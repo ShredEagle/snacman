@@ -1,0 +1,1 @@
+#@find_package@(Snacman CONFIG @REQUIRED@ COMPONENTS name)
