@@ -1,6 +1,6 @@
 editables:
-    #upstream/local:
-    #    path: ../../upstream/conan
+    math/local:
+        path: ../../../math/conan
     snacman/local:
         path: ../../conan
 layout: layout

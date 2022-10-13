@@ -22,6 +22,8 @@ class SnacmanConan(ConanFile):
     }
 
     requires = (
+        ("math/local"),
+
         ("spdlog/1.10.0"),
     )
 

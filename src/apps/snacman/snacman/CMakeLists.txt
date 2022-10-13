@@ -2,7 +2,9 @@ set(TARGET_NAME snacman)
 
 set(${TARGET_NAME}_HEADERS
     Entities.h
+    GraphicState.h
     Logging.h
+    Timing.h
 
     detail/Logger.h
 )
@@ -39,10 +41,14 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 ## Dependencies
 ##
 
+find_package(Math CONFIG REQUIRED math)
+
 find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
+        ad::math
+
         spdlog::spdlog
 )
 
