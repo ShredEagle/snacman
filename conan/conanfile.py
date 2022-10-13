@@ -21,7 +21,9 @@ class SnacmanConan(ConanFile):
         "visibility": "hidden",
     }
 
-    #requires = ()
+    requires = (
+        ("spdlog/1.10.0"),
+    )
 
     # Note: It seems conventionnal to add CMake build requirement
     # directly to the build profile.

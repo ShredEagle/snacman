@@ -1,4 +1,4 @@
-add_subdirectory(libs/snacman/snacman)
+add_subdirectory(apps/snacman/snacman)
 
 option (BUILD_tests "Build 'tests' application" true)
 if(BUILD_tests)

@@ -1,0 +1,8 @@
+editables:
+    #upstream/local:
+    #    path: ../../upstream/conan
+    snacman/local:
+        path: ../../conan
+layout: layout
+workspace_generator: cmake
+root: snacman/local
