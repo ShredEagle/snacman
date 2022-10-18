@@ -36,8 +36,16 @@ public:
 
     ~RenderThread()
     {
-        mStop = true;
-        mThread.join();
+        stop();
+    }
+
+    /// \brief Stop the thread and rethrow if it actually threw.
+    ///
+    /// A destructor should never throw, so we cannot rethrow in the plain destructor. 
+    void finalize()
+    {
+        stop();
+        checkRethrow();
     }
 
     void resizeViewport(math::Size<2, int> aFramebufferSize)
@@ -49,8 +57,36 @@ public:
             });
     }
 
+    void checkRethrow()
+    {
+        if (mThrew)
+        {
+            std::rethrow_exception(mThreadException);
+        }
+    }
+    
+
 private:
+    void stop()
+    {
+        mStop = true;
+        mThread.join();
+    }
+
     void run(StateFifo<GraphicState> & aStates)
+    {
+        try
+        {
+            run_impl(aStates);
+        }
+        catch(...)
+        {
+            mThreadException = std::current_exception();
+            mThrew = true;
+        }
+    }
+
+    void run_impl(StateFifo<GraphicState> & aStates)
     {
         SELOG(info)("Render thread started");
 
@@ -72,6 +108,7 @@ private:
 
         while(!mStop)
         {
+            // Service all queued operations first
             {
                 std::lock_guard lock{mOperationsMutex};
                 while(!mOperations.empty())
@@ -84,11 +121,13 @@ private:
             std::this_thread::sleep_for(ms{8});
 
             // TODO interpolate
+
             mApplication.getAppInterface()->clear();
             // TODO render
             SELOG(trace)("Render thread: Done (not) rendering.");
             mApplication.swapBuffers();
 
+            // Get new latest state, if any
             if (auto latest = aStates.popToEnd(); latest)
             {
                 entry = std::move(*latest);
@@ -100,19 +139,21 @@ private:
     };
 
 private:
-    std::atomic<bool> mStop{false};
     graphics::ApplicationGlfw & mApplication;
+
     std::queue<std::function<void()>> mOperations;
     std::mutex mOperationsMutex;
+
+    std::atomic<bool> mThrew{false};
+    std::exception_ptr mThreadException;
+
+    std::atomic<bool> mStop{false};
     std::thread mThread;
 };
 
 
-int main(int argc, char * argv[])
+void runApplication()
 {
-    snac::detail::initializeLogging();
-    spdlog::set_level(spdlog::level::trace);
-
     SELOG(info)("I'm a snac man.");
     SELOG(debug)("Delta time {}ms.", std::chrono::duration_cast<ms>(gSimulationDelta).count());
 
@@ -139,6 +180,9 @@ int main(int argc, char * argv[])
     while(glfwApp.handleEvents())
     {
         Clock::time_point beginStepTime = endStepTime;
+
+        // Regularly check if the rendering thread did not throw
+        renderingThread.checkRethrow();
 
         //
         // Release CPU cycles until next time point to advance the simulation.
@@ -178,5 +222,48 @@ int main(int argc, char * argv[])
         endStepTime = Clock::now();
     }
 
-    return 0;
+    // Optional, but guarantees that we did not miss any excpetion occuring between the last check
+    // and the thread destruction.
+    renderingThread.finalize();
+}
+
+
+int main(int argc, char * argv[])
+{
+    // Initialize logging (and use std err if there is an error)
+    try 
+    {
+        snac::detail::initializeLogging();
+        spdlog::set_level(spdlog::level::trace);
+    }
+    catch (std::exception & aException)
+    {
+        std::cerr << "Uncaught exception while initializing logging:\n"
+            <<   aException.what()
+            << std::endl;
+        return -2;
+    }
+    catch (...)
+    {
+        std::cerr << "Uncaught non-exception while initializing logging."
+            << std::endl;
+        return -1;
+    }
+
+    // Run the application (and use logging facilities if there is an error)
+    try 
+    {
+        runApplication();
+    }
+    catch (std::exception & aException)
+    {
+        SELOG(critical)("Uncaught exception while running application:\n{}",
+                        aException.what());
+        return -1;
+    }
+    catch (...)
+    {
+        SELOG(critical)("Uncaught non-exception while running application.");
+        return -1;
+    }
 }
