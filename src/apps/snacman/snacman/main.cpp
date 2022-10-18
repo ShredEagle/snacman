@@ -6,6 +6,8 @@
 
 #include <graphics/ApplicationGlfw.h>
 
+#include <queue>
+
 
 using namespace ad;
 using namespace ad::snac;
@@ -38,6 +40,15 @@ public:
         mThread.join();
     }
 
+    void resizeViewport(math::Size<2, int> aFramebufferSize)
+    {
+        std::lock_guard lock{mOperationsMutex};
+        mOperations.push([=]()
+            {
+                glViewport(0, 0, aFramebufferSize.width(), aFramebufferSize.height());
+            });
+    }
+
 private:
     void run(StateFifo<GraphicState> & aStates)
     {
@@ -61,6 +72,15 @@ private:
 
         while(!mStop)
         {
+            {
+                std::lock_guard lock{mOperationsMutex};
+                while(!mOperations.empty())
+                {
+                    mOperations.front()();
+                    mOperations.pop();
+                }
+            }
+
             std::this_thread::sleep_for(ms{8});
 
             // TODO interpolate
@@ -82,6 +102,8 @@ private:
 private:
     std::atomic<bool> mStop{false};
     graphics::ApplicationGlfw & mApplication;
+    std::queue<std::function<void()>> mOperations;
+    std::mutex mOperationsMutex;
     std::thread mThread;
 };
 
@@ -104,6 +126,9 @@ int main(int argc, char * argv[])
 
     StateFifo<GraphicState> graphicStates;
     RenderThread renderingThread{glfwApp, graphicStates};
+
+    auto viewportListening = glfwApp.getAppInterface()->listenFramebufferResize(
+        std::bind(&RenderThread::resizeViewport, &renderingThread, std::placeholders::_1));
 
     //
     // TODO Initialize scene
