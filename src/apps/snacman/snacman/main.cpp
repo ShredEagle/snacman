@@ -22,11 +22,24 @@ constexpr bool gWaitByBusyLoop = true;
 class RenderThread
 {
 public:
-    RenderThread(graphics::ApplicationGlfw & aGlfwApp) :
+    RenderThread(graphics::ApplicationGlfw & aGlfwApp,
+                 StateFifo<GraphicState> & aStates) :
         mApplication{aGlfwApp}
-    {}
+    {
+        mThread = std::thread{
+            std::bind(&RenderThread::run,
+                      this,
+                      std::ref(aStates))};
+    }
 
-    void run(StateFifo<GraphicState> & aStates, std::atomic<bool> & aStop)
+    ~RenderThread()
+    {
+        mStop = true;
+        mThread.join();
+    }
+
+private:
+    void run(StateFifo<GraphicState> & aStates)
     {
         SELOG(info)("Render thread started");
 
@@ -46,7 +59,7 @@ public:
         }();
         SELOG(info)("Render thread retrieved first state.");
 
-        while(!aStop)
+        while(!mStop)
         {
             std::this_thread::sleep_for(ms{8});
 
@@ -67,7 +80,9 @@ public:
     };
 
 private:
+    std::atomic<bool> mStop{false};
     graphics::ApplicationGlfw & mApplication;
+    std::thread mThread;
 };
 
 
@@ -87,14 +102,8 @@ int main(int argc, char * argv[])
     // Context must be removed from this thread before it can be made current on the render thread.
     glfwApp.removeCurrentContext();
 
-    std::atomic<bool> stop = false;
-
     StateFifo<GraphicState> graphicStates;
-    std::thread renderingThread{
-        std::bind(&RenderThread::run,
-                  RenderThread{glfwApp},
-                  std::ref(graphicStates),
-                  std::ref(stop))};
+    RenderThread renderingThread{glfwApp, graphicStates};
 
     //
     // TODO Initialize scene
@@ -143,9 +152,6 @@ int main(int argc, char * argv[])
 
         endStepTime = Clock::now();
     }
-
-    stop = true;
-    renderingThread.join();
 
     return 0;
 }
