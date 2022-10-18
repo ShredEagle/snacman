@@ -2,6 +2,8 @@
 #include "Timing.h"
 #include "GraphicState.h"
 
+#include <build_info.h>
+
 
 using namespace ad;
 using namespace ad::snac;
