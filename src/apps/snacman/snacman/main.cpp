@@ -4,6 +4,8 @@
 
 #include <build_info.h>
 
+#include <graphics/ApplicationGlfw.h>
+
 
 using namespace ad;
 using namespace ad::snac;
@@ -20,9 +22,16 @@ constexpr bool gWaitByBusyLoop = true;
 class RenderThread
 {
 public:
-    void run(StateFifo<GraphicState> & aStates)
+    RenderThread(graphics::ApplicationGlfw & aGlfwApp) :
+        mApplication{aGlfwApp}
+    {}
+
+    void run(StateFifo<GraphicState> & aStates, std::atomic<bool> & aStop)
     {
         SELOG(info)("Render thread started");
+
+        // The context must be made current on this thread before it can call GL functions.
+        mApplication.makeContextCurrent();
 
         // Get a first entry
         auto entry = [&]()
@@ -37,13 +46,15 @@ public:
         }();
         SELOG(info)("Render thread retrieved first state.");
 
-        while(true)
+        while(!aStop)
         {
             std::this_thread::sleep_for(ms{8});
 
             // TODO interpolate
+            mApplication.getAppInterface()->clear();
             // TODO render
             SELOG(trace)("Render thread: Done (not) rendering.");
+            mApplication.swapBuffers();
 
             if (auto latest = aStates.popToEnd(); latest)
             {
@@ -51,10 +62,12 @@ public:
                 SELOG(trace)("Render thread: Newer state retrieved.");
             }
         }
+
+        SELOG(info)("Render thread stopping.");
     };
 
 private:
-
+    graphics::ApplicationGlfw & mApplication;
 };
 
 
@@ -66,8 +79,22 @@ int main(int argc, char * argv[])
     SELOG(info)("I'm a snac man.");
     SELOG(debug)("Delta time {}ms.", std::chrono::duration_cast<ms>(gSimulationDelta).count());
 
+    // Application and window initialization
+    graphics::ApplicationGlfw glfwApp{getVersionedName(),
+                                      800, 600 // TODO handle via settings
+                                      //TODO, applicationFlags
+    };
+    // Context must be removed from this thread before it can be made current on the render thread.
+    glfwApp.removeCurrentContext();
+
+    std::atomic<bool> stop = false;
+
     StateFifo<GraphicState> graphicStates;
-    std::thread RenderingThread{std::bind(&RenderThread::run, RenderThread{}, std::ref(graphicStates))};
+    std::thread renderingThread{
+        std::bind(&RenderThread::run,
+                  RenderThread{glfwApp},
+                  std::ref(graphicStates),
+                  std::ref(stop))};
 
     //
     // TODO Initialize scene
@@ -75,7 +102,7 @@ int main(int argc, char * argv[])
 
     Clock::time_point endStepTime = Clock::now();
 
-    while(true)
+    while(glfwApp.handleEvents())
     {
         Clock::time_point beginStepTime = endStepTime;
 
@@ -116,6 +143,9 @@ int main(int argc, char * argv[])
 
         endStepTime = Clock::now();
     }
+
+    stop = true;
+    renderingThread.join();
 
     return 0;
 }

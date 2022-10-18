@@ -1,4 +1,10 @@
 editables:
+    entity/local:
+        path: ../../../entity/conan
+    graphics/local:
+        path: ../../../graphics/conan
+    handy/local:
+        path: ../../../handy/conan
     math/local:
         path: ../../../math/conan
     snacman/local:

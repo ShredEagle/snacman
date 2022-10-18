@@ -22,6 +22,9 @@ class SnacmanConan(ConanFile):
     }
 
     requires = (
+        ("entity/local"),
+        ("graphics/local"),
+        ("handy/local"),
         ("math/local"),
 
         ("spdlog/1.10.0"),

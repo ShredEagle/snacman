@@ -52,6 +52,7 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 ## Dependencies
 ##
 
+find_package(Graphics CONFIG REQUIRED graphics)
 find_package(Math CONFIG REQUIRED math)
 
 find_package(spdlog CONFIG REQUIRED)
@@ -59,6 +60,7 @@ find_package(spdlog CONFIG REQUIRED)
 target_link_libraries(${TARGET_NAME}
     PRIVATE
         ad::math
+        ad::graphics
 
         spdlog::spdlog
 )
