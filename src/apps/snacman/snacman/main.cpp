@@ -2,6 +2,9 @@
 #include "Timing.h"
 #include "GraphicState.h"
 
+#include "bawls/Bawls.h"
+#include "bawls/Renderer.h"
+
 #include <build_info.h>
 
 #include <graphics/ApplicationGlfw.h>
@@ -14,34 +17,32 @@ using namespace ad::snac;
 
 
 using ms = std::chrono::milliseconds;
-//
+
 //constexpr Clock::duration gSimulationDelta = 1.f/60;
 constexpr Clock::duration gSimulationDelta = ms{50};
 
 constexpr bool gWaitByBusyLoop = true;
 
+using GraphicStateFifo = StateFifo<bawls::GraphicState>;
 
 class RenderThread
 {
 public:
     RenderThread(graphics::ApplicationGlfw & aGlfwApp,
-                 StateFifo<GraphicState> & aStates) :
+                 GraphicStateFifo & aStates,
+                 math::Size<2, GLfloat> aWindowSize_world) :
         mApplication{aGlfwApp}
     {
         mThread = std::thread{
             std::bind(&RenderThread::run,
                       this,
-                      std::ref(aStates))};
-    }
-
-    ~RenderThread()
-    {
-        stop();
+                      std::ref(aStates),
+                      aWindowSize_world)};
     }
 
     /// \brief Stop the thread and rethrow if it actually threw.
     ///
-    /// A destructor should never throw, so we cannot rethrow in the plain destructor. 
+    /// A destructor should never throw, so we cannot implement this behaviour in the destructor. 
     void finalize()
     {
         stop();
@@ -73,11 +74,11 @@ private:
         mThread.join();
     }
 
-    void run(StateFifo<GraphicState> & aStates)
+    void run(GraphicStateFifo & aStates, math::Size<2, GLfloat> aWindowSize_world)
     {
         try
         {
-            run_impl(aStates);
+            run_impl(aStates, aWindowSize_world);
         }
         catch(...)
         {
@@ -86,7 +87,7 @@ private:
         }
     }
 
-    void run_impl(StateFifo<GraphicState> & aStates)
+    void run_impl(GraphicStateFifo & aStates, math::Size<2, GLfloat> aWindowSize_world)
     {
         SELOG(info)("Render thread started");
 
@@ -106,6 +107,10 @@ private:
         }();
         SELOG(info)("Render thread retrieved first state.");
 
+        // Must be initialized here, in the render thread, because the ctor makes
+        // OpenGL calls (and the GL context is current on the render thread).
+        bawls::Renderer renderer{aWindowSize_world};
+
         while(!mStop)
         {
             // Service all queued operations first
@@ -118,13 +123,16 @@ private:
                 }
             }
 
-            std::this_thread::sleep_for(ms{8});
+            // TODO simulate delay in the render thread:
+            // * Thread iteration time (simulate what happens on the thread, potentially visibility).
+            // * GPU load, i.e. rendering time. This might be harder to simulate.
+            //std::this_thread::sleep_for(ms{8});
 
             // TODO interpolate
 
             mApplication.getAppInterface()->clear();
-            // TODO render
-            SELOG(trace)("Render thread: Done (not) rendering.");
+            renderer.render(*entry.state);
+            SELOG(trace)("Render thread: Frame rendered.");
             mApplication.swapBuffers();
 
             // Get new latest state, if any
@@ -165,18 +173,27 @@ void runApplication()
     // Context must be removed from this thread before it can be made current on the render thread.
     glfwApp.removeCurrentContext();
 
-    StateFifo<GraphicState> graphicStates;
-    RenderThread renderingThread{glfwApp, graphicStates};
+    //
+    // Initialize scene
+    //
+    bawls::Bawls scene{*glfwApp.getAppInterface()};
+
+    //
+    // Initialize rendering subsystem
+    //
+    GraphicStateFifo graphicStates;
+    RenderThread renderingThread{glfwApp,
+                                 graphicStates,
+                                 scene.getWindowWorldSize()};
 
     auto viewportListening = glfwApp.getAppInterface()->listenFramebufferResize(
         std::bind(&RenderThread::resizeViewport, &renderingThread, std::placeholders::_1));
 
-    //
-    // TODO Initialize scene
-    //
 
+    //
+    // Main simulation loop
+    //
     Clock::time_point endStepTime = Clock::now();
-
     while(glfwApp.handleEvents())
     {
         Clock::time_point beginStepTime = endStepTime;
@@ -214,16 +231,19 @@ void runApplication()
         }
 
         //
-        // TODO simulate one step
+        // Simulate one step
         //
+        scene.update((float)asSeconds(gSimulationDelta));
 
-        graphicStates.push(std::make_unique<GraphicState>());
+        //
+        // Push the graphic state for the latest simulated state
+        //
+        graphicStates.push(scene.makeGraphicState());
 
         endStepTime = Clock::now();
     }
 
-    // Optional, but guarantees that we did not miss any excpetion occuring between the last check
-    // and the thread destruction.
+    // Stop and join the thread
     renderingThread.finalize();
 }
 
