@@ -9,6 +9,8 @@
 
 #include <graphics/ApplicationGlfw.h>
 
+#include <imguiui/ImguiUi.h>
+
 #include <queue>
 
 
@@ -24,6 +26,34 @@ constexpr Clock::duration gSimulationDelta = ms{50};
 constexpr bool gWaitByBusyLoop = true;
 
 using GraphicStateFifo = StateFifo<bawls::GraphicState>;
+
+
+class ImguiGameLoop
+{
+public:
+    void render()
+    {
+        int simulationPeriod = (int)mSimulationPeriodMs;
+        if(ImGui::InputInt("Simulation period (ms)", &simulationPeriod))
+        {
+            simulationPeriod = std::clamp(simulationPeriod, 1, 200);
+        }
+        mSimulationPeriodMs = simulationPeriod;
+    }
+
+    Clock::duration getSimulationDelta() const
+    {
+        return Clock::duration{ms{mSimulationPeriodMs}};
+    }
+
+private:
+    std::atomic<Clock::duration::rep> mSimulationPeriodMs{duration_cast<ms>(gSimulationDelta).count()};
+};
+
+
+// TODO find a better place than global
+ImguiGameLoop gImguiGameLoop;
+
 
 class RenderThread
 {
@@ -94,6 +124,13 @@ private:
         // The context must be made current on this thread before it can call GL functions.
         mApplication.makeContextCurrent();
 
+
+        //
+        // Imgui
+        //
+        imguiui::ImguiUi ui{mApplication};
+        bool showImguiDemo = true;
+
         // Get a first entry
         auto entry = [&]()
         {
@@ -133,6 +170,17 @@ private:
             mApplication.getAppInterface()->clear();
             renderer.render(*entry.state);
             SELOG(trace)("Render thread: Frame rendered.");
+
+            ui.newFrame();
+
+            ImGui::ShowDemoWindow(&showImguiDemo);
+            ImGui::Begin("Gameloop");
+            //ImGui::Checkbox("Demo window", &showImguiDemo);
+            gImguiGameLoop.render();
+            ImGui::End();
+
+            ui.render();
+
             mApplication.swapBuffers();
 
             // Get new latest state, if any
@@ -163,7 +211,7 @@ private:
 void runApplication()
 {
     SELOG(info)("I'm a snac man.");
-    SELOG(debug)("Delta time {}ms.", std::chrono::duration_cast<ms>(gSimulationDelta).count());
+    SELOG(debug)("Initial delta time {}ms.", std::chrono::duration_cast<ms>(gSimulationDelta).count());
 
     // Application and window initialization
     graphics::ApplicationGlfw glfwApp{getVersionedName(),
@@ -201,14 +249,16 @@ void runApplication()
         // Regularly check if the rendering thread did not throw
         renderingThread.checkRethrow();
 
+        Clock::duration simulationDelta = gImguiGameLoop.getSimulationDelta();
+
         //
         // Release CPU cycles until next time point to advance the simulation.
         //
         if (!gWaitByBusyLoop)
         {
-            if (auto beforeSleep = Clock::now(); (beginStepTime + gSimulationDelta) > beforeSleep)
+            if (auto beforeSleep = Clock::now(); (beginStepTime + simulationDelta) > beforeSleep)
             {
-                Clock::duration ahead = beginStepTime + gSimulationDelta - beforeSleep;
+                Clock::duration ahead = beginStepTime + simulationDelta - beforeSleep;
                 // Could be sleep_until
                 std::this_thread::sleep_for(ahead);
 
@@ -220,8 +270,8 @@ void runApplication()
         else
         {
             auto beforeSleep = Clock::now();
-            Clock::duration ahead = beginStepTime + gSimulationDelta - beforeSleep;
-            while((beginStepTime + gSimulationDelta) > Clock::now())
+            Clock::duration ahead = beginStepTime + simulationDelta - beforeSleep;
+            while((beginStepTime + simulationDelta) > Clock::now())
             {
                 std::this_thread::sleep_for(Clock::duration{0});
             }
@@ -233,7 +283,7 @@ void runApplication()
         //
         // Simulate one step
         //
-        scene.update((float)asSeconds(gSimulationDelta));
+        scene.update((float)asSeconds(simulationDelta));
 
         //
         // Push the graphic state for the latest simulated state

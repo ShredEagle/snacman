@@ -62,7 +62,7 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 ##
 
 find_package(Entity CONFIG REQUIRED entity)
-find_package(Graphics CONFIG REQUIRED graphics)
+find_package(Graphics CONFIG REQUIRED graphics imguiui)
 find_package(Math CONFIG REQUIRED math)
 
 find_package(spdlog CONFIG REQUIRED)
@@ -71,6 +71,7 @@ target_link_libraries(${TARGET_NAME}
     PRIVATE
         ad::entity
         ad::graphics
+        ad::imguiui
         ad::math
 
         spdlog::spdlog
