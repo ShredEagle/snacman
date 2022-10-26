@@ -18,5 +18,24 @@ constexpr double asSeconds(Clock::duration aDuration)
 }
 
 
+struct SleepResult
+{
+    Clock::time_point timeBefore;
+    Clock::duration targetDuration;
+};
+
+
+inline SleepResult sleepBusy(Clock::duration aDuration, Clock::time_point aSleepFrom = Clock::now())
+{
+    auto beforeSleep = Clock::now();
+    Clock::duration ahead = aSleepFrom + aDuration - beforeSleep;
+    while((aSleepFrom + aDuration) > Clock::now())
+    {
+        std::this_thread::sleep_for(Clock::duration{0});
+    }
+    return {beforeSleep, ahead};
+}
+
+
 } // namespace snac
 } // namespace ad

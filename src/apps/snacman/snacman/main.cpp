@@ -339,10 +339,10 @@ void runApplication()
     //
     // Main simulation loop
     //
-    Clock::time_point endStepTime = Clock::now();
+    Clock::time_point beginStepTime = Clock::now() - gImguiGameLoop.getSimulationDelta();
     while(glfwApp.handleEvents())
     {
-        Clock::time_point beginStepTime = endStepTime;
+        Clock::time_point previousStepTime = beginStepTime;
 
         // Regularly check if the rendering thread did not throw
         renderingThread.checkRethrow();
@@ -354,9 +354,9 @@ void runApplication()
         //
         if (!gWaitByBusyLoop)
         {
-            if (auto beforeSleep = Clock::now(); (beginStepTime + simulationDelta) > beforeSleep)
+            if (auto beforeSleep = Clock::now(); (previousStepTime + simulationDelta) > beforeSleep)
             {
-                Clock::duration ahead = beginStepTime + simulationDelta - beforeSleep;
+                Clock::duration ahead = previousStepTime + simulationDelta - beforeSleep;
                 // Could be sleep_until
                 std::this_thread::sleep_for(ahead);
 
@@ -367,28 +367,22 @@ void runApplication()
         }
         else
         {
-            auto beforeSleep = Clock::now();
-            Clock::duration ahead = beginStepTime + simulationDelta - beforeSleep;
-            while((beginStepTime + simulationDelta) > Clock::now())
-            {
-                std::this_thread::sleep_for(Clock::duration{0});
-            }
+            SleepResult slept = sleepBusy(simulationDelta, previousStepTime);
             SELOG(trace)("Expected to sleep for {}ms, actually slept for {}ms",
-                    std::chrono::duration_cast<ms>(ahead).count(),
-                    std::chrono::duration_cast<ms>(Clock::now() - beforeSleep).count());
+                    std::chrono::duration_cast<ms>(slept.targetDuration).count(),
+                    std::chrono::duration_cast<ms>(Clock::now() - slept.timeBefore).count());
         }
 
         //
         // Simulate one step
         //
+        beginStepTime = Clock::now();
         scene.update((float)asSeconds(simulationDelta));
 
         //
         // Push the graphic state for the latest simulated state
         //
         graphicStates.push(scene.makeGraphicState());
-
-        endStepTime = Clock::now();
     }
 
     // Stop and join the thread
