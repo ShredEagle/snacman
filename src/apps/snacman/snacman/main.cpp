@@ -11,6 +11,8 @@
 
 #include <imguiui/ImguiUi.h>
 
+#include <math/Interpolation/Interpolation.h>
+
 #include <queue>
 
 
@@ -53,6 +55,61 @@ private:
 
 // TODO find a better place than global
 ImguiGameLoop gImguiGameLoop;
+
+
+/// \brief A double buffer implementation, consuming entries from a GraphicStateFifo.
+class EntryBuffer
+{
+public:
+    /// \brief Construct the buffer, block until it could initialize all its entries.
+    EntryBuffer(GraphicStateFifo & aStateFifo)
+    {
+        for (std::size_t i = 0; i != std::size(mDoubleBuffer); ++i)
+        {
+            // busy wait
+            while(aStateFifo.empty())
+            {}
+
+            mDoubleBuffer[i] = aStateFifo.pop();
+        }
+
+        // Make sure the EntryBuffer is up-to-date
+        consume(aStateFifo);
+    }
+
+    const GraphicStateFifo::Entry & current() const
+    {
+        return mDoubleBuffer[mFront];
+    }
+    
+    const GraphicStateFifo::Entry & previous() const
+    {
+        return mDoubleBuffer[back()];
+    }
+    
+    /// \brief Pop as many states as available from the Fifo.
+    ///
+    /// Ensures the buffer current() and previous() entries are
+    /// up-to-date at the time of return (modulo return branching duration).
+    void consume(GraphicStateFifo & aStateFifo)
+    {
+        while(!aStateFifo.empty())
+        {
+            mFront = back();
+            mDoubleBuffer[mFront] = aStateFifo.pop();
+            SELOG(trace)("Render thread: Newer state retrieved.");
+        }
+    }
+
+private:
+    std::size_t back() const
+    {
+        return (mFront + 1) % 2;
+    }
+
+    std::array<GraphicStateFifo::Entry, 2> mDoubleBuffer;
+    std::size_t mFront = 1;
+};
 
 
 class RenderThread
@@ -124,29 +181,20 @@ private:
         // The context must be made current on this thread before it can call GL functions.
         mApplication.makeContextCurrent();
 
-
         //
         // Imgui
         //
         imguiui::ImguiUi ui{mApplication};
         bool showImguiDemo = true;
 
-        // Get a first entry
-        auto entry = [&]()
-        {
-            while(true)
-            {
-                if (auto firstState = aStates.popToEnd(); firstState)
-                {
-                    return std::move(*firstState);
-                }
-            }
-        }();
-        SELOG(info)("Render thread retrieved first state.");
-
         // Must be initialized here, in the render thread, because the ctor makes
         // OpenGL calls (and the GL context is current on the render thread).
         bawls::Renderer renderer{aWindowSize_world};
+
+        // Initialize the buffer with the required number of entries (2 for double buffering)
+        // This is blocking call, done last to offer more opportunities for the entries to already be in the queue
+        EntryBuffer entries{aStates};
+        SELOG(info)("Render thread initialized states buffer.");
 
         while(!mStop)
         {
@@ -165,12 +213,37 @@ private:
             // * GPU load, i.e. rendering time. This might be harder to simulate.
             //std::this_thread::sleep_for(ms{8});
 
-            // TODO interpolate
+            //
+            // Interpolate
+            //
+            const auto & previous = entries.previous();
+            const auto & latest = entries.current();
 
+            // TODO Is it better to use difference in push times, or the fixed simulation delta as denominator?
+            float interpolant = float((Clock::now() - latest.pushTime).count()) 
+                                / (latest.pushTime - previous.pushTime).count();
+            SELOG(trace)("Render thread: Interpolant is {}, delta between entries is {}ms.",
+                interpolant,
+                duration_cast<ms>(latest.pushTime - previous.pushTime).count());
+
+            using Circle = graphics::r2d::Shaping::Circle;
+            std::vector<Circle> balls;
+            for (std::size_t ballId = 0; ballId != latest.state->balls.size(); ++ballId)
+            {
+                balls.emplace_back(
+                    math::lerp(previous.state->balls[ballId].position, latest.state->balls[ballId].position, interpolant),
+                    previous.state->balls[ballId].radius);
+            }
+
+            //
+            // Render
+            //
             mApplication.getAppInterface()->clear();
-            renderer.render(*entry.state);
-            SELOG(trace)("Render thread: Frame rendered.");
+            //renderer.render(*entries.current().state);
+            renderer.render(balls);
+            SELOG(trace)("Render thread: Frame sent to GPU.");
 
+            // Imgui rendering
             ui.newFrame();
 
             ImGui::ShowDemoWindow(&showImguiDemo);
@@ -184,11 +257,7 @@ private:
             mApplication.swapBuffers();
 
             // Get new latest state, if any
-            if (auto latest = aStates.popToEnd(); latest)
-            {
-                entry = std::move(*latest);
-                SELOG(trace)("Render thread: Newer state retrieved.");
-            }
+            entries.consume(aStates);
         }
 
         SELOG(info)("Render thread stopping.");

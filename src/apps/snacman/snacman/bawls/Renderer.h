@@ -27,8 +27,12 @@ public:
         {
             balls.emplace_back(ballState.position, ballState.radius);
         };
-        mBalls.resetCircles(balls);
+        render(balls);
+    }
 
+    void render(std::vector<graphics::r2d::Shaping::Circle> aBalls)
+    {
+        mBalls.resetCircles(aBalls);
         mShaping.render(mBalls, mCameraProjection);
     }
 

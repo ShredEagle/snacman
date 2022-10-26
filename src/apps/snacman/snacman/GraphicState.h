@@ -44,6 +44,12 @@ public:
         return result;
     }
 
+    bool empty()
+    {
+        std::lock_guard lock{mMutex};
+        return mStore.empty();
+    }
+
 
     std::optional<Entry> popToEnd()
     {
