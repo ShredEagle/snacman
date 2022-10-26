@@ -8,6 +8,8 @@
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
 
+#include <graphics/2d/Shaping.h>
+
 #include <math/Vector.h>
 
 
@@ -17,13 +19,7 @@ namespace bawls {
 
 struct GraphicState
 {
-    struct Ball
-    {
-        math::Position<3, float> position;
-        float radius;
-    };
-
-    std::vector<Ball> balls;
+    std::vector<graphics::r2d::Shaping::Circle> balls;
 };
 
 

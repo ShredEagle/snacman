@@ -41,6 +41,8 @@ public:
             simulationPeriod = std::clamp(simulationPeriod, 1, 200);
         }
         mSimulationPeriodMs = simulationPeriod;
+
+        ImGui::Checkbox("State interpolation", &mInterpolate);
     }
 
     Clock::duration getSimulationDelta() const
@@ -48,8 +50,16 @@ public:
         return Clock::duration{ms{mSimulationPeriodMs}};
     }
 
+    bool isInterpoling() const
+    {
+        return mInterpolate;
+    }
+
 private:
     std::atomic<Clock::duration::rep> mSimulationPeriodMs{duration_cast<ms>(gSimulationDelta).count()};
+
+    // Synchronous part (only seen by the rendering thread)
+    bool mInterpolate{true};
 };
 
 
@@ -191,6 +201,9 @@ private:
         // OpenGL calls (and the GL context is current on the render thread).
         bawls::Renderer renderer{aWindowSize_world};
 
+        // Used by non-interpolating path, to decide if frame is dirty.
+        Clock::time_point renderedPushTime;
+
         // Initialize the buffer with the required number of entries (2 for double buffering)
         // This is blocking call, done last to offer more opportunities for the entries to already be in the queue
         EntryBuffer entries{aStates};
@@ -213,26 +226,45 @@ private:
             // * GPU load, i.e. rendering time. This might be harder to simulate.
             //std::this_thread::sleep_for(ms{8});
 
-            //
-            // Interpolate
-            //
-            const auto & previous = entries.previous();
-            const auto & latest = entries.current();
+            // Get new latest state, if any
+            entries.consume(aStates);
 
-            // TODO Is it better to use difference in push times, or the fixed simulation delta as denominator?
-            float interpolant = float((Clock::now() - latest.pushTime).count()) 
-                                / (latest.pushTime - previous.pushTime).count();
-            SELOG(trace)("Render thread: Interpolant is {}, delta between entries is {}ms.",
-                interpolant,
-                duration_cast<ms>(latest.pushTime - previous.pushTime).count());
-
+            //
+            // Interpolate (or pick the current state if interpolation is disabled)
+            //
             using Circle = graphics::r2d::Shaping::Circle;
             std::vector<Circle> balls;
-            for (std::size_t ballId = 0; ballId != latest.state->balls.size(); ++ballId)
+            if(gImguiGameLoop.isInterpoling())
             {
-                balls.emplace_back(
-                    math::lerp(previous.state->balls[ballId].position, latest.state->balls[ballId].position, interpolant),
-                    previous.state->balls[ballId].radius);
+                const auto & previous = entries.previous();
+                const auto & latest = entries.current();
+
+                // TODO Is it better to use difference in push times, or the fixed simulation delta as denominator?
+                float interpolant = float((Clock::now() - latest.pushTime).count()) 
+                                    / (latest.pushTime - previous.pushTime).count();
+                SELOG(trace)("Render thread: Interpolant is {}, delta between entries is {}ms.",
+                    interpolant,
+                    duration_cast<ms>(latest.pushTime - previous.pushTime).count());
+
+                for (std::size_t ballId = 0; ballId != latest.state->balls.size(); ++ballId)
+                {
+                    balls.emplace_back(
+                        math::lerp(previous.state->balls[ballId].mPosition_world, latest.state->balls[ballId].mPosition_world, interpolant),
+                        previous.state->balls[ballId].mSize_world.width());
+                }
+            }
+            else
+            {
+                const auto & latest = entries.current();
+                if(latest.pushTime != renderedPushTime)
+                {
+                    balls = latest.state->balls;        
+                    renderedPushTime = latest.pushTime;
+                }
+                else
+                {
+                    continue;
+                }
             }
 
             //
@@ -255,9 +287,6 @@ private:
             ui.render();
 
             mApplication.swapBuffers();
-
-            // Get new latest state, if any
-            entries.consume(aStates);
         }
 
         SELOG(info)("Render thread stopping.");

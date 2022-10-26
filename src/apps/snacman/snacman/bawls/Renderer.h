@@ -19,18 +19,7 @@ public:
         mCameraProjection.setCameraTransformation(GetProjection(aWindowSize_world));
     }
 
-    void render(const GraphicState & aState)
-    {
-        // TODO get rid of this loop, the graphic state should be the expected type
-        std::vector<graphics::r2d::Shaping::Circle> balls;
-        for (const auto & ballState : aState.balls)
-        {
-            balls.emplace_back(ballState.position, ballState.radius);
-        };
-        render(balls);
-    }
-
-    void render(std::vector<graphics::r2d::Shaping::Circle> aBalls)
+    void render(std::span<graphics::r2d::Shaping::Circle> aBalls)
     {
         mBalls.resetCircles(aBalls);
         mShaping.render(mBalls, mCameraProjection);
