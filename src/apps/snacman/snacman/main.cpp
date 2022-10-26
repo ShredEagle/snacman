@@ -42,12 +42,26 @@ public:
         }
         mSimulationPeriodMs = simulationPeriod;
 
+        int updateDuration = (int)mUpdateDuration;
+        if(ImGui::InputInt("Update duration (ms)", &updateDuration))
+        {
+            updateDuration = std::clamp(updateDuration, 1, 500);
+        }
+        mUpdateDuration = updateDuration;
+
         ImGui::Checkbox("State interpolation", &mInterpolate);
     }
 
     Clock::duration getSimulationDelta() const
     {
         return Clock::duration{ms{mSimulationPeriodMs}};
+    }
+
+    /// \brief The (minimal) duration that **computing** an update should consume.
+    /// \attention Do not confound with the simulation delta, which is the duration between two simulated states.
+    Clock::duration getUpdateDuration()
+    {
+        return Clock::duration{ms{mUpdateDuration}};
     }
 
     bool isInterpoling() const
@@ -57,6 +71,7 @@ public:
 
 private:
     std::atomic<Clock::duration::rep> mSimulationPeriodMs{duration_cast<ms>(gSimulationDelta).count()};
+    std::atomic<Clock::duration::rep> mUpdateDuration{0};
 
     // Synchronous part (only seen by the rendering thread)
     bool mInterpolate{true};
@@ -378,6 +393,7 @@ void runApplication()
         //
         beginStepTime = Clock::now();
         scene.update((float)asSeconds(simulationDelta));
+        sleepBusy(gImguiGameLoop.getUpdateDuration(), beginStepTime);
 
         //
         // Push the graphic state for the latest simulated state
