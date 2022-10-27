@@ -14,6 +14,7 @@
 #include <math/Interpolation/Interpolation.h>
 
 #include <queue>
+#include <thread>
 
 
 using namespace ad;
@@ -106,12 +107,12 @@ public:
     {
         return mDoubleBuffer[mFront];
     }
-    
+
     const GraphicStateFifo::Entry & previous() const
     {
         return mDoubleBuffer[back()];
     }
-    
+
     /// \brief Pop as many states as available from the Fifo.
     ///
     /// Ensures the buffer current() and previous() entries are
@@ -154,7 +155,7 @@ public:
 
     /// \brief Stop the thread and rethrow if it actually threw.
     ///
-    /// A destructor should never throw, so we cannot implement this behaviour in the destructor. 
+    /// A destructor should never throw, so we cannot implement this behaviour in the destructor.
     void finalize()
     {
         stop();
@@ -177,7 +178,7 @@ public:
             std::rethrow_exception(mThreadException);
         }
     }
-    
+
 
 private:
     void stop()
@@ -255,7 +256,7 @@ private:
                 const auto & latest = entries.current();
 
                 // TODO Is it better to use difference in push times, or the fixed simulation delta as denominator?
-                float interpolant = float((Clock::now() - latest.pushTime).count()) 
+                float interpolant = float((Clock::now() - latest.pushTime).count())
                                     / (latest.pushTime - previous.pushTime).count();
                 SELOG(trace)("Render thread: Interpolant is {}, delta between entries is {}ms.",
                     interpolant,
@@ -273,7 +274,7 @@ private:
                 const auto & latest = entries.current();
                 if(latest.pushTime != renderedPushTime)
                 {
-                    balls = latest.state->balls;        
+                    balls = latest.state->balls;
                     renderedPushTime = latest.pushTime;
                 }
                 else
@@ -409,7 +410,7 @@ void runApplication()
 int main(int argc, char * argv[])
 {
     // Initialize logging (and use std err if there is an error)
-    try 
+    try
     {
         snac::detail::initializeLogging();
         spdlog::set_level(spdlog::level::trace);
@@ -429,7 +430,7 @@ int main(int argc, char * argv[])
     }
 
     // Run the application (and use logging facilities if there is an error)
-    try 
+    try
     {
         runApplication();
     }
