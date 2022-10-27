@@ -1,6 +1,12 @@
 editables:
-    #upstream/local:
-    #    path: ../../upstream/conan
+    entity/663a42cc7e@adnn/develop:
+        path: ../../../entity/conan
+    graphics/ac8af9d688@adnn/develop:
+        path: ../../../graphics/conan
+    handy/301bce6d20@adnn/develop:
+        path: ../../../handy/conan
+    math/3d5a576c1e@adnn/develop:
+        path: ../../../math/conan
     snacman/local:
         path: ../../conan
 layout: layout

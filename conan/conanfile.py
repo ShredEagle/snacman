@@ -22,6 +22,11 @@ class SnacmanConan(ConanFile):
     }
 
     requires = (
+        ("entity/663a42cc7e@adnn/develop"),
+        ("graphics/ac8af9d688@adnn/develop"),
+        ("handy/301bce6d20@adnn/develop"),
+        ("math/3d5a576c1e@adnn/develop"),
+
         ("spdlog/1.10.0"),
     )
 
