@@ -6,6 +6,7 @@
 #include <math/Color.h>
 
 #include <list>
+#include <mutex>
 
 
 namespace ad {
