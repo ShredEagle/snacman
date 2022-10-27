@@ -16,8 +16,8 @@ class Move
 {
 public:
     Move(ent::EntityManager & aWorld, const math::Rectangle<GLfloat> & mBoundingBox) :
-        mMovables{aWorld},
-        mWorldBounds{mBoundingBox}
+        mWorldBounds{mBoundingBox},
+        mMovables{aWorld}
     {}
 
     void update(float aDelta)
@@ -30,12 +30,12 @@ public:
                 // Window border bounce
                 math::Vec<2, GLfloat> radiusVec{aGeometry.radius, aGeometry.radius};
 
-                // One each dimension: 
+                // One each dimension:
                 // the signed value of the overflow, or zero if there is none.
                 math::Vec<2, GLfloat> overflow =
-                    (max(mWorldBounds.topRight(), aGeometry.position + radiusVec) 
+                    (max(mWorldBounds.topRight(), aGeometry.position + radiusVec)
                         - mWorldBounds.topRight())
-                    + (min(mWorldBounds.bottomLeft(), aGeometry.position - radiusVec) 
+                    + (min(mWorldBounds.bottomLeft(), aGeometry.position - radiusVec)
                         - mWorldBounds.bottomLeft())
                     ;
                 if(overflow != math::Vec<2, GLfloat>::Zero())
