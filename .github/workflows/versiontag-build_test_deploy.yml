@@ -13,6 +13,8 @@ jobs:
     needs: extract_tag
     uses: shredeagle/reusable-workflows/.github/workflows/main_build.yml@v2.3.2
     with:
+      os: >-
+        ["ubuntu-20.04", "windows-2022"]
       deployrecipe_userchannel: adnn/stable
       version: ${{ needs.extract_tag.outputs.version }}
     secrets:
