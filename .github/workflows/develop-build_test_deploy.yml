@@ -12,7 +12,6 @@ jobs:
     with:
       os: >-
         ["ubuntu-20.04", "windows-2022"]
-    with:
       deployrecipe_userchannel: adnn/develop
     secrets:
       SHREDROBOT_GITHUB_TOKEN: ${{ secrets.SHREDROBOT_GITHUB_TOKEN }}
