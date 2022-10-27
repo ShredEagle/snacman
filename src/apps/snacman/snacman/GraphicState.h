@@ -7,6 +7,7 @@
 
 #include <list>
 #include <mutex>
+#include <optional>
 
 
 namespace ad {

@@ -23,7 +23,7 @@ public:
 
     void update()
     {
-        mMovables.eachPair([this](component::Geometry & aGeometryA, component::Velocity & aVelocityA,
+        mMovables.eachPair([](component::Geometry & aGeometryA, component::Velocity & aVelocityA,
                                   component::Geometry & aGeometryB, component::Velocity & aVelocityB)
             
         {
