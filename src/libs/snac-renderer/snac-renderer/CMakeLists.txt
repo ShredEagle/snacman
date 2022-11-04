@@ -1,6 +1,7 @@
 set(TARGET_NAME snac-renderer)
 
 set(${TARGET_NAME}_HEADERS
+    Camera.h
     Cube.h
     Effect.h
     Material.h

@@ -7,13 +7,19 @@ namespace snac {
 inline const GLchar* gVertexShader = R"#(
 #version 420
 
-layout(location=0) in vec3 vertexPosition_l;
+layout(location=0) in vec3 ve_VertexPosition_l;
+
+layout(std140) uniform ViewingBlock
+{
+    mat4 u_Camera;
+    mat4 u_Projection;
+};
 
 out vec4 ex_Color;
 
 void main(void)
 {
-    gl_Position = vec4(vertexPosition_l, 1.f);
+    gl_Position = u_Projection * u_Camera * vec4(ve_VertexPosition_l, 1.f);
     ex_Color = vec4(1.f, 0.3, 0.8f, 1.f);
 }
 )#";
@@ -40,8 +46,18 @@ Renderer::Renderer() :
 {}
 
 
-void Renderer::render(const Mesh & aMesh) const
+void Renderer::render(const Mesh & aMesh, const Camera & aCamera) const
 {
+    constexpr graphics::BindingIndex viewingLocation{1};
+    bind(aCamera.mViewing, viewingLocation);
+
+    GLuint viewingBlockIndex;
+    if(viewingBlockIndex = glGetUniformBlockIndex(mProgram, "ViewingBlock") == GL_INVALID_INDEX)
+    {
+        throw std::logic_error{"Invalid block name."};
+    }
+    glUniformBlockBinding(mProgram, viewingBlockIndex, viewingLocation);
+
     //graphics::ScopedBind boundVAO{aMesh.mStream.mVertexArray};
     bind(aMesh.mStream.mVertexArray);
     {

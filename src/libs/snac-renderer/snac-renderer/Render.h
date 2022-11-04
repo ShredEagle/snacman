@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Camera.h"
 #include "Mesh.h"
 
 #include <renderer/GL_Loader.h>
@@ -21,7 +22,7 @@ class Renderer
 public:
     Renderer();
 
-    void render(const Mesh & aMesh) const;
+    void render(const Mesh & aMesh, const Camera & aCamera) const;
 
 private:
     graphics::Program mProgram;
