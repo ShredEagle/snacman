@@ -24,11 +24,18 @@ struct Camera
 class OrbitalControl
 {
 public:
-   void callbackCursorPosition(double xpos, double ypos);
-   void callbackMouseButton(int button, int action, int mods, double xpos, double ypos);
-   void callbackScroll(double xoffset, double yoffset);
+    OrbitalControl(math::Size<2, int> aWindowSize) :
+        mWindowSize{aWindowSize}
+    {}
 
-   math::AffineMatrix<4, float> getParentToLocal() const;
+    void setWindowSize(math::Size<2, int> aWindowSize)
+    { mWindowSize = aWindowSize; }
+
+    void callbackCursorPosition(double xpos, double ypos);
+    void callbackMouseButton(int button, int action, int mods, double xpos, double ypos);
+    void callbackScroll(double xoffset, double yoffset);
+
+    math::AffineMatrix<4, float> getParentToLocal() const;
 
 private:
     enum class ControlMode
@@ -42,7 +49,9 @@ private:
     static constexpr float gScrollFactor = 0.05f;
 
     math::Position<3, float> mSphericalOrigin;
-    math::Spherical<float> mSpherical{3.f}; // to be out of a 2 unit cube centered on the origin
+    math::Spherical<float> mSpherical{11.f}; // to be out of a 2 unit cube centered on the origin
+
+    math::Size<2, int> mWindowSize;
 
     ControlMode mControlMode{ControlMode::None};
     math::Position<2, GLfloat> mPreviousDragPosition{0.f, 0.f};
