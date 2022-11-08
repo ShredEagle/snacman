@@ -30,7 +30,7 @@ void runApplication()
     //
     // Initialize scene
     //
-    Scene scene;
+    Scene scene{*glfwApp.getAppInterface()};
     Renderer renderer;
 
     //
@@ -46,6 +46,7 @@ void runApplication()
         //
         //beginStepTime = Clock::now();
         //scene.update((float)asSeconds(simulationDelta));
+        scene.update();
 
         //
         // Render

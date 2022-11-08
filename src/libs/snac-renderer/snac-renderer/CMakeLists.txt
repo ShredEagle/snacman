@@ -10,6 +10,7 @@ set(${TARGET_NAME}_HEADERS
 )
 
 set(${TARGET_NAME}_SOURCES
+    Camera.cpp
     Effect.cpp
     Material.cpp
     Mesh.cpp
@@ -48,6 +49,7 @@ target_link_libraries(${TARGET_NAME}
     PUBLIC
         ad::math
     PRIVATE
+        ad::graphics
         ad::renderer
 
         spdlog::spdlog

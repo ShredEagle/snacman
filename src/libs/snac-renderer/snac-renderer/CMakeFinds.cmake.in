@@ -1,4 +1,4 @@
-@find_package@(Graphics CONFIG @REQUIRED@ COMPONENTS renderer)
+@find_package@(Graphics CONFIG @REQUIRED@ COMPONENTS graphics renderer)
 @find_package@(Math CONFIG @REQUIRED@ COMPONENTS math)
 
 @find_package@(spdlog CONFIG @REQUIRED@)

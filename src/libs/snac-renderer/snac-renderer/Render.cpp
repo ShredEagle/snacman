@@ -48,6 +48,8 @@ Renderer::Renderer() :
 
 void Renderer::render(const Mesh & aMesh, const Camera & aCamera) const
 {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
     constexpr graphics::BindingIndex viewingLocation{1};
     bind(aCamera.mViewing, viewingLocation);
 
