@@ -13,9 +13,9 @@ namespace snac {
 
 constexpr float gZNear = -0.1f;
 constexpr float gZFar = -500.f;
-//constexpr math::Degree<float> gVFov{45.f};
-// I am about 50cm away from screen, a 600px high window is ~14cm on it.
-const math::Radian<float> gVFov{2 * std::atan2(140.f/2, 500.f)};
+constexpr math::Degree<float> gVFov{45.f};
+//// I am about 50cm away from screen, a 600px high window is ~14cm on it.
+////const math::Radian<float> gVFov{2 * std::atan2(140.f/2, 500.f)};
 
 
 math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVerticalFov, float aAspectRatio,

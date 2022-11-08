@@ -26,8 +26,15 @@ struct VertexStream
         graphics::ClientAttribute mAttribute;
     };
 
+    // TODO should be generalized via a BufferView, so a VBO can contain several diffrent sections.
+    struct VertexBuffer
+    {
+        graphics::VertexBufferObject mBuffer;
+        std::size_t mStride{0};
+    };
+
     graphics::VertexArrayObject mVertexArray;
-    std::vector<graphics::VertexBufferObject> mVertexBuffers;
+    std::vector<VertexBuffer> mVertexBuffers;
     std::map<Semantic, Attribute> mAttributes;
     GLsizei mVertexCount;
     //IndexBufferObject mIndexBuffer;

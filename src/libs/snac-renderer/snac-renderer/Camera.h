@@ -49,7 +49,7 @@ private:
     static constexpr float gScrollFactor = 0.05f;
 
     math::Position<3, float> mSphericalOrigin;
-    math::Spherical<float> mSpherical{11.f}; // to be out of a 2 unit cube centered on the origin
+    math::Spherical<float> mSpherical{6.f}; // to be out of a 2 unit cube centered on the origin
 
     math::Size<2, int> mWindowSize;
 

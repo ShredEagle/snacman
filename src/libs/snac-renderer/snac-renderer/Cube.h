@@ -55,16 +55,16 @@ namespace snac {
 
 namespace cube {
 
-    constexpr std::array<math::Vec<3, float>, 8> gVertices{
-        math::Vec<3, float>{-1.0f, -1.0f, -1.0f},
-        math::Vec<3, float>{-1.0f, -1.0f,  1.0f},
-        math::Vec<3, float>{-1.0f,  1.0f, -1.0f},
-        math::Vec<3, float>{-1.0f,  1.0f,  1.0f},
+    constexpr std::array<math::Position<3, float>, 8> gVertices{
+        math::Position<3, float>{-1.0f, -1.0f, -1.0f},
+        math::Position<3, float>{-1.0f, -1.0f,  1.0f},
+        math::Position<3, float>{-1.0f,  1.0f, -1.0f},
+        math::Position<3, float>{-1.0f,  1.0f,  1.0f},
 
-        math::Vec<3, float>{ 1.0f, -1.0f, -1.0f},
-        math::Vec<3, float>{ 1.0f, -1.0f,  1.0f},
-        math::Vec<3, float>{ 1.0f,  1.0f, -1.0f},
-        math::Vec<3, float>{ 1.0f,  1.0f,  1.0f},
+        math::Position<3, float>{ 1.0f, -1.0f, -1.0f},
+        math::Position<3, float>{ 1.0f, -1.0f,  1.0f},
+        math::Position<3, float>{ 1.0f,  1.0f, -1.0f},
+        math::Position<3, float>{ 1.0f,  1.0f,  1.0f},
     };
 
     constexpr std::array<GLushort, 6*6> gIndices
@@ -72,13 +72,13 @@ namespace cube {
         // Left
         0, 2, 1,
         1, 2, 3,
-        // Back
+        // Front
         1, 3, 5,
         5, 3, 7,
         // Right,
         5, 7, 4,
         4, 7, 6,
-        // Front
+        // Back
         4, 6, 0,
         0, 6, 2,
         // Top
@@ -89,15 +89,58 @@ namespace cube {
         4, 1, 5,
     };
 
+    constexpr std::array<math::Vec<3, float>, 6> gNormals =
+    {
+        // Left
+        math::Vec<3, float>{-1.f,  0.f,  0.f},
+        //Front
+        math::Vec<3, float>{ 0.f,  0.f,  1.f},
+        // Right
+        math::Vec<3, float>{ 1.f,  0.f,  0.f},
+        // Back
+        math::Vec<3, float>{ 0.f,  0.f, -1.f},
+        // Top
+        math::Vec<3, float>{ 0.f,  1.f,  0.f},
+        // Bottom
+        math::Vec<3, float>{ 0.f, -1.f,  0.f},
+    };
+
 } // namespace cube
 
-constexpr std::vector<math::Vec<3, float>> getExpandedCubeVertices()
+template <class T_vertex>
+constexpr std::vector<T_vertex> getExpandedCubeVertices();
+
+
+template <>
+constexpr std::vector<math::Position<3, float>> getExpandedCubeVertices()
 {
-    std::vector<math::Vec<3, float>> result;
+    std::vector<math::Position<3, float>> result;
     result.reserve(36);
     for (int i = 0; i < 36; i++) 
     {
         result.push_back(cube::gVertices[cube::gIndices[i]]);
+    }
+    return result;
+}
+
+
+struct PositionNormal
+{
+    math::Position<3, float> position;
+    math::Vec<3, float> normal;
+};
+
+template <>
+constexpr std::vector<PositionNormal> getExpandedCubeVertices()
+{
+    std::vector<PositionNormal> result;
+    result.reserve(36);
+    for (int i = 0; i < 36; i++) 
+    {
+        result.push_back(PositionNormal{
+            .position = cube::gVertices[cube::gIndices[i]],
+            .normal = cube::gNormals[i / 6]
+        });
     }
     return result;
 }
@@ -124,18 +167,32 @@ inline graphics::VertexBufferObject loadVBO(std::span<T_vertex, N_extent> aVerti
 inline Mesh makeCube()
 {
     VertexStream geometry;
-    // Note: I suppose binding the VAO is not required?
-    //graphics::ScopedBind boundVAO{geometry.mVertexArray};
+    // Note: Binding the VAO is not required for loading vertex buffers
     // Make a VBO and load the cube vertices into it
+    // Save the index of the next VBO.
     auto index = geometry.mVertexBuffers.size();
-    auto vertices = getExpandedCubeVertices();
-    geometry.mVertexBuffers.push_back(loadVBO(std::span{vertices}));
-    graphics::ClientAttribute attribute{
-        .mDimension = 3,
-        .mOffset = 0,
-        .mDataType = GL_FLOAT
-    };
-    geometry.mAttributes.emplace(Semantic::Position, VertexStream::Attribute{index, attribute});
+    auto vertices = getExpandedCubeVertices<PositionNormal>();
+    geometry.mVertexBuffers.push_back({
+        .mBuffer = loadVBO(std::span{vertices}),
+        .mStride = sizeof(PositionNormal)
+    });
+
+    {
+        graphics::ClientAttribute position{
+            .mDimension = 3,
+            .mOffset = offsetof(PositionNormal, position),
+            .mDataType = GL_FLOAT
+        };
+        geometry.mAttributes.emplace(Semantic::Position, VertexStream::Attribute{index, position});
+    }
+    {
+        graphics::ClientAttribute normal{
+            .mDimension = 3,
+            .mOffset = offsetof(PositionNormal, normal),
+            .mDataType = GL_FLOAT
+        };
+        geometry.mAttributes.emplace(Semantic::Normal, VertexStream::Attribute{index, normal});
+    }
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
     return Mesh{.mStream = std::move(geometry)};
@@ -153,7 +210,9 @@ inline Mesh makeTriangle()
         math::Vec<3, float>{  0.f,  0.6f, 0.f}
     };
 
-    geometry.mVertexBuffers.push_back(loadVBO(std::span{vertices}));
+    geometry.mVertexBuffers.push_back({
+        .mBuffer = loadVBO(std::span{vertices}),
+    });
     graphics::ClientAttribute attribute{
         .mDimension = 3,
         .mOffset = 0,
