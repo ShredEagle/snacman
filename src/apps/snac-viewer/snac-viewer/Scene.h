@@ -17,10 +17,16 @@ namespace snac {
 
 InstanceStream makeInstances()
 {
-    std::vector<math::Matrix<4, 4, float>> transformations{
-        math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f}),
-        math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f}),
-        math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f}),
+    struct PoseColor
+    {
+        math::Matrix<4, 4, float> pose;
+        math::sdr::Rgba albedo{math::sdr::gWhite / 2};
+    };
+
+    std::vector<PoseColor> transformations{
+        {math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f})},
+        {math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f})},
+        {math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f})},
     };
 
     InstanceStream instances{
@@ -39,10 +45,18 @@ InstanceStream makeInstances()
     {
         graphics::ClientAttribute transformation{
             .mDimension = 16,
-            .mOffset = 0,
+            .mOffset = offsetof(PoseColor, pose),
             .mDataType = GL_FLOAT,
         };
         instances.mAttributes.emplace(Semantic::LocalToWorld, VertexStream::Attribute{0, transformation});
+    }
+    {
+        graphics::ClientAttribute albedo{
+            .mDimension = 4,
+            .mOffset = offsetof(PoseColor, albedo),
+            .mDataType = GL_UNSIGNED_BYTE,
+        };
+        instances.mAttributes.emplace(Semantic::Albedo, VertexStream::Attribute{0, albedo});
     }
     return instances;
 }

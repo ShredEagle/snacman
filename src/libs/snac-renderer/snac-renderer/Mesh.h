@@ -16,7 +16,7 @@ enum class Semantic
     // Usally per vertex
     Position,
     Normal,
-    Color,
+    Albedo,
     // Usually per instance
     LocalToWorld
 };

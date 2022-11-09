@@ -15,6 +15,7 @@ layout(location=1) in vec3 ve_Normal_l;
 layout(location=4) in mat4 in_LocalToWorld;
 // Will be required to support non-uniform scaling.
 //layout(location=8) in mat4 in_LocalToWorldInverseTranspose;
+layout(location=12) in vec4 in_Albedo;
 
 layout(std140) uniform ViewingBlock
 {
@@ -22,12 +23,11 @@ layout(std140) uniform ViewingBlock
     mat4 u_Projection;
 };
 
-//uniform vec4 u_Albedo;
-
-// Use diffuse color alpha for surface opacity
-out vec4 ex_DiffuseColor;
 out vec4 ex_Position_v;
 out vec4 ex_Normal_v;
+out vec3 ex_DiffuseColor;
+out vec3 ex_SpecularColor;
+out float ex_Opacity;
 
 void main(void)
 {
@@ -36,7 +36,10 @@ void main(void)
     ex_Position_v = localToCamera * vec4(ve_VertexPosition_l, 1.f);
     gl_Position = u_Projection * ex_Position_v;
     ex_Normal_v = localToCamera * vec4(ve_Normal_l, 0.f);
-    ex_DiffuseColor = vec4(0.5f, 0.5f, 0.5f, 1.f);
+
+    ex_DiffuseColor  = in_Albedo.rgb;
+    ex_SpecularColor = in_Albedo.rgb;
+    ex_Opacity       = in_Albedo.a;
 }
 )#";
 
@@ -44,12 +47,15 @@ void main(void)
 inline const GLchar* gFragmentShader = R"#(
 #version 420
 
-in vec4 ex_DiffuseColor;
 in vec4 ex_Position_v;
 in vec4 ex_Normal_v;
+in vec3 ex_DiffuseColor;
+in vec3  ex_SpecularColor;
+in float ex_Opacity;
 
 uniform vec3 u_LightPosition_v;
 uniform vec3 u_LightColor;
+uniform vec3 u_AmbientColor;
 
 out vec4 out_Color;
 
@@ -61,27 +67,25 @@ void main(void)
     vec3 h = normalize(view + light);
     vec3 normal = normalize(ex_Normal_v.xyz); // cannot normalize in vertex shader, as interpolation change norm.
     
-    vec3 ambientColor = vec3(0.1, 0.2, 0.1);
-    vec3 specularColor = ex_DiffuseColor.rgb; // metal like
     float specularExponent = 32;
 
     vec3 diffuse = 
-        ex_DiffuseColor.rgb * (ambientColor + u_LightColor * max(0.f, dot(normal, light)));
+        ex_DiffuseColor * (u_AmbientColor + u_LightColor * max(0.f, dot(normal, light)));
     vec3 specular = 
-        u_LightColor * specularColor.rgb * pow(max(0.f, dot(normal, h)), specularExponent);
+        u_LightColor * ex_SpecularColor * pow(max(0.f, dot(normal, h)), specularExponent);
     vec3 color = diffuse + specular;
 
     // Gamma correction
     float gamma = 2.2;
-    out_Color = vec4(pow(color, vec3(1./gamma)), ex_DiffuseColor.a);
+    out_Color = vec4(pow(color, vec3(1./gamma)), ex_Opacity);
 }
 )#";
 
 
 Renderer::Renderer() :
     mProgram{graphics::makeLinkedProgram({
-        {GL_VERTEX_SHADER, gVertexShader},
-        {GL_FRAGMENT_SHADER, gFragmentShader},
+        {GL_VERTEX_SHADER,   {gVertexShader, "PhongVertexShader"}},
+        {GL_FRAGMENT_SHADER, {gFragmentShader, "PhongFragmentShader"}},
     })}
 {}
 
@@ -105,7 +109,8 @@ void Renderer::render(const Mesh & aMesh,
 
     // Converted to HDR in order to normalize the values
     setUniform(mProgram, "u_LightColor", to_hdr(math::sdr::gWhite));
-
+    setUniform(mProgram, "u_AmbientColor", math::hdr::Rgb_f{0.1f, 0.2f, 0.1f});
+    
     //graphics::ScopedBind boundVAO{aMesh.mStream.mVertexArray};
     bind(aMesh.mStream.mVertexArray);
     {
@@ -129,6 +134,15 @@ void Renderer::render(const Mesh & aMesh,
                 glEnableVertexAttribArray(shaderIndex);
                 glVertexAttribDivisor(shaderIndex, 1);
             }
+        }
+        {
+            const graphics::ClientAttribute & attribute =
+                aInstances.mAttributes.at(Semantic::Albedo).mAttribute;
+            // Note: has to handle normalized attributes here
+            glVertexAttribPointer(12, attribute.mDimension, attribute.mDataType, 
+                                  GL_TRUE, static_cast<GLsizei>(instanceView.mStride), (void *)attribute.mOffset);
+            glEnableVertexAttribArray(12);
+            glVertexAttribDivisor(12, 1);
         }
 
         const VertexStream::VertexBuffer & view = aMesh.mStream.mVertexBuffers.front();
