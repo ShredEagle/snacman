@@ -51,8 +51,7 @@ void runApplication()
         //
         // Render
         //
-        clear();
-        renderer.render(scene.mMesh, scene.mCamera);
+        scene.render(renderer);
         glfwApp.swapBuffers();
     }
 }

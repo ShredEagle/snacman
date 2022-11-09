@@ -22,7 +22,7 @@ class Renderer
 public:
     Renderer();
 
-    void render(const Mesh & aMesh, const Camera & aCamera) const;
+    void render(const Mesh & aMesh, const Camera & aCamera, const InstanceStream & aInstances) const;
 
 private:
     graphics::Program mProgram;

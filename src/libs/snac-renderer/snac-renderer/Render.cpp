@@ -12,6 +12,10 @@ inline const GLchar* gVertexShader = R"#(
 layout(location=0) in vec3 ve_VertexPosition_l;
 layout(location=1) in vec3 ve_Normal_l;
 
+layout(location=4) in mat4 in_LocalToWorld;
+// Will be required to support non-uniform scaling.
+//layout(location=8) in mat4 in_LocalToWorldInverseTranspose;
+
 layout(std140) uniform ViewingBlock
 {
     mat4 u_Camera;
@@ -27,9 +31,11 @@ out vec4 ex_Normal_v;
 
 void main(void)
 {
-    ex_Position_v = u_Camera * vec4(ve_VertexPosition_l, 1.f);
+    // TODO maybe should be pre-multiplied in client code?
+    mat4 localToCamera = u_Camera * in_LocalToWorld;
+    ex_Position_v = localToCamera * vec4(ve_VertexPosition_l, 1.f);
     gl_Position = u_Projection * ex_Position_v;
-    ex_Normal_v = u_Camera * vec4(ve_Normal_l, 0.f);
+    ex_Normal_v = localToCamera * vec4(ve_Normal_l, 0.f);
     ex_DiffuseColor = vec4(0.5f, 0.5f, 0.5f, 1.f);
 }
 )#";
@@ -80,7 +86,10 @@ Renderer::Renderer() :
 {}
 
 
-void Renderer::render(const Mesh & aMesh, const Camera & aCamera) const
+// TODO use a matrix 4, 3
+void Renderer::render(const Mesh & aMesh,
+                      const Camera & aCamera,
+                      const InstanceStream & aInstances) const
 {
     auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
@@ -100,6 +109,28 @@ void Renderer::render(const Mesh & aMesh, const Camera & aCamera) const
     //graphics::ScopedBind boundVAO{aMesh.mStream.mVertexArray};
     bind(aMesh.mStream.mVertexArray);
     {
+        const VertexStream::VertexBuffer & instanceView = aInstances.mInstanceBuffer;
+        bind(instanceView.mBuffer);
+        {
+            const graphics::ClientAttribute & attribute =
+                aInstances.mAttributes.at(Semantic::LocalToWorld).mAttribute;
+            // TODO: Remove hardcoding knowledge this will be a multiple of dimensions 4.
+            for (int attributeOffset = 0; attributeOffset != attribute.mDimension / 4; ++attributeOffset)
+            {
+                int dimension = 4; // TODO stop hardcoding
+                int shaderIndex = 4 + attributeOffset;
+                glVertexAttribPointer(shaderIndex,
+                                      dimension,
+                                      attribute.mDataType, 
+                                      GL_FALSE, 
+                                      static_cast<GLsizei>(instanceView.mStride),
+                                      (void *)(attribute.mOffset 
+                                               + attributeOffset * dimension * graphics::getByteSize(attribute.mDataType)));
+                glEnableVertexAttribArray(shaderIndex);
+                glVertexAttribDivisor(shaderIndex, 1);
+            }
+        }
+
         const VertexStream::VertexBuffer & view = aMesh.mStream.mVertexBuffers.front();
         //graphics::ScopedBind boundVBO{aMesh.mStream.mVertexBuffers.front()};
         bind(view.mBuffer);
@@ -120,7 +151,7 @@ void Renderer::render(const Mesh & aMesh, const Camera & aCamera) const
     }
 
     use(mProgram);
-    glDrawArrays(GL_TRIANGLES, 0, aMesh.mStream.mVertexCount);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);
 }
 
 

@@ -12,9 +12,13 @@ namespace snac {
 
 enum class Semantic
 {
+    // TODO should we have separate vertex/instance semantics
+    // Usally per vertex
     Position,
     Normal,
     Color,
+    // Usually per instance
+    LocalToWorld
 };
 
 
@@ -45,6 +49,14 @@ struct Mesh
 {
     VertexStream mStream;
     //Material mMaterial;
+};
+
+
+struct InstanceStream
+{
+    VertexStream::VertexBuffer mInstanceBuffer;
+    std::map<Semantic, VertexStream::Attribute> mAttributes;
+    GLsizei mInstanceCount;
 };
 
 
