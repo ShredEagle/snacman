@@ -110,6 +110,10 @@ void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
             mSphericalOrigin -= dragVector.x() * tangent.u().normalize() - dragVector.y() * tangent.v();
             break;
         }
+        default:
+        {
+            // pass
+        }
     }
 
     mPreviousDragPosition = cursorPosition;

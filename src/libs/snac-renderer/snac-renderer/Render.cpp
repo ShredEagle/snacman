@@ -102,7 +102,7 @@ void Renderer::render(const Mesh & aMesh,
     bind(aCamera.mViewing, viewingLocation);
 
     GLuint viewingBlockIndex;
-    if(viewingBlockIndex = glGetUniformBlockIndex(mProgram, "ViewingBlock") == GL_INVALID_INDEX)
+    if((viewingBlockIndex = glGetUniformBlockIndex(mProgram, "ViewingBlock")) == GL_INVALID_INDEX)
     {
         throw std::logic_error{"Invalid block name."};
     }
