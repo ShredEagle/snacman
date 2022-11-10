@@ -121,7 +121,7 @@ void Renderer::render(const Mesh & aMesh,
             const graphics::ClientAttribute & attribute =
                 aInstances.mAttributes.at(Semantic::LocalToWorld).mAttribute;
             // TODO: Remove hardcoding knowledge this will be a multiple of dimensions 4.
-            for (int attributeOffset = 0; attributeOffset != attribute.mDimension / 4; ++attributeOffset)
+            for (int attributeOffset = 0; attributeOffset != (int)attribute.mDimension / 4; ++attributeOffset)
             {
                 int dimension = 4; // TODO stop hardcoding
                 int shaderIndex = 4 + attributeOffset;
