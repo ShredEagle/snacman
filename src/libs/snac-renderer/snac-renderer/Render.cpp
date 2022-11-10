@@ -1,5 +1,6 @@
 #include "Render.h"
 
+#include <renderer/BufferUtilities.h>
 #include <renderer/Uniforms.h>
 
 namespace ad {

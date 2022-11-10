@@ -2,10 +2,14 @@
 
 #include <graphics/CameraUtilities.h>
 
+#include <renderer/BufferUtilities.h>
+
 #include <math/Angle.h>
 
-// TODO Address this dirty include, to get the GLFW input definitions
+// TODO Address this dirty include, currently needed to get the GLFW input definitions
 #include <GLFW/glfw3.h>
+
+#include <span>
 
 
 namespace ad {
@@ -65,12 +69,11 @@ void Camera::setWorldToCamera(const math::AffineMatrix<4, GLfloat> & aTransforma
 
 math::AffineMatrix<4, float> OrbitalControl::getParentToLocal() const
 {
-    const math::Position<3, float> cartesian = mSpherical.toCartesian();
-    const math::OrthonormalBase<3, float> tangentBase = mSpherical.computeTangentBase();
+    const math::Frame<3, float> tangentFrame = mSpherical.computeTangentFrame();
 
     return math::trans3d::canonicalToFrame(math::Frame<3, float>{
-        mSphericalOrigin + cartesian.as<math::Vec>(),
-        tangentBase
+        mSphericalOrigin + tangentFrame.origin.as<math::Vec>(),
+        tangentFrame.base
     });
 }
 
@@ -103,7 +106,7 @@ void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
             float viewHeight = 2 * tan(gVFov / 2) * std::abs(mSpherical.radius());
             dragVector *= viewHeight / mWindowSize.height();
 
-            math::OrthonormalBase<3, float> tangent = mSpherical.computeTangentBase();
+            math::OrthonormalBase<3, float> tangent = mSpherical.computeTangentFrame().base;
             mSphericalOrigin -= dragVector.x() * tangent.u().normalize() - dragVector.y() * tangent.v();
             break;
         }
