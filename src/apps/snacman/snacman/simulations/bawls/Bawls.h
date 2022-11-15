@@ -23,6 +23,8 @@ class Bawls
     //};
 
 public:
+    using Renderer_t = Renderer;
+
     Bawls(const ad::graphics::AppInterface & aAppInterface);
 
     void update(float aDelta);

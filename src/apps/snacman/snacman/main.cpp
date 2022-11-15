@@ -2,8 +2,10 @@
 #include "Timing.h"
 #include "GraphicState.h"
 
-#include "bawls/Bawls.h"
-#include "bawls/Renderer.h"
+#include "simulations/bawls/Bawls.h"
+#include "simulations/bawls/Renderer.h"
+
+#include "simulations/cubes/Cubes.h"
 
 #include <build_info.h>
 
@@ -11,7 +13,7 @@
 
 #include <imguiui/ImguiUi.h>
 
-#include <math/Interpolation/Interpolation.h>
+#include <math/VectorUtilities.h>
 
 #include <queue>
 #include <thread>
@@ -21,14 +23,24 @@ using namespace ad;
 using namespace ad::snac;
 
 
+//#define BAWLS_SCENE
+#define CUBE_SCENE
+
+#if defined(BAWLS_SCENE)
+using Simu_t = bawls::Bawls;
+#elif defined(CUBE_SCENE)
+using Simu_t = cubes::Cubes;
+#endif
+
+using GraphicStateFifo = StateFifo<Simu_t::Renderer_t::GraphicState_t>;
+
+
 using ms = std::chrono::milliseconds;
 
 //constexpr Clock::duration gSimulationDelta = 1.f/60;
 constexpr Clock::duration gSimulationDelta = ms{50};
 
 constexpr bool gWaitByBusyLoop = true;
-
-using GraphicStateFifo = StateFifo<bawls::GraphicState>;
 
 
 class ImguiGameLoop
@@ -137,20 +149,25 @@ private:
     std::size_t mFront = 1;
 };
 
-
+template <class T_renderer>
 class RenderThread
 {
 public:
     RenderThread(graphics::ApplicationGlfw & aGlfwApp,
                  GraphicStateFifo & aStates,
-                 math::Size<2, GLfloat> aWindowSize_world) :
-        mApplication{aGlfwApp}
+                 T_renderer && aRenderer) :
+        mApplication{aGlfwApp},
+        mViewportListening{
+            aGlfwApp.getAppInterface()->listenFramebufferResize(
+                std::bind(&RenderThread::resizeViewport, this, std::placeholders::_1))}
     {
-        mThread = std::thread{
-            std::bind(&RenderThread::run,
-                      this,
-                      std::ref(aStates),
-                      aWindowSize_world)};
+        mThread = std::thread{[this, &aStates, renderer=std::move(aRenderer)]() mutable
+            {
+                // Note: the move below is why we cannot use std::bind.
+                // We know that the lambda is invoked only once, so we can move from its closure.
+                run(aStates, std::move(renderer));
+            }};
+
     }
 
     /// \brief Stop the thread and rethrow if it actually threw.
@@ -187,11 +204,11 @@ private:
         mThread.join();
     }
 
-    void run(GraphicStateFifo & aStates, math::Size<2, GLfloat> aWindowSize_world)
+    void run(GraphicStateFifo & aStates, T_renderer && aRenderer)
     {
         try
         {
-            run_impl(aStates, aWindowSize_world);
+            run_impl(aStates, std::move(aRenderer));
         }
         catch(...)
         {
@@ -200,7 +217,7 @@ private:
         }
     }
 
-    void run_impl(GraphicStateFifo & aStates, math::Size<2, GLfloat> aWindowSize_world)
+    void run_impl(GraphicStateFifo & aStates, T_renderer && aRenderer)
     {
         SELOG(info)("Render thread started");
 
@@ -213,9 +230,17 @@ private:
         imguiui::ImguiUi ui{mApplication};
         bool showImguiDemo = true;
 
-        // Must be initialized here, in the render thread, because the ctor makes
+        // At first, Renderer was constructed here directly, in the render thread, because the ctor makes
         // OpenGL calls (and the GL context is current on the render thread).
-        bawls::Renderer renderer{aWindowSize_world};
+        //T_renderer renderer{aWindowSize_world};
+
+        // Yet, I am afraid it would be limiting, so it could either:
+        // * forward variadic ctor args
+        // * forward a factory function
+        // * move a fully constructed Renderer here (constructed in main thread, before releasing GL context)
+        // We currently use the 3rd approach. 
+        // Important: move into a **local copy**, so dtor is called on the render thread, where GL context is active.
+         T_renderer renderer{std::move(aRenderer)};
 
         // Used by non-interpolating path, to decide if frame is dirty.
         Clock::time_point renderedPushTime;
@@ -232,13 +257,14 @@ private:
                 std::lock_guard lock{mOperationsMutex};
                 while(!mOperations.empty())
                 {
-                    mOperations.front()();
+                    // Execute operation then pop it.
+                    mOperations.front()(); 
                     mOperations.pop();
                 }
             }
 
             // TODO simulate delay in the render thread:
-            // * Thread iteration time (simulate what happens on the thread, potentially visibility).
+            // * Thread iteration time (simulate what CPU compuations run on the thread, e.g. visibility).
             // * GPU load, i.e. rendering time. This might be harder to simulate.
             //std::this_thread::sleep_for(ms{8});
 
@@ -249,36 +275,34 @@ private:
             // Interpolate (or pick the current state if interpolation is disabled)
             //
             using Circle = graphics::r2d::Shaping::Circle;
-            std::vector<Circle> balls;
+            typename T_renderer::GraphicState_t state;
             if(gImguiGameLoop.isInterpoling())
             {
                 const auto & previous = entries.previous();
                 const auto & latest = entries.current();
 
                 // TODO Is it better to use difference in push times, or the fixed simulation delta as denominator?
+                // Note: using the difference in push time smoothly "slows" the game if push
+                // occurs less frequently than the simulation period would require.
                 float interpolant = float((Clock::now() - latest.pushTime).count())
                                     / (latest.pushTime - previous.pushTime).count();
                 SELOG(trace)("Render thread: Interpolant is {}, delta between entries is {}ms.",
                     interpolant,
                     duration_cast<ms>(latest.pushTime - previous.pushTime).count());
 
-                for (std::size_t ballId = 0; ballId != latest.state->balls.size(); ++ballId)
-                {
-                    balls.emplace_back(
-                        math::lerp(previous.state->balls[ballId].mPosition_world, latest.state->balls[ballId].mPosition_world, interpolant),
-                        previous.state->balls[ballId].mSize_world.width());
-                }
+                state = interpolate(*previous.state, *latest.state, interpolant);
             }
             else
             {
                 const auto & latest = entries.current();
                 if(latest.pushTime != renderedPushTime)
                 {
-                    balls = latest.state->balls;
+                    state = *latest.state;
                     renderedPushTime = latest.pushTime;
                 }
                 else
                 {
+                    // The last frame rendered is still for the latest state, non need to render.
                     continue;
                 }
             }
@@ -288,7 +312,7 @@ private:
             //
             mApplication.getAppInterface()->clear();
             //renderer.render(*entries.current().state);
-            renderer.render(balls);
+            renderer.render(state);
             SELOG(trace)("Render thread: Frame sent to GPU.");
 
             // Imgui rendering
@@ -310,6 +334,7 @@ private:
 
 private:
     graphics::ApplicationGlfw & mApplication;
+    std::shared_ptr<graphics::AppInterface::SizeListener> mViewportListening;
 
     std::queue<std::function<void()>> mOperations;
     std::mutex mOperationsMutex;
@@ -332,25 +357,34 @@ void runApplication()
                                       800, 600 // TODO handle via settings
                                       //TODO, applicationFlags
     };
-    // Context must be removed from this thread before it can be made current on the render thread.
-    glfwApp.removeCurrentContext();
 
     //
     // Initialize scene
     //
-    bawls::Bawls scene{*glfwApp.getAppInterface()};
+#if defined(BAWLS_SCENE)
+    Simu_t scene{*glfwApp.getAppInterface()};
+#elif defined(CUBE_SCENE)
+    Simu_t scene;
+#endif
 
     //
     // Initialize rendering subsystem
     //
+
+    // Initialize the renderer
+#if defined(BAWLS_SCENE)
+    Simu_t::Renderer_t renderer{scene.getWindowWorldSize()};
+#elif defined(CUBE_SCENE)
+    Simu_t::Renderer_t renderer{math::getRatio<float>(glfwApp.getAppInterface()->getWindowSize())};
+#endif
+
+    // Context must be removed from this thread before it can be made current on the render thread.
+    glfwApp.removeCurrentContext();
+
     GraphicStateFifo graphicStates;
     RenderThread renderingThread{glfwApp,
                                  graphicStates,
-                                 scene.getWindowWorldSize()};
-
-    auto viewportListening = glfwApp.getAppInterface()->listenFramebufferResize(
-        std::bind(&RenderThread::resizeViewport, &renderingThread, std::placeholders::_1));
-
+                                 std::move(renderer)};
 
     //
     // Main simulation loop
@@ -394,6 +428,7 @@ void runApplication()
         //
         beginStepTime = Clock::now();
         scene.update((float)asSeconds(simulationDelta));
+        // Pretend update took longer if requested by user.
         sleepBusy(gImguiGameLoop.getUpdateDuration(), beginStepTime);
 
         //

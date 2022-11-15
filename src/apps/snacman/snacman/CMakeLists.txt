@@ -12,13 +12,17 @@ set(${TARGET_NAME}_HEADERS
     Logging.h
     Timing.h
 
-    bawls/Bawls.h
-    bawls/ComponentGeometry.h
-    bawls/ComponentVelocity.h
-    bawls/GraphicState.h
-    bawls/Renderer.h
-    bawls/SystemCollide.h
-    bawls/SystemMove.h
+    simulations/bawls/Bawls.h
+    simulations/bawls/ComponentGeometry.h
+    simulations/bawls/ComponentVelocity.h
+    simulations/bawls/GraphicState.h
+    simulations/bawls/Renderer.h
+    simulations/bawls/SystemCollide.h
+    simulations/bawls/SystemMove.h
+
+    simulations/cubes/Cubes.h
+    simulations/cubes/GraphicState.h
+    simulations/cubes/Renderer.h
 
     detail/Logger.h
 )
@@ -28,7 +32,10 @@ set(${TARGET_NAME}_SOURCES
 
     Entities.cpp
 
-    bawls/Bawls.cpp
+    simulations/bawls/Bawls.cpp
+
+    simulations/cubes/Cubes.cpp
+    simulations/cubes/Renderer.cpp
 
     detail/Logger.cpp
 )
@@ -69,6 +76,8 @@ find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
+        ad::snac-renderer
+
         ad::entity
         ad::graphics
         ad::imguiui
