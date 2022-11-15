@@ -40,7 +40,7 @@ struct VertexStream
     graphics::VertexArrayObject mVertexArray;
     std::vector<VertexBuffer> mVertexBuffers;
     std::map<Semantic, Attribute> mAttributes;
-    GLsizei mVertexCount;
+    GLsizei mVertexCount{0};
     //IndexBufferObject mIndexBuffer;
 };
 
@@ -54,10 +54,21 @@ struct Mesh
 
 struct InstanceStream
 {
+    template <class T_value, std::size_t N_spanExtent>
+    void respecifyData(std::span<T_value, N_spanExtent> aData);
+
     VertexStream::VertexBuffer mInstanceBuffer;
     std::map<Semantic, VertexStream::Attribute> mAttributes;
-    GLsizei mInstanceCount;
+    GLsizei mInstanceCount{0};
 };
+
+
+template <class T_value, std::size_t N_spanExtent>
+void InstanceStream::respecifyData(std::span<T_value, N_spanExtent> aData)
+{
+    respecifyBuffer(mInstanceBuffer.mBuffer, aData);
+    mInstanceCount = (GLsizei)aData.size();
+}
 
 
 } // namespace snac

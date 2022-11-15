@@ -66,7 +66,7 @@ void main(void)
     vec3 light = normalize(u_LightPosition_v - ex_Position_v.xyz);
     vec3 view = vec3(0., 0., 1.);
     vec3 h = normalize(view + light);
-    vec3 normal = normalize(ex_Normal_v.xyz); // cannot normalize in vertex shader, as interpolation change norm.
+    vec3 normal = normalize(ex_Normal_v.xyz); // cannot normalize in vertex shader, as interpolation changes length.
     
     float specularExponent = 32;
 
