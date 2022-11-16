@@ -16,7 +16,7 @@ namespace cubes {
 struct Entity
 {
     math::Position<3, float> mPosition_world;
-    math::Degree<float> mYAngle;
+    math::Radian<float> mYAngle;
     math::hdr::Rgba_f mColor;
 };
 

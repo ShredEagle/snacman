@@ -20,7 +20,7 @@ namespace {
 } // anonymous namespace
 
 
-snac::InstanceStream makeInstanceStream()
+snac::InstanceStream initializeInstanceStream()
 {
     snac::InstanceStream instances;
     {
@@ -39,6 +39,7 @@ snac::InstanceStream makeInstanceStream()
         };
         instances.mAttributes.emplace(snac::Semantic::Albedo, snac::VertexStream::Attribute{0, albedo});
     }
+    instances.mInstanceBuffer.mStride = sizeof(PoseColor);
     return instances;
 }
 
@@ -46,7 +47,7 @@ snac::InstanceStream makeInstanceStream()
 Renderer::Renderer(float aAspectRatio) :
     mCamera{aAspectRatio},
     mCubeMesh{snac::makeCube()},
-    mInstances{makeInstanceStream()}
+    mInstances{initializeInstanceStream()}
 {}
 
 

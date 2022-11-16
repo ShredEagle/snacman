@@ -20,9 +20,11 @@ set(${TARGET_NAME}_HEADERS
     simulations/bawls/SystemCollide.h
     simulations/bawls/SystemMove.h
 
+    simulations/cubes/ComponentGeometry.h
     simulations/cubes/Cubes.h
     simulations/cubes/GraphicState.h
     simulations/cubes/Renderer.h
+    simulations/cubes/SystemMove.h
 
     detail/Logger.h
 )
@@ -36,6 +38,7 @@ set(${TARGET_NAME}_SOURCES
 
     simulations/cubes/Cubes.cpp
     simulations/cubes/Renderer.cpp
+    simulations/cubes/SystemMove.cpp
 
     detail/Logger.cpp
 )
