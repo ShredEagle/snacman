@@ -28,7 +28,7 @@ struct Camera
     graphics::UniformBufferObject mViewing;
 
     static constexpr Parameters gDefaults{
-        .vFov = math::Degree{45.f},
+        .vFov = math::Degree<float>{45.f},
         //// I am about 50cm away from screen, a 600px high window is ~14cm on it.
         ///.vFov = math::Radian<float>{2 * std::atan2(140.f/2, 500.f)},
         .zNear = -0.1f,
@@ -47,7 +47,7 @@ public:
     /// \warning aAzimuthal first, aPolar second (matches the usual convention for x and y)
     void incrementOrbit(math::Radian<float> aAzimuthal, math::Radian<float> aPolar);
     void incrementOrbitRadians(math::Vec<2, float> aIncrements)
-    { incrementOrbit(math::Radian{aIncrements.x()}, math::Radian{aIncrements.y()}); }
+    { incrementOrbit(math::Radian<float>{aIncrements.x()}, math::Radian<float>{aIncrements.y()}); }
 
     void pan(math::Vec<2, float> aPanning);
     float & radius();

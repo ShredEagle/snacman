@@ -52,10 +52,10 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         leftIt != aLeft.mEntities.end();
         ++leftIt, ++rightIt)
     {
-        state.mEntities.emplace_back(
+        state.mEntities.push_back(Entity{
             math::lerp(leftIt->mPosition_world, rightIt->mPosition_world,   aInterpolant),
             math::lerp(leftIt->mYAngle,         rightIt->mYAngle,           aInterpolant),
-            math::lerp(leftIt->mColor,          rightIt->mColor,            aInterpolant));
+            math::lerp(leftIt->mColor,          rightIt->mColor,            aInterpolant)});
     }
     return state;
 }

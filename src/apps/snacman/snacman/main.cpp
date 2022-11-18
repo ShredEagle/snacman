@@ -314,7 +314,6 @@ private:
             //
             // Interpolate (or pick the current state if interpolation is disabled)
             //
-            using Circle = graphics::r2d::Shaping::Circle;
             typename T_renderer::GraphicState_t state;
             if(gImguiGameLoop.isInterpoling())
             {

@@ -76,6 +76,9 @@ struct Input
 class HidManager
 {
 public:
+    // Note: Could not find a way for clang to accept Null as class nested under Inhibiter.
+    class InhibiterNull;
+
     class Inhibiter
     {
     public:
@@ -84,9 +87,16 @@ public:
 
         virtual ~Inhibiter() = default;
 
-        class Null;
+        static const InhibiterNull gNull;
+    };
 
-        static const Null gNull;
+    class InhibiterNull final : public Inhibiter
+    {
+    public:
+        bool isCapturingMouse() const override
+        { return false; }
+        bool isCapturingKeyboard() const override
+        { return false; }
     };
 
     HidManager(graphics::ApplicationGlfw & aApplication);
@@ -96,15 +106,6 @@ public:
     Input read(const Input & aPrevious, const Inhibiter & aInhibiter = Inhibiter::gNull);
 
 private:
-    // Note: must be defined within HidManager (not after) because it is used as a default value on read().
-    class Inhibiter::Null final : public Inhibiter
-    {
-        bool isCapturingMouse() const override
-        { return false; }
-        bool isCapturingKeyboard() const override
-        { return false; }
-    };
-
     // TODO Answer: might the callback be called several times between/by glfwPollEvents()?
     void callbackCursorPosition(double xpos, double ypos);
     void callbackMouseButton(int button, int action, int mods, double xpos, double ypos);
@@ -117,7 +118,10 @@ private:
 };
 
 
-inline const HidManager::Inhibiter::Null HidManager::Inhibiter::gNull{};
+// Note: must be defined within HidManager (not after) because it is used as a default value on read().
+
+
+inline const HidManager::InhibiterNull HidManager::Inhibiter::gNull{};
 
 
 } // namespace snac

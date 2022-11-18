@@ -21,12 +21,12 @@ Cubes::Cubes(graphics::AppInterface & aAppInterface) :
     // Add cubes
     mWorld.addEntity().get(init)->add(component::Geometry{
         .mPosition = { 1.5f, 0.f, 0.f},
-        .mYRotation = math::Degree{0.f},
+        .mYRotation = math::Degree<float>{0.f},
     });
 
     mWorld.addEntity().get(init)->add(component::Geometry{
         .mPosition = {-1.5f, 0.f, 0.f},
-        .mYRotation = math::Degree{0.f},
+        .mYRotation = math::Degree<float>{0.f},
     });
 }
 
