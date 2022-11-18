@@ -70,17 +70,21 @@ Input HidManager::initialInput() const
 }
 
 
-Input HidManager::read(const Input & aPrevious)
+Input HidManager::read(const Input & aPrevious, const Inhibiter & aInhibiter)
 {
     Input result{
         .mCursorPosition = mCursorPosition,
         .mCursorDisplacement = mCursorPosition - aPrevious.mCursorPosition,
-        .mScrollOffset = mScrollOffset,
     };
 
-    for (auto id = 0; id != mMouseButtons.size(); ++id)
+    if (!aInhibiter.isCapturingMouse())
     {
-        handleButtonEdges(result.mMouseButtons[id], mMouseButtons[id]);
+        for (auto id = 0; id != mMouseButtons.size(); ++id)
+        {
+            handleButtonEdges(result.mMouseButtons[id], mMouseButtons[id]);
+        }
+
+        result.mScrollOffset = mScrollOffset;
     }
 
     mScrollOffset.setZero();

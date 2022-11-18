@@ -80,9 +80,29 @@ public:
         return mInterpolate;
     }
 
+    enum WantCapture
+    {
+        Null,
+        Mouse = 1 << 0,
+        Keyboard = 1 << 1 ,
+    };
+
+    // TODO use a flag type
+    void resetCapture(WantCapture aCaptures)
+    {
+        mCaptures = aCaptures;
+    }
+
+    bool isCapturing(WantCapture aCapture)
+    {
+        return (mCaptures & aCapture) == aCapture;
+    }
+
 private:
     std::atomic<Clock::duration::rep> mSimulationPeriodMs{duration_cast<ms>(gSimulationDelta).count()};
     std::atomic<Clock::duration::rep> mUpdateDuration{0};
+
+    std::atomic<std::uint8_t> mCaptures{0};
 
     // Synchronous part (only seen by the rendering thread)
     bool mInterpolate{true};
@@ -91,6 +111,17 @@ private:
 
 // TODO find a better place than global
 ImguiGameLoop gImguiGameLoop;
+
+
+/// \brief Implement HidManager's Inhibiter protocol, for Imgui.
+/// Allowing the app to discard input events that are handled by DearImgui.
+class ImguiInhibiter : public HidManager::Inhibiter
+{
+    bool isCapturingMouse() const override
+    { return gImguiGameLoop.isCapturing(ImguiGameLoop::Mouse); }
+    bool isCapturingKeyboard() const override
+    { return gImguiGameLoop.isCapturing(ImguiGameLoop::Keyboard); }
+};
 
 
 /// \brief A double buffer implementation, consuming entries from a GraphicStateFifo.
@@ -315,6 +346,11 @@ private:
 
             // Imgui rendering
             ui.newFrame();
+            // NewFrame() updates the io catpure flag: consume them ASAP
+            // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
+            gImguiGameLoop.resetCapture(static_cast<ImguiGameLoop::WantCapture>(
+                (ui.isCapturingMouse() ? ImguiGameLoop::Mouse : ImguiGameLoop::Null) 
+                | (ui.isCapturingKeyboard() ? ImguiGameLoop::Keyboard : ImguiGameLoop::Null)));
 
             ImGui::ShowDemoWindow(&showImguiDemo);
             ImGui::Begin("Gameloop");
@@ -381,6 +417,7 @@ void runApplication()
     //
     HidManager hid{glfwApp};
     Input input = hid.initialInput();
+    ImguiInhibiter inhibiter;
 
     //
     // Main simulation loop
@@ -396,7 +433,7 @@ void runApplication()
         Clock::duration simulationDelta = gImguiGameLoop.getSimulationDelta();
 
         // Update input
-        input = hid.read(input);
+        input = hid.read(input, inhibiter);
 
         //
         // Release CPU cycles until next time point to advance the simulation.

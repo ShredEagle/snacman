@@ -76,13 +76,35 @@ struct Input
 class HidManager
 {
 public:
+    class Inhibiter
+    {
+    public:
+        virtual bool isCapturingMouse() const = 0;
+        virtual bool isCapturingKeyboard() const = 0;
+
+        virtual ~Inhibiter() = default;
+
+        class Null;
+
+        static const Null gNull;
+    };
+
     HidManager(graphics::ApplicationGlfw & aApplication);
 
     Input initialInput() const;
 
-    Input read(const Input & aPrevious);
+    Input read(const Input & aPrevious, const Inhibiter & aInhibiter = Inhibiter::gNull);
 
 private:
+    // Note: must be defined within HidManager (not after) because it is used as a default value on read().
+    class Inhibiter::Null final : public Inhibiter
+    {
+        bool isCapturingMouse() const override
+        { return false; }
+        bool isCapturingKeyboard() const override
+        { return false; }
+    };
+
     // TODO Answer: might the callback be called several times between/by glfwPollEvents()?
     void callbackCursorPosition(double xpos, double ypos);
     void callbackMouseButton(int button, int action, int mods, double xpos, double ypos);
@@ -93,6 +115,9 @@ private:
     std::array<bool, static_cast<std::size_t>(MouseButton::_End)> mMouseButtons;
     math::Vec<2, float> mScrollOffset{0.f, 0.f};
 };
+
+
+inline const HidManager::Inhibiter::Null HidManager::Inhibiter::gNull{};
 
 
 } // namespace snac
