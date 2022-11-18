@@ -13,8 +13,6 @@
 
 #include <imguiui/ImguiUi.h>
 
-#include <math/VectorUtilities.h>
-
 #include <queue>
 #include <thread>
 
@@ -361,22 +359,14 @@ void runApplication()
     //
     // Initialize scene
     //
-#if defined(BAWLS_SCENE)
     Simu_t scene{*glfwApp.getAppInterface()};
-#elif defined(CUBE_SCENE)
-    Simu_t scene;
-#endif
 
     //
     // Initialize rendering subsystem
     //
 
     // Initialize the renderer
-#if defined(BAWLS_SCENE)
-    Simu_t::Renderer_t renderer{scene.getWindowWorldSize()};
-#elif defined(CUBE_SCENE)
-    Simu_t::Renderer_t renderer{math::getRatio<float>(glfwApp.getAppInterface()->getWindowSize())};
-#endif
+    Simu_t::Renderer_t renderer = scene.makeRenderer();
 
     // Context must be removed from this thread before it can be made current on the render thread.
     glfwApp.removeCurrentContext();
@@ -385,6 +375,12 @@ void runApplication()
     RenderThread renderingThread{glfwApp,
                                  graphicStates,
                                  std::move(renderer)};
+
+    //
+    // Initialize input devices
+    //
+    HidManager hid{glfwApp};
+    Input input = hid.initialInput();
 
     //
     // Main simulation loop
@@ -399,9 +395,13 @@ void runApplication()
 
         Clock::duration simulationDelta = gImguiGameLoop.getSimulationDelta();
 
+        // Update input
+        input = hid.read(input);
+
         //
         // Release CPU cycles until next time point to advance the simulation.
         //
+        // TODO move, so the wait happend **before** handle events
         if (!gWaitByBusyLoop)
         {
             if (auto beforeSleep = Clock::now(); (previousStepTime + simulationDelta) > beforeSleep)
@@ -427,7 +427,7 @@ void runApplication()
         // Simulate one step
         //
         beginStepTime = Clock::now();
-        scene.update((float)asSeconds(simulationDelta));
+        scene.update((float)asSeconds(simulationDelta), input);
         // Pretend update took longer if requested by user.
         sleepBusy(gImguiGameLoop.getUpdateDuration(), beginStepTime);
 

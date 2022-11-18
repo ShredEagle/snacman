@@ -3,8 +3,6 @@
 
 #include "ComponentGeometry.h"
 
-#include "../../GraphicState.h"
-
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
 

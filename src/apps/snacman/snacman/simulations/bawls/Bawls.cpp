@@ -49,11 +49,17 @@ Bawls::Bawls(const ad::graphics::AppInterface & aAppInterface) :
 }
 
 
-void Bawls::update(float aDelta)
+void Bawls::update(float aDelta, const snac::Input & /*aInput*/)
 {
     //mHistory.push(Backup{mWorld.saveState()});
     mMoveSystem.update(aDelta);
     mCollideSystem.update();
+}
+
+
+Bawls::Renderer_t Bawls::makeRenderer() const
+{
+    return Renderer_t{mWindowSize_world};
 }
 
 

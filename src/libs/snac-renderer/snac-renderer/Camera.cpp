@@ -15,12 +15,6 @@
 namespace ad {
 namespace snac {
 
-constexpr float gZNear = -0.1f;
-constexpr float gZFar = -500.f;
-constexpr math::Degree<float> gVFov{45.f};
-//// I am about 50cm away from screen, a 600px high window is ~14cm on it.
-////const math::Radian<float> gVFov{2 * std::atan2(140.f/2, 500.f)};
-
 
 math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVerticalFov, float aAspectRatio,
                                                     float aZNear, float aZFar)
@@ -39,21 +33,22 @@ math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVertica
            ;
 }
            
-Camera::Camera(float aAspectRatio)
+Camera::Camera(float aAspectRatio, Parameters aParameters)
 {
     const std::array<math::Matrix<4, 4, float>, 2> identities{
         math::Matrix<4, 4, float>::Identity(),
-        makePerspectiveProjection(gVFov, aAspectRatio, gZNear, gZFar)
+        makePerspectiveProjection(aParameters.vFov, aAspectRatio, aParameters.zNear, aParameters.zFar)
     };
 
     load(mViewing, std::span{identities}, graphics::BufferHint::DynamicDraw);
 }
 
 
-void Camera::setAspectRatio(float aAspectRatio)
+void Camera::resetProjection(float aAspectRatio, Parameters aParameters)
 {
     graphics::ScopedBind bound{mViewing};
-    auto perspectiveProjection = makePerspectiveProjection(gVFov, aAspectRatio, gZNear, gZFar);
+    auto perspectiveProjection = 
+        makePerspectiveProjection(aParameters.vFov, aAspectRatio, aParameters.zNear, aParameters.zFar);
     glBufferSubData(GL_UNIFORM_BUFFER, sizeof(math::Matrix<4, 4, float>), sizeof(perspectiveProjection),
                     perspectiveProjection.data());
 }
@@ -67,7 +62,31 @@ void Camera::setWorldToCamera(const math::AffineMatrix<4, GLfloat> & aTransforma
 }
 
 
-math::AffineMatrix<4, float> OrbitalControl::getParentToLocal() const
+void Orbital::incrementOrbit(math::Radian<float> aAzimuthal, math::Radian<float> aPolar)
+{
+    using Radian = math::Radian<float>;
+    mSpherical.polar() += aPolar;
+    mSpherical.azimuthal() += aAzimuthal;
+    mSpherical.polar() = std::max(Radian{0},
+                                  std::min(Radian{math::pi<float>},
+                                           mSpherical.polar()));
+}
+
+
+void Orbital::pan(math::Vec<2, float> aPanning)
+{
+    math::OrthonormalBase<3, float> tangent = mSpherical.computeTangentFrame().base;
+    mSphericalOrigin -= aPanning.x() * tangent.u().normalize() - aPanning.y() * tangent.v();
+}
+
+
+float & Orbital::radius()
+{
+    return mSpherical.radius();
+}
+
+
+math::AffineMatrix<4, float> Orbital::getParentToLocal() const
 {
     const math::Frame<3, float> tangentFrame = mSpherical.computeTangentFrame();
 
@@ -78,7 +97,7 @@ math::AffineMatrix<4, float> OrbitalControl::getParentToLocal() const
 }
 
 
-void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
+void MouseOrbitalControl::callbackCursorPosition(double xpos, double ypos)
 {
     using Radian = math::Radian<float>;
     math::Position<2, float> cursorPosition{(float)xpos, (float)ypos};
@@ -92,9 +111,7 @@ void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
 
             // The viewed object should turn in the direction of the mouse,
             // so the camera angles are changed in the opposite direction (hence the substractions).
-            mSpherical.azimuthal() -= Radian{angularIncrements.x()};
-            mSpherical.polar() -= Radian{angularIncrements.y()};
-            mSpherical.polar() = std::max(Radian{0}, std::min(Radian{math::pi<float>}, mSpherical.polar()));
+            mOrbital.incrementOrbit(Radian{-angularIncrements.x()}, Radian{-angularIncrements.y()});
             break;
         }
         case ControlMode::Pan:
@@ -103,11 +120,10 @@ void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
 
             // View height in the plane of the polar origin (plane perpendicular to the view vector)
             // (the view height depends on the "plane distance" in the perspective case).
-            float viewHeight = 2 * tan(gVFov / 2) * std::abs(mSpherical.radius());
-            dragVector *= viewHeight / mWindowSize.height();
+            float viewHeight_world = 2 * tan(mVerticalFov / 2) * std::abs(mOrbital.radius());
+            dragVector *= viewHeight_world / mWindowSize.height();
 
-            math::OrthonormalBase<3, float> tangent = mSpherical.computeTangentFrame().base;
-            mSphericalOrigin -= dragVector.x() * tangent.u().normalize() - dragVector.y() * tangent.v();
+            mOrbital.pan(dragVector);
             break;
         }
         default:
@@ -120,7 +136,7 @@ void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
 }
 
 
-void OrbitalControl::callbackMouseButton(int button, int action, int mods, double xpos, double ypos)
+void MouseOrbitalControl::callbackMouseButton(int button, int action, int mods, double xpos, double ypos)
 {
     if (action == GLFW_PRESS)
     {
@@ -142,10 +158,10 @@ void OrbitalControl::callbackMouseButton(int button, int action, int mods, doubl
 }
 
 
-void OrbitalControl::callbackScroll(double xoffset, double yoffset)
+void MouseOrbitalControl::callbackScroll(double xoffset, double yoffset)
 {
     float factor = (1 - (float)yoffset * gScrollFactor);
-    mSpherical.radius() *= factor;
+    mOrbital.radius() *= factor;
 }
 
 } // namespace snac

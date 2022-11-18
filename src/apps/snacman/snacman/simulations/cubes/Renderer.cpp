@@ -44,18 +44,18 @@ snac::InstanceStream initializeInstanceStream()
 }
 
 
-Renderer::Renderer(float aAspectRatio) :
-    mCamera{aAspectRatio},
+Renderer::Renderer(float aAspectRatio, snac::Camera::Parameters aCameraParameters) :
+    mCamera{aAspectRatio, aCameraParameters},
     mCubeMesh{snac::makeCube()},
     mInstances{initializeInstanceStream()}
 {}
 
 
-void Renderer::render(const GraphicState & aState)
+void Renderer::render(const visu::GraphicState & aState)
 {
     // Stream the instance buffer data
     std::vector<PoseColor> instanceBufferData;
-    for (const Entity & entity : aState.mEntities)
+    for (const visu::Entity & entity : aState.mEntities)
     {
         instanceBufferData.push_back(PoseColor{
             .pose = 
@@ -66,7 +66,8 @@ void Renderer::render(const GraphicState & aState)
     }
 
     // Position camera
-    mCamera.setWorldToCamera(math::trans3d::translate(-aState.mCamera.mPosition_world.as<math::Vec>()));
+    //mCamera.setWorldToCamera(math::trans3d::translate(-aState.mCamera.mPosition_world.as<math::Vec>()));
+    mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
     mInstances.respecifyData(std::span{instanceBufferData});
     mRenderer.render(mCubeMesh, mCamera, mInstances);

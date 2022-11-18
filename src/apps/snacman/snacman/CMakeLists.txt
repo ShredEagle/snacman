@@ -9,6 +9,7 @@ configure_file(build_info.h.in build_info.h @ONLY)
 set(${TARGET_NAME}_HEADERS
     Entities.h
     GraphicState.h
+    Input.h
     Logging.h
     Timing.h
 
@@ -22,9 +23,11 @@ set(${TARGET_NAME}_HEADERS
 
     simulations/cubes/ComponentGeometry.h
     simulations/cubes/Cubes.h
+    simulations/cubes/EntityWrap.h
     simulations/cubes/GraphicState.h
     simulations/cubes/Renderer.h
     simulations/cubes/SystemMove.h
+    simulations/cubes/SystemOrbitalCamera.h
 
     detail/Logger.h
 )
@@ -33,12 +36,14 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     Entities.cpp
+    Input.cpp
 
     simulations/bawls/Bawls.cpp
 
     simulations/cubes/Cubes.cpp
     simulations/cubes/Renderer.cpp
     simulations/cubes/SystemMove.cpp
+    simulations/cubes/SystemOrbitalCamera.cpp
 
     detail/Logger.cpp
 )

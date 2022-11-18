@@ -73,31 +73,31 @@ struct Scene
     Mesh mMesh{makeCube()};
     InstanceStream mInstances{makeInstances()};
     Camera mCamera;
-    OrbitalControl mCameraControl;
+    MouseOrbitalControl mCameraControl;
 
     std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListener;
 };
 
 
 inline Scene::Scene(graphics::AppInterface & aAppInterface) :
-    mCamera{math::getRatio<float>(aAppInterface.getFramebufferSize())},
-    mCameraControl{aAppInterface.getWindowSize()}
+    mCamera{math::getRatio<float>(aAppInterface.getFramebufferSize()), Camera::gDefaults},
+    mCameraControl{aAppInterface.getWindowSize(), Camera::gDefaults.vFov}
 {
     using namespace std::placeholders;
 
     aAppInterface.registerCursorPositionCallback(
-        std::bind(&OrbitalControl::callbackCursorPosition, &mCameraControl, _1, _2));
+        std::bind(&MouseOrbitalControl::callbackCursorPosition, &mCameraControl, _1, _2));
 
     aAppInterface.registerMouseButtonCallback(
-        std::bind(&OrbitalControl::callbackMouseButton, &mCameraControl, _1, _2, _3, _4, _5));
+        std::bind(&MouseOrbitalControl::callbackMouseButton, &mCameraControl, _1, _2, _3, _4, _5));
 
     aAppInterface.registerScrollCallback(
-        std::bind(&OrbitalControl::callbackScroll, &mCameraControl, _1, _2));
+        std::bind(&MouseOrbitalControl::callbackScroll, &mCameraControl, _1, _2));
 
     mSizeListener = aAppInterface.listenWindowResize(
         [this](const math::Size<2, int> & size)
         {
-            mCamera.setAspectRatio(math::getRatio<float>(size)); 
+            mCamera.resetProjection(math::getRatio<float>(size), Camera::gDefaults); 
             mCameraControl.setWindowSize(size);
         });
 }

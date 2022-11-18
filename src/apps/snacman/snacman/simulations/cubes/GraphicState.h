@@ -3,6 +3,7 @@
 
 #include <math/Angle.h>
 #include <math/Color.h>
+#include <math/Homogeneous.h> // TODO #pose remove
 #include <math/Vector.h>
 #include <math/Interpolation/Interpolation.h>
 
@@ -11,6 +12,7 @@
 
 namespace ad {
 namespace cubes {
+namespace visu {
 
 
 struct Entity
@@ -23,7 +25,10 @@ struct Entity
 
 struct Camera
 {
-    math::Position<3, float> mPosition_world;
+    // TODO #pose replace with position and orientation
+    math::AffineMatrix<4, float> mWorldToCamera{math::AffineMatrix<4, float>::Identity()};
+
+    //math::Position<3, float> mPosition_world;
 };
 
 
@@ -34,11 +39,13 @@ struct GraphicState
 };
 
 
-// TODO Handle cases where left and right do not have the same entities (i.e. only interpolate the intersection).
+// TODO Handle cases where left and right do not have the same entities (i.e. only interpolate the sets intersection).
 inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState & aRight, float aInterpolant)
 {
     GraphicState state{
-        .mCamera = math::lerp(aLeft.mCamera.mPosition_world, aRight.mCamera.mPosition_world, aInterpolant),
+        // TODO #pose
+        //.mCamera = math::lerp(aLeft.mCamera.mPosition_world, aRight.mCamera.mPosition_world, aInterpolant),
+        .mCamera{aRight.mCamera},
     };
 
     for(auto leftIt = aLeft.mEntities.begin(), rightIt = aRight.mEntities.begin();
@@ -53,5 +60,6 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
     return state;
 }
 
+} // namespace visu
 } // namespace cubes
 } // namespace ad

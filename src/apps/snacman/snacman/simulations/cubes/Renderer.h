@@ -14,16 +14,17 @@ namespace cubes {
 class Renderer
 {
 public:
-    using GraphicState_t = GraphicState;
+    using GraphicState_t = visu::GraphicState;
 
-    Renderer(float aAspectRatio);
+    Renderer(float aAspectRatio, snac::Camera::Parameters aCameraParameters);
 
-    void render(const GraphicState & aState);
+    void render(const visu::GraphicState & aState);
 
 private:
     snac::Renderer mRenderer;
 
     snac::Camera mCamera;
+
     snac::Mesh mCubeMesh;
     snac::InstanceStream mInstances;
 };
