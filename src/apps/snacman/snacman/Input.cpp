@@ -79,7 +79,7 @@ Input HidManager::read(const Input & aPrevious, const Inhibiter & aInhibiter)
 
     if (!aInhibiter.isCapturingMouse())
     {
-        for (auto id = 0; id != mMouseButtons.size(); ++id)
+        for (std::size_t id = 0; id != mMouseButtons.size(); ++id)
         {
             handleButtonEdges(result.mMouseButtons[id], mMouseButtons[id]);
         }
