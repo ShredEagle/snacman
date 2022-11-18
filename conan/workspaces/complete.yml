@@ -1,7 +1,7 @@
 editables:
-    entity/83e1ade064@adnn/develop:
+    entity/879a1668d5@adnn/develop:
         path: ../../../entity/conan
-    graphics/aa960a2385@adnn/develop:
+    graphics/88a4396f18@adnn/develop:
         path: ../../../graphics/conan
     handy/acd90c0549@adnn/develop:
         path: ../../../handy/conan
