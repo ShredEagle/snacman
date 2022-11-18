@@ -18,6 +18,8 @@ public:
 
     Renderer(float aAspectRatio, snac::Camera::Parameters aCameraParameters);
 
+    void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
+
     void render(const visu::GraphicState & aState);
 
 private:

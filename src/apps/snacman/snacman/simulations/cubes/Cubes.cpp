@@ -36,7 +36,7 @@ void Cubes::update(float aDelta, const snac::Input & aInput)
     ent::Phase update;
     mSystemMove.get(update)->get<system::Move>().update(aDelta);
     mSystemOrbitalCamera->update(aInput,
-                                 mCameraParams.vFov,
+                                 getCameraParameters().vFov,
                                  mAppInterface->getWindowSize().height());
 }
 
@@ -60,11 +60,17 @@ std::unique_ptr<visu::GraphicState> Cubes::makeGraphicState() const
 }
 
 
+snac::Camera::Parameters Cubes::getCameraParameters() const
+{
+    return mCameraParameters;
+}
+
+
 Cubes::Renderer_t Cubes::makeRenderer() const
 {
     return Renderer_t{
         math::getRatio<float>(mAppInterface->getWindowSize()),
-        mCameraParams
+        getCameraParameters(),
     };
 }
 

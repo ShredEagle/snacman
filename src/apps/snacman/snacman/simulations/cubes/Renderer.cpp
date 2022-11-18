@@ -51,6 +51,12 @@ Renderer::Renderer(float aAspectRatio, snac::Camera::Parameters aCameraParameter
 {}
 
 
+void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
+{
+    mCamera.resetProjection(aAspectRatio, aParameters);
+}
+
+
 void Renderer::render(const visu::GraphicState & aState)
 {
     // Stream the instance buffer data

@@ -13,6 +13,8 @@
 
 #include <imguiui/ImguiUi.h>
 
+#include <math/VectorUtilities.h>
+
 #include <queue>
 #include <thread>
 
@@ -211,9 +213,18 @@ public:
     void resizeViewport(math::Size<2, int> aFramebufferSize)
     {
         std::lock_guard lock{mOperationsMutex};
-        mOperations.push([=]()
+        mOperations.push([=](T_renderer & /*aRenderer*/)
             {
                 glViewport(0, 0, aFramebufferSize.width(), aFramebufferSize.height());
+            });
+    }
+
+    void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
+    {
+        std::lock_guard lock{mOperationsMutex};
+        mOperations.push([=](T_renderer & aRenderer)
+            {
+                aRenderer.resetProjection(aAspectRatio, aParameters);
             });
     }
 
@@ -287,7 +298,7 @@ private:
                 while(!mOperations.empty())
                 {
                     // Execute operation then pop it.
-                    mOperations.front()(); 
+                    mOperations.front()(renderer); 
                     mOperations.pop();
                 }
             }
@@ -370,7 +381,7 @@ private:
     graphics::ApplicationGlfw & mApplication;
     std::shared_ptr<graphics::AppInterface::SizeListener> mViewportListening;
 
-    std::queue<std::function<void()>> mOperations;
+    std::queue<std::function<void(T_renderer &)>> mOperations;
     std::mutex mOperationsMutex;
 
     std::atomic<bool> mThrew{false};
@@ -411,6 +422,15 @@ void runApplication()
     RenderThread renderingThread{glfwApp,
                                  graphicStates,
                                  std::move(renderer)};
+
+#if defined(CUBE_SCENE)
+    // Reset the camera projection when the window size changes
+    auto mWindowSizeListening = glfwApp.getAppInterface()->listenWindowResize(
+        [&renderingThread, &scene](math::Size<2, int> aWindowSize)
+        {
+            renderingThread.resetProjection(math::getRatio<float>(aWindowSize), scene.getCameraParameters());
+        });
+#endif
 
     //
     // Initialize input devices

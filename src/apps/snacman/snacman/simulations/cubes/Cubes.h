@@ -31,11 +31,13 @@ public:
 
     std::unique_ptr<visu::GraphicState> makeGraphicState() const; 
 
+    snac::Camera::Parameters getCameraParameters() const;
+
     Renderer_t makeRenderer() const;
 
 private:
     graphics::AppInterface * mAppInterface;
-    snac::Camera::Parameters mCameraParams = snac::Camera::gDefaults;
+    snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
 
     ent::EntityManager mWorld;
     ent::Handle<ent::Entity> mSystemMove;
