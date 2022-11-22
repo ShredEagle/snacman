@@ -37,8 +37,8 @@ using GraphicStateFifo = StateFifo<Simu_t::Renderer_t::GraphicState_t>;
 
 using ms = std::chrono::milliseconds;
 
-//constexpr Clock::duration gSimulationDelta = 1.f/60;
-constexpr Clock::duration gSimulationDelta = ms{50};
+constexpr Clock::duration gSimulationDelta = Clock::duration{std::chrono::seconds{1}} / 60;
+//constexpr Clock::duration gSimulationDelta = ms{50};
 
 constexpr bool gWaitByBusyLoop = true;
 
