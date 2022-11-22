@@ -5,6 +5,8 @@
 #include "SystemCollide.h"
 #include "SystemMove.h"
 
+#include "../../Input.h"
+
 #include <entity/EntityManager.h>
 
 #include <graphics/AppInterface.h>
@@ -23,9 +25,11 @@ class Bawls
     //};
 
 public:
+    using Renderer_t = Renderer;
+
     Bawls(const ad::graphics::AppInterface & aAppInterface);
 
-    void update(float aDelta);
+    void update(float aDelta, const snac::Input & aInput);
 
     //void restorePrevious();
     //void restoreNext();
@@ -33,9 +37,7 @@ public:
     std::unique_ptr<GraphicState> makeGraphicState() /*const*/ //TODO should allow constness
     { return mGraphicStateProducer.makeGraphicState(); }
 
-
-    math::Size<2, GLfloat> getWindowWorldSize() const
-    { return mWindowSize_world; }
+    Renderer_t makeRenderer() const;
 
 private:
     static constexpr GLfloat gWindowHeight_world = 10;

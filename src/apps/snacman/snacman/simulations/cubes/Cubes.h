@@ -1,0 +1,50 @@
+#pragma once
+
+
+#include "ComponentGeometry.h"
+#include "EntityWrap.h"
+#include "Renderer.h"
+#include "SystemOrbitalCamera.h"
+
+#include "../../Input.h"
+
+#include <entity/EntityManager.h>
+
+#include <graphics/AppInterface.h>
+
+#include <memory>
+
+
+namespace ad {
+namespace cubes {
+
+
+class Cubes
+{
+public:
+    using Renderer_t = Renderer;
+
+    /// \brief Initialize the scene;
+    Cubes(graphics::AppInterface & aAppInterface);
+
+    void update(float aDelta, const snac::Input & aInput);
+
+    std::unique_ptr<visu::GraphicState> makeGraphicState() const; 
+
+    snac::Camera::Parameters getCameraParameters() const;
+
+    Renderer_t makeRenderer() const;
+
+private:
+    graphics::AppInterface * mAppInterface;
+    snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
+
+    ent::EntityManager mWorld;
+    ent::Handle<ent::Entity> mSystemMove;
+    EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
+    EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
+};
+
+
+} // namespace cubes
+} // namespace ad

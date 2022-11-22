@@ -14,14 +14,16 @@ namespace bawls {
 class Renderer
 {
 public:
+    using GraphicState_t = GraphicState;
+
     explicit Renderer(math::Size<2, GLfloat> aWindowSize_world)
     {
         mCameraProjection.setCameraTransformation(GetProjection(aWindowSize_world));
     }
 
-    void render(std::span<graphics::r2d::Shaping::Circle> aBalls)
+    void render(const GraphicState & aState)
     {
-        mBalls.resetCircles(aBalls);
+        mBalls.resetCircles(std::span{aState.balls});
         mShaping.render(mBalls, mCameraProjection);
     }
 

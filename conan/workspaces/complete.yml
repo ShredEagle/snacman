@@ -1,11 +1,11 @@
 editables:
-    entity/663a42cc7e@adnn/develop:
+    entity/879a1668d5@adnn/develop:
         path: ../../../entity/conan
-    graphics/ac8af9d688@adnn/develop:
+    graphics/88a4396f18@adnn/develop:
         path: ../../../graphics/conan
-    handy/301bce6d20@adnn/develop:
+    handy/acd90c0549@adnn/develop:
         path: ../../../handy/conan
-    math/3d5a576c1e@adnn/develop:
+    math/541fce5f6a@adnn/develop:
         path: ../../../math/conan
     snacman/local:
         path: ../../conan

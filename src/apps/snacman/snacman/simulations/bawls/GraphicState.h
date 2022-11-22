@@ -3,14 +3,13 @@
 
 #include "ComponentGeometry.h"
 
-#include "../GraphicState.h"
-
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 #include <graphics/2d/Shaping.h>
 
 #include <math/Vector.h>
+#include <math/Interpolation/Interpolation.h>
 
 
 namespace ad {
@@ -45,6 +44,21 @@ public:
 private:
     ent::Query<component::Geometry> mRenderables;
 };
+
+
+inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState & aRight, float aInterpolant)
+{
+    GraphicState state;
+    for (std::size_t ballId = 0; ballId != aLeft.balls.size(); ++ballId)
+    {
+        state.balls.emplace_back(
+            math::lerp(aLeft.balls[ballId].mPosition_world, aRight.balls[ballId].mPosition_world, aInterpolant),
+            // The size remains constant
+            aLeft.balls[ballId].mSize_world.width());
+    }
+    return state;
+}
+
 
 } // namespace bawls
 } // namespace ad
