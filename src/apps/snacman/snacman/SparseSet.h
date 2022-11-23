@@ -26,8 +26,8 @@ class SparseSet
     struct DenseValue
     {
         DenseValue(T_index aIndex, T_value aValue) :
-            mValue{std::move(aValue)},
-            mBackIndex{aIndex}
+            mBackIndex{aIndex},
+            mValue{std::move(aValue)}
         {}
 
         T_value & get()
@@ -49,9 +49,9 @@ class SparseSet
         T_value mValue;
     };
     
-    using DenseStore = std::vector<DenseValue>;
-    using Iterator = DenseStore::iterator;
-    using Const_Iterator = DenseStore::const_iterator;
+    using DenseStore = typename std::vector<DenseValue>;
+    using Iterator = typename DenseStore::iterator;
+    using Const_Iterator = typename DenseStore::const_iterator;
 
 public:
     void insert(T_index aIndex, T_value aValue);
