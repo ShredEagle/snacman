@@ -69,14 +69,17 @@ std::unique_ptr<visu::GraphicState> Cubes::makeGraphicState() const
     auto state = std::make_unique<visu::GraphicState>();
 
     ent::Phase nomutation;
-    mQueryRenderable.get(nomutation).each([&state](component::Geometry & aGeometry)
-    {
-        state->mEntities.push_back(visu::Entity{
-            .mPosition_world = aGeometry.mPosition,
-            .mYAngle = aGeometry.mYRotation,
-            .mColor = math::hdr::gBlue<float>,
+    mQueryRenderable.get(nomutation).each(
+        [&state](ent::Handle<ent::Entity> aHandle, component::Geometry & aGeometry)
+        {
+            state->mEntities.insert(
+                aHandle.id(),
+                visu::Entity{
+                    .mPosition_world = aGeometry.mPosition,
+                    .mYAngle = aGeometry.mYRotation,
+                    .mColor = math::hdr::gBlue<float>,
+                });
         });
-    });
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
     return state;

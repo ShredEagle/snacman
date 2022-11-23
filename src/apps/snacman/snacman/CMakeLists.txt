@@ -11,6 +11,7 @@ set(${TARGET_NAME}_HEADERS
     GraphicState.h
     Input.h
     Logging.h
+    SparseSet.h
     Timing.h
 
     simulations/bawls/Bawls.h

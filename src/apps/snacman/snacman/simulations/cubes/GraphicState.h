@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "../../SparseSet.h"
+
 #include <math/Angle.h>
 #include <math/Color.h>
 #include <math/Homogeneous.h> // TODO #pose remove
@@ -34,7 +36,9 @@ struct Camera
 
 struct GraphicState
 {
-    std::vector<Entity> mEntities;    
+    static constexpr std::size_t MaxEntityId{1024};
+
+    snac::SparseSet<Entity, MaxEntityId> mEntities;    
     Camera mCamera; 
 };
 
@@ -48,14 +52,18 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         .mCamera{aRight.mCamera},
     };
 
-    for(auto leftIt = aLeft.mEntities.begin(), rightIt = aRight.mEntities.begin();
-        leftIt != aLeft.mEntities.end();
-        ++leftIt, ++rightIt)
+    for(const auto & [id, rightEntity] : aRight.mEntities)
     {
-        state.mEntities.push_back(Entity{
-            math::lerp(leftIt->mPosition_world, rightIt->mPosition_world,   aInterpolant),
-            math::lerp(leftIt->mYAngle,         rightIt->mYAngle,           aInterpolant),
-            math::lerp(leftIt->mColor,          rightIt->mColor,            aInterpolant)});
+        if(aLeft.mEntities.contains(id)) 
+        {
+            const Entity & leftEntity = aLeft.mEntities[id];    
+            state.mEntities.insert(
+                id,
+                Entity{
+                    math::lerp(leftEntity.mPosition_world, rightEntity.mPosition_world,   aInterpolant),
+                    math::lerp(leftEntity.mYAngle,         rightEntity.mYAngle,           aInterpolant),
+                    math::lerp(leftEntity.mColor,          rightEntity.mColor,            aInterpolant)});
+        }
     }
     return state;
 }
