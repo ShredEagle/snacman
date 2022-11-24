@@ -13,7 +13,8 @@ Cubes::Cubes(graphics::AppInterface & aAppInterface) :
     mAppInterface{&aAppInterface},
     mSystemMove{mWorld.addEntity()},
     mSystemOrbitalCamera{mWorld, mWorld},
-    mQueryRenderable{mWorld, mWorld}
+    mQueryRenderable{mWorld, mWorld},
+    mBlinkingCube{mWorld.addEntity()}
 {
     ent::Phase init;
     mSystemMove.get(init)->add(system::Move{mWorld});
@@ -33,27 +34,52 @@ Cubes::Cubes(graphics::AppInterface & aAppInterface) :
 
 void Cubes::update(float aDelta, const snac::Input & aInput)
 {
+    mSimulationTime += aDelta; 
+
     ent::Phase update;
+
+    blinkCube(update);
+
     mSystemMove.get(update)->get<system::Move>().update(aDelta);
     mSystemOrbitalCamera->update(aInput,
                                  getCameraParameters().vFov,
                                  mAppInterface->getWindowSize().height());
 }
 
+void Cubes::blinkCube(ent::Phase & aPhase)
+{
+    auto cube = mBlinkingCube.get(aPhase);
+    if((int)mSimulationTime % 2 == 0 && cube)
+    {
+        cube->erase();
+    }
+    else if((int)mSimulationTime % 2 == 1 && !cube)
+    {
+        mBlinkingCube = mWorld.addEntity();
+        mBlinkingCube.get(aPhase)->add(component::Geometry{
+            .mPosition = { 0.f, 1.f, -3.f},
+            .mYRotation = math::Degree<float>{45.f},
+        });
+    }
+
+}
 
 std::unique_ptr<visu::GraphicState> Cubes::makeGraphicState() const
 {
     auto state = std::make_unique<visu::GraphicState>();
 
     ent::Phase nomutation;
-    mQueryRenderable.get(nomutation).each([&state](component::Geometry & aGeometry)
-    {
-        state->mEntities.push_back(visu::Entity{
-            .mPosition_world = aGeometry.mPosition,
-            .mYAngle = aGeometry.mYRotation,
-            .mColor = math::hdr::gBlue<float>,
+    mQueryRenderable.get(nomutation).each(
+        [&state](ent::Handle<ent::Entity> aHandle, component::Geometry & aGeometry)
+        {
+            state->mEntities.insert(
+                aHandle.id(),
+                visu::Entity{
+                    .mPosition_world = aGeometry.mPosition,
+                    .mYAngle = aGeometry.mYRotation,
+                    .mColor = math::hdr::gBlue<float>,
+                });
         });
-    });
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
     return state;
