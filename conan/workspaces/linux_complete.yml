@@ -1,5 +1,5 @@
 editables:
-    MarkovJunior.cpp/5d066e60e2@adnn/develop":
+    MarkovJunior.cpp/5d066e60e2@adnn/develop:
         path: ../../../MarkovJunior.cpp/conan
     entity/5a6413d96f@adnn/develop:
         path: ../../../entity/conan
@@ -11,6 +11,6 @@ editables:
         path: ../../../math/conan
     snacman/local:
         path: ../../conan
-layout: layout
+layout: linux_layout
 workspace_generator: cmake
 root: snacman/local

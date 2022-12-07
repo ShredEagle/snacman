@@ -30,6 +30,14 @@ set(${TARGET_NAME}_HEADERS
     simulations/cubes/SystemMove.h
     simulations/cubes/SystemOrbitalCamera.h
 
+    simulations/snacgame/ComponentGeometry.h
+    simulations/snacgame/SnacGame.h
+    simulations/snacgame/EntityWrap.h
+    simulations/snacgame/GraphicState.h
+    simulations/snacgame/Renderer.h
+    simulations/snacgame/SystemMove.h
+    simulations/snacgame/SystemOrbitalCamera.h
+
     detail/Logger.h
 )
 
@@ -45,6 +53,10 @@ set(${TARGET_NAME}_SOURCES
     simulations/cubes/Renderer.cpp
     simulations/cubes/SystemMove.cpp
     simulations/cubes/SystemOrbitalCamera.cpp
+
+    simulations/snacgame/SnacGame.cpp
+    simulations/snacgame/Renderer.cpp
+    simulations/snacgame/SystemOrbitalCamera.cpp
 
     detail/Logger.cpp
 )
@@ -80,6 +92,7 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 find_package(Entity CONFIG REQUIRED entity)
 find_package(Graphics CONFIG REQUIRED graphics imguiui)
 find_package(Math CONFIG REQUIRED math)
+find_package(MarkovJunior CONFIG REQUIRED markovjunior)
 
 find_package(spdlog CONFIG REQUIRED)
 

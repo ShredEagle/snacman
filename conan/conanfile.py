@@ -25,7 +25,8 @@ class SnacmanConan(ConanFile):
         ("entity/5a6413d96f@adnn/develop"),
         ("graphics/7632994b19@adnn/develop"),
         ("handy/9cea48868d@adnn/develop"),
-        ("math/541fce5f6a@adnn/develop"),
+        ("math/7f21cc44fd@adnn/develop"),
+        ("MarkovJunior.cpp/5d066e60e2@adnn/develop"),
 
         ("spdlog/1.10.0"),
     )
