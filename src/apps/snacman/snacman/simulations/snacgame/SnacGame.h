@@ -38,16 +38,12 @@ public:
     Renderer_t makeRenderer() const;
 
 private:
-    void blinkCube(ent::Phase & aPhase);
-
     graphics::AppInterface * mAppInterface;
     snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
 
     ent::EntityManager mWorld;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
-
-    ent::Handle<ent::Entity> mBlinkingCube;
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};
