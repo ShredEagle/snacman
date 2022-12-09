@@ -1,5 +1,6 @@
 #pragma once
 
+#include "math/Angle.h"
 #include <math/Homogeneous.h>
 #include <math/Spherical.h>
 
@@ -40,8 +41,8 @@ struct Camera
 class Orbital
 {
 public:
-    Orbital(float aRadius) :
-        mSpherical{aRadius}
+    Orbital(float aRadius, math::Radian<float> aPolar = math::Radian<float>{0.f}, math::Radian<float> aAzimuthal = math::Radian<float>{0.f}) :
+        mSpherical{aRadius, aPolar, aAzimuthal}
     {}
 
     /// \warning aAzimuthal first, aPolar second (matches the usual convention for x and y)

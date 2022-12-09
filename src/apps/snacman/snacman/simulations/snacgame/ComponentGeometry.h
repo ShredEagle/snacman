@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <math/Color.h>
 #include <math/Angle.h>
 #include <math/Vector.h>
 
@@ -15,6 +16,7 @@ struct Geometry
     // Pose
     math::Position<3, float> mPosition;
     math::Radian<float> mYRotation;
+    math::hdr::Rgba_f mColor;
 };
 
 

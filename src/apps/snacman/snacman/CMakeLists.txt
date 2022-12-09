@@ -56,6 +56,7 @@ set(${TARGET_NAME}_SOURCES
 
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/Renderer.cpp
+    simulations/snacgame/SystemMove.cpp
     simulations/snacgame/SystemOrbitalCamera.cpp
 
     detail/Logger.cpp
@@ -104,6 +105,7 @@ target_link_libraries(${TARGET_NAME}
         ad::graphics
         ad::imguiui
         ad::math
+        ad::markovjunior
 
         spdlog::spdlog
 )

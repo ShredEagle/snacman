@@ -12,6 +12,8 @@
 
 #include <graphics/AppInterface.h>
 
+#include <markovjunior/Interpreter.h>
+
 #include <memory>
 
 
@@ -42,7 +44,6 @@ private:
     snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
 
     ent::EntityManager mWorld;
-    ent::Handle<ent::Entity> mSystemMove;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 

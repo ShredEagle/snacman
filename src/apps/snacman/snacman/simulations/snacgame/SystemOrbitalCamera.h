@@ -3,13 +3,12 @@
 #include "ComponentGeometry.h"
 #include "EntityWrap.h"
 #include "GraphicState.h"
+#include "math/Constants.h"
 
 #include "../../Input.h"
 
 #include <entity/Query.h>
-
 #include <snac-renderer/Camera.h>
-
 
 namespace ad {
 namespace snacgame {
@@ -17,26 +16,28 @@ namespace system {
 
 class OrbitalCamera
 {
-public:
+  public:
     OrbitalCamera(ent::EntityManager & aWorld) :
-        mCamera{aWorld, gInitialCameraRadius}
-    {}
+        mCamera{aWorld, gInitialCameraSpherical.radius(), gInitialCameraSpherical.polar(),
+                gInitialCameraSpherical.azimuthal()}
+    {
+    }
 
     void update(const snac::Input & aInput,
                 math::Radian<float> aVerticalFov,
                 int aWindowHeight_screen);
 
-    visu::Camera getCamera() const; 
+    visu::Camera getCamera() const;
 
-
-private:
-    static constexpr float gInitialCameraRadius{6.f};
-    static constexpr math::Vec<2, GLfloat> gMouseControlFactor{1/500.f, 1/500.f};
+  private:
+    static constexpr math::Spherical<float> gInitialCameraSpherical{
+        50.f, math::Radian<float>{0.15f * math::pi<float>}, math::Radian<float>{0.5f * math::pi<float>}};
+    static constexpr math::Vec<2, GLfloat> gMouseControlFactor{1 / 500.f, 1 / 500.f};
     static constexpr float gScrollFactor = 0.05f;
 
     EntityWrap<snac::Orbital> mCamera;
 };
 
 } // namespace system
-} // namespace cubes
+} // namespace snacgame
 } // namespace ad

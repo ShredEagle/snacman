@@ -112,7 +112,7 @@ constexpr std::vector<T_vertex> getExpandedCubeVertices();
 
 
 template <>
-std::vector<math::Position<3, float>> getExpandedCubeVertices()
+inline std::vector<math::Position<3, float>> getExpandedCubeVertices()
 {
     std::vector<math::Position<3, float>> result;
     result.reserve(36);
@@ -131,7 +131,7 @@ struct PositionNormal
 };
 
 template <>
-std::vector<PositionNormal> getExpandedCubeVertices()
+inline std::vector<PositionNormal> getExpandedCubeVertices()
 {
     std::vector<PositionNormal> result;
     result.reserve(36);
