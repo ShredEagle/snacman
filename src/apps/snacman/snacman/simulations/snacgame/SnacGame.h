@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "ComponentGeometry.h"
+#include "component/Geometry.h"
 #include "EntityWrap.h"
 #include "Renderer.h"
 #include "SystemOrbitalCamera.h"

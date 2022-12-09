@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ComponentGeometry.h"
+#include "component/Geometry.h"
 
 #include <entity/Query.h>
 

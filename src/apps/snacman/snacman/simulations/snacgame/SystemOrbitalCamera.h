@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ComponentGeometry.h"
+#include "component/Geometry.h"
 #include "EntityWrap.h"
 #include "GraphicState.h"
 #include "math/Constants.h"
