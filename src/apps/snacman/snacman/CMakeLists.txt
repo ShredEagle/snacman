@@ -32,6 +32,7 @@ set(${TARGET_NAME}_HEADERS
 
     simulations/snacgame/component/Geometry.h
     simulations/snacgame/EntityWrap.h
+    simulations/snacgame/Entities.h
     simulations/snacgame/GraphicState.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SnacGame.h
@@ -54,6 +55,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/cubes/SystemMove.cpp
     simulations/cubes/SystemOrbitalCamera.cpp
 
+    simulations/snacgame/Entities.cpp
     simulations/snacgame/Renderer.cpp
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SystemMove.cpp
