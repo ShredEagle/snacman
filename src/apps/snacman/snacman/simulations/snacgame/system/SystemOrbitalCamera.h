@@ -1,11 +1,11 @@
 #pragma once
 
-#include "component/Geometry.h"
-#include "EntityWrap.h"
-#include "GraphicState.h"
-#include "math/Constants.h"
+#include "../component/Geometry.h"
+#include "../EntityWrap.h"
+#include "../GraphicState.h"
+#include <math/Constants.h>
 
-#include "../../Input.h"
+#include "../../../Input.h"
 
 #include <entity/Query.h>
 #include <snac-renderer/Camera.h>
@@ -31,7 +31,7 @@ class OrbitalCamera
 
   private:
     static constexpr math::Spherical<float> gInitialCameraSpherical{
-        50.f, math::Radian<float>{0.15f * math::pi<float>}, math::Radian<float>{0.5f * math::pi<float>}};
+        75.f, math::Radian<float>{0.15f * math::pi<float>}, math::Radian<float>{0.5f * math::pi<float>}};
     static constexpr math::Vec<2, GLfloat> gMouseControlFactor{1 / 500.f, 1 / 500.f};
     static constexpr float gScrollFactor = 0.05f;
 

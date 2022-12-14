@@ -1,10 +1,11 @@
 #pragma once
 
 
-#include "component/Geometry.h"
 #include "EntityWrap.h"
 #include "Renderer.h"
-#include "SystemOrbitalCamera.h"
+
+#include "component/Geometry.h"
+#include "system/SystemOrbitalCamera.h"
 
 #include "../../Input.h"
 
@@ -42,6 +43,7 @@ private:
     snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
 
     ent::EntityManager mWorld;
+    ent::Handle<ent::Entity> mSystems;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 

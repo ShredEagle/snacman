@@ -30,14 +30,20 @@ set(${TARGET_NAME}_HEADERS
     simulations/cubes/SystemMove.h
     simulations/cubes/SystemOrbitalCamera.h
 
-    simulations/snacgame/component/Geometry.h
     simulations/snacgame/EntityWrap.h
     simulations/snacgame/Entities.h
     simulations/snacgame/GraphicState.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SnacGame.h
     simulations/snacgame/SystemMove.h
-    simulations/snacgame/SystemOrbitalCamera.h
+
+    simulations/snacgame/component/Geometry.h
+    simulations/snacgame/component/PlayerLifeCycle.h
+    simulations/snacgame/component/Spawner.h
+
+    simulations/snacgame/system/SystemOrbitalCamera.h
+    simulations/snacgame/system/PlayerSpawner.h
+    simulations/snacgame/system/PlayerInvulFrame.h
 
     detail/Logger.h
 )
@@ -59,7 +65,10 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/Renderer.cpp
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SystemMove.cpp
-    simulations/snacgame/SystemOrbitalCamera.cpp
+
+    simulations/snacgame/system/SystemOrbitalCamera.cpp
+    simulations/snacgame/system/PlayerSpawner.cpp
+    simulations/snacgame/system/PlayerInvulFrame.cpp
 
     detail/Logger.cpp
 )

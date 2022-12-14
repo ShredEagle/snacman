@@ -1,10 +1,6 @@
 #include "Input.h"
 
-#include <graphics/AppInterface.h>
-#include <graphics/ApplicationGlfw.h>
-
 #include <GLFW/glfw3.h>
-
 #include <functional>
 
 
@@ -51,6 +47,9 @@ HidManager::HidManager(graphics::ApplicationGlfw & aApplication)
     appInterface->registerScrollCallback(
         std::bind(&HidManager::callbackScroll, this, _1, _2));
 
+    appInterface->registerKeyCallback(
+        std::bind(&HidManager::callbackKeyboardStroke, this, _1, _2, _3, _4));
+
     double x, y;
     glfwGetCursorPos(aApplication.getGlfwWindow(), &x, &y);
     callbackCursorPosition(x, y);  
@@ -75,6 +74,9 @@ Input HidManager::read(const Input & aPrevious, const Inhibiter & aInhibiter)
     Input result{
         .mCursorPosition = mCursorPosition,
         .mCursorDisplacement = mCursorPosition - aPrevious.mCursorPosition,
+        .mMouseButtons = aPrevious.mMouseButtons,
+        .mGamepads = aPrevious.mGamepads,
+        .mKeyboard = aPrevious.mKeyboard
     };
 
     if (!aInhibiter.isCapturingMouse())
@@ -85,6 +87,41 @@ Input HidManager::read(const Input & aPrevious, const Inhibiter & aInhibiter)
         }
 
         result.mScrollOffset = mScrollOffset;
+    }
+
+    if (!aInhibiter.isCapturingKeyboard())
+    {
+        for (std::size_t id = 0; id != mKeyState.size(); ++id)
+        {
+            handleButtonEdges(result.mKeyboard.mKeyState.at(id), mKeyState.at(id));
+        }
+    }
+
+    for (std::size_t joystickId = 0; joystickId != result.mGamepads.size(); ++joystickId)
+    {
+        GamepadState & gamepadState = result.mGamepads.at(joystickId);
+        GLFWgamepadstate rawGamepadState;
+        int connected = glfwGetGamepadState(static_cast<int>(joystickId), &rawGamepadState);
+        gamepadState.mConnected = connected;
+
+        if (connected)
+        {
+            for (std::size_t buttonId = 0; buttonId < result.mGamepads.size(); ++buttonId)
+            {
+                handleButtonEdges(gamepadState.mButtons.at(buttonId), rawGamepadState.buttons[buttonId]);
+            }
+
+            gamepadState.mLeftJoystick = {
+                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_X],
+                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y],
+            };
+            gamepadState.mRightJoystick = {
+                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X],
+                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y],
+            };
+            gamepadState.mLeftTrigger = rawGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+            gamepadState.mRightTrigger = rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+        }
     }
 
     mScrollOffset.setZero();
@@ -134,6 +171,11 @@ void HidManager::callbackScroll(double xoffset, double yoffset)
 {
     // In case the callbacks can be called several times...
     mScrollOffset += math::Vec<2, float>{static_cast<float>(xoffset), static_cast<float>(yoffset)};
+}
+
+void HidManager::callbackKeyboardStroke(int key, int scancode, int action, int mods)
+{
+    mKeyState.at(key) = (action != GLFW_RELEASE);
 }
 
 } // namespace snac

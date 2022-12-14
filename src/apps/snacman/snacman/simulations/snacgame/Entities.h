@@ -13,5 +13,7 @@ void createPortalEntity(ent::EntityManager &mWorld, ent::Phase &aInit, const mat
 void createCopPenEntity(ent::EntityManager & mWorld, ent::Phase & aInit, const math::Position<3, float> & aPos);
 void createPlayerSpawnEntity(ent::EntityManager & mWorld, ent::Phase & aInit, const math::Position<3, float> & aPos);
 
+void createPlayerEntity(ent::EntityManager & mWorld, ent::Phase & aInit);
+
 } // snacgame
 } // ad
