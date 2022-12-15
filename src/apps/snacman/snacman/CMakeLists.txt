@@ -9,6 +9,7 @@ configure_file(build_info.h.in build_info.h @ONLY)
 set(${TARGET_NAME}_HEADERS
     Entities.h
     GraphicState.h
+    ImguiUtilities.h
     Input.h
     Logging.h
     SparseSet.h

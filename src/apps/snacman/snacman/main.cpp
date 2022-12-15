@@ -1,3 +1,4 @@
+#include "ImguiUtilities.h"
 #include "Logging.h"
 #include "Timing.h"
 #include "GraphicState.h"
@@ -367,6 +368,8 @@ private:
             //ImGui::Checkbox("Demo window", &showImguiDemo);
             gImguiGameLoop.render();
             ImGui::End();
+            // Note: We hope that setting log level for a logger is thread safe.
+            imguiLogLevelSelection();
 
             ui.render();
 
@@ -504,7 +507,7 @@ int main(int argc, char * argv[])
     try
     {
         snac::detail::initializeLogging();
-        spdlog::set_level(spdlog::level::trace);
+        spdlog::set_level(spdlog::level::debug);
     }
     catch (std::exception & aException)
     {
