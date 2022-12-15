@@ -8,6 +8,7 @@ set(${TARGET_NAME}_HEADERS
     Material.h
     Mesh.h
     Render.h
+    SetupDrawing.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -17,6 +18,7 @@ set(${TARGET_NAME}_SOURCES
     Material.cpp
     Mesh.cpp
     Render.cpp
+    SetupDrawing.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

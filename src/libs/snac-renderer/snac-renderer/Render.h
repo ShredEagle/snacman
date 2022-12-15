@@ -2,6 +2,7 @@
 
 #include "Camera.h"
 #include "Mesh.h"
+#include "SetupDrawing.h"
 
 #include <renderer/GL_Loader.h>
 #include <renderer/Shading.h>
@@ -22,10 +23,11 @@ class Renderer
 public:
     Renderer();
 
-    void render(const Mesh & aMesh, const Camera & aCamera, const InstanceStream & aInstances) const;
+    void render(const Mesh & aMesh, const Camera & aCamera, const InstanceStream & aInstances);
 
 private:
     graphics::Program mProgram;
+    VertexArrayRepository mVertexArrayRepo;
 };
 
 

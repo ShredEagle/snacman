@@ -24,20 +24,21 @@ enum class Semantic
 
 struct VertexStream
 {
+    // ~glTF::accessor
     struct Attribute
     {
         std::size_t mVertexBufferIndex;
         graphics::ClientAttribute mAttribute;
     };
 
-    // TODO should be generalized via a BufferView, so a VBO can contain several diffrent sections.
+    // TODO generalize via a BufferView, so a VBO can contain several distinct sections.
+    //      See glTF format.
     struct VertexBuffer
     {
         graphics::VertexBufferObject mBuffer;
         std::size_t mStride{0};
     };
 
-    graphics::VertexArrayObject mVertexArray;
     std::vector<VertexBuffer> mVertexBuffers;
     std::map<Semantic, Attribute> mAttributes;
     GLsizei mVertexCount{0};

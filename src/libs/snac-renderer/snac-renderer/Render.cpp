@@ -94,7 +94,7 @@ Renderer::Renderer() :
 // TODO use a matrix 4, 3
 void Renderer::render(const Mesh & aMesh,
                       const Camera & aCamera,
-                      const InstanceStream & aInstances) const
+                      const InstanceStream & aInstances)
 {
     auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
@@ -113,57 +113,7 @@ void Renderer::render(const Mesh & aMesh,
     setUniform(mProgram, "u_AmbientColor", math::hdr::Rgb_f{0.1f, 0.2f, 0.1f});
     
     //graphics::ScopedBind boundVAO{aMesh.mStream.mVertexArray};
-    bind(aMesh.mStream.mVertexArray);
-    {
-        const VertexStream::VertexBuffer & instanceView = aInstances.mInstanceBuffer;
-        bind(instanceView.mBuffer);
-        {
-            const graphics::ClientAttribute & attribute =
-                aInstances.mAttributes.at(Semantic::LocalToWorld).mAttribute;
-            // TODO: Remove hardcoding knowledge this will be a multiple of dimensions 4.
-            for (int attributeOffset = 0; attributeOffset != (int)attribute.mDimension / 4; ++attributeOffset)
-            {
-                int dimension = 4; // TODO stop hardcoding
-                int shaderIndex = 4 + attributeOffset;
-                glVertexAttribPointer(shaderIndex,
-                                      dimension,
-                                      attribute.mDataType, 
-                                      GL_FALSE, 
-                                      static_cast<GLsizei>(instanceView.mStride),
-                                      (void *)(attribute.mOffset 
-                                               + attributeOffset * dimension * graphics::getByteSize(attribute.mDataType)));
-                glEnableVertexAttribArray(shaderIndex);
-                glVertexAttribDivisor(shaderIndex, 1);
-            }
-        }
-        {
-            const graphics::ClientAttribute & attribute =
-                aInstances.mAttributes.at(Semantic::Albedo).mAttribute;
-            // Note: has to handle normalized attributes here
-            glVertexAttribPointer(12, attribute.mDimension, attribute.mDataType, 
-                                  GL_TRUE, static_cast<GLsizei>(instanceView.mStride), (void *)attribute.mOffset);
-            glEnableVertexAttribArray(12);
-            glVertexAttribDivisor(12, 1);
-        }
-
-        const VertexStream::VertexBuffer & view = aMesh.mStream.mVertexBuffers.front();
-        //graphics::ScopedBind boundVBO{aMesh.mStream.mVertexBuffers.front()};
-        bind(view.mBuffer);
-        {
-            const graphics::ClientAttribute & attribute =
-                aMesh.mStream.mAttributes.at(Semantic::Position).mAttribute;
-            glVertexAttribPointer(0, attribute.mDimension, attribute.mDataType, 
-                                  GL_FALSE, static_cast<GLsizei>(view.mStride), (void *)attribute.mOffset);
-            glEnableVertexAttribArray(0);
-        }
-        {
-            const graphics::ClientAttribute & attribute =
-                aMesh.mStream.mAttributes.at(Semantic::Normal).mAttribute;
-            glVertexAttribPointer(1, attribute.mDimension, attribute.mDataType, 
-                                  GL_FALSE, static_cast<GLsizei>(view.mStride), (void *)attribute.mOffset);
-            glEnableVertexAttribArray(1);
-        }
-    }
+    bind(mVertexArrayRepo.get(aMesh, aInstances, mProgram));
 
     use(mProgram);
     glDrawArraysInstanced(GL_TRIANGLES, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);
