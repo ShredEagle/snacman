@@ -1,5 +1,7 @@
 #include "Logger.h"
 
+#include <snac-renderer/Logging.h>
+
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <mutex>
@@ -26,6 +28,7 @@ namespace {
 void initializeLogging()
 {
     std::call_once(loggingInitializationOnce, &initializeLogging_impl);
+    renderer::initializeLogging();
     //Note: Initialize all upstream libraries logging here too.
 };
 
