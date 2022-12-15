@@ -1,4 +1,5 @@
 #include "PlayerSpawner.h"
+#include "math/Vector.h"
 
 #include "../component/Spawner.h"
 
@@ -21,7 +22,8 @@ void PlayerSpawner::update(float aDelta)
                         aPlayer.mIsAlive = true;
                         aPlayer.mTimeToRespawn = component::gBaseTimeToRespawn;
                         aPlayer.mInvulFrameCounter = component::gBaseInvulFrameDuration;
-                        aPlayerGeometry.mPosition = aSpawner.mSpawnPosition;
+                        aPlayerGeometry.mGridPosition = aSpawner.mSpawnPosition;
+                        aPlayerGeometry.mSubGridPosition = math::Position<2, float>::Zero();
                         aPlayerGeometry.mShouldBeDrawn = true;
                     }
                 });

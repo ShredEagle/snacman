@@ -1,55 +1,106 @@
 #include "Entities.h"
+
+#include "component/Controller.h"
+#include "component/Geometry.h"
+#include "component/Level.h"
+#include "component/PlayerLifeCycle.h"
+#include "component/PlayerMoveState.h"
+#include "component/Spawner.h"
+
 #include "math/Color.h"
-#include "snacman/simulations/snacgame/component/PlayerLifeCycle.h"
-#include "snacman/simulations/snacgame/component/Spawner.h"
 
 namespace ad {
 namespace snacgame {
 
-void createPathEntity(ent::EntityManager & mWorld, ent::Phase & aInit, const math::Position<3, float> & aPos)
+void createLevel(ent::Handle<ent::Entity> & aLevelHandle, ent::EntityManager & aWorld,
+                 ent::Phase & aInit,
+                 const markovjunior::Grid & aGrid)
 {
-  mWorld.addEntity().get(aInit)->add(component::Geometry{
-      .mPosition = aPos,
-      .mYRotation = math::Degree<float>{0.f},
-      .mColor = math::hdr::gWhite<float>});
+    aLevelHandle.get(aInit)->add(component::Level(aWorld, aInit, aGrid));
 }
 
-void createPortalEntity(ent::EntityManager & mWorld, ent::Phase & aInit, const math::Position<3, float> & aPos)
+ent::Handle<ent::Entity>
+createPathEntity(ent::EntityManager & mWorld,
+                 ent::Phase & aInit,
+                 const math::Position<2, int> & aGridPos)
 {
-  mWorld.addEntity().get(aInit)->add(component::Geometry{
-      .mPosition = aPos,
-      .mYRotation = math::Degree<float>{0.f},
-      .mColor = math::hdr::gRed<float>});
+    auto handle = mWorld.addEntity();
+    handle.get(aInit)->add(component::Geometry{
+        .mSubGridPosition = math::Position<2, float>::Zero(),
+        .mGridPosition = aGridPos,
+        .mLayer = component::GeometryLayer::Level,
+        .mYRotation = math::Degree<float>{0.f},
+        .mColor = math::hdr::gWhite<float>});
+    return handle;
 }
 
-void createCopPenEntity(ent::EntityManager & mWorld, ent::Phase & aInit, const math::Position<3, float> & aPos)
+ent::Handle<ent::Entity>
+createPortalEntity(ent::EntityManager & mWorld,
+                   ent::Phase & aInit,
+                   const math::Position<2, int> & aGridPos)
 {
-  mWorld.addEntity().get(aInit)->add(component::Geometry{
-      .mPosition = aPos,
-      .mYRotation = math::Degree<float>{0.f},
-      .mColor = math::hdr::gYellow<float>});
+    auto handle = mWorld.addEntity();
+    handle.get(aInit)->add(component::Geometry{
+        .mSubGridPosition = math::Position<2, float>::Zero(),
+        .mGridPosition = aGridPos,
+        .mLayer = component::GeometryLayer::Level,
+        .mYRotation = math::Degree<float>{0.f},
+        .mColor = math::hdr::gRed<float>});
+    return handle;
 }
 
-void createPlayerSpawnEntity(ent::EntityManager & mWorld, ent::Phase & aInit, const math::Position<3, float> & aPos)
+ent::Handle<ent::Entity>
+createCopPenEntity(ent::EntityManager & mWorld,
+                   ent::Phase & aInit,
+                   const math::Position<2, int> & aGridPos)
 {
-  auto spawner = mWorld.addEntity().get(aInit);
-  spawner->add(component::Geometry{
-      .mPosition = aPos,
-      .mYRotation = math::Degree<float>{0.f},
-      .mColor = math::hdr::gCyan<float>});
-  spawner->add(component::Spawner{
-      .mSpawnPosition = aPos + math::Vec<3, float>{0.f, 2.f, 0.f}});
+    auto handle = mWorld.addEntity();
+    handle.get(aInit)->add(component::Geometry{
+        .mSubGridPosition = math::Position<2, float>::Zero(),
+        .mGridPosition = aGridPos,
+        .mLayer = component::GeometryLayer::Level,
+        .mYRotation = math::Degree<float>{0.f},
+        .mColor = math::hdr::gYellow<float>});
+    return handle;
 }
 
-void createPlayerEntity(ent::EntityManager & mWorld, ent::Phase & aInit)
+ent::Handle<ent::Entity>
+createPlayerSpawnEntity(ent::EntityManager & mWorld,
+                        ent::Phase & aInit,
+                        const math::Position<2, int> & aGridPos)
 {
-    auto playerEntity = mWorld.addEntity().get(aInit);
+    auto spawner = mWorld.addEntity();
+    spawner.get(aInit)->add(component::Geometry{
+        .mSubGridPosition = math::Position<2, float>::Zero(),
+        .mGridPosition = aGridPos,
+        .mLayer = component::GeometryLayer::Level,
+        .mYRotation = math::Degree<float>{0.f},
+        .mColor = math::hdr::gCyan<float>});
+    spawner.get(aInit)->add(component::Spawner{
+        .mSpawnPosition = aGridPos});
+
+    return spawner;
+}
+
+ent::Handle<ent::Entity> createPlayerEntity(ent::EntityManager & mWorld,
+                                            ent::Phase & aInit)
+{
+    auto playerHandle = mWorld.addEntity();
+    auto playerEntity = playerHandle.get(aInit);
+
     playerEntity->add(component::Geometry{
-      .mPosition = math::Position<3, float>::Zero(),
-      .mYRotation = math::Degree<float>{0.f},
-      .mColor = math::hdr::gMagenta<float>,
-      .mShouldBeDrawn = false});
+        .mSubGridPosition = math::Position<2, float>::Zero(),
+        .mGridPosition = math::Position<2, int>::Zero(),
+        .mLayer = component::GeometryLayer::Player,
+        .mYRotation = math::Degree<float>{0.f},
+        .mColor = math::hdr::gMagenta<float>,
+        .mShouldBeDrawn = false});
     playerEntity->add(component::PlayerLifeCycle{});
+    playerEntity->add(
+        component::Controller{component::ControllerType::Keyboard, -1});
+    playerEntity->add(component::PlayerMoveState{});
+
+    return playerHandle;
 }
 } // namespace snacgame
 } // namespace ad

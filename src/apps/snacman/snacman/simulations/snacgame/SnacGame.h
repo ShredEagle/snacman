@@ -32,7 +32,7 @@ public:
 
     void update(float aDelta, const snac::Input & aInput);
 
-    std::unique_ptr<visu::GraphicState> makeGraphicState() const; 
+    std::unique_ptr<visu::GraphicState> makeGraphicState(); 
 
     snac::Camera::Parameters getCameraParameters() const;
 
@@ -44,6 +44,7 @@ private:
 
     ent::EntityManager mWorld;
     ent::Handle<ent::Entity> mSystems;
+    ent::Handle<ent::Entity> mLevel;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 

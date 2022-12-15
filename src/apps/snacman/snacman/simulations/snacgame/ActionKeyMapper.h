@@ -1,24 +1,24 @@
+#pragma once
+
 #include "snacman/Input.h"
-#include "snacman/simulations/snacgame/component/PlayerAction.h"
-#include <GLFW/glfw3.h>
 
 #include <concepts>
+#include <GLFW/glfw3.h>
 
 namespace ad {
 namespace snacgame {
 
 typedef int PlayerActionFlag;
 
-constexpr PlayerActionFlag gPlayerMoveRight = 0;
-constexpr PlayerActionFlag gPlayerMoveLeft = 0b1;
-constexpr PlayerActionFlag gPlayerMoveUp = 0b10;
-constexpr PlayerActionFlag gPlayerMoveDown = 0b100;
+constexpr PlayerActionFlag gPlayerMoveRight = 0x0;
+constexpr PlayerActionFlag gPlayerMoveLeft = 0x1;
+constexpr PlayerActionFlag gPlayerMoveUp = 0x2;
+constexpr PlayerActionFlag gPlayerMoveDown = 0x4;
 
 struct GamepadMapping
 {
     static constexpr std::size_t size = static_cast<std::size_t>(snac::GamepadAtomicCommand::End);
-    std::array<PlayerActionFlag,
-                         GamepadMapping::size> mapping;
+    std::array<PlayerActionFlag, GamepadMapping::size> mapping;
 
     using command_type = snac::GamepadAtomicCommand;
 
@@ -50,16 +50,16 @@ struct KeyboardMapping
     std::array<PlayerActionFlag, KeyboardMapping::size> mapping;
     using command_type = int;
 
-    constexpr KeyboardMapping() :
-        mapping{}
+    constexpr KeyboardMapping() : mapping{}
     {
+        mapping.fill(-1);
         for (std::size_t i = 0; i != mapping.size(); ++i)
         {
-            if (i == GLFW_KEY_Z)
+            if (i == GLFW_KEY_W)
             {
                 mapping.at(i) = gPlayerMoveUp;
             }
-            else if (i == GLFW_KEY_Q)
+            else if (i == GLFW_KEY_S)
             {
                 mapping.at(i) = gPlayerMoveDown;
             }
@@ -67,7 +67,7 @@ struct KeyboardMapping
             {
                 mapping.at(i) = gPlayerMoveRight;
             }
-            else if (i == GLFW_KEY_S)
+            else if (i == GLFW_KEY_A)
             {
                 mapping.at(i) = gPlayerMoveLeft;
             }
@@ -75,21 +75,28 @@ struct KeyboardMapping
     }
 };
 
-constexpr KeyboardMapping gKeyboardDefaultMapping();
-constexpr GamepadMapping gGamepadDefaultMapping();
+constexpr KeyboardMapping gKeyboardDefaultMapping = KeyboardMapping();
+constexpr GamepadMapping gGamepadDefaultMapping = GamepadMapping();
 
-template<class T>
+template <class T>
 concept Mapping = requires(T a)
 {
-    {T::size} -> std::convertible_to<std::size_t>;
-    {a.mapping} -> std::convertible_to<std::array<PlayerActionFlag, T::size>>;
-    // TODO: this is wonky but i don't know how to do
+    {
+        T::size
+        } -> std::convertible_to<std::size_t>;
+    {
+        a.mapping
+        } -> std::convertible_to<std::array<PlayerActionFlag, T::size>>;
     std::is_convertible_v<typename T::command_type, std::size_t>;
 };
 
-template<Mapping T_mapping, T_mapping V_mapping>
+template <auto V_mapping>
+requires Mapping<decltype(V_mapping)>
 class ActionKeyMapper
 {
+public:
+    using T_mapping = decltype(V_mapping);
+
     PlayerActionFlag get(typename T_mapping::command_type aCommand)
     {
         return mKeymaps.at(static_cast<size_t>(aCommand));
@@ -100,18 +107,9 @@ class ActionKeyMapper
         mKeymaps.at(static_cast<size_t>(aCommand)) = aAction;
     }
 
-    std::array<PlayerActionFlag,
-               static_cast<std::size_t>(T_mapping::size)>
-        mKeymaps = V_mapping;
+    std::array<PlayerActionFlag, static_cast<std::size_t>(T_mapping::size)> mKeymaps =
+        V_mapping.mapping;
 };
-
-template<KeyboardMapping V_mapping>
-class ActionKeyMapper<KeyboardMapping, V_mapping>;
-
-template<GamepadMapping V_mapping>
-class ActionKeyMapper<GamepadMapping, V_mapping>;
-
-ActionKeyMapper<gKeyboardDefaultMapping> allo;
 
 } // namespace snacgame
 } // namespace ad

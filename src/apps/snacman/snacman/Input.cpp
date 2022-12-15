@@ -58,6 +58,8 @@ HidManager::HidManager(graphics::ApplicationGlfw & aApplication)
     {
         mouseButton = false;
     };
+
+    mKeyState.fill(false);
 }
 
 

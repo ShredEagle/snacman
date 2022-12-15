@@ -1,6 +1,7 @@
 #pragma once
 
 #include "component/Geometry.h"
+#include "markovjunior/Grid.h"
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
@@ -8,12 +9,23 @@
 namespace ad {
 namespace snacgame {
 
-void createPathEntity(ent::EntityManager &mWorld, ent::Phase &aInit, const math::Position<3, float> & aPos);
-void createPortalEntity(ent::EntityManager &mWorld, ent::Phase &aInit, const math::Position<3, float> & aPos);
-void createCopPenEntity(ent::EntityManager & mWorld, ent::Phase & aInit, const math::Position<3, float> & aPos);
-void createPlayerSpawnEntity(ent::EntityManager & mWorld, ent::Phase & aInit, const math::Position<3, float> & aPos);
+void createLevel(ent::Handle<ent::Entity> & aLevelHandle, ent::EntityManager & aWorld,
+                ent::Phase & aInit,
+                const markovjunior::Grid & aGrid);
+ent::Handle<ent::Entity> createPathEntity(ent::EntityManager & mWorld,
+                      ent::Phase & aInit,
+                      const math::Position<2, int> & aPos);
+ent::Handle<ent::Entity> createPortalEntity(ent::EntityManager & mWorld,
+                        ent::Phase & aInit,
+                        const math::Position<2, int> & aPos);
+ent::Handle<ent::Entity> createCopPenEntity(ent::EntityManager & mWorld,
+                        ent::Phase & aInit,
+                        const math::Position<2, int> & aPos);
+ent::Handle<ent::Entity> createPlayerSpawnEntity(ent::EntityManager & mWorld,
+                             ent::Phase & aInit,
+                             const math::Position<2, int> & aPos);
 
-void createPlayerEntity(ent::EntityManager & mWorld, ent::Phase & aInit);
+ent::Handle<ent::Entity> createPlayerEntity(ent::EntityManager & mWorld, ent::Phase & aInit);
 
-} // snacgame
-} // ad
+} // namespace snacgame
+} // namespace ad

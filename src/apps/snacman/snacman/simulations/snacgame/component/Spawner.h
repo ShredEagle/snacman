@@ -9,7 +9,7 @@ namespace component {
 
 struct Spawner
 {
-    math::Position<3, float> mSpawnPosition;
+    math::Position<2, int> mSpawnPosition;
 };
 
 

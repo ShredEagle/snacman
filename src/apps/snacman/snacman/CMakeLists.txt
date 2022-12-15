@@ -14,33 +14,23 @@ set(${TARGET_NAME}_HEADERS
     SparseSet.h
     Timing.h
 
-    simulations/bawls/Bawls.h
-    simulations/bawls/ComponentGeometry.h
-    simulations/bawls/ComponentVelocity.h
-    simulations/bawls/GraphicState.h
-    simulations/bawls/Renderer.h
-    simulations/bawls/SystemCollide.h
-    simulations/bawls/SystemMove.h
-
-    simulations/cubes/ComponentGeometry.h
-    simulations/cubes/Cubes.h
-    simulations/cubes/EntityWrap.h
-    simulations/cubes/GraphicState.h
-    simulations/cubes/Renderer.h
-    simulations/cubes/SystemMove.h
-    simulations/cubes/SystemOrbitalCamera.h
-
     simulations/snacgame/EntityWrap.h
     simulations/snacgame/Entities.h
     simulations/snacgame/GraphicState.h
+    simulations/snacgame/ActionKeyMapper.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SnacGame.h
     simulations/snacgame/SystemMove.h
 
+    simulations/snacgame/component/Controller.h
     simulations/snacgame/component/Geometry.h
+    simulations/snacgame/component/Level.h
     simulations/snacgame/component/PlayerLifeCycle.h
+    simulations/snacgame/component/PlayerMoveState.h
     simulations/snacgame/component/Spawner.h
 
+    simulations/snacgame/system/DeterminePlayerAction.h
+    simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/SystemOrbitalCamera.h
     simulations/snacgame/system/PlayerSpawner.h
     simulations/snacgame/system/PlayerInvulFrame.h
@@ -54,18 +44,13 @@ set(${TARGET_NAME}_SOURCES
     Entities.cpp
     Input.cpp
 
-    simulations/bawls/Bawls.cpp
-
-    simulations/cubes/Cubes.cpp
-    simulations/cubes/Renderer.cpp
-    simulations/cubes/SystemMove.cpp
-    simulations/cubes/SystemOrbitalCamera.cpp
-
     simulations/snacgame/Entities.cpp
     simulations/snacgame/Renderer.cpp
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SystemMove.cpp
 
+    simulations/snacgame/system/DeterminePlayerAction.cpp
+    simulations/snacgame/system/IntegratePlayerMovement.cpp
     simulations/snacgame/system/SystemOrbitalCamera.cpp
     simulations/snacgame/system/PlayerSpawner.cpp
     simulations/snacgame/system/PlayerInvulFrame.cpp

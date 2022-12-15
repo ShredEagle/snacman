@@ -1,12 +1,15 @@
 #include "SnacGame.h"
 
+#include "ActionKeyMapper.h"
+#include "component/Level.h"
 #include "Entities.h"
-
+#include "markovjunior/Grid.h"
+#include "math/Color.h"
+#include "system/DeterminePlayerAction.h"
+#include "system/IntegratePlayerMovement.h"
 #include "system/PlayerInvulFrame.h"
 #include "system/PlayerSpawner.h"
 
-#include "markovjunior/Grid.h"
-#include "math/Color.h"
 #include <math/VectorUtilities.h>
 
 namespace ad {
@@ -15,6 +18,7 @@ namespace snacgame {
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface) :
     mAppInterface{&aAppInterface},
     mSystems{mWorld.addEntity()},
+    mLevel{mWorld.addEntity()},
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld}
 {
@@ -25,53 +29,19 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface) :
 
     markovInterpreter.setup();
 
-    while (markovInterpreter.mCurrentBranch != nullptr) {
+    while (markovInterpreter.mCurrentBranch != nullptr)
+    {
         markovInterpreter.runStep();
     }
     mSystems.get(init)->add(system::PlayerSpawner{mWorld});
     mSystems.get(init)->add(system::PlayerInvulFrame{mWorld});
+    mSystems.get(init)->add(system::DeterminePlayerAction{mWorld, mLevel});
+    mSystems.get(init)->add(system::IntegratePlayerMovement{mWorld, mLevel});
 
     markovjunior::Grid grid = markovInterpreter.mGrid;
 
-    for (int z = 0; z < grid.mSize.depth(); z++) {
-        for (int y = 0; y < grid.mSize.height(); y++) {
-            for (int x = 0; x < grid.mSize.width(); x++) {
-                unsigned char value =
-                    grid.mCharacters.at(grid.mState.at(grid.getFlatGridIndex({x, y, z})));
-                switch (value) {
-                case 'W':
-                    createPathEntity(mWorld, init,
-                                     math::Position<3, float>{
-                                         -grid.mSize.height() + (float)y * 2.f, 0.f,
-                                         grid.mSize.width() - (float)x * 2.f});
-                    break;
-                case 'K':
-                    createPortalEntity(mWorld, init,
-                                       math::Position<3, float>{
-                                           -grid.mSize.height() + (float)y * 2.f, 0.f,
-                                           grid.mSize.width() - (float)x * 2.f});
-                case 'O':
-                    createCopPenEntity(mWorld, init,
-                                       math::Position<3, float>{
-                                           -grid.mSize.height() + (float)y * 2.f, 0.f,
-                                           grid.mSize.width() - (float)x * 2.f});
-                    break;
-                case 'U':
-                    createPlayerSpawnEntity(
-                        mWorld, init,
-                        math::Position<3, float>{-grid.mSize.height() + (float)y * 2.f,
-                                                 0.f,
-                                                 grid.mSize.width() - (float)x * 2.f});
-                    break;
-                default:
-                    break;
-                }
-            }
-        }
-    }
-
+    createLevel(mLevel, mWorld, init, grid);
     createPlayerEntity(mWorld, init);
-
 }
 
 void SnacGame::update(float aDelta, const snac::Input & aInput)
@@ -85,25 +55,44 @@ void SnacGame::update(float aDelta, const snac::Input & aInput)
                                  mAppInterface->getWindowSize().height());
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
+    mSystems.get(update)->get<system::DeterminePlayerAction>().update(aInput);
+    mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
 }
 
-std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState() const
+std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 {
     auto state = std::make_unique<visu::GraphicState>();
 
     ent::Phase nomutation;
+    ent::Entity levelEntity = *mLevel.get(nomutation);
+    const float cellSize = levelEntity.get<component::Level>().mCellSize;
+    const int mRowCount = levelEntity.get<component::Level>().mRowCount;
+    const int mColCount = levelEntity.get<component::Level>().mColCount;
     mQueryRenderable.get(nomutation)
-        .each(
-            [&state](ent::Handle<ent::Entity> aHandle, component::Geometry & aGeometry) {
-                if (aGeometry.mShouldBeDrawn) {
-                    state->mEntities.insert(aHandle.id(),
-                                            visu::Entity{
-                                                .mPosition_world = aGeometry.mPosition,
-                                                .mYAngle = aGeometry.mYRotation,
-                                                .mColor = aGeometry.mColor,
-                                            });
-                }
-            });
+        .each([mRowCount, mColCount, cellSize, &state](
+                  ent::Handle<ent::Entity> aHandle,
+                  component::Geometry & aGeometry) {
+            if (aGeometry.mShouldBeDrawn)
+            {
+                float yCoord =
+                    aGeometry.mLayer == component::GeometryLayer::Level
+                        ? 0.f
+                        : cellSize;
+                auto worldPosition = math::Position<3, float>{
+                    -(float) mRowCount
+                        + (float) aGeometry.mGridPosition.y() * cellSize + aGeometry.mSubGridPosition.y(),
+                    yCoord,
+                    -(float) mColCount
+                        + (float) aGeometry.mGridPosition.x() * cellSize + aGeometry.mSubGridPosition.x(),
+                };
+                state->mEntities.insert(aHandle.id(),
+                                        visu::Entity{
+                                            .mPosition_world = worldPosition,
+                                            .mYAngle = aGeometry.mYRotation,
+                                            .mColor = aGeometry.mColor,
+                                        });
+            }
+        });
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
     return state;

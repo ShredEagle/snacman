@@ -1,13 +1,14 @@
 #pragma once
 
+#include "../ActionKeyMapper.h"
 
 namespace ad {
 namespace snacgame {
 namespace component {
 
-struct PlayerAction
+struct PlayerMoveState
 {
-    int mActionFlag;
+    PlayerActionFlag mMoveState = -1;
 };
 
 
