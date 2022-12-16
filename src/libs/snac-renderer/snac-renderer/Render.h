@@ -1,11 +1,12 @@
 #pragma once
 
 #include "Camera.h"
+#include "IntrospectProgram.h"
 #include "Mesh.h"
 #include "SetupDrawing.h"
 
 #include <renderer/GL_Loader.h>
-#include <renderer/Shading.h>
+
 
 
 namespace ad {
@@ -26,7 +27,7 @@ public:
     void render(const Mesh & aMesh, const Camera & aCamera, const InstanceStream & aInstances);
 
 private:
-    graphics::Program mProgram;
+    IntrospectProgram mProgram;
     VertexArrayRepository mVertexArrayRepo;
 };
 

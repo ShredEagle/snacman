@@ -10,7 +10,7 @@ namespace snac {
 inline const GLchar* gVertexShader = R"#(
 #version 420
 
-layout(location=0) in vec3 ve_VertexPosition_l;
+layout(location=0) in vec3 ve_Position_l;
 layout(location=1) in vec3 ve_Normal_l;
 
 layout(location=4) in mat4 in_LocalToWorld;
@@ -34,7 +34,7 @@ void main(void)
 {
     // TODO maybe should be pre-multiplied in client code?
     mat4 localToCamera = u_Camera * in_LocalToWorld;
-    ex_Position_v = localToCamera * vec4(ve_VertexPosition_l, 1.f);
+    ex_Position_v = localToCamera * vec4(ve_Position_l, 1.f);
     gl_Position = u_Projection * ex_Position_v;
     ex_Normal_v = localToCamera * vec4(ve_Normal_l, 0.f);
 
@@ -109,13 +109,13 @@ void Renderer::render(const Mesh & aMesh,
     glUniformBlockBinding(mProgram, viewingBlockIndex, viewingLocation);
 
     // Converted to HDR in order to normalize the values
-    setUniform(mProgram, "u_LightColor", to_hdr(math::sdr::gWhite));
-    setUniform(mProgram, "u_AmbientColor", math::hdr::Rgb_f{0.1f, 0.2f, 0.1f});
+    graphics::setUniform(mProgram, "u_LightColor", to_hdr(math::sdr::gWhite));
+    graphics::setUniform(mProgram, "u_AmbientColor", math::hdr::Rgb_f{0.1f, 0.2f, 0.1f});
     
     //graphics::ScopedBind boundVAO{aMesh.mStream.mVertexArray};
     bind(mVertexArrayRepo.get(aMesh, aInstances, mProgram));
 
-    use(mProgram);
+    graphics::use(mProgram);
     glDrawArraysInstanced(GL_TRIANGLES, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);
 }
 

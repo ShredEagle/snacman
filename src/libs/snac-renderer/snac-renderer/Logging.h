@@ -4,7 +4,6 @@
 #include <spdlog/spdlog.h>
 
 
-
 namespace ad {
 namespace snac {
 
@@ -21,7 +20,8 @@ namespace renderer {
 
 } // namespace renderer
 
-} // namespace snace
+
+} // namespace snac
 } // namespace ad
 
 

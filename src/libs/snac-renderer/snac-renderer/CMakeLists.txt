@@ -4,6 +4,7 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Cube.h
     Effect.h
+    IntrospectProgram.h
     Logging.h
     Material.h
     Mesh.h
@@ -14,6 +15,7 @@ set(${TARGET_NAME}_HEADERS
 set(${TARGET_NAME}_SOURCES
     Camera.cpp
     Effect.cpp
+    IntrospectProgram.cpp
     Logging.cpp
     Material.cpp
     Mesh.cpp

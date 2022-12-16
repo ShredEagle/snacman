@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include <handy/StringUtilities.h>
+
 #include <renderer/VertexSpecification.h>
 
 #include <map>
@@ -18,8 +20,30 @@ enum class Semantic
     Normal,
     Albedo,
     // Usually per instance
-    LocalToWorld
+    LocalToWorld,
 };
+
+
+inline Semantic to_semantic(std::string_view aAttributeName)
+{
+    static const std::string delimiter = "_";
+    std::string_view prefix, body, suffix;
+    std::tie(prefix, body) = lsplit(aAttributeName, delimiter);
+    std::tie(body, suffix) = lsplit(body, delimiter);
+
+#define MAPPING(name) else if(body == #name) { return Semantic::name; }
+    if(false){}
+    MAPPING(Position)
+    MAPPING(Normal)
+    MAPPING(Albedo)
+    MAPPING(LocalToWorld)
+    else
+    {
+        throw std::logic_error{
+            "Unable to map shader attribute name '" + std::string{aAttributeName} + "' to a semantic."};
+    }
+#undef MAPPING
+}
 
 
 struct VertexStream

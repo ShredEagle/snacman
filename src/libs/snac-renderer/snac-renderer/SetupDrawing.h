@@ -1,8 +1,8 @@
 #pragma once
 
+#include "IntrospectProgram.h"
 #include "Mesh.h"
 
-#include <renderer/Shading.h>
 #include <renderer/VertexSpecification.h>
 
 #include <map>
@@ -15,8 +15,8 @@ namespace snac {
 struct VertexArrayRepository
 {
     const graphics::VertexArrayObject & get(const Mesh & aMesh,
-                                                const InstanceStream & aInstances,
-                                                const graphics::Program & aProgram);
+                                            const InstanceStream & aInstances,
+                                            const IntrospectProgram & aProgram);
 
     // TODO this key is dangerous: using the address as the identity
     //      this expose us to collision through address reuse.

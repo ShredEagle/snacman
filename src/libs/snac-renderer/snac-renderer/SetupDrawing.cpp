@@ -8,7 +8,7 @@ namespace snac {
 
 graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
                                        const InstanceStream & aInstances,
-                                       const graphics::Program & aProgram)
+                                       const IntrospectProgram & aProgram)
 {
     graphics::VertexArrayObject vertexArray;
     // TODO scoped bind (also remove the unbind)
@@ -45,22 +45,23 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
         glVertexAttribDivisor(12, 1);
     }
 
-    const VertexStream::VertexBuffer & view = aMesh.mStream.mVertexBuffers.front();
-    //graphics::ScopedBind boundVBO{aMesh.mStream.mVertexBuffers.front()};
-    bind(view.mBuffer);
+    for (const IntrospectProgram::Attribute & attribute : aProgram.mAttributes)
     {
-        const graphics::ClientAttribute & attribute =
-            aMesh.mStream.mAttributes.at(Semantic::Position).mAttribute;
-        glVertexAttribPointer(0, attribute.mDimension, attribute.mDataType, 
-                                GL_FALSE, static_cast<GLsizei>(view.mStride), (void *)attribute.mOffset);
-        glEnableVertexAttribArray(0);
-    }
-    {
-        const graphics::ClientAttribute & attribute =
-            aMesh.mStream.mAttributes.at(Semantic::Normal).mAttribute;
-        glVertexAttribPointer(1, attribute.mDimension, attribute.mDataType, 
-                                GL_FALSE, static_cast<GLsizei>(view.mStride), (void *)attribute.mOffset);
-        glEnableVertexAttribArray(1);
+        if(auto found = aMesh.mStream.mAttributes.find(attribute.mSemantic);
+           found != aMesh.mStream.mAttributes.end())
+        {
+            const VertexStream::Attribute & arrayBuffer = found->second;
+            const graphics::ClientAttribute & client = found->second.mAttribute;
+            const VertexStream::VertexBuffer & vertexBuffer = 
+                aMesh.mStream.mVertexBuffers.at(arrayBuffer.mVertexBufferIndex);
+            bind(vertexBuffer.mBuffer);
+            // TODO handle integral program attributes
+            // TODO some assertions regarding the number of components compatibility
+            // TODO handle normalizing
+            glVertexAttribPointer(attribute.mLocation, client.mDimension, client.mDataType, 
+                                  GL_FALSE, static_cast<GLsizei>(vertexBuffer.mStride), (void *)client.mOffset);
+            glEnableVertexAttribArray(attribute.mLocation);
+        }
     }
 
     SELOG_LG(gRenderLogger, info)("Added a new VAO to the repository.");
@@ -72,9 +73,9 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
 const graphics::VertexArrayObject &
 VertexArrayRepository::get(const Mesh & aMesh,
                            const InstanceStream & aInstances,
-                           const graphics::Program & aProgram)
+                           const IntrospectProgram & aProgram)
 {
-    Key key = std::make_tuple(&aMesh, &aInstances, &aProgram);
+    Key key = std::make_tuple(&aMesh, &aInstances, &static_cast<const graphics::Program &>(aProgram));
     if (auto found = mVAOs.find(key);
         found != mVAOs.end())
     {
