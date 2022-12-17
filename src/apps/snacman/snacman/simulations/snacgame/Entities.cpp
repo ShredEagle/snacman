@@ -19,6 +19,20 @@ void createLevel(ent::Handle<ent::Entity> & aLevelHandle, ent::EntityManager & a
     aLevelHandle.get(aInit)->add(component::Level(aWorld, aInit, aGrid));
 }
 
+void createPill(ent::EntityManager & mWorld,
+                 ent::Phase & aInit,
+                 const math::Position<2, int> & aGridPos)
+{
+    auto handle = mWorld.addEntity();
+    handle.get(aInit)->add(component::Geometry{
+        .mSubGridPosition = math::Position<2, float>::Zero(),
+        .mGridPosition = aGridPos,
+        .mScaling = math::Size<3, float>{.3f, .3f, .3f},
+        .mLayer = component::GeometryLayer::Player,
+        .mYRotation = math::Degree<float>{15.f},
+        .mColor = math::hdr::Rgb<float>{1.f, 0.5f, 0.5f}});
+}
+
 ent::Handle<ent::Entity>
 createPathEntity(ent::EntityManager & mWorld,
                  ent::Phase & aInit,

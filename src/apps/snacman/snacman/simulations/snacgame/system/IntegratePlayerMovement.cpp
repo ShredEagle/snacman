@@ -6,7 +6,7 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
-float gBasePlayerSpeed = 4.f;
+float gBasePlayerSpeed = 10.f;
 
 void IntegratePlayerMovement::update(float aDelta)
 {
@@ -35,25 +35,25 @@ void IntegratePlayerMovement::update(float aDelta)
                 math::Vec<2, float>{-1.f, 0.f} * gBasePlayerSpeed * aDelta;
         }
 
-        if (aGeometry.mSubGridPosition.y() >= cellSize / 2)
+        if (aGeometry.mSubGridPosition.y() > cellSize / 2)
         {
             aGeometry.mGridPosition.y() += 1;
             aGeometry.mSubGridPosition.y() -= 2.f;
             aGeometry.mSubGridPosition.x() = 0.f;
         }
-        else if (aGeometry.mSubGridPosition.y() <= -cellSize / 2)
+        else if (aGeometry.mSubGridPosition.y() < -cellSize / 2)
         {
             aGeometry.mGridPosition.y() -= 1;
             aGeometry.mSubGridPosition.y() += 2.f;
             aGeometry.mSubGridPosition.x() = 0.f;
         }
-        else if (aGeometry.mSubGridPosition.x() >= cellSize / 2)
+        else if (aGeometry.mSubGridPosition.x() > cellSize / 2)
         {
             aGeometry.mGridPosition.x() += 1;
             aGeometry.mSubGridPosition.x() -= 2.f;
             aGeometry.mSubGridPosition.y() = 0.f;
         }
-        else if (aGeometry.mSubGridPosition.x() <= -cellSize / 2)
+        else if (aGeometry.mSubGridPosition.x() < -cellSize / 2)
         {
             aGeometry.mGridPosition.x() -= 1;
             aGeometry.mSubGridPosition.x() += 2.f;

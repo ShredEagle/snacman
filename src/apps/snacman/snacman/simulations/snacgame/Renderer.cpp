@@ -65,7 +65,8 @@ void Renderer::render(const visu::GraphicState & aState)
     {
         instanceBufferData.push_back(PoseColor{
             .pose = 
-                math::trans3d::rotateY(entity.mYAngle)
+                math::trans3d::scale(entity.mScaling)
+                * math::trans3d::rotateY(entity.mYAngle)
                 * math::trans3d::translate(entity.mPosition_world.as<math::Vec>()),
             .albedo = to_sdr(entity.mColor),
         });

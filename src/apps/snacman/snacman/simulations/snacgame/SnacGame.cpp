@@ -88,6 +88,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                 state->mEntities.insert(aHandle.id(),
                                         visu::Entity{
                                             .mPosition_world = worldPosition,
+                                            .mScaling = aGeometry.mScaling,
                                             .mYAngle = aGeometry.mYRotation,
                                             .mColor = aGeometry.mColor,
                                         });

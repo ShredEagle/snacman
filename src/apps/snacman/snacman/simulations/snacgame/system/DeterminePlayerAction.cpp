@@ -47,32 +47,7 @@ void DeterminePlayerAction::update(const snac::Input & aInput)
             break;
         }
 
-        auto entity = levelGrid
-            .at((aPlayerGeometry.mGridPosition.x() + 1)
-                + aPlayerGeometry.mGridPosition.y() * colCount)
-            .get(nomutation);
-
-        if (entity->has<component::Geometry>())
-        {
-            auto & geo = entity->get<component::Geometry>();
-            geo.mColor = math::hdr::gBlue<float>;
-        }
-
-
         if (action == gPlayerMoveDown)
-        {
-            bool isPath =
-                levelGrid
-                    .at(aPlayerGeometry.mGridPosition.x()
-                        + (aPlayerGeometry.mGridPosition.y() - 1) * colCount)
-                    .get(nomutation)
-                    ->has<component::Geometry>();
-            if (!isPath)
-            {
-                action = -1;
-            }
-        }
-        else if (action == gPlayerMoveUp)
         {
             bool isPath =
                 levelGrid
@@ -80,25 +55,39 @@ void DeterminePlayerAction::update(const snac::Input & aInput)
                         + (aPlayerGeometry.mGridPosition.y() + 1) * colCount)
                     .get(nomutation)
                     ->has<component::Geometry>();
-            if (!isPath)
+            if ((!isPath && aPlayerGeometry.mSubGridPosition.y() >= 0.f) || (
+                    aPlayerGeometry.mSubGridPosition.x() > 0.2f && aPlayerGeometry.mSubGridPosition.x() < -0.2f
+                       ))
             {
+                aPlayerGeometry.mSubGridPosition.y() = 0.f;
                 action = -1;
             }
+            else
+            {
+                aPlayerGeometry.mSubGridPosition.x() = 0.f;
+            }
         }
-        else if (action == gPlayerMoveRight)
+        else if (action == gPlayerMoveUp)
         {
             bool isPath =
                 levelGrid
-                    .at((aPlayerGeometry.mGridPosition.x() + 1)
-                        + aPlayerGeometry.mGridPosition.y() * colCount)
+                    .at(aPlayerGeometry.mGridPosition.x()
+                        + (aPlayerGeometry.mGridPosition.y() - 1) * colCount)
                     .get(nomutation)
                     ->has<component::Geometry>();
-            if (!isPath)
+            if ((!isPath && aPlayerGeometry.mSubGridPosition.y() <= 0.f) || (
+                    aPlayerGeometry.mSubGridPosition.x() > 0.2f && aPlayerGeometry.mSubGridPosition.x() < -0.2f
+                       ))
             {
+                aPlayerGeometry.mSubGridPosition.y() = 0.f;
                 action = -1;
             }
+            else
+            {
+                aPlayerGeometry.mSubGridPosition.x() = 0.f;
+            }
         }
-        else if (action == gPlayerMoveLeft)
+        else if (action == gPlayerMoveRight)
         {
             bool isPath =
                 levelGrid
@@ -106,9 +95,32 @@ void DeterminePlayerAction::update(const snac::Input & aInput)
                         + aPlayerGeometry.mGridPosition.y() * colCount)
                     .get(nomutation)
                     ->has<component::Geometry>();
-            if (!isPath)
+            if ((!isPath && aPlayerGeometry.mSubGridPosition.x() <= 0.f) || (
+                    aPlayerGeometry.mSubGridPosition.y() > 0.2f && aPlayerGeometry.mSubGridPosition.y() < -0.2f
+                       ))
             {
+                aPlayerGeometry.mSubGridPosition.y() = 0.f;
                 action = -1;
+            }
+        }
+        else if (action == gPlayerMoveLeft)
+        {
+            bool isPath =
+                levelGrid
+                    .at((aPlayerGeometry.mGridPosition.x() + 1)
+                        + aPlayerGeometry.mGridPosition.y() * colCount)
+                    .get(nomutation)
+                    ->has<component::Geometry>();
+            if ((!isPath && aPlayerGeometry.mSubGridPosition.x() >= 0.f) || (
+                    aPlayerGeometry.mSubGridPosition.y() > 0.2f && aPlayerGeometry.mSubGridPosition.y() < -0.2f
+                       ))
+            {
+                aPlayerGeometry.mSubGridPosition.x() = 0.f;
+                action = -1;
+            }
+            else
+            {
+                aPlayerGeometry.mSubGridPosition.y() = 0.f;
             }
         }
         aPlayerMoveState.mMoveState = action;

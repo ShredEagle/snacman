@@ -36,7 +36,7 @@ struct Camera
 
 struct GraphicState
 {
-    static constexpr std::size_t MaxEntityId{1024};
+    static constexpr std::size_t MaxEntityId{2048};
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
     Camera mCamera; 

@@ -42,6 +42,10 @@ struct Level
                             math::Position<2, int>{
                                 x,
                                 y}));
+                        createPill(aWorld, aInit,
+                            math::Position<2, int>{
+                                x,
+                                y});
                         break;
                     case 'K':
                         mLevelGrid.push_back(createPortalEntity(

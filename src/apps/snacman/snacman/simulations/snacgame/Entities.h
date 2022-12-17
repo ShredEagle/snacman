@@ -12,6 +12,9 @@ namespace snacgame {
 void createLevel(ent::Handle<ent::Entity> & aLevelHandle, ent::EntityManager & aWorld,
                 ent::Phase & aInit,
                 const markovjunior::Grid & aGrid);
+void createPill(ent::EntityManager & aWorld,
+        ent::Phase & aInit,
+        const math::Position<2, int> & Pos);
 ent::Handle<ent::Entity> createPathEntity(ent::EntityManager & mWorld,
                       ent::Phase & aInit,
                       const math::Position<2, int> & aPos);

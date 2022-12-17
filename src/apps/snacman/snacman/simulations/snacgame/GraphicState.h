@@ -20,6 +20,7 @@ namespace visu {
 struct Entity
 {
     math::Position<3, float> mPosition_world;
+    math::Size<3, float> mScaling;
     math::Radian<float> mYAngle;
     math::hdr::Rgba_f mColor;
 };
@@ -36,7 +37,7 @@ struct Camera
 
 struct GraphicState
 {
-    static constexpr std::size_t MaxEntityId{1024};
+    static constexpr std::size_t MaxEntityId{2048};
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
     Camera mCamera; 
@@ -61,6 +62,7 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
                 id,
                 Entity{
                     math::lerp(leftEntity.mPosition_world, rightEntity.mPosition_world,   aInterpolant),
+                    math::lerp(leftEntity.mScaling,        rightEntity.mScaling,   aInterpolant),
                     math::lerp(leftEntity.mYAngle,         rightEntity.mYAngle,           aInterpolant),
                     math::lerp(leftEntity.mColor,          rightEntity.mColor,            aInterpolant)});
         }
