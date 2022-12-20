@@ -25,11 +25,11 @@ snac::InstanceStream initializeInstanceStream()
     snac::InstanceStream instances;
     {
         graphics::ClientAttribute transformation{
-            .mDimension = 16,
+            .mDimension = {4, 4},
             .mOffset = offsetof(PoseColor, pose),
             .mDataType = GL_FLOAT,
         };
-        instances.mAttributes.emplace(snac::Semantic::LocalToWorld, snac::VertexStream::Attribute{0, transformation});
+        instances.mAttributes.emplace(snac::Semantic::LocalToWorld, transformation);
     }
     {
         graphics::ClientAttribute albedo{
@@ -37,7 +37,7 @@ snac::InstanceStream initializeInstanceStream()
             .mOffset = offsetof(PoseColor, albedo),
             .mDataType = GL_UNSIGNED_BYTE,
         };
-        instances.mAttributes.emplace(snac::Semantic::Albedo, snac::VertexStream::Attribute{0, albedo});
+        instances.mAttributes.emplace(snac::Semantic::Albedo, albedo);
     }
     instances.mInstanceBuffer.mStride = sizeof(PoseColor);
     return instances;

@@ -16,7 +16,7 @@ namespace snac {
 
 struct IntrospectProgram
 {
-    /*implicit*/ IntrospectProgram(graphics::Program aProgram);
+    /*implicit*/ IntrospectProgram(graphics::Program aProgram, std::string aName);
 
     /*implicit*/ operator graphics::Program &()
     { return mProgram; }
@@ -27,16 +27,22 @@ struct IntrospectProgram
     /*implicit*/ operator GLuint() const
     { return mProgram; }
 
+    std::string_view name() const
+    { return mName; }
+
     struct Attribute
     {
-        GLint mLocation;
+        GLuint mLocation;
         GLenum mType;
         Semantic mSemantic;
         std::string mName; // To ease debugger inspection, we only need the semantic
+
+        graphics::ShaderParameter toShaderParameter() const;
     };
 
     graphics::Program mProgram;
     std::vector<Attribute> mAttributes;
+    std::string mName;
 };
 
 

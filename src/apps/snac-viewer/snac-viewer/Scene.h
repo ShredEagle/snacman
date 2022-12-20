@@ -44,7 +44,7 @@ InstanceStream makeInstances()
 
     {
         graphics::ClientAttribute transformation{
-            .mDimension = 16,
+            .mDimension = {4, 4},
             .mOffset = offsetof(PoseColor, pose),
             .mDataType = GL_FLOAT,
         };

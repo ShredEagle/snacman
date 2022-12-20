@@ -11,6 +11,68 @@ namespace ad {
 namespace snac {
 
 
+graphics::ShaderParameter::Access getShaderAccess(GLenum aType)
+{
+    switch(aType)
+    {
+        case GL_FLOAT:
+        case GL_FLOAT_VEC2:
+        case GL_FLOAT_VEC3:
+        case GL_FLOAT_VEC4:
+        case GL_FLOAT_MAT2:
+        case GL_FLOAT_MAT3:
+        case GL_FLOAT_MAT4:
+        case GL_FLOAT_MAT2x3:
+        case GL_FLOAT_MAT2x4:
+        case GL_FLOAT_MAT3x2:
+        case GL_FLOAT_MAT3x4:
+        case GL_FLOAT_MAT4x2:
+        case GL_FLOAT_MAT4x3:
+        {
+            return graphics::ShaderParameter::Access::Float;
+        }
+
+        case GL_DOUBLE:
+        case GL_DOUBLE_VEC2:
+        case GL_DOUBLE_VEC3:
+        case GL_DOUBLE_VEC4:
+        case GL_DOUBLE_MAT2:
+        case GL_DOUBLE_MAT3:
+        case GL_DOUBLE_MAT4:
+        case GL_DOUBLE_MAT2x3:
+        case GL_DOUBLE_MAT2x4:
+        case GL_DOUBLE_MAT3x2:
+        case GL_DOUBLE_MAT3x4:
+        case GL_DOUBLE_MAT4x2:
+        case GL_DOUBLE_MAT4x3:
+        {
+            throw std::logic_error{
+                std::string{__func__} + ": Double parameters are not handled at the moment."};
+        }
+
+        case GL_INT:
+        case GL_INT_VEC2:
+        case GL_INT_VEC3:
+        case GL_INT_VEC4:
+
+        case GL_UNSIGNED_INT:
+        case GL_UNSIGNED_INT_VEC2:
+        case GL_UNSIGNED_INT_VEC3:
+        case GL_UNSIGNED_INT_VEC4:
+        {
+            return graphics::ShaderParameter::Access::Integer;
+        }
+
+        default:
+        {
+            throw std::logic_error{
+                std::string{__func__} + ": Unhandled enumerator with value: " 
+                + std::to_string(aType) + "."};
+        }
+    }
+}
+
+
 namespace {
 
 
@@ -116,8 +178,9 @@ namespace {
 } // anonymous
 
 
-IntrospectProgram::IntrospectProgram(graphics::Program aProgram) :
-    mProgram{std::move(aProgram)}
+IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aName) :
+    mProgram{std::move(aProgram)},
+    mName{std::move(aName)}
 {
     using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE>;
     for (auto it = Iterator(mProgram, GL_PROGRAM_INPUT);
@@ -126,12 +189,23 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram) :
     {
         auto & attribute = *it;
         mAttributes.push_back({
-            .mLocation = attribute[0],
+            .mLocation = (GLuint)attribute[0],
             .mType = (GLenum)attribute[1],
             .mSemantic = to_semantic(attribute.mName),
             .mName = attribute.mName,
         });
     }
+}
+
+
+graphics::ShaderParameter IntrospectProgram::Attribute::toShaderParameter() const
+{
+    graphics::ShaderParameter result{
+        mLocation,
+        getShaderAccess(mType)
+    };
+    result.mNormalize = isNormalized(mSemantic);
+    return result;
 }
 
 

@@ -85,9 +85,11 @@ void main(void)
 
 Renderer::Renderer() :
     mProgram{graphics::makeLinkedProgram({
-        {GL_VERTEX_SHADER,   {gVertexShader, "PhongVertexShader"}},
-        {GL_FRAGMENT_SHADER, {gFragmentShader, "PhongFragmentShader"}},
-    })}
+            {GL_VERTEX_SHADER,   {gVertexShader, "PhongVertexShader"}},
+            {GL_FRAGMENT_SHADER, {gFragmentShader, "PhongFragmentShader"}},
+        }),
+        "PhongLighting"
+    }
 {}
 
 

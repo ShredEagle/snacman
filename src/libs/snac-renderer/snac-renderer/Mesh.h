@@ -6,6 +6,7 @@
 #include <renderer/VertexSpecification.h>
 
 #include <map>
+#include <string>
 
 
 namespace ad {
@@ -19,10 +20,42 @@ enum class Semantic
     Position,
     Normal,
     Albedo,
+    TextureCoords,
     // Usually per instance
     LocalToWorld,
+
+    _End/* Must be last
+*/
 };
 
+
+inline std::string to_string(Semantic aSemantic)
+{
+#define MAPPING_STR(semantic) case Semantic::semantic: return #semantic;
+    switch(aSemantic)
+    {
+        MAPPING_STR(Position)
+        MAPPING_STR(Normal)
+        MAPPING_STR(Albedo)
+        MAPPING_STR(TextureCoords)
+        MAPPING_STR(LocalToWorld)
+        default:
+        {
+            auto value = static_cast<std::underlying_type_t<Semantic>>(aSemantic);
+            if(value >= static_cast<std::underlying_type_t<Semantic>>(Semantic::_End))
+            {
+                throw std::invalid_argument{"There are no semantics with value: " + std::to_string(value) + "."};
+            }
+            else
+            {
+                // Stop us here in a debug build
+                assert(false);
+                return "(Semantic#" + std::to_string(value) + ")";
+            }
+        }
+    }
+#undef MAPPING_STR
+}
 
 inline Semantic to_semantic(std::string_view aAttributeName)
 {
@@ -36,6 +69,7 @@ inline Semantic to_semantic(std::string_view aAttributeName)
     MAPPING(Position)
     MAPPING(Normal)
     MAPPING(Albedo)
+    MAPPING(TextureCoords)
     MAPPING(LocalToWorld)
     else
     {
@@ -43,6 +77,29 @@ inline Semantic to_semantic(std::string_view aAttributeName)
             "Unable to map shader attribute name '" + std::string{aAttributeName} + "' to a semantic."};
     }
 #undef MAPPING
+}
+
+inline bool isNormalized(Semantic aSemantic)
+{
+    switch(aSemantic)
+    {
+        case Semantic::Albedo:
+        {
+            return true;
+        }
+        case Semantic::Position:
+        case Semantic::Normal:
+        case Semantic::TextureCoords:
+        case Semantic::LocalToWorld:
+        {
+            return false;
+        }
+        default:
+        {
+            throw std::logic_error{
+                "Semantic '" + to_string(aSemantic) + "' normalization has not been listed."};
+        }
+    }
 }
 
 
@@ -60,7 +117,7 @@ struct VertexStream
     struct VertexBuffer
     {
         graphics::VertexBufferObject mBuffer;
-        std::size_t mStride{0};
+        GLsizei mStride{0};
     };
 
     std::vector<VertexBuffer> mVertexBuffers;
@@ -83,7 +140,7 @@ struct InstanceStream
     void respecifyData(std::span<T_value, N_spanExtent> aData);
 
     VertexStream::VertexBuffer mInstanceBuffer;
-    std::map<Semantic, VertexStream::Attribute> mAttributes;
+    std::map<Semantic, graphics::ClientAttribute> mAttributes;
     GLsizei mInstanceCount{0};
 };
 

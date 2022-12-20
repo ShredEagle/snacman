@@ -14,37 +14,6 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
     // TODO scoped bind (also remove the unbind)
     bind (vertexArray);
 
-    const VertexStream::VertexBuffer & instanceView = aInstances.mInstanceBuffer;
-    bind(instanceView.mBuffer);
-    {
-        const graphics::ClientAttribute & attribute =
-            aInstances.mAttributes.at(Semantic::LocalToWorld).mAttribute;
-        // TODO: Remove hardcoding knowledge this will be a multiple of dimensions 4.
-        for (int attributeOffset = 0; attributeOffset != (int)attribute.mDimension / 4; ++attributeOffset)
-        {
-            int dimension = 4; // TODO stop hardcoding
-            int shaderIndex = 4 + attributeOffset;
-            glVertexAttribPointer(shaderIndex,
-                                    dimension,
-                                    attribute.mDataType, 
-                                    GL_FALSE, 
-                                    static_cast<GLsizei>(instanceView.mStride),
-                                    (void *)(attribute.mOffset 
-                                            + attributeOffset * dimension * graphics::getByteSize(attribute.mDataType)));
-            glEnableVertexAttribArray(shaderIndex);
-            glVertexAttribDivisor(shaderIndex, 1);
-        }
-    }
-    {
-        const graphics::ClientAttribute & attribute =
-            aInstances.mAttributes.at(Semantic::Albedo).mAttribute;
-        // Note: has to handle normalized attributes here
-        glVertexAttribPointer(12, attribute.mDimension, attribute.mDataType, 
-                                GL_TRUE, static_cast<GLsizei>(instanceView.mStride), (void *)attribute.mOffset);
-        glEnableVertexAttribArray(12);
-        glVertexAttribDivisor(12, 1);
-    }
-
     for (const IntrospectProgram::Attribute & attribute : aProgram.mAttributes)
     {
         if(auto found = aMesh.mStream.mAttributes.find(attribute.mSemantic);
@@ -55,12 +24,28 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
             const VertexStream::VertexBuffer & vertexBuffer = 
                 aMesh.mStream.mVertexBuffers.at(arrayBuffer.mVertexBufferIndex);
             bind(vertexBuffer.mBuffer);
-            // TODO handle integral program attributes
             // TODO some assertions regarding the number of components compatibility
-            // TODO handle normalizing
-            glVertexAttribPointer(attribute.mLocation, client.mDimension, client.mDataType, 
-                                  GL_FALSE, static_cast<GLsizei>(vertexBuffer.mStride), (void *)client.mOffset);
-            glEnableVertexAttribArray(attribute.mLocation);
+            graphics::attachBoundVertexBuffer(
+                {attribute.toShaderParameter(), client},
+                vertexBuffer.mStride);
+        }
+        else if (auto found = aInstances.mAttributes.find(attribute.mSemantic);
+                 found != aInstances.mAttributes.end())
+        {
+            bind(aInstances.mInstanceBuffer.mBuffer);
+            const graphics::ClientAttribute & client = found->second;
+            graphics::attachBoundVertexBuffer(
+                {attribute.toShaderParameter(), client},
+                aInstances.mInstanceBuffer.mStride,
+                1);
+        }
+        else
+        {
+            SELOG_LG(gRenderLogger, warn)(
+                "{}: Could not find an a vertex array buffer for semantic '{}' in program '{}'.", 
+                __func__,
+                to_string(attribute.mSemantic),
+                aProgram.name());
         }
     }
 
