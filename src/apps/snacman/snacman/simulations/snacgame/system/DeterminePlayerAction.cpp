@@ -2,6 +2,7 @@
 
 #include "math/Color.h"
 #include "snacman/Input.h"
+#include "snacman/simulations/snacgame/component/AllowedMovement.h"
 #include "snacman/simulations/snacgame/component/Geometry.h"
 
 #include "../component/Controller.h"
@@ -15,8 +16,7 @@ void DeterminePlayerAction::update(const snac::Input & aInput)
 {
     ent::Phase nomutation;
     auto levelGrid = mLevel.get(nomutation)->get<component::Level>().mLevelGrid;
-    int colCount =
-        mLevel.get(nomutation)->get<component::Level>().mColCount;
+    int colCount = mLevel.get(nomutation)->get<component::Level>().mColCount;
     mPlayer.each([this, &aInput, colCount, &levelGrid, &nomutation](
                      component::Controller & aController,
                      component::Geometry & aPlayerGeometry,
@@ -47,82 +47,47 @@ void DeterminePlayerAction::update(const snac::Input & aInput)
             break;
         }
 
-        if (action == gPlayerMoveDown)
+        auto pathUnderPlayerAllowedMove =
+            levelGrid
+                .at(aPlayerGeometry.mGridPosition.x()
+                    + aPlayerGeometry.mGridPosition.y() * colCount)
+                .get(nomutation)
+                ->get<component::AllowedMovement>();
+
+        // If the player wants to move down and is not allowed to move down
+        if (!(pathUnderPlayerAllowedMove.mAllowedMovement
+                & component::AllowedMovementDown)
+            && aPlayerGeometry.mSubGridPosition.y() >= 0.f
+            && action == gPlayerMoveDown)
         {
-            bool isPath =
-                levelGrid
-                    .at(aPlayerGeometry.mGridPosition.x()
-                        + (aPlayerGeometry.mGridPosition.y() + 1) * colCount)
-                    .get(nomutation)
-                    ->has<component::Geometry>();
-            if ((!isPath && aPlayerGeometry.mSubGridPosition.y() >= 0.f) || (
-                    aPlayerGeometry.mSubGridPosition.x() > 0.2f && aPlayerGeometry.mSubGridPosition.x() < -0.2f
-                       ))
-            {
-                aPlayerGeometry.mSubGridPosition.y() = 0.f;
-                action = -1;
-            }
-            else
-            {
-                aPlayerGeometry.mSubGridPosition.x() = 0.f;
-            }
+            aPlayerGeometry.mSubGridPosition.y() = 0.f;
+            action = -1;
         }
-        else if (action == gPlayerMoveUp)
+        else if (!(pathUnderPlayerAllowedMove.mAllowedMovement
+                     & component::AllowedMovementUp)
+                 && aPlayerGeometry.mSubGridPosition.y() <= 0.f
+                 && action == gPlayerMoveUp)
         {
-            bool isPath =
-                levelGrid
-                    .at(aPlayerGeometry.mGridPosition.x()
-                        + (aPlayerGeometry.mGridPosition.y() - 1) * colCount)
-                    .get(nomutation)
-                    ->has<component::Geometry>();
-            if ((!isPath && aPlayerGeometry.mSubGridPosition.y() <= 0.f) || (
-                    aPlayerGeometry.mSubGridPosition.x() > 0.2f && aPlayerGeometry.mSubGridPosition.x() < -0.2f
-                       ))
-            {
-                aPlayerGeometry.mSubGridPosition.y() = 0.f;
-                action = -1;
-            }
-            else
-            {
-                aPlayerGeometry.mSubGridPosition.x() = 0.f;
-            }
+            aPlayerGeometry.mSubGridPosition.y() = 0.f;
+            action = -1;
         }
-        else if (action == gPlayerMoveRight)
+        else if (!(pathUnderPlayerAllowedMove.mAllowedMovement
+                 & component::AllowedMovementLeft)
+                 && aPlayerGeometry.mSubGridPosition.x() >= 0.f
+                 && action == gPlayerMoveLeft)
         {
-            bool isPath =
-                levelGrid
-                    .at((aPlayerGeometry.mGridPosition.x() - 1)
-                        + aPlayerGeometry.mGridPosition.y() * colCount)
-                    .get(nomutation)
-                    ->has<component::Geometry>();
-            if ((!isPath && aPlayerGeometry.mSubGridPosition.x() <= 0.f) || (
-                    aPlayerGeometry.mSubGridPosition.y() > 0.2f && aPlayerGeometry.mSubGridPosition.y() < -0.2f
-                       ))
-            {
-                aPlayerGeometry.mSubGridPosition.y() = 0.f;
-                action = -1;
-            }
+            aPlayerGeometry.mSubGridPosition.x() = 0.f;
+            action = -1;
         }
-        else if (action == gPlayerMoveLeft)
+        else if (!(pathUnderPlayerAllowedMove.mAllowedMovement
+                 & component::AllowedMovementRight)
+                 && aPlayerGeometry.mSubGridPosition.x() <= 0.f
+                 && action == gPlayerMoveRight)
         {
-            bool isPath =
-                levelGrid
-                    .at((aPlayerGeometry.mGridPosition.x() + 1)
-                        + aPlayerGeometry.mGridPosition.y() * colCount)
-                    .get(nomutation)
-                    ->has<component::Geometry>();
-            if ((!isPath && aPlayerGeometry.mSubGridPosition.x() >= 0.f) || (
-                    aPlayerGeometry.mSubGridPosition.y() > 0.2f && aPlayerGeometry.mSubGridPosition.y() < -0.2f
-                       ))
-            {
-                aPlayerGeometry.mSubGridPosition.x() = 0.f;
-                action = -1;
-            }
-            else
-            {
-                aPlayerGeometry.mSubGridPosition.y() = 0.f;
-            }
+            aPlayerGeometry.mSubGridPosition.x() = 0.f;
+            action = -1;
         }
+
         aPlayerMoveState.mMoveState = action;
     });
 }
