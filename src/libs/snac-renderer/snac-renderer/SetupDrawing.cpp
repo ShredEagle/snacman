@@ -6,6 +6,56 @@
 namespace ad {
 namespace snac {
 
+namespace {
+
+    /// @brief Attach vertex buffer data to a shader program parameter.
+    ///
+    /// Make several sanity checks regarding the data and attribute "compatibility"
+    /// (dimensions, etc.)
+    void attachAttribute(const IntrospectProgram::Attribute & aShaderAttribute,
+                         const graphics::ClientAttribute & aClientAttribute,
+                         const VertexStream::VertexBuffer & aView,
+                         GLuint aInstanceDivisor,
+                         std::string_view aProgramName /* for log messages */)
+    {
+            // Consider secondary dimension mismatch (i.e., number of rows) a fatal error
+            // Note: this might be too conservative, to be revised when a use case requires it.
+            if (aClientAttribute.mDimension[1] != aShaderAttribute.dimension()[1])
+            {
+                SELOG_LG(gRenderLogger, critical)(
+                    "{}: '{}' program attribute '{}'({}) of dimension {} is to be attached to vertex data of dimension {}. Row counts are not allowed to differ.",
+                    __func__,
+                    aProgramName,
+                    aShaderAttribute.mName,
+                    to_string(aShaderAttribute.mSemantic),
+                    aShaderAttribute.dimension(),
+                    aClientAttribute.mDimension
+                );
+                throw std::logic_error{"Mismatching row counts between shader attribute and buffer data."};
+            }
+            else if (aClientAttribute.mDimension[0] != aShaderAttribute.dimension()[0])
+            {
+                SELOG_LG(gRenderLogger, warn)(
+                    "{}: '{}' program attribute '{}'({}) of dimension {} is to be attached to vertex data of dimension {}.",
+                    __func__,
+                    aProgramName,
+                    aShaderAttribute.mName,
+                    to_string(aShaderAttribute.mSemantic),
+                    aShaderAttribute.dimension(),
+                    aClientAttribute.mDimension
+                );
+            }
+
+            bind(aView.mBuffer);
+            graphics::attachBoundVertexBuffer(
+                {aShaderAttribute.toShaderParameter(), aClientAttribute},
+                aView.mStride,
+                aInstanceDivisor);
+    }
+
+}; // anonymous
+
+
 graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
                                        const InstanceStream & aInstances,
                                        const IntrospectProgram & aProgram)
@@ -14,37 +64,29 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
     // TODO scoped bind (also remove the unbind)
     bind (vertexArray);
 
-    for (const IntrospectProgram::Attribute & attribute : aProgram.mAttributes)
+    for (const IntrospectProgram::Attribute & shaderAttribute : aProgram.mAttributes)
     {
-        if(auto found = aMesh.mStream.mAttributes.find(attribute.mSemantic);
+        if(auto found = aMesh.mStream.mAttributes.find(shaderAttribute.mSemantic);
            found != aMesh.mStream.mAttributes.end())
         {
             const VertexStream::Attribute & arrayBuffer = found->second;
             const graphics::ClientAttribute & client = found->second.mAttribute;
             const VertexStream::VertexBuffer & vertexBuffer = 
                 aMesh.mStream.mVertexBuffers.at(arrayBuffer.mVertexBufferIndex);
-            bind(vertexBuffer.mBuffer);
-            // TODO some assertions regarding the number of components compatibility
-            graphics::attachBoundVertexBuffer(
-                {attribute.toShaderParameter(), client},
-                vertexBuffer.mStride);
+            attachAttribute(shaderAttribute, client, vertexBuffer, 0, aProgram.name());
         }
-        else if (auto found = aInstances.mAttributes.find(attribute.mSemantic);
+        else if (auto found = aInstances.mAttributes.find(shaderAttribute.mSemantic);
                  found != aInstances.mAttributes.end())
         {
-            bind(aInstances.mInstanceBuffer.mBuffer);
             const graphics::ClientAttribute & client = found->second;
-            graphics::attachBoundVertexBuffer(
-                {attribute.toShaderParameter(), client},
-                aInstances.mInstanceBuffer.mStride,
-                1);
+            attachAttribute(shaderAttribute, client, aInstances.mInstanceBuffer, 1, aProgram.name());
         }
         else
         {
             SELOG_LG(gRenderLogger, warn)(
                 "{}: Could not find an a vertex array buffer for semantic '{}' in program '{}'.", 
                 __func__,
-                to_string(attribute.mSemantic),
+                to_string(shaderAttribute.mSemantic),
                 aProgram.name());
         }
     }
@@ -54,6 +96,7 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
     unbind(vertexArray);
     return vertexArray;
 }
+
 
 const graphics::VertexArrayObject &
 VertexArrayRepository::get(const Mesh & aMesh,

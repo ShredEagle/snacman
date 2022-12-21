@@ -14,6 +14,10 @@ namespace ad {
 namespace snac {
 
 
+// TODO move to a more general library
+graphics::AttributeDimension getDimension(GLenum aType);
+
+
 struct IntrospectProgram
 {
     /*implicit*/ IntrospectProgram(graphics::Program aProgram, std::string aName);
@@ -36,6 +40,9 @@ struct IntrospectProgram
         GLenum mType;
         Semantic mSemantic;
         std::string mName; // To ease debugger inspection, we only need the semantic
+
+        graphics::AttributeDimension dimension() const
+        { return getDimension(mType); }
 
         graphics::ShaderParameter toShaderParameter() const;
     };

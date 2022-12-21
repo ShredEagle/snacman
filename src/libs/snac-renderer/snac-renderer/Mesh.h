@@ -79,6 +79,9 @@ inline Semantic to_semantic(std::string_view aAttributeName)
 #undef MAPPING
 }
 
+
+// Note: At the moment, the fact that an attribute is normalized or not
+//       is hardcoded by its semantic. This is to be revisited when new need arises.
 inline bool isNormalized(Semantic aSemantic)
 {
     switch(aSemantic)
