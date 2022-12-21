@@ -1,10 +1,11 @@
 #pragma once
 
 
-#include "Mesh.h"
+#include "Semantic.h"
+#include "ShaderResource.h"
 
-#include <renderer/GL_Loader.h>
 #include <renderer/Shading.h>
+#include <renderer/VertexSpecification.h>
 
 #include <string>
 #include <vector>
@@ -12,10 +13,6 @@
 
 namespace ad {
 namespace snac {
-
-
-// TODO move to a more general library
-graphics::AttributeDimension getDimension(GLenum aType);
 
 
 struct IntrospectProgram
@@ -42,7 +39,7 @@ struct IntrospectProgram
         std::string mName; // To ease debugger inspection, we only need the semantic
 
         graphics::AttributeDimension dimension() const
-        { return getDimension(mType); }
+        { return getResourceDimension(mType); }
 
         graphics::ShaderParameter toShaderParameter() const;
     };

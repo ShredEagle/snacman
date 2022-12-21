@@ -9,7 +9,9 @@ set(${TARGET_NAME}_HEADERS
     Material.h
     Mesh.h
     Render.h
+    Semantic.h
     SetupDrawing.h
+    ShaderResource.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -20,7 +22,9 @@ set(${TARGET_NAME}_SOURCES
     Material.cpp
     Mesh.cpp
     Render.cpp
+    Semantic.cpp
     SetupDrawing.cpp
+    ShaderResource.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
