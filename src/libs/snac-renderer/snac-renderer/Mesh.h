@@ -11,26 +11,38 @@ namespace ad {
 namespace snac {
 
 
+// We use the same model as glTF, because it is good, and because it will
+// make it convenient to load glTF models.
+// Note: A difference is that we do **not** store lengths in buffer, buffer view, etc.
+//       This is because the data will already be loaded into the buffer by the time
+//       those classes are used, and all is needed then is the count of vertices or instances.
+
+
+struct BufferView
+{
+    graphics::VertexBufferObject mBuffer;
+    GLsizei mStride{0};
+
+    // TODO Extend the buffer view so a single buffer can store the vertex data for several meshes.
+    //      This will require sharing the vertex buffer object between views.
+    //      I would use shared_ptr for simplicity and safe reference counting.
+    //GLuint byteOffset; // Offset from the start of the underlying buffer to the start of the view.
+};
+
+
+struct AttributeAccessor
+{
+    std::size_t mBufferViewIndex;
+    graphics::ClientAttribute mAttribute;
+};
+
+
 struct VertexStream
 {
-    // ~glTF::accessor
-    struct Attribute
-    {
-        std::size_t mVertexBufferIndex;
-        graphics::ClientAttribute mAttribute;
-    };
-
-    // TODO generalize via a BufferView, so a VBO can contain several distinct sections.
-    //      See glTF format.
-    struct VertexBuffer
-    {
-        graphics::VertexBufferObject mBuffer;
-        GLsizei mStride{0};
-    };
-
-    std::vector<VertexBuffer> mVertexBuffers;
-    std::map<Semantic, Attribute> mAttributes;
+    std::vector<BufferView> mVertexBuffers;
+    std::map<Semantic, AttributeAccessor> mAttributes;
     GLsizei mVertexCount{0};
+    // TODO handle indexed rendering
     //IndexBufferObject mIndexBuffer;
 };
 
@@ -47,7 +59,8 @@ struct InstanceStream
     template <class T_value, std::size_t N_spanExtent>
     void respecifyData(std::span<T_value, N_spanExtent> aData);
 
-    VertexStream::VertexBuffer mInstanceBuffer;
+    BufferView mInstanceBuffer;
+    // No need for an Accessor to indicate the buffer view, as there is only one.
     std::map<Semantic, graphics::ClientAttribute> mAttributes;
     GLsizei mInstanceCount{0};
 };

@@ -183,7 +183,7 @@ inline Mesh makeCube()
             .mOffset = offsetof(PositionNormal, position),
             .mDataType = GL_FLOAT
         };
-        geometry.mAttributes.emplace(Semantic::Position, VertexStream::Attribute{index, position});
+        geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, position});
     }
     {
         graphics::ClientAttribute normal{
@@ -191,7 +191,7 @@ inline Mesh makeCube()
             .mOffset = offsetof(PositionNormal, normal),
             .mDataType = GL_FLOAT
         };
-        geometry.mAttributes.emplace(Semantic::Normal, VertexStream::Attribute{index, normal});
+        geometry.mAttributes.emplace(Semantic::Normal, AttributeAccessor{index, normal});
     }
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
@@ -218,7 +218,7 @@ inline Mesh makeTriangle()
         .mOffset = 0,
         .mDataType = GL_FLOAT
     };
-    geometry.mAttributes.emplace(Semantic::Position, VertexStream::Attribute{index, attribute});
+    geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, attribute});
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
     return Mesh{.mStream = std::move(geometry)};

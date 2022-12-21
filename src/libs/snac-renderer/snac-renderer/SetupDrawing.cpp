@@ -14,7 +14,7 @@ namespace {
     /// (dimensions, etc.)
     void attachAttribute(const IntrospectProgram::Attribute & aShaderAttribute,
                          const graphics::ClientAttribute & aClientAttribute,
-                         const VertexStream::VertexBuffer & aView,
+                         const BufferView & aView,
                          GLuint aInstanceDivisor,
                          std::string_view aProgramName /* for log messages */)
     {
@@ -69,11 +69,10 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
         if(auto found = aMesh.mStream.mAttributes.find(shaderAttribute.mSemantic);
            found != aMesh.mStream.mAttributes.end())
         {
-            const VertexStream::Attribute & arrayBuffer = found->second;
-            const graphics::ClientAttribute & client = found->second.mAttribute;
-            const VertexStream::VertexBuffer & vertexBuffer = 
-                aMesh.mStream.mVertexBuffers.at(arrayBuffer.mVertexBufferIndex);
-            attachAttribute(shaderAttribute, client, vertexBuffer, 0, aProgram.name());
+            const AttributeAccessor & accessor = found->second;
+            const BufferView & bufferView = 
+                aMesh.mStream.mVertexBuffers.at(accessor.mBufferViewIndex);
+            attachAttribute(shaderAttribute, accessor.mAttribute, bufferView, 0, aProgram.name());
         }
         else if (auto found = aInstances.mAttributes.find(shaderAttribute.mSemantic);
                  found != aInstances.mAttributes.end())
