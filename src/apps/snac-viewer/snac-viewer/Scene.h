@@ -48,7 +48,7 @@ InstanceStream makeInstances()
             .mOffset = offsetof(PoseColor, pose),
             .mDataType = GL_FLOAT,
         };
-        instances.mAttributes.emplace(Semantic::LocalToWorld, AttributeAccessor{0, transformation});
+        instances.mAttributes.emplace(Semantic::LocalToWorld, transformation);
     }
     {
         graphics::ClientAttribute albedo{
@@ -56,7 +56,7 @@ InstanceStream makeInstances()
             .mOffset = offsetof(PoseColor, albedo),
             .mDataType = GL_UNSIGNED_BYTE,
         };
-        instances.mAttributes.emplace(Semantic::Albedo, AttributeAccessor{0, albedo});
+        instances.mAttributes.emplace(Semantic::Albedo, albedo);
     }
     return instances;
 }
