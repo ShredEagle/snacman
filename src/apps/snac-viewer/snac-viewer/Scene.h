@@ -33,7 +33,7 @@ InstanceStream makeInstances()
         .mInstanceCount = (GLsizei)std::size(transformations),
     };
     std::size_t instanceSize = sizeof(decltype(transformations)::value_type);
-    instances.mInstanceBuffer.mStride = instanceSize;
+    instances.mInstanceBuffer.mStride = (GLsizei)instanceSize;
 
     bind(instances.mInstanceBuffer.mBuffer);
     glBufferData(
