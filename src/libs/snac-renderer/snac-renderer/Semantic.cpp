@@ -13,14 +13,19 @@ namespace snac {
 
 std::string to_string(Semantic aSemantic)
 {
-#define MAPPING_STR(semantic) case Semantic::semantic: return #semantic;
+#define MAPPING(semantic) case Semantic::semantic: return #semantic;
     switch(aSemantic)
     {
-        MAPPING_STR(Position)
-        MAPPING_STR(Normal)
-        MAPPING_STR(Albedo)
-        MAPPING_STR(TextureCoords)
-        MAPPING_STR(LocalToWorld)
+        MAPPING(Position)
+        MAPPING(Normal)
+        MAPPING(Albedo)
+        MAPPING(TextureCoords)
+        MAPPING(LocalToWorld)
+        MAPPING(AmbientColor) 
+        MAPPING(LightColor)
+        MAPPING(LightPosition)
+        MAPPING(WorldToCamera)
+        MAPPING(Projection)
         default:
         {
             auto value = static_cast<std::underlying_type_t<Semantic>>(aSemantic);
@@ -36,7 +41,7 @@ std::string to_string(Semantic aSemantic)
             }
         }
     }
-#undef MAPPING_STR
+#undef MAPPING
 }
 
 Semantic to_semantic(std::string_view aAttributeName)
@@ -53,6 +58,11 @@ Semantic to_semantic(std::string_view aAttributeName)
     MAPPING(Albedo)
     MAPPING(TextureCoords)
     MAPPING(LocalToWorld)
+    MAPPING(AmbientColor) 
+    MAPPING(LightColor)
+    MAPPING(LightPosition)
+    MAPPING(WorldToCamera)
+    MAPPING(Projection)
     else
     {
         throw std::logic_error{
@@ -67,6 +77,8 @@ bool isNormalized(Semantic aSemantic)
     switch(aSemantic)
     {
         case Semantic::Albedo:
+        case Semantic::AmbientColor:
+        case Semantic::LightColor:
         {
             return true;
         }
@@ -74,6 +86,9 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::Normal:
         case Semantic::TextureCoords:
         case Semantic::LocalToWorld:
+        case Semantic::LightPosition:
+        case Semantic::WorldToCamera:
+        case Semantic::Projection:
         {
             return false;
         }

@@ -98,7 +98,7 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
 
 
 const graphics::VertexArrayObject &
-VertexArrayRepository::get(const Mesh & aMesh,
+VertexArrayRepository::get(const Mesh & aMesh, // Maybe it should just be the VertexStream?
                            const InstanceStream & aInstances,
                            const IntrospectProgram & aProgram)
 {

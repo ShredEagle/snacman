@@ -29,6 +29,7 @@ namespace {
             }
 
             std::string mName;
+            GLuint mIndex;
             std::array<GLint, sizeof...(VN_properties) + 1 /*name length*/> mProperties;
         };
 
@@ -88,6 +89,7 @@ namespace {
             glGetProgramResourceName(*mProgram, mProgramInterface, mCurrentId,
                                      nameLength, &nameLength, nameBuffer.get());
             mValue.mName = std::string(nameBuffer.get(), nameLength);
+            mValue.mIndex = (GLuint)mCurrentId;
 
             // TODO This raises the question of how long should the reference be valid by standard?
             return mValue;
@@ -116,22 +118,139 @@ namespace {
 } // anonymous
 
 
+std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram & aProgram)
+{
+    auto lister = [&aOut](std::string_view aCategory, const auto & aCollection)
+    {
+        aOut << "\n* " << aCollection.size() << " " << aCategory 
+             << (aCollection.size() > 1 ? "s" : "") << ":";
+        for (const auto & resource : aCollection)
+        {
+            aOut << "\n\t*" << resource;
+        }
+    };
+
+    aOut << "Program '" << aProgram.mName << "' with:";
+    lister("attribute", aProgram.mAttributes);
+    lister("uniform", aProgram.mUniforms);
+    lister("uniform block", aProgram.mUniformBlocks);
+    return aOut;
+}
+
+
+std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::Resource & aResource)
+{
+    aOut << aResource.mName 
+         << " (" << to_string(aResource.mSemantic) << ")"
+         ;
+    
+    if (aResource.mLocation != -1)
+    {
+        aOut << " at location " << aResource.mLocation;
+    }
+
+    return aOut << " has type " << graphics::to_string(getResourceComponentType(aResource.mType))
+                << " and dimension " << getResourceDimension(aResource.mType)
+                << "."
+                ;
+}
+
+
+std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::UniformBlock & aBlock)
+{
+    aOut << aBlock.mName 
+         // TODO add block semantic output
+         //<< " (" << to_string(aResource.mSemantic) << ")"
+         << " at binding index " << aBlock.mBindingIndex
+         << " has " << aBlock.mUniforms.size() << " active uniform variable(s):"
+         ;
+
+    for (const auto & resource : aBlock.mUniforms)
+    {
+        // TODO Address the dirty encoding of two tabs
+        // (because we currently intend to use it under the IntrospectProgram output operator)
+        aOut << "\n\t\t*" << resource;
+    }
+
+    return aOut;
+}
+
+
 IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aName) :
     mProgram{std::move(aProgram)},
     mName{std::move(aName)}
 {
-    using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE>;
-    for (auto it = Iterator(mProgram, GL_PROGRAM_INPUT);
-         it != Iterator::makeEnd(mProgram, GL_PROGRAM_INPUT);
-         ++it)
+    auto makeResource = [](const auto &aAttribute) -> Resource
     {
-        auto & attribute = *it;
-        mAttributes.push_back({
-            .mLocation = (GLuint)attribute[0],
-            .mType = (GLenum)attribute[1],
-            .mSemantic = to_semantic(attribute.mName),
-            .mName = attribute.mName,
-        });
+        return Resource{
+            .mLocation = aAttribute[0],
+            .mType = (GLenum)aAttribute[1],
+            .mSemantic = to_semantic(aAttribute.mName),
+            .mName = aAttribute.mName,
+        };
+    };
+
+    // Attributes
+    {
+        using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE>;
+        for (auto it = Iterator(mProgram, GL_PROGRAM_INPUT);
+            it != Iterator::makeEnd(mProgram, GL_PROGRAM_INPUT);
+            ++it)
+        {
+            mAttributes.push_back(Attribute{makeResource(*it)});
+        }
+    }
+
+    // Uniform blocks
+    {
+        using Iterator = InterfaceIterator<GL_BUFFER_BINDING>;
+        for (auto it = Iterator(mProgram, GL_UNIFORM_BLOCK);
+            it != Iterator::makeEnd(mProgram, GL_UNIFORM_BLOCK);
+            ++it)
+        {
+            mUniformBlocks.push_back(UniformBlock{
+                .mBlockIndex = it->mIndex,
+                .mBindingIndex = (GLuint)(*it)[0],
+                .mName = it->mName,
+            });
+        }
+    }
+
+    // All uniforms (from uniform blocks, and not)
+    {
+        using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE, GL_BLOCK_INDEX>;
+        for (auto it = Iterator(mProgram, GL_UNIFORM);
+            it != Iterator::makeEnd(mProgram, GL_UNIFORM);
+            ++it)
+        {
+            GLint blockIndex = (*it)[2];
+            GLint location = (*it)[0];
+            if ((*it)[2] == -1) // BLOCK_INDEX == -1 means not part of an interface blocks
+            {
+                assert(location != -1);
+                mUniforms.push_back(Attribute{makeResource(*it)});
+            }
+            // Note: Instead of re-iterating all uniforms of a block by uniform id
+            //       (obtained via GL_ACTIVE_VARIABLES), match-up on block index.
+            else
+            {
+                assert(location == -1);
+                auto found = std::find_if(mUniformBlocks.begin(), mUniformBlocks.end(),
+                                          [blockIndex](const auto & block)
+                                          {
+                                            return block.mBlockIndex == (GLuint)blockIndex;
+                                          });
+                if (found == mUniformBlocks.end())
+                {
+                    // This is a thing that should not be
+                    throw std::logic_error("Uniform found with non-existent block index.");
+                }
+                else
+                {
+                    found->mUniforms.push_back(makeResource(*it));
+                }
+            }
+        }
     }
 }
 
@@ -139,7 +258,7 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
 graphics::ShaderParameter IntrospectProgram::Attribute::toShaderParameter() const
 {
     graphics::ShaderParameter result{
-        mLocation,
+        (GLuint)mLocation,
         getResourceShaderAccess(mType)
     };
     result.mNormalize = isNormalized(mSemantic);

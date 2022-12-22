@@ -115,5 +115,6 @@ inline void Scene::render(Renderer & aRenderer) const
     aRenderer.render(mMesh, mCamera, mInstances);
 }
 
+
 } // namespace snac
 } // namespace ad

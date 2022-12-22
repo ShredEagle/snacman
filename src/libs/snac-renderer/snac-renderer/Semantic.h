@@ -16,6 +16,12 @@ enum class Semantic
     TextureCoords,
     // Usually per instance
     LocalToWorld,
+    //Usually uniform
+    AmbientColor,
+    LightColor,
+    LightPosition,
+    WorldToCamera,
+    Projection,
 
     _End/* Must be last
 */

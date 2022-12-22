@@ -31,23 +31,42 @@ struct IntrospectProgram
     std::string_view name() const
     { return mName; }
 
-    struct Attribute
+    struct Resource
     {
-        GLuint mLocation;
+        GLint mLocation; // keep it signed, so it can hold -1 for uniforms from uniform blocks.
         GLenum mType;
         Semantic mSemantic;
         std::string mName; // To ease debugger inspection, we only need the semantic
 
         graphics::AttributeDimension dimension() const
         { return getResourceDimension(mType); }
+    };
 
+    struct Attribute : public Resource
+    {
         graphics::ShaderParameter toShaderParameter() const;
+    };
+
+    struct UniformBlock
+    {
+        GLuint mBlockIndex;
+        GLuint mBindingIndex;
+        std::string mName;
+        // TODO do we want to use another type that does not have a location data member?
+        std::vector<Resource> mUniforms;
     };
 
     graphics::Program mProgram;
     std::vector<Attribute> mAttributes;
+    std::vector<Resource> mUniforms;
+    std::vector<UniformBlock> mUniformBlocks;
     std::string mName;
 };
+
+
+std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram & aProgram);
+std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::Resource & aResource);
+std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::UniformBlock & aBlock);
 
 
 } // namespace snac

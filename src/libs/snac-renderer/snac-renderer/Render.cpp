@@ -1,5 +1,7 @@
 #include "Render.h"
 
+#include "Logging.h"
+
 #include <renderer/BufferUtilities.h>
 #include <renderer/Uniforms.h>
 
@@ -20,7 +22,7 @@ layout(location=12) in vec4 in_Albedo;
 
 layout(std140) uniform ViewingBlock
 {
-    mat4 u_Camera;
+    mat4 u_WorldToCamera;
     mat4 u_Projection;
 };
 
@@ -33,7 +35,7 @@ out float ex_Opacity;
 void main(void)
 {
     // TODO maybe should be pre-multiplied in client code?
-    mat4 localToCamera = u_Camera * in_LocalToWorld;
+    mat4 localToCamera = u_WorldToCamera * in_LocalToWorld;
     ex_Position_v = localToCamera * vec4(ve_Position_l, 1.f);
     gl_Position = u_Projection * ex_Position_v;
     ex_Normal_v = localToCamera * vec4(ve_Normal_l, 0.f);
@@ -90,7 +92,12 @@ Renderer::Renderer() :
         }),
         "PhongLighting"
     }
-{}
+{
+    std::ostringstream ossProgram;
+    ossProgram << mProgram;  
+    SELOG_LG(gRenderLogger, debug)("Program inspection reports {}", ossProgram.str());
+    //SELOG_LG(gRenderLogger, debug)("Program inspection reports {}", fmt::streamed(mProgram));
+}
 
 
 // TODO use a matrix 4, 3
