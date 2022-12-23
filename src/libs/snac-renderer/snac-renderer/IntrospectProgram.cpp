@@ -20,6 +20,8 @@ namespace {
         static constexpr std::size_t gPropertiesCount = sizeof...(VN_properties);
 
     public:
+        using difference_type = GLint;
+
         struct value_type
         {
             GLint operator[](std::size_t aPropertyIndex) const
@@ -32,6 +34,9 @@ namespace {
             GLuint mIndex;
             std::array<GLint, sizeof...(VN_properties) + 1 /*name length*/> mProperties;
         };
+
+        using pointer = value_type *;
+        using reference = value_type &;
 
         InterfaceIterator(const graphics::Program & aProgram, GLenum aProgramInterface):
             mProgram{&aProgram},
@@ -112,7 +117,7 @@ namespace {
 
 
     // TODO can be bidirectional, depending on the requireded validity for returned reference.
-    //static_assert(std::input_iterator<InterfaceIterator>);
+    //static_assert(std::input_iterator<InterfaceIterator<GL_LOCATION>>);
 
 
 } // anonymous
