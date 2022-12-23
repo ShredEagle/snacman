@@ -1,20 +1,20 @@
 #pragma once
 
 
+#include "snacman/simulations/snacgame/ActionKeyMapper.h"
 namespace ad {
 namespace snacgame {
 namespace component {
 
-typedef int AllowedMovementFlag;
-
-constexpr AllowedMovementFlag AllowedMovementUp = 0x1;
-constexpr AllowedMovementFlag AllowedMovementDown = 0x2;
-constexpr AllowedMovementFlag AllowedMovementLeft = 0x4;
-constexpr AllowedMovementFlag AllowedMovementRight = 0x8;
+constexpr int gAllowedMovementNone = gPlayerMoveFlagNone;
+constexpr int gAllowedMovementUp = gPlayerMoveFlagUp;
+constexpr int gAllowedMovementDown = gPlayerMoveFlagDown;
+constexpr int gAllowedMovementLeft = gPlayerMoveFlagLeft;
+constexpr int gAllowedMovementRight = gPlayerMoveFlagRight;
 
 struct AllowedMovement
 {
-    AllowedMovementFlag mAllowedMovement = 0;
+    int mAllowedMovement = 0;
 };
 
 } // namespace component

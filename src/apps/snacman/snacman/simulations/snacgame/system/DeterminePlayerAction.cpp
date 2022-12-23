@@ -2,6 +2,7 @@
 
 #include "math/Color.h"
 #include "snacman/Input.h"
+#include "snacman/simulations/snacgame/ActionKeyMapper.h"
 #include "snacman/simulations/snacgame/component/AllowedMovement.h"
 #include "snacman/simulations/snacgame/component/Geometry.h"
 
@@ -12,6 +13,8 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
+constexpr float gTurningZoneHalfWidth = 0.1f;
+
 void DeterminePlayerAction::update(const snac::Input & aInput)
 {
     ent::Phase nomutation;
@@ -21,7 +24,68 @@ void DeterminePlayerAction::update(const snac::Input & aInput)
                      component::Controller & aController,
                      component::Geometry & aPlayerGeometry,
                      component::PlayerMoveState & aPlayerMoveState) {
-        PlayerActionFlag action = aPlayerMoveState.mMoveState;
+        int allowedMovementFlag = component::gAllowedMovementNone;
+        int oldMoveState = aPlayerMoveState.mMoveState;
+        int inputMoveFlag = gPlayerMoveFlagNone;
+
+        auto pathUnderPlayerAllowedMove =
+            levelGrid
+                .at(aPlayerGeometry.mGridPosition.x()
+                    + aPlayerGeometry.mGridPosition.y() * colCount)
+                .get(nomutation)
+                ->get<component::AllowedMovement>();
+
+        if (aPlayerGeometry.mSubGridPosition.y() > 0.f
+            || (pathUnderPlayerAllowedMove.mAllowedMovement
+                    & component::gAllowedMovementUp
+                && aPlayerGeometry.mSubGridPosition.x() > -gTurningZoneHalfWidth
+                && aPlayerGeometry.mSubGridPosition.x()
+                       < gTurningZoneHalfWidth))
+        {
+            allowedMovementFlag |= component::gAllowedMovementUp;
+        }
+        if (aPlayerGeometry.mSubGridPosition.y() < 0.f
+            || (pathUnderPlayerAllowedMove.mAllowedMovement
+                    & component::gAllowedMovementDown
+                && aPlayerGeometry.mSubGridPosition.x() > -gTurningZoneHalfWidth
+                && aPlayerGeometry.mSubGridPosition.x()
+                       < gTurningZoneHalfWidth))
+        {
+            allowedMovementFlag |= component::gAllowedMovementDown;
+        }
+        if (aPlayerGeometry.mSubGridPosition.x() < 0.f
+            || (pathUnderPlayerAllowedMove.mAllowedMovement
+                    & component::gAllowedMovementLeft
+                && aPlayerGeometry.mSubGridPosition.y() > -gTurningZoneHalfWidth
+                && aPlayerGeometry.mSubGridPosition.y()
+                       < gTurningZoneHalfWidth))
+        {
+            allowedMovementFlag |= component::gAllowedMovementLeft;
+        }
+        if (aPlayerGeometry.mSubGridPosition.x() > 0.f
+            || (pathUnderPlayerAllowedMove.mAllowedMovement
+                    & component::gAllowedMovementRight
+                && aPlayerGeometry.mSubGridPosition.y() > -gTurningZoneHalfWidth
+                && aPlayerGeometry.mSubGridPosition.y()
+                       < gTurningZoneHalfWidth))
+        {
+            allowedMovementFlag |= component::gAllowedMovementRight;
+        }
+
+        if ((aPlayerGeometry.mSubGridPosition.y() < 0.f
+             && !(allowedMovementFlag & component::gAllowedMovementUp))
+            || (aPlayerGeometry.mSubGridPosition.y() > 0.f
+                && !(allowedMovementFlag & component::gAllowedMovementDown)))
+        {
+            aPlayerGeometry.mSubGridPosition.y() = 0.f;
+        }
+        if ((aPlayerGeometry.mSubGridPosition.x() > 0.f
+             && !(allowedMovementFlag & component::gAllowedMovementLeft))
+            || (aPlayerGeometry.mSubGridPosition.x() < 0.f
+                && !(allowedMovementFlag & component::gAllowedMovementRight)))
+        {
+            aPlayerGeometry.mSubGridPosition.x() = 0.f;
+        }
 
         switch (aController.mType)
         {
@@ -31,64 +95,30 @@ void DeterminePlayerAction::update(const snac::Input & aInput)
             {
                 if (aInput.mKeyboard.mKeyState.at(i))
                 {
-                    PlayerActionFlag actionCandidate = mKeyboardMapping.get(i);
+                    int moveFlagcandidate = mKeyboardMapping.get(i);
 
-                    if (actionCandidate != -1)
+                    if (moveFlagcandidate != gPlayerMoveFlagNone)
                     {
-                        action = actionCandidate;
+                        inputMoveFlag = moveFlagcandidate;
                     }
                 }
             }
             break;
         case component::ControllerType::Gamepad:
-            action = -1;
+            inputMoveFlag = gPlayerMoveFlagNone;
             break;
         default:
             break;
         }
 
-        auto pathUnderPlayerAllowedMove =
-            levelGrid
-                .at(aPlayerGeometry.mGridPosition.x()
-                    + aPlayerGeometry.mGridPosition.y() * colCount)
-                .get(nomutation)
-                ->get<component::AllowedMovement>();
+        inputMoveFlag &= allowedMovementFlag;
 
-        // If the player wants to move down and is not allowed to move down
-        if (!(pathUnderPlayerAllowedMove.mAllowedMovement
-                & component::AllowedMovementDown)
-            && aPlayerGeometry.mSubGridPosition.y() >= 0.f
-            && action == gPlayerMoveDown)
+        if (inputMoveFlag == gPlayerMoveFlagNone)
         {
-            aPlayerGeometry.mSubGridPosition.y() = 0.f;
-            action = -1;
-        }
-        else if (!(pathUnderPlayerAllowedMove.mAllowedMovement
-                     & component::AllowedMovementUp)
-                 && aPlayerGeometry.mSubGridPosition.y() <= 0.f
-                 && action == gPlayerMoveUp)
-        {
-            aPlayerGeometry.mSubGridPosition.y() = 0.f;
-            action = -1;
-        }
-        else if (!(pathUnderPlayerAllowedMove.mAllowedMovement
-                 & component::AllowedMovementLeft)
-                 && aPlayerGeometry.mSubGridPosition.x() >= 0.f
-                 && action == gPlayerMoveLeft)
-        {
-            aPlayerGeometry.mSubGridPosition.x() = 0.f;
-            action = -1;
-        }
-        else if (!(pathUnderPlayerAllowedMove.mAllowedMovement
-                 & component::AllowedMovementRight)
-                 && aPlayerGeometry.mSubGridPosition.x() <= 0.f
-                 && action == gPlayerMoveRight)
-        {
-            aPlayerGeometry.mSubGridPosition.x() = 0.f;
-            action = -1;
+            inputMoveFlag = oldMoveState & allowedMovementFlag;
         }
 
-        aPlayerMoveState.mMoveState = action;
+        aPlayerMoveState.mMoveState = inputMoveFlag;
     });
 }
 

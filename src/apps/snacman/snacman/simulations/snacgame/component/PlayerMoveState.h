@@ -8,7 +8,7 @@ namespace component {
 
 struct PlayerMoveState
 {
-    PlayerActionFlag mMoveState = -1;
+    int mMoveState = gPlayerMoveFlagNone;
 };
 
 

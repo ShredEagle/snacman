@@ -52,19 +52,21 @@ namespace snac {
 //};
 //
 //constexpr int textureIndices [6] = { 0, 1, 3, 3, 1, 2 };
+//
+constexpr float gCubeSize = 2.f;
 
 namespace cube {
 
     constexpr std::array<math::Position<3, float>, 8> gVertices{
-        math::Position<3, float>{-1.0f, -1.0f, -1.0f},
-        math::Position<3, float>{-1.0f, -1.0f,  1.0f},
-        math::Position<3, float>{-1.0f,  1.0f, -1.0f},
-        math::Position<3, float>{-1.0f,  1.0f,  1.0f},
+        math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2, -gCubeSize / 2},
+        math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2,  gCubeSize / 2},
+        math::Position<3, float>{-gCubeSize / 2,  gCubeSize / 2, -gCubeSize / 2},
+        math::Position<3, float>{-gCubeSize / 2,  gCubeSize / 2,  gCubeSize / 2},
 
-        math::Position<3, float>{ 1.0f, -1.0f, -1.0f},
-        math::Position<3, float>{ 1.0f, -1.0f,  1.0f},
-        math::Position<3, float>{ 1.0f,  1.0f, -1.0f},
-        math::Position<3, float>{ 1.0f,  1.0f,  1.0f},
+        math::Position<3, float>{ gCubeSize / 2, -gCubeSize / 2, -gCubeSize / 2},
+        math::Position<3, float>{ gCubeSize / 2, -gCubeSize / 2,  gCubeSize / 2},
+        math::Position<3, float>{ gCubeSize / 2,  gCubeSize / 2, -gCubeSize / 2},
+        math::Position<3, float>{ gCubeSize / 2,  gCubeSize / 2,  gCubeSize / 2},
     };
 
     constexpr std::array<GLushort, 6*6> gIndices

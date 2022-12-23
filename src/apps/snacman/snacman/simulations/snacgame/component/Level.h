@@ -87,7 +87,7 @@ struct Level
                 auto entity = mLevelGrid.at(i + j * mColCount).get(aInit);
                 if (entity->has<component::Geometry>())
                 {
-                    AllowedMovementFlag allowed = 0;
+                    int allowed = gAllowedMovementNone;
 
                     if (mLevelGrid
                             .at(i
@@ -95,7 +95,7 @@ struct Level
                             .get(aInit)
                             ->has<component::Geometry>())
                     {
-                        allowed |= AllowedMovementDown;
+                        allowed |= gAllowedMovementDown;
                     }
                     if (mLevelGrid
                             .at(i
@@ -103,7 +103,7 @@ struct Level
                             .get(aInit)
                             ->has<component::Geometry>())
                     {
-                        allowed |= AllowedMovementUp;
+                        allowed |= gAllowedMovementUp;
                     }
                     if (mLevelGrid
                             .at((i + 1)
@@ -111,7 +111,7 @@ struct Level
                             .get(aInit)
                             ->has<component::Geometry>())
                     {
-                        allowed |= AllowedMovementLeft;
+                        allowed |= gAllowedMovementLeft;
                     }
                     if (mLevelGrid
                             .at((i - 1)
@@ -119,7 +119,7 @@ struct Level
                             .get(aInit)
                             ->has<component::Geometry>())
                     {
-                        allowed |= AllowedMovementRight;
+                        allowed |= gAllowedMovementRight;
                     }
 
                     entity->add(component::AllowedMovement{allowed});
