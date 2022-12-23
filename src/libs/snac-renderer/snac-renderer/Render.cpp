@@ -93,10 +93,9 @@ Renderer::Renderer() :
         "PhongLighting"
     }
 {
-    std::ostringstream ossProgram;
-    ossProgram << mProgram;  
-    SELOG_LG(gRenderLogger, debug)("Program inspection reports {}", ossProgram.str());
-    //SELOG_LG(gRenderLogger, debug)("Program inspection reports {}", fmt::streamed(mProgram));
+    // Explicitly format program using operator<<, otherwise it is casted to GLuint of the 
+    // underlying OpenGL resource.
+    SELOG_LG(gRenderLogger, debug)("Program inspection reports {}", fmt::streamed(mProgram));
 }
 
 

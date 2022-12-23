@@ -27,7 +27,7 @@ class SnacmanConan(ConanFile):
         ("handy/9cea48868d@adnn/develop"),
         ("math/541fce5f6a@adnn/develop"),
 
-        ("spdlog/1.10.0"),
+        ("spdlog/1.11.0"),
     )
 
     # Note: It seems conventionnal to add CMake build requirement

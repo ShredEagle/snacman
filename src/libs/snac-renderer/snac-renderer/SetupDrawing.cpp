@@ -28,8 +28,8 @@ namespace {
                     aProgramName,
                     aShaderAttribute.mName,
                     to_string(aShaderAttribute.mSemantic),
-                    aShaderAttribute.dimension(),
-                    aClientAttribute.mDimension
+                    fmt::streamed(aShaderAttribute.dimension()),
+                    fmt::streamed(aClientAttribute.mDimension)
                 );
                 throw std::logic_error{"Mismatching row counts between shader attribute and buffer data."};
             }
@@ -41,8 +41,8 @@ namespace {
                     aProgramName,
                     aShaderAttribute.mName,
                     to_string(aShaderAttribute.mSemantic),
-                    aShaderAttribute.dimension(),
-                    aClientAttribute.mDimension
+                    fmt::streamed(aShaderAttribute.dimension()),
+                    fmt::streamed(aClientAttribute.mDimension)
                 );
             }
 
