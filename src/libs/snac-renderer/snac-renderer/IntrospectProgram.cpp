@@ -35,13 +35,19 @@ namespace {
             std::array<GLint, sizeof...(VN_properties) + 1 /*name length*/> mProperties;
         };
 
-        using pointer = value_type *;
-        using reference = value_type &;
+        using pointer = const value_type *;
+        using reference = const value_type &;
 
         InterfaceIterator(const graphics::Program & aProgram, GLenum aProgramInterface):
             mProgram{&aProgram},
             mProgramInterface{aProgramInterface}
-        {}
+        {
+            // TODO maybe could be bidirectional,
+            // depending on the requireded validity for returned reference.
+            // (the reference changes target on each call to operator*() after ++/--,
+            //  and the reference becomes dangling when the iterator is destroyed.)
+            static_assert(std::input_iterator<InterfaceIterator>);
+        }
 
         static InterfaceIterator makeEnd(const graphics::Program & aProgram, GLenum aProgramInterface)
         {
@@ -73,7 +79,7 @@ namespace {
             return mCurrentId != aRhs.mCurrentId;
         }
 
-        value_type & operator*()
+        reference operator*() const
         {
             const GLenum properties[] = {
                 VN_properties...,
@@ -100,7 +106,7 @@ namespace {
             return mValue;
         }
 
-        value_type * operator->()
+        pointer operator->()
         {
             // TODO this is a pessimisation, as it might dereference for each member access.
             return &(this->operator*());
@@ -112,12 +118,8 @@ namespace {
         GLint mCurrentId{0};
         // It seems we must store the value, because operator() has to return true references.
         // see: https://stackoverflow.com/a/52856349/1027706
-        value_type mValue;
+        mutable value_type mValue; // needs to be written to by operator*() const.
     };
-
-
-    // TODO can be bidirectional, depending on the requireded validity for returned reference.
-    //static_assert(std::input_iterator<InterfaceIterator<GL_LOCATION>>);
 
 
 } // anonymous
