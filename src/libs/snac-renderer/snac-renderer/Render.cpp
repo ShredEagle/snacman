@@ -57,8 +57,8 @@ in vec3  ex_SpecularColor;
 in float ex_Opacity;
 
 uniform vec3 u_LightPosition_v;
-uniform vec3 u_LightColor;
-uniform vec3 u_AmbientColor;
+uniform vec3 u_LightColor = vec3(0.8, 0.8, 0.8);
+uniform vec3 u_AmbientColor = vec3(0.2, 0.1, 0.);
 
 out vec4 out_Color;
 
@@ -102,7 +102,8 @@ Renderer::Renderer() :
 // TODO use a matrix 4, 3
 void Renderer::render(const Mesh & aMesh,
                       const Camera & aCamera,
-                      const InstanceStream & aInstances)
+                      const InstanceStream & aInstances,
+                      const UniformRepository & aUniforms)
 {
     auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
@@ -116,14 +117,11 @@ void Renderer::render(const Mesh & aMesh,
     }
     glUniformBlockBinding(mProgram, viewingBlockIndex, viewingLocation);
 
-    // Converted to HDR in order to normalize the values
-    graphics::setUniform(mProgram, "u_LightColor", to_hdr(math::sdr::gWhite));
-    graphics::setUniform(mProgram, "u_AmbientColor", math::hdr::Rgb_f{0.1f, 0.2f, 0.1f});
-    
     //graphics::ScopedBind boundVAO{aMesh.mStream.mVertexArray};
     bind(mVertexArrayRepo.get(aMesh, aInstances, mProgram));
 
     graphics::use(mProgram);
+    setUniforms(aUniforms, mProgram); // Must be done after activating the program
     glDrawArraysInstanced(GL_TRIANGLES, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);
 }
 

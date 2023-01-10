@@ -112,7 +112,8 @@ inline void Scene::update()
 inline void Scene::render(Renderer & aRenderer) const
 {
     clear();
-    aRenderer.render(mMesh, mCamera, mInstances);
+    snac::UniformRepository uniforms;
+    aRenderer.render(mMesh, mCamera, mInstances, uniforms);
 }
 
 

@@ -12,6 +12,7 @@ set(${TARGET_NAME}_HEADERS
     Semantic.h
     SetupDrawing.h
     ShaderResource.h
+    UniformParameters.h
 )
 
 set(${TARGET_NAME}_SOURCES

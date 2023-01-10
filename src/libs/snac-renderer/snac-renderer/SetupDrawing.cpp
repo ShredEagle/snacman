@@ -115,6 +115,47 @@ VertexArrayRepository::get(const Mesh & aMesh, // Maybe it should just be the Ve
 }
 
 
+void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & aProgram)
+{
+    for (const IntrospectProgram::Resource & shaderUniform : aProgram.mUniforms)
+    {
+        if(auto found = aUniforms.find(shaderUniform.mSemantic);
+           found != aUniforms.end())
+        {
+            // We should actually support matrices,
+            // it is the uniform arrays we do not want to support
+            //if(shaderUniform.dimension()[1] != 1)
+            //{
+            //    SELOG_LG(gRenderLogger, critical)(
+            //        "{}: '{}' program uniform '{}'({}) has dimension {}, matrices assignment is not implemented.",
+            //        __func__,
+            //        aProgramName,
+            //        aUniformAttribute.mName,
+            //        to_string(aShaderAttribute.mSemantic),
+            //        fmt::streamed(aShaderAttribute.dimension()),
+            //    );
+            //    throw std::logic_error{"Uniform matrices assignment not implemented."};
+            //}
+            // TODO Select among the big amout of glUniform* functions ...
+            // The selection is based on two criterias, the dimension and the component type
+            const UniformParameter & parameter = found->second;
+            glUniform3fv(shaderUniform.mLocation,
+                         1,
+                         std::get<const GLfloat *>(parameter.mData));
+        }
+        else
+        {
+            // TODO since this function is currently called before each draw
+            // this is much to verbose for a warning...
+            SELOG_LG(gRenderLogger, warn)(
+                "{}: Could not find an a uniform value for semantic '{}' in program '{}'.", 
+                __func__,
+                to_string(shaderUniform.mSemantic),
+                aProgram.name());
+        }
+    }
+}
+
 
 } // namespace snac
 } // namespace ad

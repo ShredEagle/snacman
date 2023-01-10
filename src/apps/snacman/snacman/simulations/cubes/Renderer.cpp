@@ -3,6 +3,7 @@
 #include <math/Transformations.h>
 
 #include <snac-renderer/Cube.h>
+#include <snac-renderer/UniformParameters.h>
 
 
 namespace ad {
@@ -75,8 +76,20 @@ void Renderer::render(const visu::GraphicState & aState)
     //mCamera.setWorldToCamera(math::trans3d::translate(-aState.mCamera.mPosition_world.as<math::Vec>()));
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
+    // Converted to HDR in order to normalize the values
+    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite);
+    math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
+    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
+    
+    snac::UniformRepository uniforms
+    {
+        {snac::Semantic::LightColor, snac::UniformParameter{&lightColor}},
+        {snac::Semantic::LightPosition, {&lightPosition}},
+        {snac::Semantic::AmbientColor, {&ambientColor}},
+    };
+
     mInstances.respecifyData(std::span{instanceBufferData});
-    mRenderer.render(mCubeMesh, mCamera, mInstances);
+    mRenderer.render(mCubeMesh, mCamera, mInstances, uniforms);
 }
 
 

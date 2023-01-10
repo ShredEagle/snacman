@@ -2,6 +2,7 @@
 
 #include "IntrospectProgram.h"
 #include "Mesh.h"
+#include "UniformParameters.h"
 
 #include <renderer/VertexSpecification.h>
 
@@ -25,6 +26,9 @@ struct VertexArrayRepository
     using Key = std::tuple<const Mesh *, const InstanceStream *, const graphics::Program *>;
     std::map<Key, graphics::VertexArrayObject> mVAOs;
 };
+
+
+void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & aProgram);
 
 
 } // namespace snac
