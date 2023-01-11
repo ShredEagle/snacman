@@ -111,9 +111,16 @@ inline void Scene::update()
 
 inline void Scene::render(Renderer & aRenderer) const
 {
+    UniformBlocks uniformBlocks{
+         {BlockSemantic::Viewing, &mCamera.mViewing},
+    };
+
     clear();
     snac::UniformRepository uniforms;
-    aRenderer.render(mMesh, mCamera, mInstances, uniforms);
+    aRenderer.render(mMesh,
+                     mInstances,
+                     uniforms,
+                     uniformBlocks);
 }
 
 

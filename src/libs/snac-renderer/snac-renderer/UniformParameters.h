@@ -7,6 +7,7 @@
 #include <renderer/GL_Loader.h>
 #include <renderer/MappedGL.h>
 #include <renderer/Uniforms.h>
+#include <renderer/UniformBuffer.h>
 
 #include <map>
 #include <variant>
@@ -60,6 +61,8 @@ struct UniformParameter
 
 
 using UniformRepository = std::map<Semantic, UniformParameter>;
+
+using UniformBlocks = std::map<BlockSemantic, const graphics::UniformBufferObject *>;
 
 
 } // namespace snac

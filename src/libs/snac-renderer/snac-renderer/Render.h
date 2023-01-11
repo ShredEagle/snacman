@@ -25,8 +25,10 @@ class Renderer
 public:
     Renderer();
 
-    void render(const Mesh & aMesh, const Camera & aCamera, const InstanceStream & aInstances,
-                const UniformRepository & aUniforms);
+    void render(const Mesh & aMesh,
+                const InstanceStream & aInstances,
+                const UniformRepository & aUniforms,
+                const UniformBlocks & aUniformBlocks);
 
 private:
     IntrospectProgram mProgram;

@@ -218,7 +218,8 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
         {
             mUniformBlocks.push_back(UniformBlock{
                 .mBlockIndex = it->mIndex,
-                .mBindingIndex = (GLuint)(*it)[0],
+                .mBindingIndex = graphics::BindingIndex{(GLuint)(*it)[0]},
+                .mSemantic = to_blockSemantic(it->mName),
                 .mName = it->mName,
             });
         }
@@ -233,15 +234,17 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
         {
             GLint blockIndex = (*it)[3];
             GLint location = (*it)[0];
+            // **Not** part of an interface block
             if (blockIndex == -1) // BLOCK_INDEX == -1 means not part of an interface blocks
             {
                 assert(location != -1);
                 mUniforms.push_back(Attribute{makeResource(*it)});
             }
-            // Note: Instead of re-iterating all uniforms of a block by uniform id
-            //       (obtained via GL_ACTIVE_VARIABLES), match-up on block index.
+            // Part of an inteface block
             else
             {
+                // Note: Instead of re-iterating all uniforms of a block by uniform id
+                //       (obtained via GL_ACTIVE_VARIABLES), match-up on block index.
                 assert(location == -1);
                 auto found = std::find_if(mUniformBlocks.begin(), mUniformBlocks.end(),
                                           [blockIndex](const auto & block)

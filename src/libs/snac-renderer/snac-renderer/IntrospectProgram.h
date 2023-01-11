@@ -6,6 +6,7 @@
 
 #include <renderer/Shading.h>
 #include <renderer/VertexSpecification.h>
+#include <renderer/BufferUtilities.h>
 
 #include <string>
 #include <vector>
@@ -54,7 +55,8 @@ struct IntrospectProgram
     struct UniformBlock
     {
         GLuint mBlockIndex;
-        GLuint mBindingIndex;
+        graphics::BindingIndex mBindingIndex;
+        BlockSemantic mSemantic;
         std::string mName;
         // TODO do we want to use another type that does not have a location data member?
         std::vector<Resource> mUniforms;

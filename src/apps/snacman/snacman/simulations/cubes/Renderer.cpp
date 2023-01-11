@@ -81,15 +81,18 @@ void Renderer::render(const visu::GraphicState & aState)
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
     math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
     
-    snac::UniformRepository uniforms
-    {
+    snac::UniformRepository uniforms{
         {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
         {snac::Semantic::LightPosition, {lightPosition}},
         {snac::Semantic::AmbientColor, {ambientColor}},
     };
 
+    snac::UniformBlocks uniformBlocks{
+         {snac::BlockSemantic::Viewing, &mCamera.mViewing},
+    };
+
     mInstances.respecifyData(std::span{instanceBufferData});
-    mRenderer.render(mCubeMesh, mCamera, mInstances, uniforms);
+    mRenderer.render(mCubeMesh, mInstances, uniforms, uniformBlocks);
 }
 
 

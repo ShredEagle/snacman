@@ -99,29 +99,20 @@ Renderer::Renderer() :
 }
 
 
-// TODO use a matrix 4, 3
 void Renderer::render(const Mesh & aMesh,
-                      const Camera & aCamera,
                       const InstanceStream & aInstances,
-                      const UniformRepository & aUniforms)
+                      const UniformRepository & aUniforms,
+                      const UniformBlocks & aUniformBlocks)
 {
     auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
-    constexpr graphics::BindingIndex viewingLocation{1};
-    bind(aCamera.mViewing, viewingLocation);
-
-    GLuint viewingBlockIndex;
-    if((viewingBlockIndex = glGetUniformBlockIndex(mProgram, "ViewingBlock")) == GL_INVALID_INDEX)
-    {
-        throw std::logic_error{"Invalid block name."};
-    }
-    glUniformBlockBinding(mProgram, viewingBlockIndex, viewingLocation);
+    setUniforms(aUniforms, mProgram);
+    setBlocks(aUniformBlocks, mProgram);
 
     //graphics::ScopedBind boundVAO{aMesh.mStream.mVertexArray};
     bind(mVertexArrayRepo.get(aMesh, aInstances, mProgram));
 
     graphics::use(mProgram);
-    setUniforms(aUniforms, mProgram); // Must be done after activating the program
     glDrawArraysInstanced(GL_TRIANGLES, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);
 }
 

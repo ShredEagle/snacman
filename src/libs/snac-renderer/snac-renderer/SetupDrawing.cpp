@@ -154,5 +154,31 @@ void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & 
 }
 
 
+void setBlocks(const UniformBlocks & aUniformBlocks, const IntrospectProgram & aProgram)
+{
+    for (const IntrospectProgram::UniformBlock & shaderBlock : aProgram.mUniformBlocks)
+    {
+        if(auto found = aUniformBlocks.find(shaderBlock.mSemantic);
+           found != aUniformBlocks.end())
+        {
+            // Currently, checking if the uniform block is an array is conducted
+            // when getting its semantic.
+            const graphics::UniformBufferObject & uniformBuffer = *(found->second);
+            bind(uniformBuffer, shaderBlock.mBindingIndex);
+        }
+        else
+        {
+            // TODO since this function is currently called before each draw
+            // this is much to verbose for a warning...
+            SELOG_LG(gRenderLogger, warn)(
+                "{}: Could not find an a block uniform for block semantic '{}' in program '{}'.", 
+                __func__,
+                to_string(shaderBlock.mSemantic),
+                aProgram.name());
+        }
+    }
+}
+
+
 } // namespace snac
 } // namespace ad

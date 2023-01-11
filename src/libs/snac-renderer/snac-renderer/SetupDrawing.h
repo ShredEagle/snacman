@@ -30,6 +30,8 @@ struct VertexArrayRepository
 
 void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & aProgram);
 
+void setBlocks(const UniformBlocks & aUniformBlocks, const IntrospectProgram & aProgram);
+
 
 } // namespace snac
 } // namespace ad
