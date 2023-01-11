@@ -36,10 +36,14 @@ struct IntrospectProgram
         GLint mLocation; // keep it signed, so it can hold -1 for uniforms from uniform blocks.
         GLenum mType;
         Semantic mSemantic;
+        GLuint mArraySize;
         std::string mName; // To ease debugger inspection, we only need the semantic
 
         graphics::AttributeDimension dimension() const
         { return getResourceDimension(mType); }
+
+        GLenum componentType() const
+        { return getResourceComponentType(mType); }
     };
 
     struct Attribute : public Resource

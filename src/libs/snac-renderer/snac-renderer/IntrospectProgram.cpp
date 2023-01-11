@@ -193,13 +193,14 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
             .mLocation = aAttribute[0],
             .mType = (GLenum)aAttribute[1],
             .mSemantic = to_semantic(aAttribute.mName),
+            .mArraySize = (GLuint)aAttribute[2],
             .mName = aAttribute.mName,
         };
     };
 
     // Attributes
     {
-        using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE>;
+        using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE, GL_ARRAY_SIZE>;
         for (auto it = Iterator(mProgram, GL_PROGRAM_INPUT);
             it != Iterator::makeEnd(mProgram, GL_PROGRAM_INPUT);
             ++it)
@@ -225,14 +226,14 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
 
     // All uniforms (from uniform blocks, and not)
     {
-        using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE, GL_BLOCK_INDEX>;
+        using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE, GL_ARRAY_SIZE, GL_BLOCK_INDEX>;
         for (auto it = Iterator(mProgram, GL_UNIFORM);
             it != Iterator::makeEnd(mProgram, GL_UNIFORM);
             ++it)
         {
-            GLint blockIndex = (*it)[2];
+            GLint blockIndex = (*it)[3];
             GLint location = (*it)[0];
-            if ((*it)[2] == -1) // BLOCK_INDEX == -1 means not part of an interface blocks
+            if (blockIndex == -1) // BLOCK_INDEX == -1 means not part of an interface blocks
             {
                 assert(location != -1);
                 mUniforms.push_back(Attribute{makeResource(*it)});

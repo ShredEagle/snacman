@@ -122,26 +122,23 @@ void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & 
         if(auto found = aUniforms.find(shaderUniform.mSemantic);
            found != aUniforms.end())
         {
-            // We should actually support matrices,
-            // it is the uniform arrays we do not want to support
-            //if(shaderUniform.dimension()[1] != 1)
-            //{
-            //    SELOG_LG(gRenderLogger, critical)(
-            //        "{}: '{}' program uniform '{}'({}) has dimension {}, matrices assignment is not implemented.",
-            //        __func__,
-            //        aProgramName,
-            //        aUniformAttribute.mName,
-            //        to_string(aShaderAttribute.mSemantic),
-            //        fmt::streamed(aShaderAttribute.dimension()),
-            //    );
-            //    throw std::logic_error{"Uniform matrices assignment not implemented."};
-            //}
-            // TODO Select among the big amout of glUniform* functions ...
-            // The selection is based on two criterias, the dimension and the component type
+            if (shaderUniform.mArraySize != 1)
+            {
+                SELOG_LG(gRenderLogger, error)(
+                    "{}: '{}' program uniform '{}'({}) is an array of size {}, setting uniform arrays is not supported.",
+                    __func__,
+                    aProgram.name(),
+                    shaderUniform.mName,
+                    to_string(shaderUniform.mSemantic),
+                    shaderUniform.mArraySize
+                );
+            }
+
             const UniformParameter & parameter = found->second;
-            glUniform3fv(shaderUniform.mLocation,
-                         1,
-                         std::get<const GLfloat *>(parameter.mData));
+            // Very conservative assertions, this might be relaxed when legitimate use cases "show-up".
+            assert(parameter.mComponentType == shaderUniform.componentType());
+            assert(parameter.mDimension == shaderUniform.dimension());
+            parameter.mSetter(aProgram, shaderUniform.mLocation);
         }
         else
         {

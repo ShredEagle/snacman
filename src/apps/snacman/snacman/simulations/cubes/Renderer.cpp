@@ -83,9 +83,9 @@ void Renderer::render(const visu::GraphicState & aState)
     
     snac::UniformRepository uniforms
     {
-        {snac::Semantic::LightColor, snac::UniformParameter{&lightColor}},
-        {snac::Semantic::LightPosition, {&lightPosition}},
-        {snac::Semantic::AmbientColor, {&ambientColor}},
+        {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
+        {snac::Semantic::LightPosition, {lightPosition}},
+        {snac::Semantic::AmbientColor, {ambientColor}},
     };
 
     mInstances.respecifyData(std::span{instanceBufferData});
