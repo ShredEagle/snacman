@@ -57,8 +57,8 @@ in vec3  ex_SpecularColor;
 in float ex_Opacity;
 
 uniform vec3 u_LightPosition_v;
-uniform vec3 u_LightColor = vec3(0.8, 0.8, 0.8);
-uniform vec3 u_AmbientColor = vec3(0.2, 0.1, 0.);
+uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8);
+uniform vec3 u_AmbientColor = vec3(0.2, 0.0, 0.2);
 
 out vec4 out_Color;
 

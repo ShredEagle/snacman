@@ -77,7 +77,7 @@ void Renderer::render(const visu::GraphicState & aState)
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
     // Converted to HDR in order to normalize the values
-    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite);
+    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gBlue);
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
     math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
     
