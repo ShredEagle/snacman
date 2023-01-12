@@ -14,15 +14,6 @@ constexpr int gPlayerMoveFlagDown = 0x2;
 constexpr int gPlayerMoveFlagLeft = 0x4;
 constexpr int gPlayerMoveFlagRight = 0x8;
 
-template <class T>
-concept Mapping = requires(T a)
-{
-    {
-        a.mMapping
-        } -> std::convertible_to<std::vector<std::pair<typename T::command_type, int>>>;
-    std::is_convertible_v<typename T::input_type, std::size_t>;
-};
-
 // Maybe we should just give up on GamepadAtomicInput
 // being a class enum and this template would
 // dissapear
