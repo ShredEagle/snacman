@@ -65,7 +65,7 @@ void SnacGame::update(float aDelta, const RawInput & aInput)
 
     component::InputDeviceDirectory & directory =
         mContext.get(update)->get<component::InputDeviceDirectory>();
-    for (const auto & connectedPlayer : directory.mGamepadBindings)
+    for (auto & connectedPlayer : directory.mGamepadBindings)
     {
         if (connectedPlayer.mPlayer && connectedPlayer.mPlayer->isValid())
         {
@@ -85,7 +85,7 @@ void SnacGame::update(float aDelta, const RawInput & aInput)
         }
     }
 
-    const auto & keyboardPlayer = directory.mPlayerBoundToKeyboard;
+    auto & keyboardPlayer = directory.mPlayerBoundToKeyboard;
 
     if (keyboardPlayer && keyboardPlayer->isValid())
     {
