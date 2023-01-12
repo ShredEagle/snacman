@@ -5,7 +5,7 @@ namespace cubes {
 namespace system {
 
 
-void OrbitalCamera::update(const snac::Input & aInput,
+void OrbitalCamera::update(const RawInput & aInput,
                            math::Radian<float> aVerticalFov,
                            int aWindowHeight_screen)
 {

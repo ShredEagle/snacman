@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../ActionKeyMapper.h"
+#include "../InputCommandConverter.h"
 
 namespace ad {
 namespace snacgame {

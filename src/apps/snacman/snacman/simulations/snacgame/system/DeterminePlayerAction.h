@@ -4,7 +4,7 @@
 #include "entity/Query.h"
 #include "snacman/Input.h"
 
-#include "../ActionKeyMapper.h"
+#include "../InputCommandConverter.h"
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
 #include "../component/PlayerMoveState.h"
@@ -22,15 +22,13 @@ public:
         mLevel{aLevel}
     {}
 
-    void update(const snac::Input & aInput);
+    void update();
 
 private:
     ent::Query<component::Controller,
                component::Geometry,
                component::PlayerMoveState>
         mPlayer;
-    ActionKeyMapper<gGamepadDefaultMapping> mGamepadMapping;
-    ActionKeyMapper<gKeyboardDefaultMapping> mKeyboardMapping;
     ent::Handle<ent::Entity> mLevel;
 };
 

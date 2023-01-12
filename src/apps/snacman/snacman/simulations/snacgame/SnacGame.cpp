@@ -1,16 +1,22 @@
 #include "SnacGame.h"
 
-#include "ActionKeyMapper.h"
-#include "component/Level.h"
 #include "Entities.h"
-#include "markovjunior/Grid.h"
-#include "math/Color.h"
+#include "InputCommandConverter.h"
+
+#include "component/Controller.h"
+#include "component/InputDeviceDirectory.h"
+#include "component/Level.h"
+
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
 #include "system/PlayerInvulFrame.h"
 #include "system/PlayerSpawner.h"
 
+#include <markovjunior/Grid.h>
+#include <math/Color.h>
 #include <math/VectorUtilities.h>
+
+#include <GLFW/glfw3.h>
 
 namespace ad {
 namespace snacgame {
@@ -19,10 +25,12 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface) :
     mAppInterface{&aAppInterface},
     mSystems{mWorld.addEntity()},
     mLevel{mWorld.addEntity()},
+    mContext{mWorld.addEntity()},
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld}
 {
     ent::Phase init;
+    component::InputDeviceDirectory inputDeviceDirectory;
     markovjunior::Interpreter markovInterpreter(
         "/home/franz/gamedev/snac-assets", "markov/snaclvl.xml",
         ad::math::Size<3, int>{29, 29, 1}, 1231234);
@@ -41,21 +49,68 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface) :
     markovjunior::Grid grid = markovInterpreter.mGrid;
 
     createLevel(mLevel, mWorld, init, grid);
-    createPlayerEntity(mWorld, init);
+    createPlayerEntity(
+        mWorld, init,
+        inputDeviceDirectory,
+        component::ControllerType::Keyboard);
+
+    mContext.get(init)->add(inputDeviceDirectory);
 }
 
-void SnacGame::update(float aDelta, const snac::Input & aInput)
+void SnacGame::update(float aDelta, const RawInput & aInput)
 {
     mSimulationTime += aDelta;
 
     ent::Phase update;
+
+    component::InputDeviceDirectory & directory =
+        mContext.get(update)->get<component::InputDeviceDirectory>();
+    for (const auto & connectedPlayer : directory.mGamepadBindings)
+    {
+        if (connectedPlayer.mPlayer && connectedPlayer.mPlayer->isValid())
+        {
+            component::Controller & controller =
+                connectedPlayer.mPlayer->get(update)
+                    ->get<component::Controller>();
+            controller.mCommandQuery = convertGamepadInput(
+                aInput.mGamepads.at(connectedPlayer.mRawInputGamepadIndex),
+                GamepadMapping({{GamepadAtomicInput::leftXAxisNegative,
+                                 gPlayerMoveFlagLeft},
+                                {GamepadAtomicInput::leftXAxisPositive,
+                                 gPlayerMoveFlagRight},
+                                {GamepadAtomicInput::leftYAxisNegative,
+                                 gPlayerMoveFlagDown},
+                                {GamepadAtomicInput::leftYAxisPositive,
+                                 gPlayerMoveFlagUp}}));
+        }
+    }
+
+    const auto & keyboardPlayer = directory.mPlayerBoundToKeyboard;
+
+    if (keyboardPlayer && keyboardPlayer->isValid())
+    {
+            component::Controller & keyboard =
+                keyboardPlayer->get(update)
+                    ->get<component::Controller>();
+
+            keyboard.mCommandQuery = convertKeyboardInput(
+                aInput.mKeyboard,
+                KeyboardMapping({{GLFW_KEY_LEFT,
+                                 gPlayerMoveFlagLeft},
+                                {GLFW_KEY_RIGHT,
+                                 gPlayerMoveFlagRight},
+                                {GLFW_KEY_DOWN,
+                                 gPlayerMoveFlagDown},
+                                {GLFW_KEY_UP,
+                                 gPlayerMoveFlagUp}}));
+    }
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
     mSystemOrbitalCamera->update(aInput, getCameraParameters().vFov,
                                  mAppInterface->getWindowSize().height());
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
-    mSystems.get(update)->get<system::DeterminePlayerAction>().update(aInput);
+    mSystems.get(update)->get<system::DeterminePlayerAction>().update();
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
 }
 
@@ -80,10 +135,12 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                         : cellSize;
                 auto worldPosition = math::Position<3, float>{
                     -(float) mRowCount
-                        + (float) aGeometry.mGridPosition.y() * cellSize + aGeometry.mSubGridPosition.y(),
+                        + (float) aGeometry.mGridPosition.y() * cellSize
+                        + aGeometry.mSubGridPosition.y(),
                     yCoord,
                     -(float) mColCount
-                        + (float) aGeometry.mGridPosition.x() * cellSize + aGeometry.mSubGridPosition.x(),
+                        + (float) aGeometry.mGridPosition.x() * cellSize
+                        + aGeometry.mSubGridPosition.x(),
                 };
                 state->mEntities.insert(aHandle.id(),
                                         visu::Entity{

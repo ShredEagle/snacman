@@ -433,7 +433,7 @@ void runApplication()
     // Initialize input devices
     //
     HidManager hid{glfwApp};
-    Input input = hid.initialInput();
+    RawInput input = hid.initialInput();
     ImguiInhibiter inhibiter;
 
     //

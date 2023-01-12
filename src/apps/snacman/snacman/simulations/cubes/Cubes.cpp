@@ -32,7 +32,7 @@ Cubes::Cubes(graphics::AppInterface & aAppInterface) :
 }
 
 
-void Cubes::update(float aDelta, const snac::Input & aInput)
+void Cubes::update(float aDelta, const RawInput & aInput)
 {
     mSimulationTime += aDelta; 
 

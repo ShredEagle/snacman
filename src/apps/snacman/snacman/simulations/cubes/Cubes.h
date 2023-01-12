@@ -27,7 +27,7 @@ public:
     /// \brief Initialize the scene;
     Cubes(graphics::AppInterface & aAppInterface);
 
-    void update(float aDelta, const snac::Input & aInput);
+    void update(float aDelta, const RawInput & aInput);
 
     std::unique_ptr<visu::GraphicState> makeGraphicState() const; 
 

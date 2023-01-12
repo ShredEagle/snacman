@@ -1,8 +1,9 @@
 #pragma once
 
 #include "component/Geometry.h"
-#include "markovjunior/Grid.h"
+#include "component/InputDeviceDirectory.h"
 
+#include <markovjunior/Grid.h>
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
 
@@ -28,7 +29,12 @@ ent::Handle<ent::Entity> createPlayerSpawnEntity(ent::EntityManager & mWorld,
                              ent::Phase & aInit,
                              const math::Position<2, int> & aPos);
 
-ent::Handle<ent::Entity> createPlayerEntity(ent::EntityManager & mWorld, ent::Phase & aInit);
+ent::Handle<ent::Entity>
+createPlayerEntity(ent::EntityManager & mWorld,
+                   ent::Phase & aInit,
+                   component::InputDeviceDirectory & aDeviceDirectory,
+                   component::ControllerType aControllerType,
+                   int aControllerId = 0);
 
 } // namespace snacgame
 } // namespace ad

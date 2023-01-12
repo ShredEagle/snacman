@@ -8,19 +8,13 @@
 
 #include <type_traits>
 
-
 namespace ad {
-
 
 // Forward
 namespace graphics
 {
     class ApplicationGlfw;
 } // namespace graphics
-
-
-namespace snac {
-
 
 using ButtonEnum_t = std::int8_t;
 
@@ -32,10 +26,14 @@ enum class ButtonStatus : ButtonEnum_t
     PositiveEdge, // just pressed
 };
 
-
 struct InputState
 {
     using Enum_t = std::underlying_type_t<ButtonStatus>;
+
+    InputState() = default;
+    InputState(const bool & aBool) :
+        mState{aBool ? ButtonStatus::Pressed : ButtonStatus::Released}
+    {}
 
     operator ButtonStatus() const
     { return mState; }
@@ -63,6 +61,9 @@ constexpr std::size_t gGlfwButtonListSize = GLFW_GAMEPAD_BUTTON_LAST + 1;
 constexpr std::size_t gGlfwJoystickListSize = GLFW_JOYSTICK_LAST + 1;
 constexpr std::size_t gGlfwKeyboardListSize = GLFW_KEY_LAST + 1;
 
+constexpr float gJoystickDeadzone = 0.1f;
+constexpr float gTriggerDeadzone = 0.1f;
+
 // What is a mapping
 // a mapping links an input device type and an atomic command
 // to an action
@@ -79,7 +80,7 @@ constexpr std::size_t gGlfwKeyboardListSize = GLFW_KEY_LAST + 1;
 // command for all axis and associate a move action to that
 // command and do the differentiation in a system
 // if so axis should be one command and dpad should be one command
-enum class GamepadAtomicCommand
+enum class GamepadAtomicInput
 {
     leftXAxisPositive,
     leftXAxisNegative,
@@ -113,7 +114,7 @@ struct GamepadState
     math::Vec<2, float> mRightJoystick;
     float mLeftTrigger = 0.f;
     float mRightTrigger = 0.f;
-    std::array<InputState, static_cast<std::size_t>(GamepadAtomicCommand::End)> mAtomicCommands;
+    std::array<InputState, static_cast<std::size_t>(GamepadAtomicInput::End)> mAtomicInputList;
 };
 
 struct KeyboardState
@@ -121,26 +122,36 @@ struct KeyboardState
     std::array<InputState, static_cast<std::size_t>(gGlfwKeyboardListSize)> mKeyState;
 };
 
-
-
-/// \brief Produced by the HidManager
-struct Input
+struct MouseState
 {
-    const InputState & get(MouseButton aButton) const
-    { return mMouseButtons[static_cast<ButtonEnum_t>(aButton)]; }
+    MouseState diff(const MouseState & aPrevious)
+    {
+        return MouseState{
+            .mCursorPosition = mCursorPosition,
+            .mCursorDisplacement = mCursorPosition - aPrevious.mCursorPosition,
+            .mMouseButtons = aPrevious.mMouseButtons,
+        };
+    }
 
-    const GamepadState & get(int aJoystickId) const
-    { return mGamepads.at(aJoystickId); }
+    const InputState & get(MouseButton aButton) const
+    { return mMouseButtons.at(static_cast<ButtonEnum_t>(aButton)); }
 
     math::Position<2, float> mCursorPosition;
     math::Vec<2, float> mCursorDisplacement;
     math::Vec<2, float> mScrollOffset{0.f, 0.f};
 
     std::array<InputState, static_cast<std::size_t>(MouseButton::_End)> mMouseButtons;
-    std::array<GamepadState, gGlfwJoystickListSize> mGamepads;
-    KeyboardState mKeyboard;
 };
 
+/// \brief Produced by the HidManager
+struct RawInput
+{
+    MouseState mMouse;
+    KeyboardState mKeyboard;
+    std::array<GamepadState, gGlfwJoystickListSize> mGamepads;
+};
+
+namespace snac {
 
 /// \brief Handles all the input devices, and produce the `Input` instance that is consumed by the simulation.
 class HidManager
@@ -171,9 +182,9 @@ public:
 
     HidManager(graphics::ApplicationGlfw & aApplication);
 
-    Input initialInput() const;
+    RawInput initialInput() const;
 
-    Input read(const Input & aPrevious, const Inhibiter & aInhibiter = Inhibiter::gNull);
+    RawInput read(const RawInput & aPrevious, const Inhibiter & aInhibiter = Inhibiter::gNull);
 
 private:
     // TODO Answer: might the callback be called several times between/by glfwPollEvents()?
@@ -182,10 +193,7 @@ private:
     void callbackScroll(double xoffset, double yoffset);
     void callbackKeyboardStroke(int key, int scancode, int action, int mods);
 
-    math::Position<2, float> mCursorPosition;
-    // TODO could be made more compact, only need a bit per button (Franz says 2 bits per buttons, Release, neg, pos and pressed)
-    std::array<bool, static_cast<std::size_t>(MouseButton::_End)> mMouseButtons;
-    math::Vec<2, float> mScrollOffset{0.f, 0.f};
+    MouseState mMouse;
 
     // TODO could be made more compact, only need a bit per button (Franz says 2 bits per buttons, Release, neg, pos and pressed)
     // However it would introduce a fucking long list of masks
@@ -202,3 +210,14 @@ inline const HidManager::InhibiterNull HidManager::Inhibiter::gNull{};
 
 } // namespace snac
 } // namespace ad
+
+namespace std {
+    template<>
+    struct hash<ad::GamepadAtomicInput>
+    {
+        size_t operator()(const ad::GamepadAtomicInput & aAtomicInput) const
+        {
+            return hash<int>()(static_cast<int>(aAtomicInput));
+        }
+    };
+};

@@ -3,12 +3,13 @@
 #include "../component/Geometry.h"
 #include "../EntityWrap.h"
 #include "../GraphicState.h"
-#include <math/Constants.h>
 
 #include "../../../Input.h"
 
 #include <entity/Query.h>
 #include <snac-renderer/Camera.h>
+
+#include <math/Constants.h>
 
 namespace ad {
 namespace snacgame {
@@ -23,7 +24,7 @@ class OrbitalCamera
     {
     }
 
-    void update(const snac::Input & aInput,
+    void update(const RawInput & aInput,
                 math::Radian<float> aVerticalFov,
                 int aWindowHeight_screen);
 

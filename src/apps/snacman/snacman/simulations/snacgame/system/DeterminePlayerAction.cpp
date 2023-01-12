@@ -2,11 +2,9 @@
 
 #include "math/Color.h"
 #include "snacman/Input.h"
-#include "snacman/simulations/snacgame/ActionKeyMapper.h"
-#include "snacman/simulations/snacgame/component/AllowedMovement.h"
-#include "snacman/simulations/snacgame/component/Geometry.h"
 
-#include "../component/Controller.h"
+#include "../component/AllowedMovement.h"
+
 #include "../component/Level.h"
 
 namespace ad {
@@ -15,12 +13,12 @@ namespace system {
 
 constexpr float gTurningZoneHalfWidth = 0.1f;
 
-void DeterminePlayerAction::update(const snac::Input & aInput)
+void DeterminePlayerAction::update()
 {
     ent::Phase nomutation;
     auto levelGrid = mLevel.get(nomutation)->get<component::Level>().mLevelGrid;
     int colCount = mLevel.get(nomutation)->get<component::Level>().mColCount;
-    mPlayer.each([this, &aInput, colCount, &levelGrid, &nomutation](
+    mPlayer.each([colCount, &levelGrid, &nomutation](
                      component::Controller & aController,
                      component::Geometry & aPlayerGeometry,
                      component::PlayerMoveState & aPlayerMoveState) {
@@ -87,29 +85,7 @@ void DeterminePlayerAction::update(const snac::Input & aInput)
             aPlayerGeometry.mSubGridPosition.x() = 0.f;
         }
 
-        switch (aController.mType)
-        {
-        case component::ControllerType::Keyboard:
-            // TODO: mKeyboard.mKeyState should not be a super long array
-            for (std::size_t i = 0; i != aInput.mKeyboard.mKeyState.size(); ++i)
-            {
-                if (aInput.mKeyboard.mKeyState.at(i))
-                {
-                    int moveFlagcandidate = mKeyboardMapping.get(i);
-
-                    if (moveFlagcandidate != gPlayerMoveFlagNone)
-                    {
-                        inputMoveFlag = moveFlagcandidate;
-                    }
-                }
-            }
-            break;
-        case component::ControllerType::Gamepad:
-            inputMoveFlag = gPlayerMoveFlagNone;
-            break;
-        default:
-            break;
-        }
+        inputMoveFlag = aController.mCommandQuery;
 
         inputMoveFlag &= allowedMovementFlag;
 

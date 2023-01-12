@@ -30,7 +30,7 @@ public:
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface);
 
-    void update(float aDelta, const snac::Input & aInput);
+    void update(float aDelta, const RawInput & aInput);
 
     std::unique_ptr<visu::GraphicState> makeGraphicState(); 
 
@@ -45,6 +45,7 @@ private:
     ent::EntityManager mWorld;
     ent::Handle<ent::Entity> mSystems;
     ent::Handle<ent::Entity> mLevel;
+    ent::Handle<ent::Entity> mContext;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 

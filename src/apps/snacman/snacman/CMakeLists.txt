@@ -17,13 +17,14 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/EntityWrap.h
     simulations/snacgame/Entities.h
     simulations/snacgame/GraphicState.h
-    simulations/snacgame/ActionKeyMapper.h
+    simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SnacGame.h
     simulations/snacgame/SystemMove.h
 
     simulations/snacgame/component/Controller.h
     simulations/snacgame/component/Geometry.h
+    simulations/snacgame/component/InputDeviceDirectory.h
     simulations/snacgame/component/Level.h
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerMoveState.h

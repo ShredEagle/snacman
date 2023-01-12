@@ -7,12 +7,13 @@
 #include "component/PlayerMoveState.h"
 #include "component/Spawner.h"
 
-#include "math/Color.h"
+#include <math/Color.h>
 
 namespace ad {
 namespace snacgame {
 
-void createLevel(ent::Handle<ent::Entity> & aLevelHandle, ent::EntityManager & aWorld,
+void createLevel(ent::Handle<ent::Entity> & aLevelHandle,
+                 ent::EntityManager & aWorld,
                  ent::Phase & aInit,
                  const markovjunior::Grid & aGrid)
 {
@@ -20,8 +21,8 @@ void createLevel(ent::Handle<ent::Entity> & aLevelHandle, ent::EntityManager & a
 }
 
 void createPill(ent::EntityManager & mWorld,
-                 ent::Phase & aInit,
-                 const math::Position<2, int> & aGridPos)
+                ent::Phase & aInit,
+                const math::Position<2, int> & aGridPos)
 {
     auto handle = mWorld.addEntity();
     handle.get(aInit)->add(component::Geometry{
@@ -90,14 +91,17 @@ createPlayerSpawnEntity(ent::EntityManager & mWorld,
         .mLayer = component::GeometryLayer::Level,
         .mYRotation = math::Degree<float>{0.f},
         .mColor = math::hdr::gCyan<float>});
-    spawner.get(aInit)->add(component::Spawner{
-        .mSpawnPosition = aGridPos});
+    spawner.get(aInit)->add(component::Spawner{.mSpawnPosition = aGridPos});
 
     return spawner;
 }
 
-ent::Handle<ent::Entity> createPlayerEntity(ent::EntityManager & mWorld,
-                                            ent::Phase & aInit)
+ent::Handle<ent::Entity>
+createPlayerEntity(ent::EntityManager & mWorld,
+                   ent::Phase & aInit,
+                   component::InputDeviceDirectory & aDeviceDirectory,
+                   component::ControllerType aControllerType,
+                   int aControllerId)
 {
     auto playerHandle = mWorld.addEntity();
     auto playerEntity = playerHandle.get(aInit);
@@ -110,8 +114,16 @@ ent::Handle<ent::Entity> createPlayerEntity(ent::EntityManager & mWorld,
         .mColor = math::hdr::gMagenta<float>,
         .mShouldBeDrawn = false});
     playerEntity->add(component::PlayerLifeCycle{});
-    playerEntity->add(
-        component::Controller{component::ControllerType::Keyboard, -1});
+
+    if (aControllerType == component::ControllerType::Keyboard)
+    {
+        aDeviceDirectory.bindPlayerToKeyboard(aInit, playerHandle);
+    }
+    else if (aControllerType == component::ControllerType::Gamepad)
+    {
+        aDeviceDirectory.bindPlayerToGamepad(aInit, playerHandle, aControllerId);
+    }
+
     playerEntity->add(component::PlayerMoveState{});
 
     return playerHandle;

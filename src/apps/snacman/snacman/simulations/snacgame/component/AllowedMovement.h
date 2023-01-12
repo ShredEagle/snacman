@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "snacman/simulations/snacgame/ActionKeyMapper.h"
+#include "../InputCommandConverter.h"
 namespace ad {
 namespace snacgame {
 namespace component {

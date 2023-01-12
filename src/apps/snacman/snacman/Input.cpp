@@ -3,7 +3,6 @@
 #include <GLFW/glfw3.h>
 #include <functional>
 
-
 namespace ad {
 namespace snac {
 
@@ -54,7 +53,7 @@ HidManager::HidManager(graphics::ApplicationGlfw & aApplication)
     glfwGetCursorPos(aApplication.getGlfwWindow(), &x, &y);
     callbackCursorPosition(x, y);  
 
-    for(bool & mouseButton : mMouseButtons)
+    for(InputState & mouseButton : mMouse.mMouseButtons)
     {
         mouseButton = false;
     };
@@ -63,32 +62,32 @@ HidManager::HidManager(graphics::ApplicationGlfw & aApplication)
 }
 
 
-Input HidManager::initialInput() const
+RawInput HidManager::initialInput() const
 {
-    return Input{
-        .mCursorPosition = mCursorPosition,
+    return RawInput{
+        .mMouse{
+            .mCursorPosition = mMouse.mCursorPosition,
+        },
     };
 }
 
 
-Input HidManager::read(const Input & aPrevious, const Inhibiter & aInhibiter)
+RawInput HidManager::read(const RawInput & aPrevious, const Inhibiter & aInhibiter)
 {
-    Input result{
-        .mCursorPosition = mCursorPosition,
-        .mCursorDisplacement = mCursorPosition - aPrevious.mCursorPosition,
-        .mMouseButtons = aPrevious.mMouseButtons,
+    RawInput result{
+        .mMouse{mMouse.diff(aPrevious.mMouse)},
+        .mKeyboard = aPrevious.mKeyboard,
         .mGamepads = aPrevious.mGamepads,
-        .mKeyboard = aPrevious.mKeyboard
     };
 
     if (!aInhibiter.isCapturingMouse())
     {
-        for (std::size_t id = 0; id != mMouseButtons.size(); ++id)
+        for (std::size_t id = 0; id != mMouse.mMouseButtons.size(); ++id)
         {
-            handleButtonEdges(result.mMouseButtons[id], mMouseButtons[id]);
+            handleButtonEdges(result.mMouse.mMouseButtons.at(id), mMouse.mMouseButtons.at(id));
         }
 
-        result.mScrollOffset = mScrollOffset;
+        result.mMouse.mScrollOffset = mMouse.mScrollOffset;
     }
 
     if (!aInhibiter.isCapturingKeyboard())
@@ -126,7 +125,7 @@ Input HidManager::read(const Input & aPrevious, const Inhibiter & aInhibiter)
         }
     }
 
-    mScrollOffset.setZero();
+    mMouse.mScrollOffset.setZero();
 
     return result;
 }
@@ -134,7 +133,7 @@ Input HidManager::read(const Input & aPrevious, const Inhibiter & aInhibiter)
 
 void HidManager::callbackCursorPosition(double xpos, double ypos)
 {
-    mCursorPosition = {static_cast<float>(xpos), static_cast<float>(ypos)};
+    mMouse.mCursorPosition = {static_cast<float>(xpos), static_cast<float>(ypos)};
 }
 
 
@@ -164,7 +163,7 @@ void HidManager::callbackMouseButton(int button, int action, int mods, double xp
 
     if (mouseButton != MouseButton::_End)
     {
-        mMouseButtons[static_cast<ButtonEnum_t>(mouseButton)] = (action != GLFW_RELEASE);
+        mMouse.mMouseButtons.at(static_cast<ButtonEnum_t>(mouseButton)) = (action != GLFW_RELEASE);
     }
 }
 
@@ -172,7 +171,7 @@ void HidManager::callbackMouseButton(int button, int action, int mods, double xp
 void HidManager::callbackScroll(double xoffset, double yoffset)
 {
     // In case the callbacks can be called several times...
-    mScrollOffset += math::Vec<2, float>{static_cast<float>(xoffset), static_cast<float>(yoffset)};
+    mMouse.mScrollOffset += math::Vec<2, float>{static_cast<float>(xoffset), static_cast<float>(yoffset)};
 }
 
 void HidManager::callbackKeyboardStroke(int key, int scancode, int action, int mods)
