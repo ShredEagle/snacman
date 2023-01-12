@@ -481,7 +481,10 @@ void runApplication()
         // Simulate one step
         //
         beginStepTime = Clock::now();
-        scene.update((float)asSeconds(simulationDelta), input);
+        if (scene.update((float)asSeconds(simulationDelta), input))
+        {
+            break;
+        }
         // Pretend update took longer if requested by user.
         sleepBusy(gImguiGameLoop.getUpdateDuration(), beginStepTime);
 

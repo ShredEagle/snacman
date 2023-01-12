@@ -57,8 +57,10 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface) :
     mContext.get(init)->add(inputDeviceDirectory);
 }
 
-void SnacGame::update(float aDelta, const RawInput & aInput)
+bool SnacGame::update(float aDelta, const RawInput & aInput)
 {
+    bool quitGame = false;
+
     mSimulationTime += aDelta;
 
     ent::Phase update;
@@ -102,7 +104,11 @@ void SnacGame::update(float aDelta, const RawInput & aInput)
                                 {GLFW_KEY_DOWN,
                                  gPlayerMoveFlagDown},
                                 {GLFW_KEY_UP,
-                                 gPlayerMoveFlagUp}}));
+                                 gPlayerMoveFlagUp},
+                                {GLFW_KEY_ESCAPE,
+                                 gQuitCommand}}));
+
+            quitGame = keyboard.mCommandQuery & gQuitCommand;
     }
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
@@ -112,6 +118,8 @@ void SnacGame::update(float aDelta, const RawInput & aInput)
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
+
+    return quitGame;
 }
 
 std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()

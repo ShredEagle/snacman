@@ -30,7 +30,7 @@ public:
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface);
 
-    void update(float aDelta, const RawInput & aInput);
+    bool update(float aDelta, const RawInput & aInput);
 
     std::unique_ptr<visu::GraphicState> makeGraphicState(); 
 

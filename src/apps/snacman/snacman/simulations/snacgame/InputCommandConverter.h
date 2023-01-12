@@ -14,6 +14,8 @@ constexpr int gPlayerMoveFlagDown = 0x2;
 constexpr int gPlayerMoveFlagLeft = 0x4;
 constexpr int gPlayerMoveFlagRight = 0x8;
 
+constexpr int gQuitCommand = 0x256;
+
 // Maybe we should just give up on GamepadAtomicInput
 // being a class enum and this template would
 // dissapear
