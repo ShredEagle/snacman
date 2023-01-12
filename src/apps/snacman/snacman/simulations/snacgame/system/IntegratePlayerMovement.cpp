@@ -17,22 +17,22 @@ void IntegratePlayerMovement::update(float aDelta)
     mPlayer.each(
         [cellSize, aDelta](component::Geometry & aGeometry,
                            const component::PlayerMoveState & aMoveState) {
-            if (aMoveState.mMoveState == gPlayerMoveFlagUp)
+            if (aMoveState.mMoveState & gPlayerMoveFlagUp)
             {
                 aGeometry.mSubGridPosition +=
                     math::Vec<2, float>{0.f, -1.f} * gBasePlayerSpeed * aDelta;
             }
-            else if (aMoveState.mMoveState == gPlayerMoveFlagDown)
+            else if (aMoveState.mMoveState & gPlayerMoveFlagDown)
             {
                 aGeometry.mSubGridPosition +=
                     math::Vec<2, float>{0.f, 1.f} * gBasePlayerSpeed * aDelta;
             }
-            else if (aMoveState.mMoveState == gPlayerMoveFlagLeft)
+            else if (aMoveState.mMoveState & gPlayerMoveFlagLeft)
             {
                 aGeometry.mSubGridPosition +=
                     math::Vec<2, float>{1.f, 0.f} * gBasePlayerSpeed * aDelta;
             }
-            else if (aMoveState.mMoveState == gPlayerMoveFlagRight)
+            else if (aMoveState.mMoveState & gPlayerMoveFlagRight)
             {
                 aGeometry.mSubGridPosition +=
                     math::Vec<2, float>{-1.f, 0.f} * gBasePlayerSpeed * aDelta;
