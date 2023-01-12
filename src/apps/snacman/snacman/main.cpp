@@ -2,9 +2,6 @@
 #include "Timing.h"
 #include "GraphicState.h"
 
-#include "simulations/bawls/Bawls.h"
-#include "simulations/bawls/Renderer.h"
-
 #include "simulations/cubes/Cubes.h"
 #include "simulations/snacgame/SnacGame.h"
 
@@ -27,9 +24,7 @@ using namespace ad::snac;
 //#define BAWLS_SCENE
 #define SNAC_SCENE
 
-#if defined(BAWLS_SCENE)
-using Simu_t = bawls::Bawls;
-#elif defined(CUBE_SCENE)
+#if defined(CUBE_SCENE)
 using Simu_t = cubes::Cubes;
 #elif defined(SNAC_SCENE)
 using Simu_t = snacgame::SnacGame;
