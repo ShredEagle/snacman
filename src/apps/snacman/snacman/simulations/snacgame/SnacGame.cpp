@@ -3,10 +3,12 @@
 #include "Entities.h"
 #include "InputCommandConverter.h"
 
+#include "context/InputDeviceDirectory.h"
+
 #include "component/Controller.h"
-#include "component/InputDeviceDirectory.h"
 #include "component/Level.h"
 
+#include "snacman/simulations/snacgame/component/Context.h"
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
 #include "system/PlayerInvulFrame.h"
@@ -30,7 +32,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface) :
     mQueryRenderable{mWorld, mWorld}
 {
     ent::Phase init;
-    component::InputDeviceDirectory inputDeviceDirectory;
+    InputDeviceDirectory inputDeviceDirectory;
     markovjunior::Interpreter markovInterpreter(
         "/home/franz/gamedev/snac-assets", "markov/snaclvl.xml",
         ad::math::Size<3, int>{29, 29, 1}, 1231234);
@@ -54,7 +56,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface) :
         inputDeviceDirectory,
         component::ControllerType::Keyboard);
 
-    mContext.get(init)->add(inputDeviceDirectory);
+    mContext.get(init)->add(component::Context{inputDeviceDirectory});
 }
 
 bool SnacGame::update(float aDelta, const RawInput & aInput)
@@ -65,8 +67,10 @@ bool SnacGame::update(float aDelta, const RawInput & aInput)
 
     ent::Phase update;
 
-    component::InputDeviceDirectory & directory =
-        mContext.get(update)->get<component::InputDeviceDirectory>();
+    component::Context & context =
+        mContext.get(update)->get<component::Context>();
+    InputDeviceDirectory & directory = context.mInputDeviceDirectory;
+
     for (auto & connectedPlayer : directory.mGamepadBindings)
     {
         if (connectedPlayer.mPlayer && connectedPlayer.mPlayer->isValid())

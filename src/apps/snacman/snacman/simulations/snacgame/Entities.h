@@ -1,7 +1,8 @@
 #pragma once
 
+#include "context/InputDeviceDirectory.h"
+
 #include "component/Geometry.h"
-#include "component/InputDeviceDirectory.h"
 
 #include <markovjunior/Grid.h>
 #include <entity/Entity.h>
@@ -32,7 +33,7 @@ ent::Handle<ent::Entity> createPlayerSpawnEntity(ent::EntityManager & mWorld,
 ent::Handle<ent::Entity>
 createPlayerEntity(ent::EntityManager & mWorld,
                    ent::Phase & aInit,
-                   component::InputDeviceDirectory & aDeviceDirectory,
+                   InputDeviceDirectory & aDeviceDirectory,
                    component::ControllerType aControllerType,
                    int aControllerId = 0);
 

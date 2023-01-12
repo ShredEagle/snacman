@@ -22,9 +22,11 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/SnacGame.h
     simulations/snacgame/SystemMove.h
 
+    simulations/snacgame/context/InputDeviceDirectory.h
+
+    simulations/snacgame/component/Context.h
     simulations/snacgame/component/Controller.h
     simulations/snacgame/component/Geometry.h
-    simulations/snacgame/component/InputDeviceDirectory.h
     simulations/snacgame/component/Level.h
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerMoveState.h

@@ -1,12 +1,12 @@
 #pragma once
-#include "Controller.h"
-#include "entity/Entity.h"
 
+#include "../component/Controller.h"
 #include "../InputCommandConverter.h"
+
+#include <entity/Entity.h>
 
 namespace ad {
 namespace snacgame {
-namespace component {
 
 constexpr int gMaxControllerListSize = 4;
 constexpr int gPlayerSlotUnavailable = -1;
@@ -32,7 +32,7 @@ struct InputDeviceDirectory
             }
 
             aPlayer.get(aPhase)->add(component::Controller{
-                .mType = ControllerType::Gamepad,
+                .mType = component::ControllerType::Gamepad,
                 .mId = playerSlot,
             });
             binding.mPlayer = aPlayer;
@@ -51,7 +51,7 @@ struct InputDeviceDirectory
         }
 
         aPlayer.get(aPhase)->add(component::Controller{
-            .mType = ControllerType::Keyboard,
+            .mType = component::ControllerType::Keyboard,
         });
         mPlayerBoundToKeyboard = aPlayer;
     }
@@ -60,6 +60,5 @@ struct InputDeviceDirectory
     std::optional<ent::Handle<ent::Entity>> mPlayerBoundToKeyboard;
 };
 
-} // namespace component
 } // namespace snacgame
 } // namespace ad

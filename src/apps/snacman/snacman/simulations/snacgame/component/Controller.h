@@ -2,6 +2,7 @@
 
 
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
+
 namespace ad {
 namespace snacgame {
 namespace component {
