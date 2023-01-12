@@ -56,7 +56,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface) :
         inputDeviceDirectory,
         component::ControllerType::Keyboard);
 
-    mContext.get(init)->add(component::Context{inputDeviceDirectory});
+    mContext.get(init)->add(component::Context(inputDeviceDirectory));
 }
 
 bool SnacGame::update(float aDelta, const RawInput & aInput)

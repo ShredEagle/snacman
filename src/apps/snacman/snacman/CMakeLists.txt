@@ -92,8 +92,10 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 find_package(Entity CONFIG REQUIRED entity)
 find_package(Graphics CONFIG REQUIRED graphics imguiui)
 find_package(Math CONFIG REQUIRED math)
+find_package(Handy CONFIG REQUIRED platform)
 find_package(MarkovJunior CONFIG REQUIRED markovjunior)
 
+find_package(nlohmann_json 3.11.2 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
@@ -104,9 +106,11 @@ target_link_libraries(${TARGET_NAME}
         ad::graphics
         ad::imguiui
         ad::math
+        ad::platform
         ad::markovjunior
 
         spdlog::spdlog
+        nlohmann_json::nlohmann_json
 )
 
 

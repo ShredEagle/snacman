@@ -29,6 +29,7 @@ class SnacmanConan(ConanFile):
         ("MarkovJunior.cpp/5d066e60e2@adnn/develop"),
 
         ("spdlog/1.10.0"),
+        ("nlohmann_json/3.11.2"),
     )
 
     # Note: It seems conventionnal to add CMake build requirement

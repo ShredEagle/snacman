@@ -2,8 +2,14 @@
 
 #include "snacman/Input.h"
 
-#include <concepts>
+
+#include <fstream>
+#include <nlohmann/json.hpp>
 #include <GLFW/glfw3.h>
+
+#include <concepts>
+
+using json = nlohmann::json;
 
 namespace ad {
 namespace snacgame {
@@ -14,7 +20,7 @@ constexpr int gPlayerMoveFlagDown = 0x2;
 constexpr int gPlayerMoveFlagLeft = 0x4;
 constexpr int gPlayerMoveFlagRight = 0x8;
 
-constexpr int gQuitCommand = 0x256;
+constexpr int gQuitCommand = 0x100;
 
 // Maybe we should just give up on GamepadAtomicInput
 // being a class enum and this template would
@@ -28,6 +34,13 @@ public:
     KeyMapping(const std::vector<std::pair<T_input_type, int>> & aMapping) :
         mKeymaps{aMapping}
     {}
+
+    KeyMapping(filesystem::path aPath)
+    {
+        std::ifstream configStream(aPath);
+
+        //json data = json::parse(configStream);
+    }
 
     int get(T_input_type aInput)
     {
