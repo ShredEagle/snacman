@@ -13,9 +13,9 @@ namespace component {
 struct Context
 {
     Context(InputDeviceDirectory aDeviceDirectory) :
-        mInputDeviceDirectory{aDeviceDirectory}
-        mGamepadMapping("/home/franz/snac-assets/gamepadmapping.json"),
-        mKeyboardMapping("/home/franz/snac-assets/gamepadmapping.json")
+        mInputDeviceDirectory{aDeviceDirectory},
+        mGamepadMapping("/home/franz/gamedev/snac-assets/settings/gamepad_mapping.json"),
+        mKeyboardMapping("/home/franz/gamedev/snac-assets/settings/keyboard_mapping.json")
     {
     }
 

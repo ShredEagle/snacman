@@ -94,6 +94,8 @@ enum class GamepadAtomicInput
     b,
     x,
     y,
+    start,
+    guide,
     dPadRight,
     dPadLeft,
     dPadUp,

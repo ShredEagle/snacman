@@ -35,11 +35,18 @@ public:
         mKeymaps{aMapping}
     {}
 
-    KeyMapping(filesystem::path aPath)
+    KeyMapping(filesystem::path aPath) :
+        mKeymaps{}
     {
         std::ifstream configStream(aPath);
 
-        //json data = json::parse(configStream);
+        json data = json::parse(configStream);
+
+        mKeymaps.push_back({static_cast<T_input_type>(data["gPlayerMoveFlagUp"]), gPlayerMoveFlagUp});
+        mKeymaps.push_back({static_cast<T_input_type>(data["gPlayerMoveFlagDown"]), gPlayerMoveFlagDown});
+        mKeymaps.push_back({static_cast<T_input_type>(data["gPlayerMoveFlagLeft"]), gPlayerMoveFlagLeft});
+        mKeymaps.push_back({static_cast<T_input_type>(data["gPlayerMoveFlagRight"]), gPlayerMoveFlagRight});
+        mKeymaps.push_back({static_cast<T_input_type>(data["gQuitCommand"]), gQuitCommand});
     }
 
     int get(T_input_type aInput)

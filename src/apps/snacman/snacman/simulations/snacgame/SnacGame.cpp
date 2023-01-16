@@ -80,14 +80,7 @@ bool SnacGame::update(float aDelta, const RawInput & aInput)
                     ->get<component::Controller>();
             controller.mCommandQuery = convertGamepadInput(
                 aInput.mGamepads.at(connectedPlayer.mRawInputGamepadIndex),
-                GamepadMapping({{GamepadAtomicInput::leftXAxisNegative,
-                                 gPlayerMoveFlagLeft},
-                                {GamepadAtomicInput::leftXAxisPositive,
-                                 gPlayerMoveFlagRight},
-                                {GamepadAtomicInput::leftYAxisNegative,
-                                 gPlayerMoveFlagDown},
-                                {GamepadAtomicInput::leftYAxisPositive,
-                                 gPlayerMoveFlagUp}}));
+                GamepadMapping(context.mGamepadMapping));
         }
     }
 
@@ -101,16 +94,7 @@ bool SnacGame::update(float aDelta, const RawInput & aInput)
 
             keyboard.mCommandQuery = convertKeyboardInput(
                 aInput.mKeyboard,
-                KeyboardMapping({{GLFW_KEY_LEFT,
-                                 gPlayerMoveFlagLeft},
-                                {GLFW_KEY_RIGHT,
-                                 gPlayerMoveFlagRight},
-                                {GLFW_KEY_DOWN,
-                                 gPlayerMoveFlagDown},
-                                {GLFW_KEY_UP,
-                                 gPlayerMoveFlagUp},
-                                {GLFW_KEY_ESCAPE,
-                                 gQuitCommand}}));
+                KeyboardMapping(context.mKeyboardMapping));
 
             quitGame = keyboard.mCommandQuery & gQuitCommand;
     }
