@@ -3,6 +3,7 @@
 #include <handy/StringUtilities.h>
 
 #include <stdexcept>
+#include <tuple>
 
 #include <cassert>
 
