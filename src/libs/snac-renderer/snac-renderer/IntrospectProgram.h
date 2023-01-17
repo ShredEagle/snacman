@@ -6,7 +6,7 @@
 
 #include <renderer/Shading.h>
 #include <renderer/VertexSpecification.h>
-#include <renderer/BufferUtilities.h>
+#include <renderer/BufferIndexedBinding.h>
 
 #include <string>
 #include <vector>

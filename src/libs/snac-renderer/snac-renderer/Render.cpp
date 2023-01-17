@@ -2,7 +2,7 @@
 
 #include "Logging.h"
 
-#include <renderer/BufferUtilities.h>
+#include <renderer/ScopeGuards.h>
 #include <renderer/Uniforms.h>
 
 namespace ad {
