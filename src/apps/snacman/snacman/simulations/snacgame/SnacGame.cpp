@@ -114,7 +114,7 @@ bool SnacGame::update(float aDelta, const RawInput & aInput)
 
     mImguiUi.mFrameMutex.lock();
     mImguiUi.newFrame();
-    context.drawUi();
+    context.drawUi(aInput);
     mImguiUi.render();
     mImguiUi.mFrameMutex.unlock();
 

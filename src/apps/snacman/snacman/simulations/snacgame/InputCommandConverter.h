@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include <concepts>
+#include <initializer_list>
 
 using json = nlohmann::json;
 
@@ -21,13 +22,73 @@ constexpr int gPlayerMoveFlagRight = 0x8;
 
 constexpr int gQuitCommand = 0x100;
 
+template<class T_input_type>
+struct InputMappingDictionnary
+{
+    InputMappingDictionnary(std::initializer_list<std::pair<std::string, T_input_type>> aStringInputList) :
+        mMap{createMap(aStringInputList)},
+        mReverseMap{createReverseMap(aStringInputList)}
+    {}
+    
+    static std::map<std::string, T_input_type> createMap(std::vector<std::pair<std::string, T_input_type>> aStringInputList)
+    {
+        std::map<std::string, T_input_type> newMap;
+
+        for (const auto & [name, input] : aStringInputList)
+        {
+            newMap.insert_or_assign(name, input);
+        }
+
+        return newMap;
+    }
+
+    static std::map<T_input_type, std::string> createReverseMap(std::vector<std::pair<std::string, T_input_type>> aStringInputList)
+    {
+        std::map<T_input_type, std::string> newMap;
+
+        for (const auto & [name, input] : aStringInputList)
+        {
+            newMap.insert_or_assign(input, name);
+        }
+
+        return newMap;
+    }
+
+    const T_input_type lookup(const std::string & aName) const
+    {
+        return mMap.at(aName);
+    }
+
+    const std::string reverseLookup(const T_input_type & aInput) const
+    {
+        return mReverseMap.at(aInput);
+    }
+
+    const std::map<std::string, T_input_type> mMap;
+    const std::map<T_input_type, std::string> mReverseMap;
+};
+
+const inline InputMappingDictionnary<GamepadAtomicInput> gGamepadMappingDictionnary{
+    {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisPositive},
+    {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisNegative},
+    {"JOY_LEFT_LEFT", GamepadAtomicInput::leftXAxisNegative},
+    {"JOY_LEFT_RIGHT", GamepadAtomicInput::leftXAxisPositive},
+    {"SELECT", GamepadAtomicInput::guide},
+};
+
+const inline InputMappingDictionnary<int> gKeyboardMappingDictionnary{
+    {"ctrl", GLFW_KEY_LEFT_CONTROL},
+    {"esc", GLFW_KEY_ESCAPE},
+};
+
+
 template<class T_return_type>
 inline T_return_type translateMappingValueToInputType(const std::string & aMappingValue);
 
 template<>
 inline GamepadAtomicInput translateMappingValueToInputType(const std::string & aMappingValue)
 {
-    return gGamepadMappingDictionnary.at(aMappingValue);
+    return gGamepadMappingDictionnary.lookup(aMappingValue);
 }
 
 template<>
@@ -46,7 +107,7 @@ inline int translateMappingValueToInputType(const std::string & aMappingValue)
     }
     else
     {
-        gKeyboardMappingDictionnary.at(aMappingValue);
+        return gKeyboardMappingDictionnary.lookup(aMappingValue);
     }
 
     return 0;

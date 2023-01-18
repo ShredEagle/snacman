@@ -1,11 +1,13 @@
 #pragma once
 
+#include "snacman/Input.h"
 #include "../InputCommandConverter.h"
 
 #include "../context/InputDeviceDirectory.h"
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
+#include <limits>
 #include <platform/Filesystem.h>
 #include <string>
 
@@ -26,12 +28,12 @@ struct Context
     GamepadMapping mGamepadMapping;
     KeyboardMapping mKeyboardMapping;
 
-    void drawUi()
+    void drawUi(const RawInput & aInput)
     {
         ImGui::Begin("Keyboard mappings");
+        static int selected = -1;
         for (auto & pair : mKeyboardMapping.mKeymaps)
         {
-            std::string key(1, static_cast<char>(pair.first));
             int move = pair.second;
             std::string moveName{""};
             switch(move)
@@ -53,29 +55,33 @@ struct Context
                     break;
             }
 
-            struct CallbackData {
-                int & mCurrentKey;
-            };
-            
-            CallbackData cbData{pair.first};
+            std::string key(1, static_cast<char>(pair.first));
 
-            ImGui::InputText(moveName.c_str(), (char*)key.c_str(), key.capacity() + 1, 0, [](ImGuiInputTextCallbackData * data) -> int
-                    {
-                        std::string newText(data->Buf, data->BufTextLen);
-                        CallbackData * myData = (CallbackData *)data->UserData;
-                        for (auto character : newText)
-                        {
-                            if (character != myData->mCurrentKey)
-                            {
-                                myData->mCurrentKey = character;
-                            }
-                        }
-
-                        return 0;
-                    }, &cbData);
-            if (key.size() != 0)
+            if (pair.first > std::numeric_limits<char>::max() || key.at(0) == 0)
             {
-                pair.first = key.at(0);
+                key = gKeyboardMappingDictionnary.reverseLookup(pair.first);
+            }
+
+            ImGui::Text("%s:", moveName.c_str());
+            ImGui::SameLine();
+            if (ImGui::Selectable(key.c_str(), selected == pair.second))
+            {
+                selected = pair.second;
+
+            }
+            if (selected == pair.second)
+            {
+                int index = 0;
+                for (const InputState & aState : aInput.mKeyboard.mKeyState)
+                {
+                    if (static_cast<ButtonStatus>(aState) == ButtonStatus::PositiveEdge)
+                    {
+                        pair.first = index;
+                        selected = -1;
+                        break;
+                    }
+                    index++;
+                }
             }
         }
         ImGui::End();
