@@ -38,7 +38,8 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface, imguiui::ImguiUi & aI
     ent::Phase init;
     InputDeviceDirectory inputDeviceDirectory;
     markovjunior::Interpreter markovInterpreter(
-        "/home/franz/gamedev/snac-assets", "markov/snaclvl.xml",
+        //"/home/franz/gamedev/snac-assets", "markov/snaclvl.xml",
+        "d:/projects/gamedev/2/snac-assets", "markov/snaclvl.xml",
         ad::math::Size<3, int>{29, 29, 1}, 1231234);
 
     markovInterpreter.setup();
