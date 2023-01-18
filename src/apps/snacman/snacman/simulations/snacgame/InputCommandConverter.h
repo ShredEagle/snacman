@@ -187,14 +187,15 @@ inline int convertKeyboardInput(
 inline int convertGamepadInput(
         const GamepadState & aGamepadState, const GamepadMapping & aGamepadMapping)
 {
-    int commandFlags = 0;
+    //int commandFlags = 0;
 
-    for (const auto & [input, command] : aGamepadMapping.mKeymaps)
-    {
-        commandFlags |= aGamepadState.mAtomicInputList.at(static_cast<size_t>(input)).isPressed();
-    }
+    //for (const auto & [input, command] : aGamepadMapping.mKeymaps)
+    //{
+    //    commandFlags |= aGamepadState.mAtomicInputList.at(static_cast<size_t>(input)).isPressed();
+    //}
 
-    return commandFlags;
+    //return commandFlags;
+    throw std::runtime_error("Not implemented.");
 }
 
 } // namespace snacgame
