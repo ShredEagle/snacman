@@ -95,7 +95,7 @@ namespace {
             glGetProgramResourceiv(*mProgram, mProgramInterface, mCurrentId,
                                    (GLsizei)std::size(properties), properties,
                                    (GLsizei)std::size(mValue.mProperties), &length, mValue.mProperties.data());
-            assert(length == std::size(properties)); // Sanity check
+            assert(static_cast<std::size_t>(length) == std::size(properties)); // Sanity check
 
             // The returned length makes provision for a terminating null character.
             // this character will be written to the buffer by glGetProgramResourceName()
