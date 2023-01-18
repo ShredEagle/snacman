@@ -37,6 +37,7 @@ struct UniformParameter
     ///
     /// \param aValue should be of a scalar type, for which there is an overload setUniform.
     template <class T>
+        requires (!math::from_matrix_v<T>) // Fix issue where gcc 12 doesn't think that requires clause disambiguate template
     UniformParameter(T aValue) :
         mComponentType{graphics::MappedGL_v<T>},
         mDimension{1},
