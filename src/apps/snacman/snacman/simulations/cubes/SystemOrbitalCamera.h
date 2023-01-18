@@ -22,7 +22,7 @@ public:
         mCamera{aWorld, gInitialCameraRadius}
     {}
 
-    void update(const snac::Input & aInput,
+    void update(const RawInput & aInput,
                 math::Radian<float> aVerticalFov,
                 int aWindowHeight_screen);
 

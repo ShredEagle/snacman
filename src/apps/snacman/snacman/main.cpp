@@ -3,10 +3,8 @@
 #include "Timing.h"
 #include "GraphicState.h"
 
-#include "simulations/bawls/Bawls.h"
-#include "simulations/bawls/Renderer.h"
-
 #include "simulations/cubes/Cubes.h"
+#include "simulations/snacgame/SnacGame.h"
 
 #include <build_info.h>
 
@@ -25,12 +23,10 @@ using namespace ad::snac;
 
 
 //#define BAWLS_SCENE
-#define CUBE_SCENE
+#define SNAC_SCENE
 
-#if defined(BAWLS_SCENE)
-using Simu_t = bawls::Bawls;
-#elif defined(CUBE_SCENE)
-using Simu_t = cubes::Cubes;
+#if defined(SNAC_SCENE)
+using Simu_t = snacgame::SnacGame;
 #endif
 
 using GraphicStateFifo = StateFifo<Simu_t::Renderer_t::GraphicState_t>;
@@ -187,11 +183,13 @@ class RenderThread
 public:
     RenderThread(graphics::ApplicationGlfw & aGlfwApp,
                  GraphicStateFifo & aStates,
-                 T_renderer && aRenderer) :
+                 T_renderer && aRenderer,
+                 imguiui::ImguiUi & aImguiUi) :
         mApplication{aGlfwApp},
         mViewportListening{
             aGlfwApp.getAppInterface()->listenFramebufferResize(
-                std::bind(&RenderThread::resizeViewport, this, std::placeholders::_1))}
+                std::bind(&RenderThread::resizeViewport, this, std::placeholders::_1))},
+        mImguiUi{aImguiUi}
     {
         mThread = std::thread{[this, &aStates, renderer=std::move(aRenderer)]() mutable
             {
@@ -264,12 +262,6 @@ private:
 
         // The context must be made current on this thread before it can call GL functions.
         mApplication.makeContextCurrent();
-
-        //
-        // Imgui
-        //
-        imguiui::ImguiUi ui{mApplication};
-        bool showImguiDemo = true;
 
         // At first, Renderer was constructed here directly, in the render thread, because the ctor makes
         // OpenGL calls (and the GL context is current on the render thread).
@@ -356,22 +348,21 @@ private:
             SELOG(trace)("Render thread: Frame sent to GPU.");
 
             // Imgui rendering
-            ui.newFrame();
-            // NewFrame() updates the io catpure flag: consume them ASAP
-            // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
+            /* // NewFrame() updates the io catpure flag: consume them ASAP */
+            /* // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration */
             gImguiGameLoop.resetCapture(static_cast<ImguiGameLoop::WantCapture>(
-                (ui.isCapturingMouse() ? ImguiGameLoop::Mouse : ImguiGameLoop::Null) 
-                | (ui.isCapturingKeyboard() ? ImguiGameLoop::Keyboard : ImguiGameLoop::Null)));
+                (mImguiUi.isCapturingMouse() ? ImguiGameLoop::Mouse : ImguiGameLoop::Null) 
+                | (mImguiUi.isCapturingKeyboard() ? ImguiGameLoop::Keyboard : ImguiGameLoop::Null)));
 
-            ImGui::ShowDemoWindow(&showImguiDemo);
-            ImGui::Begin("Gameloop");
-            //ImGui::Checkbox("Demo window", &showImguiDemo);
-            gImguiGameLoop.render();
-            ImGui::End();
-            // Note: We hope that setting log level for a logger is thread safe.
-            imguiLogLevelSelection();
+            /* ImGui::ShowDemoWindow(&showImguiDemo); */
+            /* ImGui::Begin("Gameloop"); */
+            /* //ImGui::Checkbox("Demo window", &showImguiDemo); */
+            /* gImguiGameLoop.render(); */
+            
+            /* ImGui::End(); */
+            //imguiLogLevelSelection();
 
-            ui.render();
+            mImguiUi.renderBackend();
 
             mApplication.swapBuffers();
         }
@@ -385,6 +376,7 @@ private:
 
     std::queue<std::function<void(T_renderer &)>> mOperations;
     std::mutex mOperationsMutex;
+    imguiui::ImguiUi & mImguiUi;
 
     std::atomic<bool> mThrew{false};
     std::exception_ptr mThreadException;
@@ -405,10 +397,12 @@ void runApplication()
                                       //TODO, applicationFlags
     };
 
+    imguiui::ImguiUi imguiUi(glfwApp);
+
     //
     // Initialize scene
     //
-    Simu_t scene{*glfwApp.getAppInterface()};
+    Simu_t scene{*glfwApp.getAppInterface(), imguiUi};
 
     //
     // Initialize rendering subsystem
@@ -423,7 +417,7 @@ void runApplication()
     GraphicStateFifo graphicStates;
     RenderThread renderingThread{glfwApp,
                                  graphicStates,
-                                 std::move(renderer)};
+                                 std::move(renderer), imguiUi};
 
 #if defined(CUBE_SCENE)
     // Reset the camera projection when the window size changes
@@ -438,7 +432,7 @@ void runApplication()
     // Initialize input devices
     //
     HidManager hid{glfwApp};
-    Input input = hid.initialInput();
+    RawInput input = hid.initialInput();
     ImguiInhibiter inhibiter;
 
     //

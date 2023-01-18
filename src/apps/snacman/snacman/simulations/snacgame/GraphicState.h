@@ -3,6 +3,7 @@
 
 #include "../../SparseSet.h"
 
+#include <functional>
 #include <math/Angle.h>
 #include <math/Color.h>
 #include <math/Homogeneous.h> // TODO #pose remove
@@ -13,13 +14,14 @@
 
 
 namespace ad {
-namespace cubes {
+namespace snacgame {
 namespace visu {
 
 
 struct Entity
 {
     math::Position<3, float> mPosition_world;
+    math::Size<3, float> mScaling;
     math::Radian<float> mYAngle;
     math::hdr::Rgba_f mColor;
 };
@@ -40,6 +42,8 @@ struct GraphicState
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
     Camera mCamera; 
+
+    std::vector<std::function<void()>> mImguiCommands;
 };
 
 
@@ -50,6 +54,7 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         // TODO #pose
         //.mCamera = math::lerp(aLeft.mCamera.mPosition_world, aRight.mCamera.mPosition_world, aInterpolant),
         .mCamera{aRight.mCamera},
+        .mImguiCommands{aRight.mImguiCommands},
     };
 
     for(const auto & [id, rightEntity] : aRight.mEntities)
@@ -61,6 +66,7 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
                 id,
                 Entity{
                     math::lerp(leftEntity.mPosition_world, rightEntity.mPosition_world,   aInterpolant),
+                    math::lerp(leftEntity.mScaling,        rightEntity.mScaling,   aInterpolant),
                     math::lerp(leftEntity.mYAngle,         rightEntity.mYAngle,           aInterpolant),
                     math::lerp(leftEntity.mColor,          rightEntity.mColor,            aInterpolant)});
         }

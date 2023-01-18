@@ -15,21 +15,29 @@ set(${TARGET_NAME}_HEADERS
     SparseSet.h
     Timing.h
 
-    simulations/bawls/Bawls.h
-    simulations/bawls/ComponentGeometry.h
-    simulations/bawls/ComponentVelocity.h
-    simulations/bawls/GraphicState.h
-    simulations/bawls/Renderer.h
-    simulations/bawls/SystemCollide.h
-    simulations/bawls/SystemMove.h
+    simulations/snacgame/EntityWrap.h
+    simulations/snacgame/Entities.h
+    simulations/snacgame/GraphicState.h
+    simulations/snacgame/InputCommandConverter.h
+    simulations/snacgame/Renderer.h
+    simulations/snacgame/SnacGame.h
+    simulations/snacgame/SystemMove.h
 
-    simulations/cubes/ComponentGeometry.h
-    simulations/cubes/Cubes.h
-    simulations/cubes/EntityWrap.h
-    simulations/cubes/GraphicState.h
-    simulations/cubes/Renderer.h
-    simulations/cubes/SystemMove.h
-    simulations/cubes/SystemOrbitalCamera.h
+    simulations/snacgame/context/InputDeviceDirectory.h
+
+    simulations/snacgame/component/Context.h
+    simulations/snacgame/component/Controller.h
+    simulations/snacgame/component/Geometry.h
+    simulations/snacgame/component/Level.h
+    simulations/snacgame/component/PlayerLifeCycle.h
+    simulations/snacgame/component/PlayerMoveState.h
+    simulations/snacgame/component/Spawner.h
+
+    simulations/snacgame/system/DeterminePlayerAction.h
+    simulations/snacgame/system/IntegratePlayerMovement.h
+    simulations/snacgame/system/SystemOrbitalCamera.h
+    simulations/snacgame/system/PlayerSpawner.h
+    simulations/snacgame/system/PlayerInvulFrame.h
 
     detail/Logger.h
 )
@@ -40,12 +48,16 @@ set(${TARGET_NAME}_SOURCES
     Entities.cpp
     Input.cpp
 
-    simulations/bawls/Bawls.cpp
+    simulations/snacgame/Entities.cpp
+    simulations/snacgame/Renderer.cpp
+    simulations/snacgame/SnacGame.cpp
+    simulations/snacgame/SystemMove.cpp
 
-    simulations/cubes/Cubes.cpp
-    simulations/cubes/Renderer.cpp
-    simulations/cubes/SystemMove.cpp
-    simulations/cubes/SystemOrbitalCamera.cpp
+    simulations/snacgame/system/DeterminePlayerAction.cpp
+    simulations/snacgame/system/IntegratePlayerMovement.cpp
+    simulations/snacgame/system/SystemOrbitalCamera.cpp
+    simulations/snacgame/system/PlayerSpawner.cpp
+    simulations/snacgame/system/PlayerInvulFrame.cpp
 
     detail/Logger.cpp
 )
@@ -81,7 +93,10 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 find_package(Entity CONFIG REQUIRED entity)
 find_package(Graphics CONFIG REQUIRED graphics imguiui)
 find_package(Math CONFIG REQUIRED math)
+find_package(Handy CONFIG REQUIRED platform)
+find_package(MarkovJunior CONFIG REQUIRED markovjunior)
 
+find_package(nlohmann_json 3.11.2 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
@@ -92,8 +107,11 @@ target_link_libraries(${TARGET_NAME}
         ad::graphics
         ad::imguiui
         ad::math
+        ad::platform
+        ad::markovjunior
 
         spdlog::spdlog
+        nlohmann_json::nlohmann_json
 )
 
 

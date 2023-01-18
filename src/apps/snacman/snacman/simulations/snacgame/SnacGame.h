@@ -1,10 +1,11 @@
 #pragma once
 
 
-#include "ComponentGeometry.h"
 #include "EntityWrap.h"
 #include "Renderer.h"
-#include "SystemOrbitalCamera.h"
+
+#include "component/Geometry.h"
+#include "system/SystemOrbitalCamera.h"
 
 #include "../../Input.h"
 
@@ -12,44 +13,50 @@
 
 #include <graphics/AppInterface.h>
 
+#include <markovjunior/Interpreter.h>
+
+#include <imguiui/ImguiUi.h>
+
 #include <memory>
 
 
 namespace ad {
-namespace cubes {
+namespace snacgame {
 
 
-class Cubes
+class SnacGame
 {
 public:
     using Renderer_t = Renderer;
 
     /// \brief Initialize the scene;
-    Cubes(graphics::AppInterface & aAppInterface);
+    SnacGame(graphics::AppInterface & aAppInterface, imguiui::ImguiUi & aImguiUi);
 
-    void update(float aDelta, const RawInput & aInput);
+    bool update(float aDelta, const RawInput & aInput);
 
-    std::unique_ptr<visu::GraphicState> makeGraphicState() const; 
+    std::unique_ptr<visu::GraphicState> makeGraphicState(); 
 
     snac::Camera::Parameters getCameraParameters() const;
 
     Renderer_t makeRenderer() const;
 
 private:
-    void blinkCube(ent::Phase & aPhase);
-
     graphics::AppInterface * mAppInterface;
     snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
 
     ent::EntityManager mWorld;
-    ent::Handle<ent::Entity> mSystemMove;
+    ent::Handle<ent::Entity> mSystems;
+    ent::Handle<ent::Entity> mLevel;
+    ent::Handle<ent::Entity> mContext;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 
-    ent::Handle<ent::Entity> mBlinkingCube;
-
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};
+
+    imguiui::ImguiUi & mImguiUi;
+
+    bool mHello = false;
 };
 
 
