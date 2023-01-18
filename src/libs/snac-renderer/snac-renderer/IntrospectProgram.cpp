@@ -42,11 +42,15 @@ namespace {
             mProgram{&aProgram},
             mProgramInterface{aProgramInterface}
         {
+            // P2325R2 defect report remove the requirement to be default_initializable.
+            // Note: I am not sure this is implemented above gnuc 10, might be updated.
+            #if (defined(_MSC_VER) || __clang_major__ > 13 || __GNUC__ > 10)//DR_P2325R3
             // TODO maybe could be bidirectional,
             // depending on the requireded validity for returned reference.
             // (the reference changes target on each call to operator*() after ++/--,
             //  and the reference becomes dangling when the iterator is destroyed.)
             static_assert(std::input_iterator<InterfaceIterator>);
+            #endif
         }
 
         static InterfaceIterator makeEnd(const graphics::Program & aProgram, GLenum aProgramInterface)
