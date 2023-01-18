@@ -25,19 +25,19 @@ snac::InstanceStream initializeInstanceStream()
     snac::InstanceStream instances;
     {
         graphics::ClientAttribute transformation{
-            .mDimension = 16,
+            .mDimension = {4, 4},
             .mOffset = offsetof(PoseColor, pose),
-            .mDataType = GL_FLOAT,
+            .mComponentType = GL_FLOAT,
         };
-        instances.mAttributes.emplace(snac::Semantic::LocalToWorld, snac::VertexStream::Attribute{0, transformation});
+        instances.mAttributes.emplace(snac::Semantic::LocalToWorld, transformation);
     }
     {
         graphics::ClientAttribute albedo{
             .mDimension = 4,
             .mOffset = offsetof(PoseColor, albedo),
-            .mDataType = GL_UNSIGNED_BYTE,
+            .mComponentType = GL_UNSIGNED_BYTE,
         };
-        instances.mAttributes.emplace(snac::Semantic::Albedo, snac::VertexStream::Attribute{0, albedo});
+        instances.mAttributes.emplace(snac::Semantic::Albedo, albedo);
     }
     instances.mInstanceBuffer.mStride = sizeof(PoseColor);
     return instances;
@@ -76,8 +76,22 @@ void Renderer::render(const visu::GraphicState & aState)
     //mCamera.setWorldToCamera(math::trans3d::translate(-aState.mCamera.mPosition_world.as<math::Vec>()));
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
+    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gBlue);
+    math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
+    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
+    
+    snac::UniformRepository uniforms{
+        {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
+        {snac::Semantic::LightPosition, {lightPosition}},
+        {snac::Semantic::AmbientColor, {ambientColor}},
+    };
+
+    snac::UniformBlocks uniformBlocks{
+         {snac::BlockSemantic::Viewing, &mCamera.mViewing},
+    };
+
     mInstances.respecifyData(std::span{instanceBufferData});
-    mRenderer.render(mCubeMesh, mCamera, mInstances);
+    mRenderer.render(mCubeMesh, mInstances, uniforms, uniformBlocks);
 }
 
 
