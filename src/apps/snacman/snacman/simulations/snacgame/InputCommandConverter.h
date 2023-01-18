@@ -2,7 +2,6 @@
 
 #include "snacman/Input.h"
 
-
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <GLFW/glfw3.h>
@@ -21,6 +20,37 @@ constexpr int gPlayerMoveFlagLeft = 0x4;
 constexpr int gPlayerMoveFlagRight = 0x8;
 
 constexpr int gQuitCommand = 0x100;
+
+template<class T_return_type>
+inline T_return_type translateMappingValueToInputType(const std::string & aMappingValue);
+
+template<>
+inline GamepadAtomicInput translateMappingValueToInputType(const std::string & aMappingValue)
+{
+    return gGamepadMappingDictionnary.at(aMappingValue);
+}
+
+template<>
+inline int translateMappingValueToInputType(const std::string & aMappingValue)
+{
+    if (aMappingValue.size() == 1)
+    {
+        char key = aMappingValue.at(0);
+
+        if (key >= 'A' && key <= 'Z')
+        {
+            return 'a' + (key - 'A');
+        }
+
+        return key;
+    }
+    else
+    {
+        gKeyboardMappingDictionnary.at(aMappingValue);
+    }
+
+    return 0;
+}
 
 // Maybe we should just give up on GamepadAtomicInput
 // being a class enum and this template would
@@ -42,11 +72,11 @@ public:
 
         json data = json::parse(configStream);
 
-        mKeymaps.push_back({static_cast<T_input_type>(data["gPlayerMoveFlagUp"]), gPlayerMoveFlagUp});
-        mKeymaps.push_back({static_cast<T_input_type>(data["gPlayerMoveFlagDown"]), gPlayerMoveFlagDown});
-        mKeymaps.push_back({static_cast<T_input_type>(data["gPlayerMoveFlagLeft"]), gPlayerMoveFlagLeft});
-        mKeymaps.push_back({static_cast<T_input_type>(data["gPlayerMoveFlagRight"]), gPlayerMoveFlagRight});
-        mKeymaps.push_back({static_cast<T_input_type>(data["gQuitCommand"]), gQuitCommand});
+        mKeymaps.push_back({translateMappingValueToInputType<T_input_type>(data["gPlayerMoveFlagUp"]), gPlayerMoveFlagUp});
+        mKeymaps.push_back({translateMappingValueToInputType<T_input_type>(data["gPlayerMoveFlagDown"]), gPlayerMoveFlagDown});
+        mKeymaps.push_back({translateMappingValueToInputType<T_input_type>(data["gPlayerMoveFlagLeft"]), gPlayerMoveFlagLeft});
+        mKeymaps.push_back({translateMappingValueToInputType<T_input_type>(data["gPlayerMoveFlagRight"]), gPlayerMoveFlagRight});
+        mKeymaps.push_back({translateMappingValueToInputType<T_input_type>(data["gQuitCommand"]), gQuitCommand});
     }
 
     int get(T_input_type aInput)

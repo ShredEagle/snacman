@@ -8,28 +8,32 @@
 #include "component/Controller.h"
 #include "component/Level.h"
 
+#include "imguiui/ImguiUi.h"
 #include "snacman/simulations/snacgame/component/Context.h"
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
 #include "system/PlayerInvulFrame.h"
 #include "system/PlayerSpawner.h"
 
+#include <imgui.h>
 #include <markovjunior/Grid.h>
 #include <math/Color.h>
 #include <math/VectorUtilities.h>
 
 #include <GLFW/glfw3.h>
+#include <string>
 
 namespace ad {
 namespace snacgame {
 
-SnacGame::SnacGame(graphics::AppInterface & aAppInterface) :
+SnacGame::SnacGame(graphics::AppInterface & aAppInterface, imguiui::ImguiUi & aImguiUi) :
     mAppInterface{&aAppInterface},
     mSystems{mWorld.addEntity()},
     mLevel{mWorld.addEntity()},
     mContext{mWorld.addEntity()},
     mSystemOrbitalCamera{mWorld, mWorld},
-    mQueryRenderable{mWorld, mWorld}
+    mQueryRenderable{mWorld, mWorld},
+    mImguiUi{aImguiUi}
 {
     ent::Phase init;
     InputDeviceDirectory inputDeviceDirectory;
@@ -107,6 +111,13 @@ bool SnacGame::update(float aDelta, const RawInput & aInput)
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
 
+
+    mImguiUi.mFrameMutex.lock();
+    mImguiUi.newFrame();
+    context.drawUi();
+    mImguiUi.render();
+    mImguiUi.mFrameMutex.unlock();
+
     return quitGame;
 }
 
@@ -145,6 +156,11 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                                             .mYAngle = aGeometry.mYRotation,
                                             .mColor = aGeometry.mColor,
                                         });
+                std::function<void()> func = [worldPosition]() {
+                        float stuff = worldPosition.x();
+                        ImGui::InputFloat("Stuff:", &stuff);
+                        };
+                state->mImguiCommands.push_back(func);
             }
         });
 

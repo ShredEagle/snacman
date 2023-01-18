@@ -176,7 +176,16 @@ void HidManager::callbackScroll(double xoffset, double yoffset)
 
 void HidManager::callbackKeyboardStroke(int key, int scancode, int action, int mods)
 {
-    mKeyState.at(key) = (action != GLFW_RELEASE);
+    const char * keyName = glfwGetKeyName(key, 0);
+
+    if (keyName && keyName[0] && keyName[1] == 0)
+    {
+        mKeyState.at(keyName[0]) = (action != GLFW_RELEASE);
+    }
+    else
+    {
+        mKeyState.at(key) = (action != GLFW_RELEASE);
+    }
 }
 
 } // namespace snac

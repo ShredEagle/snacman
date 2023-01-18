@@ -3,6 +3,7 @@
 
 #include "../../SparseSet.h"
 
+#include <functional>
 #include <math/Angle.h>
 #include <math/Color.h>
 #include <math/Homogeneous.h> // TODO #pose remove
@@ -41,6 +42,8 @@ struct GraphicState
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
     Camera mCamera; 
+
+    std::vector<std::function<void()>> mImguiCommands;
 };
 
 
@@ -51,6 +54,7 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         // TODO #pose
         //.mCamera = math::lerp(aLeft.mCamera.mPosition_world, aRight.mCamera.mPosition_world, aInterpolant),
         .mCamera{aRight.mCamera},
+        .mImguiCommands{aRight.mImguiCommands},
     };
 
     for(const auto & [id, rightEntity] : aRight.mEntities)

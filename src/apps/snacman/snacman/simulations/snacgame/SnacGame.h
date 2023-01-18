@@ -15,6 +15,8 @@
 
 #include <markovjunior/Interpreter.h>
 
+#include <imguiui/ImguiUi.h>
+
 #include <memory>
 
 
@@ -28,7 +30,7 @@ public:
     using Renderer_t = Renderer;
 
     /// \brief Initialize the scene;
-    SnacGame(graphics::AppInterface & aAppInterface);
+    SnacGame(graphics::AppInterface & aAppInterface, imguiui::ImguiUi & aImguiUi);
 
     bool update(float aDelta, const RawInput & aInput);
 
@@ -51,6 +53,10 @@ private:
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};
+
+    imguiui::ImguiUi & mImguiUi;
+
+    bool mHello = false;
 };
 
 

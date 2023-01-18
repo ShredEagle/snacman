@@ -108,6 +108,18 @@ enum class GamepadAtomicInput
     End, // keep last
 };
 
+const inline std::map<std::string, GamepadAtomicInput> gGamepadMappingDictionnary{
+    {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisPositive},
+    {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisNegative},
+    {"JOY_LEFT_LEFT", GamepadAtomicInput::leftXAxisNegative},
+    {"JOY_LEFT_RIGHT", GamepadAtomicInput::leftXAxisPositive},
+    {"SELECT", GamepadAtomicInput::guide},
+};
+
+const inline std::map<std::string, int> gKeyboardMappingDictionnary{
+    {"esc", GLFW_KEY_ESCAPE},
+};
+
 struct GamepadState
 {
     bool mConnected = false;
