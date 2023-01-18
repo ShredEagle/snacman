@@ -2,6 +2,7 @@
 
 #include <array>
 #include <iterator>
+#include <memory>
 #include <string>
 
 #include <cassert>
