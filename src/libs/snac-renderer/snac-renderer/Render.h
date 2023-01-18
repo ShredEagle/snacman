@@ -1,10 +1,13 @@
 #pragma once
 
 #include "Camera.h"
+#include "IntrospectProgram.h"
 #include "Mesh.h"
+#include "SetupDrawing.h"
+#include "UniformParameters.h"
 
 #include <renderer/GL_Loader.h>
-#include <renderer/Shading.h>
+
 
 
 namespace ad {
@@ -22,10 +25,14 @@ class Renderer
 public:
     Renderer();
 
-    void render(const Mesh & aMesh, const Camera & aCamera, const InstanceStream & aInstances) const;
+    void render(const Mesh & aMesh,
+                const InstanceStream & aInstances,
+                const UniformRepository & aUniforms,
+                const UniformBlocks & aUniformBlocks);
 
 private:
-    graphics::Program mProgram;
+    IntrospectProgram mProgram;
+    VertexArrayRepository mVertexArrayRepo;
 };
 
 

@@ -2,6 +2,7 @@
 
 
 #include <spdlog/spdlog.h>
+#include <spdlog/fmt/ostr.h> // allow use of operator<<
 
 
 
@@ -21,7 +22,8 @@ namespace renderer {
 
 } // namespace renderer
 
-} // namespace snace
+
+} // namespace snac
 } // namespace ad
 
 

@@ -33,7 +33,7 @@ InstanceStream makeInstances()
         .mInstanceCount = (GLsizei)std::size(transformations),
     };
     std::size_t instanceSize = sizeof(decltype(transformations)::value_type);
-    instances.mInstanceBuffer.mStride = instanceSize;
+    instances.mInstanceBuffer.mStride = (GLsizei)instanceSize;
 
     bind(instances.mInstanceBuffer.mBuffer);
     glBufferData(
@@ -44,19 +44,19 @@ InstanceStream makeInstances()
 
     {
         graphics::ClientAttribute transformation{
-            .mDimension = 16,
+            .mDimension = {4, 4},
             .mOffset = offsetof(PoseColor, pose),
-            .mDataType = GL_FLOAT,
+            .mComponentType = GL_FLOAT,
         };
-        instances.mAttributes.emplace(Semantic::LocalToWorld, VertexStream::Attribute{0, transformation});
+        instances.mAttributes.emplace(Semantic::LocalToWorld, transformation);
     }
     {
         graphics::ClientAttribute albedo{
             .mDimension = 4,
             .mOffset = offsetof(PoseColor, albedo),
-            .mDataType = GL_UNSIGNED_BYTE,
+            .mComponentType = GL_UNSIGNED_BYTE,
         };
-        instances.mAttributes.emplace(Semantic::Albedo, VertexStream::Attribute{0, albedo});
+        instances.mAttributes.emplace(Semantic::Albedo, albedo);
     }
     return instances;
 }
@@ -111,9 +111,18 @@ inline void Scene::update()
 
 inline void Scene::render(Renderer & aRenderer) const
 {
+    UniformBlocks uniformBlocks{
+         {BlockSemantic::Viewing, &mCamera.mViewing},
+    };
+
     clear();
-    aRenderer.render(mMesh, mCamera, mInstances);
+    snac::UniformRepository uniforms;
+    aRenderer.render(mMesh,
+                     mInstances,
+                     uniforms,
+                     uniformBlocks);
 }
+
 
 } // namespace snac
 } // namespace ad

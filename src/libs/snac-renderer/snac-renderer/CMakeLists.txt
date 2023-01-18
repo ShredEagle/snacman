@@ -4,19 +4,28 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Cube.h
     Effect.h
+    IntrospectProgram.h
     Logging.h
     Material.h
     Mesh.h
     Render.h
+    Semantic.h
+    SetupDrawing.h
+    ShaderResource.h
+    UniformParameters.h
 )
 
 set(${TARGET_NAME}_SOURCES
     Camera.cpp
     Effect.cpp
+    IntrospectProgram.cpp
     Logging.cpp
     Material.cpp
     Mesh.cpp
     Render.cpp
+    Semantic.cpp
+    SetupDrawing.cpp
+    ShaderResource.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

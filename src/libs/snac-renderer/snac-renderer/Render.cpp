@@ -1,6 +1,8 @@
 #include "Render.h"
 
-#include <renderer/BufferUtilities.h>
+#include "Logging.h"
+
+#include <renderer/ScopeGuards.h>
 #include <renderer/Uniforms.h>
 
 namespace ad {
@@ -10,7 +12,7 @@ namespace snac {
 inline const GLchar* gVertexShader = R"#(
 #version 420
 
-layout(location=0) in vec3 ve_VertexPosition_l;
+layout(location=0) in vec3 ve_Position_l;
 layout(location=1) in vec3 ve_Normal_l;
 
 layout(location=4) in mat4 in_LocalToWorld;
@@ -20,7 +22,7 @@ layout(location=12) in vec4 in_Albedo;
 
 layout(std140) uniform ViewingBlock
 {
-    mat4 u_Camera;
+    mat4 u_WorldToCamera;
     mat4 u_Projection;
 };
 
@@ -33,8 +35,8 @@ out float ex_Opacity;
 void main(void)
 {
     // TODO maybe should be pre-multiplied in client code?
-    mat4 localToCamera = u_Camera * in_LocalToWorld;
-    ex_Position_v = localToCamera * vec4(ve_VertexPosition_l, 1.f);
+    mat4 localToCamera = u_WorldToCamera * in_LocalToWorld;
+    ex_Position_v = localToCamera * vec4(ve_Position_l, 1.f);
     gl_Position = u_Projection * ex_Position_v;
     ex_Normal_v = localToCamera * vec4(ve_Normal_l, 0.f);
 
@@ -55,8 +57,8 @@ in vec3  ex_SpecularColor;
 in float ex_Opacity;
 
 uniform vec3 u_LightPosition_v;
-uniform vec3 u_LightColor;
-uniform vec3 u_AmbientColor;
+uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8);
+uniform vec3 u_AmbientColor = vec3(0.2, 0.0, 0.2);
 
 out vec4 out_Color;
 
@@ -85,87 +87,32 @@ void main(void)
 
 Renderer::Renderer() :
     mProgram{graphics::makeLinkedProgram({
-        {GL_VERTEX_SHADER,   {gVertexShader, "PhongVertexShader"}},
-        {GL_FRAGMENT_SHADER, {gFragmentShader, "PhongFragmentShader"}},
-    })}
-{}
+            {GL_VERTEX_SHADER,   {gVertexShader, "PhongVertexShader"}},
+            {GL_FRAGMENT_SHADER, {gFragmentShader, "PhongFragmentShader"}},
+        }),
+        "PhongLighting"
+    }
+{
+    // Explicitly format program using operator<<, otherwise it is casted to GLuint of the 
+    // underlying OpenGL resource.
+    SELOG_LG(gRenderLogger, debug)("Program inspection reports {}", fmt::streamed(mProgram));
+}
 
 
-// TODO use a matrix 4, 3
 void Renderer::render(const Mesh & aMesh,
-                      const Camera & aCamera,
-                      const InstanceStream & aInstances) const
+                      const InstanceStream & aInstances,
+                      const UniformRepository & aUniforms,
+                      const UniformBlocks & aUniformBlocks)
 {
     auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
-    constexpr graphics::BindingIndex viewingLocation{1};
-    bind(aCamera.mViewing, viewingLocation);
+    setUniforms(aUniforms, mProgram);
+    setBlocks(aUniformBlocks, mProgram);
 
-    GLuint viewingBlockIndex;
-    if((viewingBlockIndex = glGetUniformBlockIndex(mProgram, "ViewingBlock")) == GL_INVALID_INDEX)
-    {
-        throw std::logic_error{"Invalid block name."};
-    }
-    glUniformBlockBinding(mProgram, viewingBlockIndex, viewingLocation);
-
-    // Converted to HDR in order to normalize the values
-    setUniform(mProgram, "u_LightColor", to_hdr(math::sdr::gWhite));
-    setUniform(mProgram, "u_AmbientColor", math::hdr::Rgb_f{0.1f, 0.2f, 0.1f});
-    
     //graphics::ScopedBind boundVAO{aMesh.mStream.mVertexArray};
-    bind(aMesh.mStream.mVertexArray);
-    {
-        const VertexStream::VertexBuffer & instanceView = aInstances.mInstanceBuffer;
-        bind(instanceView.mBuffer);
-        {
-            const graphics::ClientAttribute & attribute =
-                aInstances.mAttributes.at(Semantic::LocalToWorld).mAttribute;
-            // TODO: Remove hardcoding knowledge this will be a multiple of dimensions 4.
-            for (int attributeOffset = 0; attributeOffset != (int)attribute.mDimension / 4; ++attributeOffset)
-            {
-                int dimension = 4; // TODO stop hardcoding
-                int shaderIndex = 4 + attributeOffset;
-                glVertexAttribPointer(shaderIndex,
-                                      dimension,
-                                      attribute.mDataType, 
-                                      GL_FALSE, 
-                                      static_cast<GLsizei>(instanceView.mStride),
-                                      (void *)(attribute.mOffset 
-                                               + attributeOffset * dimension * graphics::getByteSize(attribute.mDataType)));
-                glEnableVertexAttribArray(shaderIndex);
-                glVertexAttribDivisor(shaderIndex, 1);
-            }
-        }
-        {
-            const graphics::ClientAttribute & attribute =
-                aInstances.mAttributes.at(Semantic::Albedo).mAttribute;
-            // Note: has to handle normalized attributes here
-            glVertexAttribPointer(12, attribute.mDimension, attribute.mDataType, 
-                                  GL_TRUE, static_cast<GLsizei>(instanceView.mStride), (void *)attribute.mOffset);
-            glEnableVertexAttribArray(12);
-            glVertexAttribDivisor(12, 1);
-        }
+    bind(mVertexArrayRepo.get(aMesh, aInstances, mProgram));
 
-        const VertexStream::VertexBuffer & view = aMesh.mStream.mVertexBuffers.front();
-        //graphics::ScopedBind boundVBO{aMesh.mStream.mVertexBuffers.front()};
-        bind(view.mBuffer);
-        {
-            const graphics::ClientAttribute & attribute =
-                aMesh.mStream.mAttributes.at(Semantic::Position).mAttribute;
-            glVertexAttribPointer(0, attribute.mDimension, attribute.mDataType, 
-                                  GL_FALSE, static_cast<GLsizei>(view.mStride), (void *)attribute.mOffset);
-            glEnableVertexAttribArray(0);
-        }
-        {
-            const graphics::ClientAttribute & attribute =
-                aMesh.mStream.mAttributes.at(Semantic::Normal).mAttribute;
-            glVertexAttribPointer(1, attribute.mDimension, attribute.mDataType, 
-                                  GL_FALSE, static_cast<GLsizei>(view.mStride), (void *)attribute.mOffset);
-            glEnableVertexAttribArray(1);
-        }
-    }
-
-    use(mProgram);
+    graphics::use(mProgram);
     glDrawArraysInstanced(GL_TRIANGLES, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);
 }
 

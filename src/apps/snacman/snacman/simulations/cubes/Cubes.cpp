@@ -77,7 +77,7 @@ std::unique_ptr<visu::GraphicState> Cubes::makeGraphicState() const
                 visu::Entity{
                     .mPosition_world = aGeometry.mPosition,
                     .mYAngle = aGeometry.mYRotation,
-                    .mColor = math::hdr::gBlue<float>,
+                    .mColor = math::hdr::gWhite<float>,
                 });
         });
 

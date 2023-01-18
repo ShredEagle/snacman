@@ -2,7 +2,7 @@
 
 #include <graphics/CameraUtilities.h>
 
-#include <renderer/BufferUtilities.h>
+#include <renderer/BufferLoad.h>
 
 #include <math/Angle.h>
 
