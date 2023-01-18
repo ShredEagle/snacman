@@ -445,27 +445,44 @@ void runApplication()
     // Main simulation loop
     //
     Clock::time_point beginStepTime = Clock::now() - gImguiGameLoop.getSimulationDelta();
+    Clock::duration simulationDelta = gImguiGameLoop.getSimulationDelta();
     while(glfwApp.handleEvents())
     {
-        Clock::time_point previousStepTime = beginStepTime;
-
-        // Regularly check if the rendering thread did not throw
-        renderingThread.checkRethrow();
-
-        Clock::duration simulationDelta = gImguiGameLoop.getSimulationDelta();
-
         // Update input
         input = hid.read(input, inhibiter);
 
         //
+        // Simulate one step
+        //
+        scene.update((float)asSeconds(simulationDelta), input);
+        // Pretend update took longer if requested by user.
+        sleepBusy(gImguiGameLoop.getUpdateDuration(), beginStepTime);
+
+        //
+        // Push the graphic state for the latest simulated state
+        //
+        graphicStates.push(scene.makeGraphicState());
+
+        // Regularly check if the rendering thread did not throw
+        renderingThread.checkRethrow();
+
+        //
         // Release CPU cycles until next time point to advance the simulation.
         //
-        // TODO move, so the wait happend **before** handle events
+        // Note: The wait happens **before** handleEvents.
+        // If it happened between handleEvents and scene.update(),
+        // the simulation could get unnecessarily "outdated" input.
+
+        // Update the simulation delta at this point.
+        // If it was updated before scene.update(), there would be an inconsistency on each new delta value.
+        // (Because an update for duration D2 would be presented after a duration of D1.)
+        simulationDelta = gImguiGameLoop.getSimulationDelta();
+
         if (!gWaitByBusyLoop)
         {
-            if (auto beforeSleep = Clock::now(); (previousStepTime + simulationDelta) > beforeSleep)
+            if (auto beforeSleep = Clock::now(); (beginStepTime + simulationDelta) > beforeSleep)
             {
-                Clock::duration ahead = previousStepTime + simulationDelta - beforeSleep;
+                Clock::duration ahead = beginStepTime + simulationDelta - beforeSleep;
                 // Could be sleep_until
                 std::this_thread::sleep_for(ahead);
 
@@ -476,24 +493,17 @@ void runApplication()
         }
         else
         {
-            SleepResult slept = sleepBusy(simulationDelta, previousStepTime);
+            SleepResult slept = sleepBusy(simulationDelta, beginStepTime);
             SELOG(trace)("Expected to sleep for {}ms, actually slept for {}ms",
                     std::chrono::duration_cast<ms>(slept.targetDuration).count(),
                     std::chrono::duration_cast<ms>(Clock::now() - slept.timeBefore).count());
         }
-
+        
         //
-        // Simulate one step
+        // Note the beginning time of next step
+        // (this correctly includes handleEvent() as part of next step)
         //
         beginStepTime = Clock::now();
-        scene.update((float)asSeconds(simulationDelta), input);
-        // Pretend update took longer if requested by user.
-        sleepBusy(gImguiGameLoop.getUpdateDuration(), beginStepTime);
-
-        //
-        // Push the graphic state for the latest simulated state
-        //
-        graphicStates.push(scene.makeGraphicState());
     }
 
     // Stop and join the thread
