@@ -79,6 +79,10 @@ const inline InputMappingDictionnary<GamepadAtomicInput> gGamepadMappingDictionn
 const inline InputMappingDictionnary<int> gKeyboardMappingDictionnary{
     {"ctrl", GLFW_KEY_LEFT_CONTROL},
     {"esc", GLFW_KEY_ESCAPE},
+    {"up", GLFW_KEY_UP},
+    {"down", GLFW_KEY_DOWN},
+    {"left", GLFW_KEY_LEFT},
+    {"right", GLFW_KEY_RIGHT},
 };
 
 
