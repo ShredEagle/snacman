@@ -19,10 +19,10 @@ struct Context
 {
     Context(InputDeviceDirectory aDeviceDirectory) :
         mInputDeviceDirectory{aDeviceDirectory},
-        mGamepadMapping("d:/projects/gamedev/2/snac-assets/settings/gamepad_mapping.json"),
-        mKeyboardMapping("d:/projects/gamedev/2/snac-assets/settings/keyboard_mapping.json")
-        //mGamepadMapping("/home/franz/gamedev/snac-assets/settings/gamepad_mapping.json"),
-        //mKeyboardMapping("/home/franz/gamedev/snac-assets/settings/keyboard_mapping.json")
+        //mGamepadMapping("d:/projects/gamedev/2/snac-assets/settings/gamepad_mapping.json"),
+        //mKeyboardMapping("d:/projects/gamedev/2/snac-assets/settings/keyboard_mapping.json")
+        mGamepadMapping("/home/franz/gamedev/snac-assets/settings/gamepad_mapping.json"),
+        mKeyboardMapping("/home/franz/gamedev/snac-assets/settings/keyboard_mapping.json")
     {
     }
 
