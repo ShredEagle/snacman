@@ -6,6 +6,10 @@
 #include <snac-renderer/Mesh.h>
 #include <snac-renderer/Render.h>
 
+#include <snac-renderer/IntrospectProgram.h>
+#include <resource/ResourceFinder.h>
+#include <renderer/ShaderSource.h>
+
 
 namespace ad {
 namespace snacgame {
@@ -16,7 +20,9 @@ class Renderer
 public:
     using GraphicState_t = visu::GraphicState;
 
-    Renderer(float aAspectRatio, snac::Camera::Parameters aCameraParameters);
+    Renderer(float aAspectRatio,
+             snac::Camera::Parameters aCameraParameters,
+             const resource::ResourceFinder & aResourceFinder /* TODO remove when not used anymore*/);
 
     void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 

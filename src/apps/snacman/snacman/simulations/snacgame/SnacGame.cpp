@@ -176,11 +176,12 @@ snac::Camera::Parameters SnacGame::getCameraParameters() const
     return mCameraParameters;
 }
 
-SnacGame::Renderer_t SnacGame::makeRenderer() const
+SnacGame::Renderer_t SnacGame::makeRenderer(const resource::ResourceFinder & aResourceFinder) const
 {
     return Renderer_t{
         math::getRatio<float>(mAppInterface->getWindowSize()),
         getCameraParameters(),
+        aResourceFinder
     };
 }
 

@@ -1,7 +1,10 @@
 #pragma once
 
+#include "IntrospectProgram.h"
 #include "Semantic.h"
 
+#include <renderer/Shading.h>
+#include <renderer/Texture.h>
 #include <renderer/VertexSpecification.h>
 
 #include <map>
@@ -11,12 +14,24 @@ namespace ad {
 namespace snac {
 
 
+struct Effect
+{
+    IntrospectProgram mProgram;
+};
+
+
+struct Material
+{
+    //graphics::Texture mTexture; // TODO extend to handle several textures
+    std::shared_ptr<Effect> mEffect;
+};
+
+
 // We use the same model as glTF, because it is good, and because it will
 // make it convenient to load glTF models.
 // Note: A difference is that we do **not** store lengths in buffer, buffer view, etc.
 //       This is because the data will already be loaded into the buffer by the time
 //       those classes are used, and all is needed then is the count of vertices or instances.
-
 
 struct BufferView
 {
@@ -50,7 +65,7 @@ struct VertexStream
 struct Mesh
 {
     VertexStream mStream;
-    //Material mMaterial;
+    std::shared_ptr<Material> mMaterial;
 };
 
 

@@ -166,7 +166,7 @@ inline graphics::VertexBufferObject loadVBO(std::span<T_vertex, N_extent> aVerti
 }
 
 
-inline Mesh makeCube()
+inline VertexStream makeCube()
 {
     VertexStream geometry;
     // Note: Binding the VAO is not required for loading vertex buffers
@@ -197,11 +197,11 @@ inline Mesh makeCube()
     }
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
-    return Mesh{.mStream = std::move(geometry)};
+    return geometry;
 }
 
 
-inline Mesh makeTriangle()
+inline VertexStream makeTriangle()
 {
     VertexStream geometry;
     // Make a VBO and load the cube vertices into it
@@ -223,7 +223,7 @@ inline Mesh makeTriangle()
     geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, attribute});
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
-    return Mesh{.mStream = std::move(geometry)};
+    return geometry;
 }
 
 

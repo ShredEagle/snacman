@@ -446,7 +446,7 @@ void runApplication()
     //
 
     // Initialize the renderer
-    Simu_t::Renderer_t renderer = scene.makeRenderer();
+    Simu_t::Renderer_t renderer = scene.makeRenderer(resourceFinder);
 
     // Context must be removed from this thread before it can be made current on the render thread.
     glfwApp.removeCurrentContext();

@@ -42,7 +42,7 @@ public:
 
     snac::Camera::Parameters getCameraParameters() const;
 
-    Renderer_t makeRenderer() const;
+    Renderer_t makeRenderer(const resource::ResourceFinder & aResourceFinder) const;
 
 private:
     graphics::AppInterface * mAppInterface;

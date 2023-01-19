@@ -44,12 +44,22 @@ snac::InstanceStream initializeInstanceStream()
 }
 
 
-Renderer::Renderer(float aAspectRatio, snac::Camera::Parameters aCameraParameters) :
+Renderer::Renderer(float aAspectRatio, snac::Camera::Parameters aCameraParameters, const resource::ResourceFinder & aResourceFinder) :
     mCamera{aAspectRatio, aCameraParameters},
-    mCubeMesh{snac::makeCube()},
+    mCubeMesh{.mStream = snac::makeCube()},
     mInstances{initializeInstanceStream()}
-{}
-
+{
+    mCubeMesh.mMaterial = std::make_shared<snac::Material>();
+    mCubeMesh.mMaterial->mEffect = std::make_shared<snac::Effect>(snac::Effect{
+        .mProgram = {
+            graphics::makeLinkedProgram({
+                {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Cubes.vert"))},
+                {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Cubes.frag"))},
+            }),
+            "PhongLighting"
+        }
+    });
+}
 
 void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
 {
