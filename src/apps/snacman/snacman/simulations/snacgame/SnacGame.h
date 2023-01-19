@@ -17,6 +17,8 @@
 
 #include <imguiui/ImguiUi.h>
 
+#include <resource/ResourceFinder.h>
+
 #include <memory>
 
 
@@ -30,7 +32,9 @@ public:
     using Renderer_t = Renderer;
 
     /// \brief Initialize the scene;
-    SnacGame(graphics::AppInterface & aAppInterface, imguiui::ImguiUi & aImguiUi);
+    SnacGame(graphics::AppInterface & aAppInterface,
+             imguiui::ImguiUi & aImguiUi,
+             const resource::ResourceFinder & aResourceFinder);
 
     bool update(float aDelta, const RawInput & aInput);
 

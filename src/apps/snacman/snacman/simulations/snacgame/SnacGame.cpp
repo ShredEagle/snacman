@@ -26,7 +26,9 @@
 namespace ad {
 namespace snacgame {
 
-SnacGame::SnacGame(graphics::AppInterface & aAppInterface, imguiui::ImguiUi & aImguiUi) :
+SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
+                   imguiui::ImguiUi & aImguiUi,
+                   const resource::ResourceFinder & aResourceFinder) :
     mAppInterface{&aAppInterface},
     mSystems{mWorld.addEntity()},
     mLevel{mWorld.addEntity()},
@@ -61,7 +63,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface, imguiui::ImguiUi & aI
         inputDeviceDirectory,
         component::ControllerType::Keyboard);
 
-    mContext.get(init)->add(component::Context(inputDeviceDirectory));
+    mContext.get(init)->add(component::Context(inputDeviceDirectory, aResourceFinder));
 }
 
 bool SnacGame::update(float aDelta, const RawInput & aInput)
