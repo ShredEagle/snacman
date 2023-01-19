@@ -19,8 +19,7 @@ void Renderer::render(const Mesh & aMesh,
     setUniforms(aUniforms, program);
     setBlocks(aUniformBlocks, program);
 
-    //graphics::ScopedBind boundVAO{aMesh.mStream.mVertexArray};
-    bind(mVertexArrayRepo.get(aMesh, aInstances, program));
+    graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, program)};
 
     graphics::use(program);
     glDrawArraysInstanced(GL_TRIANGLES, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);

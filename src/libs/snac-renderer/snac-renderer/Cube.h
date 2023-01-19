@@ -155,8 +155,7 @@ template <class T_vertex, std::size_t N_extent>
 inline graphics::VertexBufferObject loadVBO(std::span<T_vertex, N_extent> aVertices)
 {
     graphics::VertexBufferObject vbo;
-    //graphics::ScopedBind boundVBO{vbo};
-    bind(vbo);
+    graphics::ScopedBind boundVBO{vbo};
     glBufferData(
         GL_ARRAY_BUFFER,
         aVertices.size_bytes(),
