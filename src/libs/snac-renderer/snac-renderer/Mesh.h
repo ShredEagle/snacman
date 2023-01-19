@@ -57,6 +57,7 @@ struct VertexStream
     std::vector<BufferView> mVertexBuffers;
     std::map<Semantic, AttributeAccessor> mAttributes;
     GLsizei mVertexCount{0};
+    GLenum mPrimitive;
     // TODO handle indexed rendering
     //IndexBufferObject mIndexBuffer;
 };

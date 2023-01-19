@@ -22,7 +22,7 @@ void Renderer::render(const Mesh & aMesh,
     graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, program)};
 
     graphics::use(program);
-    glDrawArraysInstanced(GL_TRIANGLES, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);
+    glDrawArraysInstanced(aMesh.mStream.mPrimitive, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);
 }
 
 

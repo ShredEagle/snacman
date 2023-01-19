@@ -167,7 +167,9 @@ inline graphics::VertexBufferObject loadVBO(std::span<T_vertex, N_extent> aVerti
 
 inline VertexStream makeCube()
 {
-    VertexStream geometry;
+    VertexStream geometry{
+        .mPrimitive = GL_TRIANGLES,
+    };
     // Note: Binding the VAO is not required for loading vertex buffers
     // Make a VBO and load the cube vertices into it
     // Save the index of the next VBO.
@@ -200,10 +202,42 @@ inline VertexStream makeCube()
 }
 
 
+inline VertexStream makeQuad()
+{
+    VertexStream geometry{
+        .mPrimitive = GL_TRIANGLE_STRIP,
+    };
+    // Make a VBO and load the vertices into it
+    auto index = geometry.mVertexBuffers.size();
+
+    std::array<math::Vec<3, float>, 4> vertices = {
+        math::Vec<3, float>{-1.f,  1.f, 0.f},
+        math::Vec<3, float>{-1.f, -1.f, 0.f},
+        math::Vec<3, float>{ 1.f,  1.f, 0.f},
+        math::Vec<3, float>{ 1.f, -1.f, 0.f},
+    };
+
+    geometry.mVertexBuffers.push_back({
+        .mBuffer = loadVBO(std::span{vertices}),
+    });
+    graphics::ClientAttribute attribute{
+        .mDimension = 3,
+        .mOffset = 0,
+        .mComponentType = GL_FLOAT
+    };
+    geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, attribute});
+    geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
+
+    return geometry;
+}
+
+
 inline VertexStream makeTriangle()
 {
-    VertexStream geometry;
-    // Make a VBO and load the cube vertices into it
+    VertexStream geometry{
+        .mPrimitive = GL_TRIANGLES,
+    };
+    // Make a VBO and load the triangle vertices into it
     auto index = geometry.mVertexBuffers.size();
     std::array<math::Vec<3, float>, 3> vertices = {
         math::Vec<3, float>{-0.6f, -0.4f, 0.f},
