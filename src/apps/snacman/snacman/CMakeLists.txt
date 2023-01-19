@@ -12,6 +12,7 @@ set(${TARGET_NAME}_HEADERS
     ImguiUtilities.h
     Input.h
     Logging.h
+    LoopSettings.h
     SparseSet.h
     Timing.h
 
