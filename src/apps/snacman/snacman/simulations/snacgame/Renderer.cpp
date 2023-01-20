@@ -107,7 +107,7 @@ snac::Mesh makeGlyphMesh(const arte::Freetype & aFreetype,
 
     auto material = std::make_shared<snac::Material>(snac::Material{
         .mTexture = std::make_shared<graphics::Texture>(
-            graphics::detail::makeTightGlyphAtlas(aFreetype.load(*aResourceFinder.find("fonts/Comfortaa-Regular.ttf")),
+            graphics::detail::makeTightGlyphAtlas(aFreetype.load(*aResourceFinder.find("fonts/Comfortaa-Regular.ttf")).inverseYAxis(true),
                                                   20, 126,
                                                   aGlyphMap)
         ),
