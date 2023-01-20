@@ -120,8 +120,9 @@ snac::Mesh makeGlyphMesh(const arte::Freetype & aFreetype,
     };
 }
 
-Renderer::Renderer(float aAspectRatio, snac::Camera::Parameters aCameraParameters, const resource::ResourceFinder & aResourceFinder) :
-    mCamera{aAspectRatio, aCameraParameters},
+Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Camera::Parameters aCameraParameters, const resource::ResourceFinder & aResourceFinder) :
+    mAppInterface{aAppInterface},
+    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), aCameraParameters},
     mCubeMesh{.mStream = snac::makeCube()},
     mCubeInstances{initializeInstanceStream()},
     mGlyphMesh{makeGlyphMesh(mFreetype, mGlyphMap, aResourceFinder)},
@@ -172,6 +173,7 @@ void Renderer::render(const visu::GraphicState & aState)
         {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
         {snac::Semantic::LightPosition, {lightPosition}},
         {snac::Semantic::AmbientColor, {ambientColor}},
+        {snac::Semantic::FramebufferResolution, mAppInterface.getFramebufferSize()},
     };
 
     snac::UniformBlocks uniformBlocks{

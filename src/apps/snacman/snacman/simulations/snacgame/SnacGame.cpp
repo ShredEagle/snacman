@@ -18,7 +18,6 @@
 #include <imgui.h>
 #include <markovjunior/Grid.h>
 #include <math/Color.h>
-#include <math/VectorUtilities.h>
 
 #include <GLFW/glfw3.h>
 #include <string>
@@ -179,7 +178,7 @@ snac::Camera::Parameters SnacGame::getCameraParameters() const
 SnacGame::Renderer_t SnacGame::makeRenderer(const resource::ResourceFinder & aResourceFinder) const
 {
     return Renderer_t{
-        math::getRatio<float>(mAppInterface->getWindowSize()),
+        *mAppInterface,
         getCameraParameters(),
         aResourceFinder
     };

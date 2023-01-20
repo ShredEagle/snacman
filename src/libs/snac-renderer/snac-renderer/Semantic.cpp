@@ -30,6 +30,7 @@ std::string to_string(Semantic aSemantic)
         MAPPING(TextureOffset)
         MAPPING(BoundingBox)
         MAPPING(FontAtlas)
+        MAPPING(FramebufferResolution)
         default:
         {
             auto value = static_cast<std::underlying_type_t<Semantic>>(aSemantic);
@@ -70,6 +71,7 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(TextureOffset)
     MAPPING(BoundingBox)
     MAPPING(FontAtlas)
+    MAPPING(FramebufferResolution)
     else
     {
         throw std::logic_error{
@@ -99,6 +101,7 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::TextureOffset:
         case Semantic::BoundingBox:
         case Semantic::FontAtlas:
+        case Semantic::FramebufferResolution:
         {
             return false;
         }

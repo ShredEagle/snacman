@@ -24,6 +24,7 @@ enum class Semantic
     Projection,
     TextureOffset,
     BoundingBox,
+    FramebufferResolution,
     // Usually samplers
     FontAtlas, // TODO should it just be atlas, used for both sprites and fonts?
     //SpriteAtlas,

@@ -6,6 +6,8 @@
 #include <snac-renderer/Mesh.h>
 #include <snac-renderer/Render.h>
 
+#include <graphics/AppInterface.h>
+
 // TODO remove this block
 #include <snac-renderer/IntrospectProgram.h>
 #include <resource/ResourceFinder.h>
@@ -23,7 +25,7 @@ class Renderer
 public:
     using GraphicState_t = visu::GraphicState;
 
-    Renderer(float aAspectRatio,
+    Renderer(graphics::AppInterface & aAppInterface,
              snac::Camera::Parameters aCameraParameters,
              const resource::ResourceFinder & aResourceFinder /* TODO remove when not used anymore*/);
 
@@ -32,6 +34,8 @@ public:
     void render(const visu::GraphicState & aState);
 
 private:
+    graphics::AppInterface & mAppInterface;
+
     snac::Renderer mRenderer;
 
     snac::Camera mCamera;
