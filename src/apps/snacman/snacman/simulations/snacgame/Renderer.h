@@ -25,8 +25,10 @@ class Renderer
 public:
     struct GlyphAtlas
     {
-        std::shared_ptr<graphics::Texture> mGlyphTexture;
-        graphics::detail::GlyphMap mGlyphMap;
+        GlyphAtlas(arte::FontFace aFontFace);
+
+        arte::FontFace mFontFace;
+        graphics::detail::StaticGlyphCache mGlyphCache;
     };
 
     using GraphicState_t = visu::GraphicState;

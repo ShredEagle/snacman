@@ -23,13 +23,14 @@ std::string to_string(Semantic aSemantic)
         MAPPING(TextureCoords)
         MAPPING(LocalToWorld)
         MAPPING(InstancePosition)
+        MAPPING(TextureOffset)
+        MAPPING(BoundingBox)
+        MAPPING(Bearing)
         MAPPING(AmbientColor) 
         MAPPING(LightColor)
         MAPPING(LightPosition)
         MAPPING(WorldToCamera)
         MAPPING(Projection)
-        MAPPING(TextureOffset)
-        MAPPING(BoundingBox)
         MAPPING(FontAtlas)
         MAPPING(FramebufferResolution)
         default:
@@ -65,13 +66,14 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(TextureCoords)
     MAPPING(LocalToWorld)
     MAPPING(InstancePosition)
+    MAPPING(TextureOffset)
+    MAPPING(BoundingBox)
+    MAPPING(Bearing)
     MAPPING(AmbientColor) 
     MAPPING(LightColor)
     MAPPING(LightPosition)
     MAPPING(WorldToCamera)
     MAPPING(Projection)
-    MAPPING(TextureOffset)
-    MAPPING(BoundingBox)
     MAPPING(FontAtlas)
     MAPPING(FramebufferResolution)
     else
@@ -98,11 +100,12 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::TextureCoords:
         case Semantic::LocalToWorld:
         case Semantic::InstancePosition:
+        case Semantic::TextureOffset:
+        case Semantic::BoundingBox:
+        case Semantic::Bearing:
         case Semantic::LightPosition:
         case Semantic::WorldToCamera:
         case Semantic::Projection:
-        case Semantic::TextureOffset:
-        case Semantic::BoundingBox:
         case Semantic::FontAtlas:
         case Semantic::FramebufferResolution:
         {

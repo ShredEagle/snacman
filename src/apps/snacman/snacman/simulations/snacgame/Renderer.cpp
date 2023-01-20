@@ -23,7 +23,8 @@ namespace {
         math::Position<2, GLfloat> position;
         math::sdr::Rgba albedo;
         GLint offsetInTexture_p; // horizontal offset to the glyph in its ribbon texture.
-        math::Size<2, GLfloat> boundingBox_p; // glyph bounding box in texture pixel coordinates.
+        math::Size<2, GLfloat> boundingBox_p; // glyph bounding box in texture pixel coordinates, including margins.
+        math::Vec<2, GLfloat> bearing_p; // bearing, including  margins.
     };
 
 } // anonymous namespace
@@ -88,12 +89,24 @@ snac::InstanceStream initializeGlyphInstanceStream()
         };
         instances.mAttributes.emplace(snac::Semantic::BoundingBox, boundingBox);
     }
+    {
+        graphics::ClientAttribute bearing{
+            .mDimension = 2,
+            .mOffset = offsetof(GlyphInstance, bearing_p),
+            .mComponentType = GL_FLOAT,
+        };
+        instances.mAttributes.emplace(snac::Semantic::Bearing, bearing);
+    }
     instances.mInstanceBuffer.mStride = sizeof(GlyphInstance);
     return instances;
 }
 
-snac::Mesh makeGlyphMesh(const arte::Freetype & aFreetype,
-                         Renderer::GlyphAtlas & aGlyphAtlas,
+Renderer::GlyphAtlas::GlyphAtlas(arte::FontFace aFontFace) :
+    mFontFace{std::move(aFontFace)},
+    mGlyphCache{mFontFace, 20, 126}
+{}
+
+snac::Mesh makeGlyphMesh(Renderer::GlyphAtlas & aGlyphAtlas,
                          const resource::ResourceFinder & aResourceFinder)
 {
     auto effect = std::make_shared<snac::Effect>(snac::Effect{
@@ -106,23 +119,13 @@ snac::Mesh makeGlyphMesh(const arte::Freetype & aFreetype,
         }
     });
     
-    arte::FontFace face = aFreetype.load(*aResourceFinder.find("fonts/Comfortaa-Regular.ttf"));
-    face.inverseYAxis(true)
-        .setPixelHeight(100);
-
-    aGlyphAtlas.mGlyphTexture = std::make_shared<graphics::Texture>(
-        graphics::detail::makeTightGlyphAtlas(face,
-                                              20, 126,
-                                              aGlyphAtlas.mGlyphMap)
-    );
-
     auto material = std::make_shared<snac::Material>(snac::Material{
-        .mTextures = {{snac::Semantic::FontAtlas, aGlyphAtlas.mGlyphTexture.get()}},
+        .mTextures = {{snac::Semantic::FontAtlas, &aGlyphAtlas.mGlyphCache.atlas}},
         .mEffect = std::move(effect)
     });
 
     return snac::Mesh{
-        .mStream = snac::makeQuad(),
+        .mStream = snac::makeRectangle({ {0.f, -1.f}, {1.f, 1.f}}), // The quad goes from [0, -1] to [1, 0]
         .mMaterial = std::move(material),
     };
 }
@@ -132,7 +135,9 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Camera::Paramet
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), aCameraParameters},
     mCubeMesh{.mStream = snac::makeCube()},
     mCubeInstances{initializeInstanceStream()},
-    mGlyphMesh{makeGlyphMesh(mFreetype, mGlyphAtlas, aResourceFinder)},
+    mFreetype{},
+    mGlyphAtlas{std::move(mFreetype.load(*aResourceFinder.find("fonts/Comfortaa-Regular.ttf")).setPixelHeight(100).inverseYAxis(true))},
+    mGlyphMesh{makeGlyphMesh(mGlyphAtlas, aResourceFinder)},
     mGlyphInstances{initializeGlyphInstanceStream()}
 {
     mCubeMesh.mMaterial = std::make_shared<snac::Material>();
@@ -194,15 +199,26 @@ void Renderer::render(const visu::GraphicState & aState)
     //
 
     // TODO Why it does not start at 20, but at 32 ????!
-    graphics::detail::RenderedGlyph glyph = mGlyphAtlas.mGlyphMap.at(90);
-    std::vector<GlyphInstance> textBufferData{{
-        GlyphInstance{
-            .position = {0.1f, -0.2f},
-            .albedo = math::sdr::gGreen,
-            .offsetInTexture_p = glyph.offsetInTexture,
-            .boundingBox_p = glyph.controlBoxSize,
-        },
-    }};
+    //graphics::detail::RenderedGlyph glyph = mGlyphAtlas.mGlyphMap.at(90);
+
+    std::vector<GlyphInstance> textBufferData;
+    graphics::detail::forEachGlyph(
+        "My string!",
+        //"abcdefghijklmnopqrstuvwxyz",
+        math::Position<2, GLfloat>{-0.5f, 0.f}.cwMul(static_cast<math::Position<2, GLfloat>>(mAppInterface.getFramebufferSize())),
+        mGlyphAtlas.mGlyphCache,
+        mGlyphAtlas.mFontFace,
+        [&textBufferData](const graphics::detail::RenderedGlyph & aGlyph, auto aGlyphPosition_p)
+        {
+             textBufferData.push_back(GlyphInstance{
+                .position = aGlyphPosition_p,
+                .albedo = math::sdr::gGreen,
+                .offsetInTexture_p = aGlyph.offsetInTexture,
+                .boundingBox_p = aGlyph.controlBoxSize,
+                .bearing_p = aGlyph.bearing,
+             });
+        }
+    );
     mGlyphInstances.respecifyData(std::span{textBufferData});
     mRenderer.render(mGlyphMesh, mGlyphInstances, uniforms, uniformBlocks);
 }

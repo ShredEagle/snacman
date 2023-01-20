@@ -16,15 +16,16 @@ enum class Semantic
     TextureCoords,
     // Usually per instance
     LocalToWorld,
-    // Usually uniform
     InstancePosition,
+    TextureOffset,
+    BoundingBox,
+    Bearing,
+    // Usually uniform
     AmbientColor,
     LightColor,
     LightPosition,
     WorldToCamera,
     Projection,
-    TextureOffset,
-    BoundingBox,
     FramebufferResolution,
     // Usually samplers
     FontAtlas, // TODO should it just be atlas, used for both sprites and fonts?
