@@ -17,6 +17,14 @@ namespace {
         math::sdr::Rgba albedo;
     };
     
+    struct GlyphInstance
+    {
+        math::Matrix<4, 4, float> pose;
+        math::sdr::Rgba albedo;
+        GLint offsetInTexture_p; // horizontal offset to the glyph in its ribbon texture.
+        math::Size<2, GLfloat> boundingBox_p; // glyph bounding box in texture pixel coordinates.
+    };
+
 } // anonymous namespace
 
 
@@ -44,10 +52,80 @@ snac::InstanceStream initializeInstanceStream()
 }
 
 
+snac::InstanceStream initializeGlyphInstanceStream()
+{
+    snac::InstanceStream instances;
+    {
+        graphics::ClientAttribute transformation{
+            .mDimension = {4, 4},
+            .mOffset = offsetof(GlyphInstance, pose),
+            .mComponentType = GL_FLOAT,
+        };
+        instances.mAttributes.emplace(snac::Semantic::LocalToWorld, transformation);
+    }
+    {
+        graphics::ClientAttribute albedo{
+            .mDimension = 4,
+            .mOffset = offsetof(GlyphInstance, albedo),
+            .mComponentType = GL_UNSIGNED_BYTE,
+        };
+        instances.mAttributes.emplace(snac::Semantic::Albedo, albedo);
+    }
+    {
+        graphics::ClientAttribute textureOffset{
+            .mDimension = 1,
+            .mOffset = offsetof(GlyphInstance, offsetInTexture_p),
+            .mComponentType = GL_INT,
+        };
+        instances.mAttributes.emplace(snac::Semantic::TextureOffset, textureOffset);
+    }
+    {
+        graphics::ClientAttribute boundingBox{
+            .mDimension = 2,
+            .mOffset = offsetof(GlyphInstance, boundingBox_p),
+            .mComponentType = GL_FLOAT,
+        };
+        instances.mAttributes.emplace(snac::Semantic::BoundingBox, boundingBox);
+    }
+    instances.mInstanceBuffer.mStride = sizeof(GlyphInstance);
+    return instances;
+}
+
+snac::Mesh makeGlyphMesh(const arte::Freetype & aFreetype,
+                         graphics::detail::GlyphMap & aGlyphMap,
+                         const resource::ResourceFinder & aResourceFinder)
+{
+    auto effect = std::make_shared<snac::Effect>(snac::Effect{
+        .mProgram = {
+            graphics::makeLinkedProgram({
+                {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Text.vert"))},
+                {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Text.frag"))},
+            }),
+            "TextRendering"
+        }
+    });
+
+    auto material = std::make_shared<snac::Material>(snac::Material{
+        .mTexture = std::make_shared<graphics::Texture>(
+            graphics::detail::makeTightGlyphAtlas(aFreetype.load(*aResourceFinder.find("fonts/Comfortaa-Regular.ttf")),
+                                                  20, 126,
+                                                  aGlyphMap)
+        ),
+        .mEffect = std::move(effect)
+    });
+
+    return snac::Mesh{
+        .mStream = snac::makeQuad(),
+        .mMaterial = std::move(material),
+    };
+}
+
 Renderer::Renderer(float aAspectRatio, snac::Camera::Parameters aCameraParameters, const resource::ResourceFinder & aResourceFinder) :
     mCamera{aAspectRatio, aCameraParameters},
     mCubeMesh{.mStream = snac::makeCube()},
-    mInstances{initializeInstanceStream()}
+    mCubeInstances{initializeInstanceStream()},
+    mGlyphMesh{makeGlyphMesh(mFreetype, mGlyphMap, aResourceFinder)},
+    mGlyphInstances{initializeGlyphInstanceStream()}
 {
     mCubeMesh.mMaterial = std::make_shared<snac::Material>();
     mCubeMesh.mMaterial->mEffect = std::make_shared<snac::Effect>(snac::Effect{
@@ -100,8 +178,30 @@ void Renderer::render(const visu::GraphicState & aState)
          {snac::BlockSemantic::Viewing, &mCamera.mViewing},
     };
 
-    mInstances.respecifyData(std::span{instanceBufferData});
-    mRenderer.render(mCubeMesh, mInstances, uniforms, uniformBlocks);
+    mCubeInstances.respecifyData(std::span{instanceBufferData});
+    mRenderer.render(mCubeMesh, mCubeInstances, uniforms, uniformBlocks);
+
+    //
+    // Text
+    //
+    // TODO automate
+    graphics::setUniform(mGlyphMesh.mMaterial->mEffect->mProgram, "u_FontAtlas", 1);
+    graphics::activateTextureUnit(1);
+    bind(*mGlyphMesh.mMaterial->mTexture);
+
+
+    // Why it does not start at 20, but at 32 ????!
+    graphics::detail::RenderedGlyph glyph = mGlyphMap.at(90);
+    std::vector<GlyphInstance> textBufferData{{
+        GlyphInstance{
+            .pose = (math::AffineMatrix<4, GLfloat>)math::trans3d::scale(0.5f, 0.5f, 1.f),
+            .albedo = math::sdr::gGreen,
+            .offsetInTexture_p = glyph.offsetInTexture,
+            .boundingBox_p = glyph.controlBoxSize,
+        },
+    }};
+    mGlyphInstances.respecifyData(std::span{textBufferData});
+    mRenderer.render(mGlyphMesh, mGlyphInstances, uniforms, uniformBlocks);
 }
 
 

@@ -42,6 +42,7 @@ public:
 
     snac::Camera::Parameters getCameraParameters() const;
 
+    // TODO remove finder
     Renderer_t makeRenderer(const resource::ResourceFinder & aResourceFinder) const;
 
 private:

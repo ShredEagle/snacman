@@ -22,7 +22,7 @@ struct Effect
 
 struct Material
 {
-    //graphics::Texture mTexture; // TODO extend to handle several textures
+    std::shared_ptr<graphics::Texture> mTexture = nullptr; // TODO extend to handle several textures, with semantics
     std::shared_ptr<Effect> mEffect;
 };
 

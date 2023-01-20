@@ -27,6 +27,9 @@ std::string to_string(Semantic aSemantic)
         MAPPING(LightPosition)
         MAPPING(WorldToCamera)
         MAPPING(Projection)
+        MAPPING(TextureOffset)
+        MAPPING(BoundingBox)
+        MAPPING(FontAtlas)
         default:
         {
             auto value = static_cast<std::underlying_type_t<Semantic>>(aSemantic);
@@ -64,6 +67,9 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(LightPosition)
     MAPPING(WorldToCamera)
     MAPPING(Projection)
+    MAPPING(TextureOffset)
+    MAPPING(BoundingBox)
+    MAPPING(FontAtlas)
     else
     {
         throw std::logic_error{
@@ -90,6 +96,9 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::LightPosition:
         case Semantic::WorldToCamera:
         case Semantic::Projection:
+        case Semantic::TextureOffset:
+        case Semantic::BoundingBox:
+        case Semantic::FontAtlas:
         {
             return false;
         }

@@ -6,9 +6,12 @@
 #include <snac-renderer/Mesh.h>
 #include <snac-renderer/Render.h>
 
+// TODO remove this block
 #include <snac-renderer/IntrospectProgram.h>
 #include <resource/ResourceFinder.h>
 #include <renderer/ShaderSource.h>
+#include <arte/Freetype.h>
+#include <graphics/detail/GlyphUtilities.h>
 
 
 namespace ad {
@@ -34,7 +37,11 @@ private:
     snac::Camera mCamera;
 
     snac::Mesh mCubeMesh;
-    snac::InstanceStream mInstances;
+    snac::InstanceStream mCubeInstances;
+    arte::Freetype mFreetype;
+    graphics::detail::GlyphMap mGlyphMap;
+    snac::Mesh mGlyphMesh;
+    snac::InstanceStream mGlyphInstances;
 };
 
 
