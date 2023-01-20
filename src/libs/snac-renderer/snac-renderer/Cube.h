@@ -209,7 +209,7 @@ struct PositionUV
 };
 
 
-inline VertexStream makeQuad()
+inline VertexStream makeRectangle(math::Rectangle<GLfloat> aRectangle)
 {
     VertexStream geometry{
         .mPrimitive = GL_TRIANGLE_STRIP,
@@ -218,10 +218,10 @@ inline VertexStream makeQuad()
     auto index = geometry.mVertexBuffers.size();
 
     std::array<PositionUV, 4> vertices = {
-        PositionUV{.position = {-1.f,  1.f, 0.f}, .uv = {0.f, 1.f}},
-        PositionUV{.position = {-1.f, -1.f, 0.f}, .uv = {0.f, 0.f}},
-        PositionUV{.position = { 1.f,  1.f, 0.f}, .uv = {1.f, 1.f}},
-        PositionUV{.position = { 1.f, -1.f, 0.f}, .uv = {1.f, 0.f}},
+        PositionUV{.position = {aRectangle.topLeft(), 0.f},     .uv = {0.f, 1.f}},
+        PositionUV{.position = {aRectangle.bottomLeft(), 0.f},  .uv = {0.f, 0.f}},
+        PositionUV{.position = {aRectangle.topRight(), 0.f},    .uv = {1.f, 1.f}},
+        PositionUV{.position = {aRectangle.bottomRight(), 0.f}, .uv = {1.f, 0.f}},
     };
 
     geometry.mVertexBuffers.push_back({
@@ -252,6 +252,10 @@ inline VertexStream makeQuad()
     return geometry;
 }
 
+inline VertexStream makeQuad()
+{
+    return makeRectangle({{-1.f, -1.f}, {2.f, 2.f}});
+}
 
 inline VertexStream makeTriangle()
 {
