@@ -23,6 +23,12 @@ namespace snacgame {
 class Renderer
 {
 public:
+    struct GlyphAtlas
+    {
+        std::shared_ptr<graphics::Texture> mGlyphTexture;
+        graphics::detail::GlyphMap mGlyphMap;
+    };
+
     using GraphicState_t = visu::GraphicState;
 
     Renderer(graphics::AppInterface & aAppInterface,
@@ -43,7 +49,7 @@ private:
     snac::Mesh mCubeMesh;
     snac::InstanceStream mCubeInstances;
     arte::Freetype mFreetype;
-    graphics::detail::GlyphMap mGlyphMap;
+    GlyphAtlas mGlyphAtlas;
     snac::Mesh mGlyphMesh;
     snac::InstanceStream mGlyphInstances;
 };

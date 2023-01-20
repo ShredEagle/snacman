@@ -17,6 +17,7 @@ void Renderer::render(const Mesh & aMesh,
 
     const IntrospectProgram & program = aMesh.mMaterial->mEffect->mProgram;
     setUniforms(aUniforms, program);
+    setTextures(aMesh.mMaterial->mTextures, program);
     setBlocks(aUniformBlocks, program);
 
     graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, program)};

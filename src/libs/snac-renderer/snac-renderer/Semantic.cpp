@@ -22,6 +22,7 @@ std::string to_string(Semantic aSemantic)
         MAPPING(Albedo)
         MAPPING(TextureCoords)
         MAPPING(LocalToWorld)
+        MAPPING(InstancePosition)
         MAPPING(AmbientColor) 
         MAPPING(LightColor)
         MAPPING(LightPosition)
@@ -63,6 +64,7 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(Albedo)
     MAPPING(TextureCoords)
     MAPPING(LocalToWorld)
+    MAPPING(InstancePosition)
     MAPPING(AmbientColor) 
     MAPPING(LightColor)
     MAPPING(LightPosition)
@@ -95,6 +97,7 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::Normal:
         case Semantic::TextureCoords:
         case Semantic::LocalToWorld:
+        case Semantic::InstancePosition:
         case Semantic::LightPosition:
         case Semantic::WorldToCamera:
         case Semantic::Projection:

@@ -17,6 +17,7 @@ enum class Semantic
     // Usually per instance
     LocalToWorld,
     // Usually uniform
+    InstancePosition,
     AmbientColor,
     LightColor,
     LightPosition,

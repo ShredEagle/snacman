@@ -22,6 +22,8 @@ graphics::ShaderParameter::Access getResourceShaderAccess(GLenum aType);
 
 GLenum getResourceComponentType(GLenum aType);
 
+bool isResourceSamplerType(GLenum aType);
+
 
 } // namespace graphics
 } // namespace ad
