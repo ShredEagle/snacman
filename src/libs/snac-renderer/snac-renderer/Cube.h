@@ -202,6 +202,13 @@ inline VertexStream makeCube()
 }
 
 
+struct PositionUV
+{
+    math::Position<3, float> position;
+    math::Position<2, float> uv;
+};
+
+
 inline VertexStream makeQuad()
 {
     VertexStream geometry{
@@ -210,22 +217,36 @@ inline VertexStream makeQuad()
     // Make a VBO and load the vertices into it
     auto index = geometry.mVertexBuffers.size();
 
-    std::array<math::Vec<3, float>, 4> vertices = {
-        math::Vec<3, float>{-1.f,  1.f, 0.f},
-        math::Vec<3, float>{-1.f, -1.f, 0.f},
-        math::Vec<3, float>{ 1.f,  1.f, 0.f},
-        math::Vec<3, float>{ 1.f, -1.f, 0.f},
+    std::array<PositionUV, 4> vertices = {
+        PositionUV{.position = {-1.f,  1.f, 0.f}, .uv = {0.f, 1.f}},
+        PositionUV{.position = {-1.f, -1.f, 0.f}, .uv = {0.f, 0.f}},
+        PositionUV{.position = { 1.f,  1.f, 0.f}, .uv = {1.f, 1.f}},
+        PositionUV{.position = { 1.f, -1.f, 0.f}, .uv = {1.f, 0.f}},
     };
 
     geometry.mVertexBuffers.push_back({
         .mBuffer = loadVBO(std::span{vertices}),
+        .mStride = sizeof(PositionUV),
     });
-    graphics::ClientAttribute attribute{
-        .mDimension = 3,
-        .mOffset = 0,
-        .mComponentType = GL_FLOAT
-    };
-    geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, attribute});
+
+    {
+        graphics::ClientAttribute position{
+            .mDimension = 3,
+            .mOffset = 0,
+            .mComponentType = GL_FLOAT
+        };
+        geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, position});
+    }
+
+    {
+        graphics::ClientAttribute uv{
+            .mDimension = 2,
+            .mOffset = offsetof(PositionUV, uv),
+            .mComponentType = GL_FLOAT
+        };
+        geometry.mAttributes.emplace(Semantic::TextureCoords, AttributeAccessor{index, uv});
+    }
+
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
     return geometry;
