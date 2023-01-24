@@ -1,5 +1,6 @@
 #include "Renderer.h"
 
+#include <math/Angle.h>
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 
@@ -20,7 +21,7 @@ namespace {
     
     struct GlyphInstance
     {
-        math::Position<2, GLfloat> position;
+        math::AffineMatrix<3, GLfloat> glyphToScreen_p;
         math::sdr::Rgba albedo;
         GLint offsetInTexture_p; // horizontal offset to the glyph in its ribbon texture.
         math::Size<2, GLfloat> boundingBox_p; // glyph bounding box in texture pixel coordinates, including margins.
@@ -58,12 +59,12 @@ snac::InstanceStream initializeGlyphInstanceStream()
 {
     snac::InstanceStream instances;
     {
-        graphics::ClientAttribute instancePosition{
-            .mDimension = 2,
-            .mOffset = offsetof(GlyphInstance, position),
+        graphics::ClientAttribute localToWorld{
+            .mDimension = {3, 3},
+            .mOffset = offsetof(GlyphInstance, glyphToScreen_p),
             .mComponentType = GL_FLOAT,
         };
-        instances.mAttributes.emplace(snac::Semantic::InstancePosition, instancePosition);
+        instances.mAttributes.emplace(snac::Semantic::LocalToWorld, localToWorld);
     }
     {
         graphics::ClientAttribute albedo{
@@ -201,17 +202,31 @@ void Renderer::render(const visu::GraphicState & aState)
     // TODO Why it does not start at 20, but at 32 ????!
     //graphics::detail::RenderedGlyph glyph = mGlyphAtlas.mGlyphMap.at(90);
 
+    math::Size<2, GLfloat> stringDimension_p = graphics::detail::getStringDimension(
+        "My string!",
+        mGlyphAtlas.mGlyphCache,
+        mGlyphAtlas.mFontFace);
+
+    auto stringPos = 
+        math::Position<2, GLfloat>{-0.5f, 0.f}
+            .cwMul(static_cast<math::Position<2, GLfloat>>(mAppInterface.getFramebufferSize()));
+
     std::vector<GlyphInstance> textBufferData;
     graphics::detail::forEachGlyph(
         "My string!",
         //"abcdefghijklmnopqrstuvwxyz",
-        math::Position<2, GLfloat>{-0.5f, 0.f}.cwMul(static_cast<math::Position<2, GLfloat>>(mAppInterface.getFramebufferSize())),
+        {0.f, 0.f},
         mGlyphAtlas.mGlyphCache,
         mGlyphAtlas.mFontFace,
-        [&textBufferData](const graphics::detail::RenderedGlyph & aGlyph, auto aGlyphPosition_p)
+        [&textBufferData, stringDimension_p, stringPos]
+        (const graphics::detail::RenderedGlyph & aGlyph, math::Position<2, GLfloat> aGlyphPosition_p)
         {
              textBufferData.push_back(GlyphInstance{
-                .position = aGlyphPosition_p,
+                .glyphToScreen_p =
+                    math::trans2d::translate(aGlyphPosition_p.as<math::Vec>()
+                                             - stringDimension_p.as<math::Vec>() / 2.f)
+                    * math::trans2d::rotate(math::Degree{45.f})
+                    * math::trans2d::translate(stringPos.as<math::Vec>()),
                 .albedo = math::sdr::gGreen,
                 .offsetInTexture_p = aGlyph.offsetInTexture,
                 .boundingBox_p = aGlyph.controlBoxSize,
