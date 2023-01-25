@@ -30,6 +30,11 @@ struct VertexArrayRepository
 
 void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & aProgram);
 
+// TODO this approach based on specialized repositories feels cumbersome.
+using TextureRepository = std::map<Semantic, const graphics::Texture *>;
+
+void setTextures(const TextureRepository & aTextures, const IntrospectProgram & aProgram);
+
 void setBlocks(const UniformBlocks & aUniformBlocks, const IntrospectProgram & aProgram);
 
 

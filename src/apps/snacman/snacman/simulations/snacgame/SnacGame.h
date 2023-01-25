@@ -1,21 +1,32 @@
 #pragma once
 
-#include "component/Geometry.h"
 #include "EntityWrap.h"
 #include "Renderer.h"
-#include "snacman/LoopSettings.h"
+
+#include "component/Geometry.h"
+#include "component/PoseScreenSpace.h"
+#include "component/Text.h"
+
 #include "system/SystemOrbitalCamera.h"
 
 #include "../../Input.h"
+#include "../../LoopSettings.h"
 #include "../../Timing.h"
 
+#include <arte/Freetype.h>
+
 #include <entity/EntityManager.h>
+
 #include <graphics/AppInterface.h>
+
 #include <imguiui/ImguiUi.h>
+
 #include <markovjunior/Interpreter.h>
+
+#include <resource/ResourceFinder.h>
+
 #include <memory>
 
-class ImguiGameLoop;
 
 namespace ad {
 namespace snacgame {
@@ -71,7 +82,8 @@ public:
 
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface,
-             imguiui::ImguiUi & aImguiUi);
+             imguiui::ImguiUi & aImguiUi,
+             const resource::ResourceFinder & aResourceFinder);
 
     bool update(float aDelta, const RawInput & aInput);
 
@@ -83,11 +95,16 @@ public:
 
     snac::Camera::Parameters getCameraParameters() const;
 
-    Renderer_t makeRenderer() const;
+    // TODO remove finder
+    Renderer_t makeRenderer(const resource::ResourceFinder & aResourceFinder) const;
 
 private:
     graphics::AppInterface * mAppInterface;
     snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
+
+    // Must appear before the EntityManager, because the EntityManager
+    // might contain Freetype FontFaces, and the Freetype object must outlive them.
+    arte::Freetype mFreetype;
 
     ent::EntityManager mWorld;
     ent::Handle<ent::Entity> mSystems;
@@ -95,6 +112,8 @@ private:
     ent::Handle<ent::Entity> mContext;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
+
+    EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};

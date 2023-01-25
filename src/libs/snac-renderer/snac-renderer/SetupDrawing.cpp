@@ -119,36 +119,83 @@ void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & 
 {
     for (const IntrospectProgram::Resource & shaderUniform : aProgram.mUniforms)
     {
-        if(auto found = aUniforms.find(shaderUniform.mSemantic);
-           found != aUniforms.end())
+        if (!isResourceSamplerType(shaderUniform.mType))
         {
-            if (shaderUniform.mArraySize != 1)
+            if(auto found = aUniforms.find(shaderUniform.mSemantic);
+               found != aUniforms.end())
             {
-                SELOG_LG(gRenderLogger, error)(
-                    "{}: '{}' program uniform '{}'({}) is an array of size {}, setting uniform arrays is not supported.",
-                    __func__,
-                    aProgram.name(),
-                    shaderUniform.mName,
-                    to_string(shaderUniform.mSemantic),
-                    shaderUniform.mArraySize
-                );
-            }
+                if (shaderUniform.mArraySize != 1)
+                {
+                    SELOG_LG(gRenderLogger, error)(
+                        "{}: '{}' program uniform '{}'({}) is an array of size {}, setting uniform arrays is not supported.",
+                        __func__,
+                        aProgram.name(),
+                        shaderUniform.mName,
+                        to_string(shaderUniform.mSemantic),
+                        shaderUniform.mArraySize
+                    );
+                }
 
-            const UniformParameter & parameter = found->second;
-            // Very conservative assertions, this might be relaxed when legitimate use cases "show-up".
-            assert(parameter.mComponentType == shaderUniform.componentType());
-            assert(parameter.mDimension == shaderUniform.dimension());
-            parameter.mSetter(aProgram, shaderUniform.mLocation);
+                const UniformParameter & parameter = found->second;
+                // Very conservative assertions, this might be relaxed when legitimate use cases "show-up".
+                assert(parameter.mComponentType == shaderUniform.componentType());
+                assert(parameter.mDimension == shaderUniform.dimension());
+                parameter.mSetter(aProgram, shaderUniform.mLocation);
+            }
+            else
+            {
+                // TODO since this function is currently called before each draw
+                // this is much to verbose for a warning...
+                SELOG_LG(gRenderLogger, warn)(
+                    "{}: Could not find an a uniform value for semantic '{}' in program '{}'.", 
+                    __func__,
+                    to_string(shaderUniform.mSemantic),
+                    aProgram.name());
+            }
         }
-        else
+    }
+}
+
+
+void setTextures(const TextureRepository & aTextures, const IntrospectProgram & aProgram)
+{
+    GLint textureImageUnit = 0;
+    for (const IntrospectProgram::Resource & shaderUniform : aProgram.mUniforms)
+    {
+        if (isResourceSamplerType(shaderUniform.mType))
         {
-            // TODO since this function is currently called before each draw
-            // this is much to verbose for a warning...
-            SELOG_LG(gRenderLogger, warn)(
-                "{}: Could not find an a uniform value for semantic '{}' in program '{}'.", 
-                __func__,
-                to_string(shaderUniform.mSemantic),
-                aProgram.name());
+            if(auto found = aTextures.find(shaderUniform.mSemantic);
+              found != aTextures.end())
+            {
+                if (shaderUniform.mArraySize != 1)
+                {
+                    SELOG_LG(gRenderLogger, error)(
+                        "{}: '{}' program uniform '{}'({}) is an array of size {}, setting uniform arrays is not supported.",
+                        __func__,
+                        aProgram.name(),
+                        shaderUniform.mName,
+                        to_string(shaderUniform.mSemantic),
+                        shaderUniform.mArraySize
+                    );
+                }
+
+                const graphics::Texture * texture = found->second;
+                // TODO assertions regarding texture-sampler compatibility
+                auto guardImageUnit = graphics::activateTextureUnitGuard(textureImageUnit);
+                bind(*texture); // should not be unbound when we exit the current scope.
+                graphics::setUniform(aProgram, shaderUniform.mLocation, textureImageUnit);
+                ++textureImageUnit;
+            }
+            else
+            {
+                // TODO since this function is currently called before each draw
+                // this is much to verbose for a warning...
+                SELOG_LG(gRenderLogger, warn)(
+                    "{}: Could not find an a texture for semantic '{}' in program '{}'.", 
+                    __func__,
+                    to_string(shaderUniform.mSemantic),
+                    aProgram.name());
+            }
         }
     }
 }

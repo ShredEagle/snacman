@@ -155,8 +155,7 @@ template <class T_vertex, std::size_t N_extent>
 inline graphics::VertexBufferObject loadVBO(std::span<T_vertex, N_extent> aVertices)
 {
     graphics::VertexBufferObject vbo;
-    //graphics::ScopedBind boundVBO{vbo};
-    bind(vbo);
+    graphics::ScopedBind boundVBO{vbo};
     glBufferData(
         GL_ARRAY_BUFFER,
         aVertices.size_bytes(),
@@ -166,9 +165,11 @@ inline graphics::VertexBufferObject loadVBO(std::span<T_vertex, N_extent> aVerti
 }
 
 
-inline Mesh makeCube()
+inline VertexStream makeCube()
 {
-    VertexStream geometry;
+    VertexStream geometry{
+        .mPrimitive = GL_TRIANGLES,
+    };
     // Note: Binding the VAO is not required for loading vertex buffers
     // Make a VBO and load the cube vertices into it
     // Save the index of the next VBO.
@@ -197,14 +198,71 @@ inline Mesh makeCube()
     }
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
-    return Mesh{.mStream = std::move(geometry)};
+    return geometry;
 }
 
 
-inline Mesh makeTriangle()
+struct PositionUV
 {
-    VertexStream geometry;
-    // Make a VBO and load the cube vertices into it
+    math::Position<3, float> position;
+    math::Position<2, float> uv;
+};
+
+
+inline VertexStream makeRectangle(math::Rectangle<GLfloat> aRectangle)
+{
+    VertexStream geometry{
+        .mPrimitive = GL_TRIANGLE_STRIP,
+    };
+    // Make a VBO and load the vertices into it
+    auto index = geometry.mVertexBuffers.size();
+
+    std::array<PositionUV, 4> vertices = {
+        PositionUV{.position = {aRectangle.topLeft(), 0.f},     .uv = {0.f, 1.f}},
+        PositionUV{.position = {aRectangle.bottomLeft(), 0.f},  .uv = {0.f, 0.f}},
+        PositionUV{.position = {aRectangle.topRight(), 0.f},    .uv = {1.f, 1.f}},
+        PositionUV{.position = {aRectangle.bottomRight(), 0.f}, .uv = {1.f, 0.f}},
+    };
+
+    geometry.mVertexBuffers.push_back({
+        .mBuffer = loadVBO(std::span{vertices}),
+        .mStride = sizeof(PositionUV),
+    });
+
+    {
+        graphics::ClientAttribute position{
+            .mDimension = 3,
+            .mOffset = 0,
+            .mComponentType = GL_FLOAT
+        };
+        geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, position});
+    }
+
+    {
+        graphics::ClientAttribute uv{
+            .mDimension = 2,
+            .mOffset = offsetof(PositionUV, uv),
+            .mComponentType = GL_FLOAT
+        };
+        geometry.mAttributes.emplace(Semantic::TextureCoords, AttributeAccessor{index, uv});
+    }
+
+    geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
+
+    return geometry;
+}
+
+inline VertexStream makeQuad()
+{
+    return makeRectangle({{-1.f, -1.f}, {2.f, 2.f}});
+}
+
+inline VertexStream makeTriangle()
+{
+    VertexStream geometry{
+        .mPrimitive = GL_TRIANGLES,
+    };
+    // Make a VBO and load the triangle vertices into it
     auto index = geometry.mVertexBuffers.size();
     std::array<math::Vec<3, float>, 3> vertices = {
         math::Vec<3, float>{-0.6f, -0.4f, 0.f},
@@ -223,7 +281,7 @@ inline Mesh makeTriangle()
     geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, attribute});
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
-    return Mesh{.mStream = std::move(geometry)};
+    return geometry;
 }
 
 

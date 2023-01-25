@@ -6,9 +6,19 @@
 #include "Timing.h"
 
 #include <build_info.h>
+
+// TODO we should not include something from detail.
+// So either move it out of detail, either use nholmann directly
+#include <arte/detail/Json.h>
+
 #include <graphics/ApplicationGlfw.h>
 #include <imguiui/ImguiUi.h>
 #include <math/VectorUtilities.h>
+
+#include <platform/Path.h>
+
+#include <resource/ResourceFinder.h>
+
 #include <queue>
 #include <thread>
 
@@ -292,6 +302,34 @@ private:
     std::thread mThread;
 };
 
+
+resource::ResourceFinder makeResourceFinder()
+{
+    filesystem::path assetConfig = platform::getExecutableFileDirectory() / "assets.json";
+    if(exists(assetConfig))
+    {
+        Json config = Json::parse(std::ifstream{assetConfig});
+        
+        // This leads to an ambibuity on the path ctor, I suppose because
+        // the iterator value_t is equally convertible to both filesystem::path and filesystem::path::string_type
+        //return resource::ResourceFinder(config.at("prefixes").begin(),
+        //                                config.at("prefixes").end());
+
+        // Take the silly long way
+        std::vector<std::string> prefixes{
+            config.at("prefixes").begin(),
+            config.at("prefixes").end()
+        };
+        return resource::ResourceFinder(prefixes.begin(),
+                                        prefixes.end());
+    }
+    else
+    {
+        return resource::ResourceFinder{platform::getExecutableFileDirectory()};
+    }
+}
+
+
 void runApplication()
 {
     SELOG(info)("I'm a snac man.");
@@ -307,19 +345,21 @@ void runApplication()
 
     imguiui::ImguiUi imguiUi(glfwApp);
 
+    resource::ResourceFinder resourceFinder = makeResourceFinder();
+
     ConfigurableSettings configurableSettings;
 
     //
     // Initialize scene
     //
-    Simu_t scene{*glfwApp.getAppInterface(), imguiUi};
+    Simu_t scene{*glfwApp.getAppInterface(), imguiUi, resourceFinder};
 
     //
     // Initialize rendering subsystem
     //
 
     // Initialize the renderer
-    Simu_t::Renderer_t renderer = scene.makeRenderer();
+    Simu_t::Renderer_t renderer = scene.makeRenderer(resourceFinder);
 
     // Context must be removed from this thread before it can be made current on
     // the render thread.

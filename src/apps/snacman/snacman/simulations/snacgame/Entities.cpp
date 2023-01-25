@@ -5,7 +5,11 @@
 #include "component/Level.h"
 #include "component/PlayerLifeCycle.h"
 #include "component/PlayerMoveState.h"
+#include "component/PoseScreenSpace.h"
 #include "component/Spawner.h"
+#include "component/Text.h"
+
+#include <snac-renderer/text/Text.h>
 
 #include <math/Color.h>
 
@@ -128,5 +132,28 @@ createPlayerEntity(ent::EntityManager & mWorld,
 
     return playerHandle;
 }
+
+ent::Handle<ent::Entity> makeText(ent::EntityManager & mWorld,
+                                  ent::Phase & aPhase,
+                                  std::string aString,
+                                  std::shared_ptr<snac::Font> aFont,
+                                  math::hdr::Rgba_f aColor,
+                                  math::Position<2, float> aPosition_unitscreen)
+{
+    auto handle = mWorld.addEntity();
+
+    handle.get(aPhase)
+        ->add(component::Text{
+            .mString{std::move(aString)},
+            .mFont = std::move(aFont),
+            .mColor = aColor,
+        })
+        .add(component::PoseScreenSpace{.mPosition_u = aPosition_unitscreen})
+    ;
+
+    return handle;
+}
+
+
 } // namespace snacgame
 } // namespace ad

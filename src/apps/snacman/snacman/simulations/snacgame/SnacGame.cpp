@@ -1,44 +1,59 @@
 #include "SnacGame.h"
 
+#include "Entities.h"
+#include "InputCommandConverter.h"
+
+#include "context/InputDeviceDirectory.h"
+
+#include "component/Context.h"
 #include "component/Controller.h"
 #include "component/Level.h"
-#include "context/InputDeviceDirectory.h"
-#include "Entities.h"
-#include "imguiui/ImguiUi.h"
-#include "InputCommandConverter.h"
-#include "snacman/ImguiUtilities.h"
-#include "snacman/simulations/snacgame/component/Context.h"
+#include "component/MovementScreenSpace.h"
+
+
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
+#include "system/MovementIntegration.h"
 #include "system/PlayerInvulFrame.h"
 #include "system/PlayerSpawner.h"
 
-#include <chrono>
-#include <GLFW/glfw3.h>
+#include <snacman/ImguiUtilities.h>
+
+#include <imguiui/ImguiUi.h>
+
+#include <snac-renderer/text/Text.h>
+
 #include <imgui.h>
 #include <markovjunior/Grid.h>
+
 #include <math/Color.h>
 #include <math/VectorUtilities.h>
+
+#include <GLFW/glfw3.h>
+#include <chrono>
 #include <string>
 
 namespace ad {
 namespace snacgame {
 
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
-                   imguiui::ImguiUi & aImguiUi) :
+                   imguiui::ImguiUi & aImguiUi,
+                   const resource::ResourceFinder & aResourceFinder) :
     mAppInterface{&aAppInterface},
     mSystems{mWorld.addEntity()},
     mLevel{mWorld.addEntity()},
     mContext{mWorld.addEntity()},
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld},
+    mQueryText{mWorld, mWorld},
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
     InputDeviceDirectory inputDeviceDirectory;
     markovjunior::Interpreter markovInterpreter(
-        "/home/franz/gamedev/snac-assets", "markov/snaclvl.xml",
-        //"d:/projects/gamedev/2/snac-assets", "markov/snaclvl.xml",
+        // Address this instead of comment-fighting : )
+        //"/home/franz/gamedev/snac-assets", "markov/snaclvl.xml",
+        "d:/projects/gamedev/2/snac-assets", "markov/snaclvl.xml",
         ad::math::Size<3, int>{29, 29, 1}, 1231234);
 
     markovInterpreter.setup();
@@ -51,6 +66,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mSystems.get(init)->add(system::PlayerInvulFrame{mWorld});
     mSystems.get(init)->add(system::DeterminePlayerAction{mWorld, mLevel});
     mSystems.get(init)->add(system::IntegratePlayerMovement{mWorld, mLevel});
+    mSystems.get(init)->add(system::MovementIntegration{mWorld});
 
     markovjunior::Grid grid = markovInterpreter.mGrid;
 
@@ -58,7 +74,25 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     createPlayerEntity(mWorld, init, inputDeviceDirectory,
                        component::ControllerType::Keyboard);
 
-    mContext.get(init)->add(component::Context(inputDeviceDirectory));
+    ent::Handle<ent::Entity> title = 
+        makeText(mWorld,
+                init,
+                "Snacman!",
+                // TODO this should be done within the ResourceManager, here only fetching the Font via name + size
+                std::make_shared<snac::Font>(
+                    mFreetype,
+                    *aResourceFinder.find("fonts/Comfortaa-Regular.ttf"),
+                    120,
+                    snac::makeDefaultTextProgram(aResourceFinder)
+                ),
+                math::hdr::gYellow<float>,
+                math::Position<2, float>{-0.5f, 0.f});
+    // TODO Remove, this is a silly demonstration.
+    title.get(init)->add(component::MovementScreenSpace{
+        .mAngularSpeed = math::Radian<float>{math::pi<float> / 2.f}
+    });
+
+    mContext.get(init)->add(component::Context(inputDeviceDirectory, aResourceFinder));
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
@@ -169,6 +203,7 @@ bool SnacGame::update(float aDelta, const RawInput & aInput)
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
+    mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
 
     return quitGame;
 }
@@ -216,6 +251,26 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
             }
         });
 
+    //
+    // Text
+    //
+    mQueryText.get(nomutation).each(
+        [&state](ent::Handle<ent::Entity> aHandle, component::Text & aText, component::PoseScreenSpace & aPose)
+        {
+            state->mTextEntities.insert(
+                aHandle.id(),
+                visu::TextScreen{
+                    // TODO
+                    .mPosition_unitscreen = aPose.mPosition_u, 
+                    .mOrientation = aPose.mRotationCCW,
+                    .mString = aText.mString,
+                    .mFont = aText.mFont,
+                    .mColor = aText.mColor,
+            });
+        }
+    );
+
+
     state->mCamera = mSystemOrbitalCamera->getCamera();
     return state;
 }
@@ -225,11 +280,12 @@ snac::Camera::Parameters SnacGame::getCameraParameters() const
     return mCameraParameters;
 }
 
-SnacGame::Renderer_t SnacGame::makeRenderer() const
+SnacGame::Renderer_t SnacGame::makeRenderer(const resource::ResourceFinder & aResourceFinder) const
 {
     return Renderer_t{
-        math::getRatio<float>(mAppInterface->getWindowSize()),
+        *mAppInterface,
         getCameraParameters(),
+        aResourceFinder
     };
 }
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Camera.h"
-#include "IntrospectProgram.h"
 #include "Mesh.h"
 #include "SetupDrawing.h"
 #include "UniformParameters.h"
@@ -23,15 +22,12 @@ inline void clear()
 class Renderer
 {
 public:
-    Renderer();
-
     void render(const Mesh & aMesh,
                 const InstanceStream & aInstances,
                 const UniformRepository & aUniforms,
                 const UniformBlocks & aUniformBlocks);
 
 private:
-    IntrospectProgram mProgram;
     VertexArrayRepository mVertexArrayRepo;
 };
 

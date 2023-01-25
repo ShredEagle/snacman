@@ -5,11 +5,17 @@
 
 #include "../context/InputDeviceDirectory.h"
 
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <limits>
 #include <platform/Filesystem.h>
+
+#include <resource/ResourceFinder.h>
+
+#include <GLFW/glfw3.h>
+
+#include <imgui.h>
+
+#include <limits>
 #include <string>
+
 
 namespace ad {
 namespace snacgame {
@@ -17,14 +23,12 @@ namespace component {
 
 struct Context
 {
-    Context(InputDeviceDirectory aDeviceDirectory) :
+    Context(InputDeviceDirectory aDeviceDirectory,
+            const resource::ResourceFinder aResourceFinder) :
         mInputDeviceDirectory{aDeviceDirectory},
-        //mGamepadMapping("d:/projects/gamedev/2/snac-assets/settings/gamepad_mapping.json"),
-        //mKeyboardMapping("d:/projects/gamedev/2/snac-assets/settings/keyboard_mapping.json")
-        mGamepadMapping("/home/franz/gamedev/snac-assets/settings/gamepad_mapping.json"),
-        mKeyboardMapping("/home/franz/gamedev/snac-assets/settings/keyboard_mapping.json")
-    {
-    }
+        mGamepadMapping(*aResourceFinder.find("settings/gamepad_mapping.json")),
+        mKeyboardMapping(*aResourceFinder.find("settings/keyboard_mapping.json"))
+    {}
 
     InputDeviceDirectory mInputDeviceDirectory;
     GamepadMapping mGamepadMapping;

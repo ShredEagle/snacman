@@ -13,6 +13,8 @@ set(${TARGET_NAME}_HEADERS
     SetupDrawing.h
     ShaderResource.h
     UniformParameters.h
+
+    text/Text.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -26,6 +28,8 @@ set(${TARGET_NAME}_SOURCES
     Semantic.cpp
     SetupDrawing.cpp
     ShaderResource.cpp
+
+    text/Text.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -60,8 +64,10 @@ target_link_libraries(${TARGET_NAME}
     PUBLIC
         ad::math
     PRIVATE
+        ad::arte
         ad::graphics
         ad::renderer
+        ad::resource
 
         spdlog::spdlog
 )

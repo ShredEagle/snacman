@@ -22,11 +22,17 @@ std::string to_string(Semantic aSemantic)
         MAPPING(Albedo)
         MAPPING(TextureCoords)
         MAPPING(LocalToWorld)
+        MAPPING(InstancePosition)
+        MAPPING(TextureOffset)
+        MAPPING(BoundingBox)
+        MAPPING(Bearing)
         MAPPING(AmbientColor) 
         MAPPING(LightColor)
         MAPPING(LightPosition)
         MAPPING(WorldToCamera)
         MAPPING(Projection)
+        MAPPING(FontAtlas)
+        MAPPING(FramebufferResolution)
         default:
         {
             auto value = static_cast<std::underlying_type_t<Semantic>>(aSemantic);
@@ -59,11 +65,17 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(Albedo)
     MAPPING(TextureCoords)
     MAPPING(LocalToWorld)
+    MAPPING(InstancePosition)
+    MAPPING(TextureOffset)
+    MAPPING(BoundingBox)
+    MAPPING(Bearing)
     MAPPING(AmbientColor) 
     MAPPING(LightColor)
     MAPPING(LightPosition)
     MAPPING(WorldToCamera)
     MAPPING(Projection)
+    MAPPING(FontAtlas)
+    MAPPING(FramebufferResolution)
     else
     {
         throw std::logic_error{
@@ -87,9 +99,15 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::Normal:
         case Semantic::TextureCoords:
         case Semantic::LocalToWorld:
+        case Semantic::InstancePosition:
+        case Semantic::TextureOffset:
+        case Semantic::BoundingBox:
+        case Semantic::Bearing:
         case Semantic::LightPosition:
         case Semantic::WorldToCamera:
         case Semantic::Projection:
+        case Semantic::FontAtlas:
+        case Semantic::FramebufferResolution:
         {
             return false;
         }
