@@ -9,7 +9,6 @@
 namespace ad {
 namespace snac {
 
-
 // TODO Those utilities should be more generic, and leave in some shared repo.
 void imguiLogLevelSelection()
 {

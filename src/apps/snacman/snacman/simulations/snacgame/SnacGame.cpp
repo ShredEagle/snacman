@@ -10,21 +10,27 @@
 #include "component/Level.h"
 #include "component/MovementScreenSpace.h"
 
+
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
 #include "system/MovementIntegration.h"
 #include "system/PlayerInvulFrame.h"
 #include "system/PlayerSpawner.h"
 
-#include "imguiui/ImguiUi.h"
+#include <snacman/ImguiUtilities.h>
+
+#include <imguiui/ImguiUi.h>
 
 #include <snac-renderer/text/Text.h>
 
 #include <imgui.h>
 #include <markovjunior/Grid.h>
+
 #include <math/Color.h>
+#include <math/VectorUtilities.h>
 
 #include <GLFW/glfw3.h>
+#include <chrono>
 #include <string>
 
 namespace ad {
@@ -45,6 +51,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     ent::Phase init;
     InputDeviceDirectory inputDeviceDirectory;
     markovjunior::Interpreter markovInterpreter(
+        // Address this instead of comment-fighting : )
         //"/home/franz/gamedev/snac-assets", "markov/snaclvl.xml",
         "d:/projects/gamedev/2/snac-assets", "markov/snaclvl.xml",
         ad::math::Size<3, int>{29, 29, 1}, 1231234);
@@ -64,10 +71,8 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     markovjunior::Grid grid = markovInterpreter.mGrid;
 
     createLevel(mLevel, mWorld, init, grid);
-    createPlayerEntity(
-        mWorld, init,
-        inputDeviceDirectory,
-        component::ControllerType::Keyboard);
+    createPlayerEntity(mWorld, init, inputDeviceDirectory,
+                       component::ControllerType::Keyboard);
 
     ent::Handle<ent::Entity> title = 
         makeText(mWorld,
@@ -88,6 +93,69 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     });
 
     mContext.get(init)->add(component::Context(inputDeviceDirectory, aResourceFinder));
+}
+
+void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
+                           ImguiInhibiter & aInhibiter,
+                           const RawInput & aInput)
+{
+    ent::Phase update;
+
+    component::Context & context =
+        mContext.get(update)->get<component::Context>();
+
+    mImguiUi.mFrameMutex.lock();
+    mImguiUi.newFrame();
+    // NewFrame() updates the io catpure flag: consume them ASAP
+    // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
+    // mImguiUi.newFrame();
+    aInhibiter.resetCapture(static_cast<ImguiInhibiter::WantCapture>(
+        (mImguiUi.isCapturingMouse() ? ImguiInhibiter::Mouse
+                                     : ImguiInhibiter::Null)
+        | (mImguiUi.isCapturingKeyboard() ? ImguiInhibiter::Keyboard
+                                          : ImguiInhibiter::Null)));
+
+    mImguiDisplays.display();
+    if (mImguiDisplays.mShowLogLevel)
+    {
+        snac::imguiLogLevelSelection();
+    }
+    if (mImguiDisplays.mShowMappings)
+    {
+        context.drawUi(aInput);
+    }
+    if (mImguiDisplays.mShowImguiDemo)
+    {
+        ImGui::ShowDemoWindow();
+    }
+    if (mImguiDisplays.mShowSimulationDelta)
+    {
+        ImGui::Begin("Gameloop");
+        int simulationDelta = (int) duration_cast<std::chrono::milliseconds>(
+                                  aSettings.mSimulationDelta)
+                                  .count();
+        if (ImGui::InputInt("Simulation period (ms)", &simulationDelta))
+        {
+            simulationDelta = std::clamp(simulationDelta, 1, 200);
+        }
+        aSettings.mSimulationDelta = std::chrono::milliseconds{simulationDelta};
+
+        int updateDuration = (int) duration_cast<std::chrono::milliseconds>(
+                                 aSettings.mUpdateDuration)
+                                 .count();
+        if (ImGui::InputInt("Update duration (ms)", &updateDuration))
+        {
+            updateDuration = std::clamp(updateDuration, 1, 500);
+        }
+        aSettings.mUpdateDuration = std::chrono::milliseconds{updateDuration};
+
+        bool interpolate = aSettings.mInterpolate;
+        ImGui::Checkbox("State interpolation", &interpolate);
+        aSettings.mInterpolate = interpolate;
+        ImGui::End();
+    }
+    mImguiUi.render();
+    mImguiUi.mFrameMutex.unlock();
 }
 
 bool SnacGame::update(float aDelta, const RawInput & aInput)
@@ -119,15 +187,13 @@ bool SnacGame::update(float aDelta, const RawInput & aInput)
 
     if (keyboardPlayer && keyboardPlayer->isValid())
     {
-            component::Controller & keyboard =
-                keyboardPlayer->get(update)
-                    ->get<component::Controller>();
+        component::Controller & keyboard =
+            keyboardPlayer->get(update)->get<component::Controller>();
 
-            keyboard.mCommandQuery = convertKeyboardInput(
-                aInput.mKeyboard,
-                KeyboardMapping(context.mKeyboardMapping));
+        keyboard.mCommandQuery = convertKeyboardInput(
+            aInput.mKeyboard, KeyboardMapping(context.mKeyboardMapping));
 
-            quitGame = keyboard.mCommandQuery & gQuitCommand;
+        quitGame = keyboard.mCommandQuery & gQuitCommand;
     }
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
@@ -138,13 +204,6 @@ bool SnacGame::update(float aDelta, const RawInput & aInput)
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
     mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
-
-
-    mImguiUi.mFrameMutex.lock();
-    mImguiUi.newFrame();
-    context.drawUi(aInput);
-    mImguiUi.render();
-    mImguiUi.mFrameMutex.unlock();
 
     return quitGame;
 }
@@ -185,9 +244,9 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                                             .mColor = aGeometry.mColor,
                                         });
                 std::function<void()> func = [worldPosition]() {
-                        float stuff = worldPosition.x();
-                        ImGui::InputFloat("Stuff:", &stuff);
-                        };
+                    float stuff = worldPosition.x();
+                    ImGui::InputFloat("Stuff:", &stuff);
+                };
                 state->mImguiCommands.push_back(func);
             }
         });

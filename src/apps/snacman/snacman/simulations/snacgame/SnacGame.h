@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "EntityWrap.h"
 #include "Renderer.h"
 
@@ -11,6 +10,8 @@
 #include "system/SystemOrbitalCamera.h"
 
 #include "../../Input.h"
+#include "../../LoopSettings.h"
+#include "../../Timing.h"
 
 #include <arte/Freetype.h>
 
@@ -18,9 +19,9 @@
 
 #include <graphics/AppInterface.h>
 
-#include <markovjunior/Interpreter.h>
-
 #include <imguiui/ImguiUi.h>
+
+#include <markovjunior/Interpreter.h>
 
 #include <resource/ResourceFinder.h>
 
@@ -30,6 +31,49 @@
 namespace ad {
 namespace snacgame {
 
+struct ImguiDisplays
+{
+    bool mShowMappings = false;
+    bool mShowSimulationDelta = false;
+    bool mShowImguiDemo = false;
+    bool mShowLogLevel = false;
+
+    void display()
+    {
+        ImGui::Begin("Debug windows");
+        ImGui::Checkbox("Mappings", &mShowMappings);
+        ImGui::Checkbox("Simulation delta", &mShowSimulationDelta);
+        ImGui::Checkbox("Log level", &mShowLogLevel);
+        ImGui::Checkbox("ImguiDemo", &mShowImguiDemo);
+        ImGui::End();
+    }
+};
+
+/// \brief Implement HidManager's Inhibiter protocol, for Imgui.
+/// Allowing the app to discard input events that are handled by DearImgui.
+class ImguiInhibiter : public snac::HidManager::Inhibiter
+{
+public:
+    enum WantCapture
+    {
+        Null,
+        Mouse = 1 << 0,
+        Keyboard = 1 << 1,
+    };
+
+    void resetCapture(WantCapture aCaptures) { mCaptures = aCaptures; }
+    bool isCapturingMouse() const override
+    {
+        return (mCaptures & Mouse) == Mouse;
+    }
+    bool isCapturingKeyboard() const override
+    {
+        return (mCaptures & Keyboard) == Keyboard;
+    }
+
+private:
+    std::uint8_t mCaptures{0};
+};
 
 class SnacGame
 {
@@ -43,7 +87,11 @@ public:
 
     bool update(float aDelta, const RawInput & aInput);
 
-    std::unique_ptr<visu::GraphicState> makeGraphicState(); 
+    void drawDebugUi(snac::ConfigurableSettings & aSettings,
+                     ImguiInhibiter & aInhibiter,
+                     const RawInput & aInput);
+
+    std::unique_ptr<visu::GraphicState> makeGraphicState();
 
     snac::Camera::Parameters getCameraParameters() const;
 
@@ -71,10 +119,10 @@ private:
     double mSimulationTime{0.};
 
     imguiui::ImguiUi & mImguiUi;
+    ImguiDisplays mImguiDisplays;
 
     bool mHello = false;
 };
 
-
-} // namespace cubes
+} // namespace snacgame
 } // namespace ad
