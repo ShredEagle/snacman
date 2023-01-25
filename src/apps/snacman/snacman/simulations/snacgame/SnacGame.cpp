@@ -5,15 +5,18 @@
 
 #include "context/InputDeviceDirectory.h"
 
+#include "component/Context.h"
 #include "component/Controller.h"
 #include "component/Level.h"
+#include "component/MovementScreenSpace.h"
 
-#include "imguiui/ImguiUi.h"
-#include "snacman/simulations/snacgame/component/Context.h"
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
+#include "system/MovementIntegration.h"
 #include "system/PlayerInvulFrame.h"
 #include "system/PlayerSpawner.h"
+
+#include "imguiui/ImguiUi.h"
 
 #include <snac-renderer/text/Text.h>
 
@@ -56,6 +59,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mSystems.get(init)->add(system::PlayerInvulFrame{mWorld});
     mSystems.get(init)->add(system::DeterminePlayerAction{mWorld, mLevel});
     mSystems.get(init)->add(system::IntegratePlayerMovement{mWorld, mLevel});
+    mSystems.get(init)->add(system::MovementIntegration{mWorld});
 
     markovjunior::Grid grid = markovInterpreter.mGrid;
 
@@ -65,17 +69,23 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         inputDeviceDirectory,
         component::ControllerType::Keyboard);
 
-    makeText(mWorld,
-             init,
-             "Snacman!",
-             // TODO this should be done within the ResourceManager, here only fetching the Font via name + size
-             std::make_shared<snac::Font>(
-                mFreetype,
-                *aResourceFinder.find("fonts/Comfortaa-Regular.ttf"),
-                120,
-                snac::makeDefaultTextProgram(aResourceFinder)
-            ),
-            math::hdr::gYellow<float>);
+    ent::Handle<ent::Entity> title = 
+        makeText(mWorld,
+                init,
+                "Snacman!",
+                // TODO this should be done within the ResourceManager, here only fetching the Font via name + size
+                std::make_shared<snac::Font>(
+                    mFreetype,
+                    *aResourceFinder.find("fonts/Comfortaa-Regular.ttf"),
+                    120,
+                    snac::makeDefaultTextProgram(aResourceFinder)
+                ),
+                math::hdr::gYellow<float>,
+                math::Position<2, float>{-0.5f, 0.f});
+    // TODO Remove, this is a silly demonstration.
+    title.get(init)->add(component::MovementScreenSpace{
+        .mAngularSpeed = math::Radian<float>{math::pi<float> / 2.f}
+    });
 
     mContext.get(init)->add(component::Context(inputDeviceDirectory, aResourceFinder));
 }
@@ -127,6 +137,7 @@ bool SnacGame::update(float aDelta, const RawInput & aInput)
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
+    mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
 
 
     mImguiUi.mFrameMutex.lock();
@@ -185,11 +196,14 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     // Text
     //
     mQueryText.get(nomutation).each(
-        [&state](ent::Handle<ent::Entity> aHandle, component::Text & aText)
+        [&state](ent::Handle<ent::Entity> aHandle, component::Text & aText, component::PoseScreenSpace & aPose)
         {
             state->mTextEntities.insert(
                 aHandle.id(),
                 visu::TextScreen{
+                    // TODO
+                    .mPosition_unitscreen = aPose.mPosition_u, 
+                    .mOrientation = aPose.mRotationCCW,
                     .mString = aText.mString,
                     .mFont = aText.mFont,
                     .mColor = aText.mColor,

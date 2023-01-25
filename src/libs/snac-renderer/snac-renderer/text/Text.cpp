@@ -66,12 +66,9 @@ GlyphAtlas::GlyphAtlas(arte::FontFace aFontFace) :
 
 
 std::vector<GlyphInstance> GlyphAtlas::populateInstances(const std::string & aString,
-                                                         math::sdr::Rgba aColor) const
+                                                         math::sdr::Rgba aColor,
+                                                         math::AffineMatrix<3, float> aLocalToScreen_p) const
 {
-    math::Size<2, GLfloat> stringDimension_p = graphics::detail::getStringDimension(
-        aString,
-        mGlyphCache,
-        mFontFace);
 
     std::vector<GlyphInstance> glyphInstances;
     graphics::detail::forEachGlyph(
@@ -79,15 +76,13 @@ std::vector<GlyphInstance> GlyphAtlas::populateInstances(const std::string & aSt
         {0.f, 0.f},
         mGlyphCache,
         mFontFace,
-        [&glyphInstances, stringDimension_p, aColor/*, stringPos*/]
+        [&glyphInstances, aColor, aLocalToScreen_p]
         (const graphics::detail::RenderedGlyph & aGlyph, math::Position<2, GLfloat> aGlyphPosition_p)
         {
              glyphInstances.push_back(GlyphInstance{
                 .glyphToScreen_p =
-                    math::trans2d::translate(aGlyphPosition_p.as<math::Vec>()
-                                             - stringDimension_p.as<math::Vec>() / 2.f)
-                    * math::trans2d::rotate(math::Degree{45.f})
-                    //* math::trans2d::translate(stringPos.as<math::Vec>())
+                    math::trans2d::translate(aGlyphPosition_p.as<math::Vec>())
+                    * aLocalToScreen_p
                     ,
                 .albedo = aColor,
                 .offsetInTexture_p = aGlyph.offsetInTexture,

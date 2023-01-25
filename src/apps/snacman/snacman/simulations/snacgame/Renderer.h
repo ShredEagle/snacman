@@ -16,13 +16,14 @@
 namespace ad {
 namespace snacgame {
 
+class Renderer;
 
 // TODO #generic-render I would like the render code to be generic so we get rid of these specialized render classes.
 struct TextRenderer
 {
     TextRenderer();
 
-    void render(snac::Renderer & aRenderer, 
+    void render(Renderer & aRenderer, 
                 const visu::GraphicState & aState,
                 const snac::UniformRepository & aUniforms,
                 const snac::UniformBlocks & aUniformBlocks);
@@ -32,6 +33,8 @@ struct TextRenderer
 
 class Renderer
 {
+    friend struct TextRenderer;
+
 public:
     using GraphicState_t = visu::GraphicState;
 

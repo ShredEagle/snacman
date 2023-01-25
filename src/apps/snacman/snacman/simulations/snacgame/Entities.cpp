@@ -5,6 +5,7 @@
 #include "component/Level.h"
 #include "component/PlayerLifeCycle.h"
 #include "component/PlayerMoveState.h"
+#include "component/PoseScreenSpace.h"
 #include "component/Spawner.h"
 #include "component/Text.h"
 
@@ -136,7 +137,8 @@ ent::Handle<ent::Entity> makeText(ent::EntityManager & mWorld,
                                   ent::Phase & aPhase,
                                   std::string aString,
                                   std::shared_ptr<snac::Font> aFont,
-                                  math::hdr::Rgba_f aColor)
+                                  math::hdr::Rgba_f aColor,
+                                  math::Position<2, float> aPosition_unitscreen)
 {
     auto handle = mWorld.addEntity();
 
@@ -145,7 +147,9 @@ ent::Handle<ent::Entity> makeText(ent::EntityManager & mWorld,
             .mString{std::move(aString)},
             .mFont = std::move(aFont),
             .mColor = aColor,
-        });
+        })
+        .add(component::PoseScreenSpace{.mPosition_u = aPosition_unitscreen})
+    ;
 
     return handle;
 }

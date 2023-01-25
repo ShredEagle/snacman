@@ -44,7 +44,8 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
 // which is by definition the opposite of genericity.
 struct TextScreen
 {
-    math::Position<3, float> mPosition_unitscreen;
+    math::Position<2, float> mPosition_unitscreen;
+    math::Radian<float> mOrientation;
     std::string mString;
     std::shared_ptr<snac::Font> mFont;
     math::hdr::Rgba_f mColor;
@@ -57,6 +58,7 @@ inline TextScreen interpolate(const TextScreen & aLeftEntity, const TextScreen &
         .mPosition_unitscreen = math::lerp(aLeftEntity.mPosition_unitscreen,
                                            aRightEntity.mPosition_unitscreen,
                                            aInterpolant),
+        .mOrientation = math::lerp(aLeftEntity.mOrientation, aRightEntity.mOrientation, aInterpolant),
         .mString = aLeftEntity.mString,
         .mFont = aLeftEntity.mFont,
         .mColor = math::lerp(aLeftEntity.mColor, aRightEntity.mColor, aInterpolant),

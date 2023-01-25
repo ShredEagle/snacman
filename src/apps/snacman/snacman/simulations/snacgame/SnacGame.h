@@ -5,6 +5,7 @@
 #include "Renderer.h"
 
 #include "component/Geometry.h"
+#include "component/PoseScreenSpace.h"
 #include "component/Text.h"
 
 #include "system/SystemOrbitalCamera.h"
@@ -53,6 +54,10 @@ private:
     graphics::AppInterface * mAppInterface;
     snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
 
+    // Must appear before the EntityManager, because the EntityManager
+    // might contain Freetype FontFaces, and the Freetype object must outlive them.
+    arte::Freetype mFreetype;
+
     ent::EntityManager mWorld;
     ent::Handle<ent::Entity> mSystems;
     ent::Handle<ent::Entity> mLevel;
@@ -60,14 +65,12 @@ private:
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 
-    EntityWrap<ent::Query<component::Text>> mQueryText;
+    EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};
 
     imguiui::ImguiUi & mImguiUi;
-
-    arte::Freetype mFreetype;
 
     bool mHello = false;
 };

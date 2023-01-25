@@ -27,20 +27,41 @@ TextRenderer::TextRenderer() :
 {}
 
 
-void TextRenderer::render(snac::Renderer & aRenderer,
+void TextRenderer::render(Renderer & aRenderer,
                           const visu::GraphicState & aState,
                           const snac::UniformRepository & aUniforms,
                           const snac::UniformBlocks & aUniformBlocks)
 {
+    // Note: this is pessimised code.
+    // Most of these expensive operations should be taken out and the results cached.
     for (const visu::TextScreen & text : aState.mTextEntities)
     {
+        // TODO should be cached once in the string
+        math::Size<2, GLfloat> stringDimension_p = graphics::detail::getStringDimension(
+            text.mString,
+            text.mFont->mGlyphAtlas.mGlyphCache,
+            text.mFont->mGlyphAtlas.mFontFace);
+
+        // TODO should be done outside of here (so static strings are not recomputed each frame, for example)
+        auto stringPos = 
+            text.mPosition_unitscreen
+                .cwMul(static_cast<math::Position<2, GLfloat>>(aRenderer.mAppInterface.getFramebufferSize()));
+
+        auto localToScreen_pixel = 
+            math::trans2d::translate(- stringDimension_p.as<math::Vec>() / 2.f)
+            * math::trans2d::rotate(text.mOrientation)
+            * math::trans2d::translate(stringDimension_p.as<math::Vec>() / 2.f)
+            * math::trans2d::translate(stringPos.as<math::Vec>())
+            ;
+
         // TODO should be cached once in the string and forwarded here
         std::vector<snac::GlyphInstance> textBufferData = 
-            text.mFont->mGlyphAtlas.populateInstances(text.mString, to_sdr(text.mColor));
+            text.mFont->mGlyphAtlas.populateInstances(text.mString, to_sdr(text.mColor), localToScreen_pixel);
+
 
         // TODO should be consolidated, a single call for all string of the same font.
         mGlyphInstances.respecifyData(std::span{textBufferData});
-        aRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances, aUniforms, aUniformBlocks);
+        aRenderer.mRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances, aUniforms, aUniformBlocks);
     }
 
 }
@@ -137,7 +158,7 @@ void Renderer::render(const visu::GraphicState & aState)
     // TODO Why it does not start at 20, but at 32 ????!
     //graphics::detail::RenderedGlyph glyph = mGlyphAtlas.mGlyphMap.at(90);
 
-    mTextRenderer.render(mRenderer, aState, uniforms, uniformBlocks);
+    mTextRenderer.render(*this, aState, uniforms, uniformBlocks);
 }
 
 
