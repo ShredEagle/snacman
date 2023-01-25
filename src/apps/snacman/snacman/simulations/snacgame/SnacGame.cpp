@@ -15,6 +15,8 @@
 #include "system/PlayerInvulFrame.h"
 #include "system/PlayerSpawner.h"
 
+#include <snac-renderer/text/Text.h>
+
 #include <imgui.h>
 #include <markovjunior/Grid.h>
 #include <math/Color.h>
@@ -34,6 +36,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mContext{mWorld.addEntity()},
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld},
+    mQueryText{mWorld, mWorld},
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
@@ -61,6 +64,18 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         mWorld, init,
         inputDeviceDirectory,
         component::ControllerType::Keyboard);
+
+    makeText(mWorld,
+             init,
+             "Snacman!",
+             // TODO this should be done within the ResourceManager, here only fetching the Font via name + size
+             std::make_shared<snac::Font>(
+                mFreetype,
+                *aResourceFinder.find("fonts/Comfortaa-Regular.ttf"),
+                120,
+                snac::makeDefaultTextProgram(aResourceFinder)
+            ),
+            math::hdr::gYellow<float>);
 
     mContext.get(init)->add(component::Context(inputDeviceDirectory, aResourceFinder));
 }
@@ -165,6 +180,23 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                 state->mImguiCommands.push_back(func);
             }
         });
+
+    //
+    // Text
+    //
+    mQueryText.get(nomutation).each(
+        [&state](ent::Handle<ent::Entity> aHandle, component::Text & aText)
+        {
+            state->mTextEntities.insert(
+                aHandle.id(),
+                visu::TextScreen{
+                    .mString = aText.mString,
+                    .mFont = aText.mFont,
+                    .mColor = aText.mColor,
+            });
+        }
+    );
+
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
     return state;

@@ -5,9 +5,13 @@
 #include "Renderer.h"
 
 #include "component/Geometry.h"
+#include "component/Text.h"
+
 #include "system/SystemOrbitalCamera.h"
 
 #include "../../Input.h"
+
+#include <arte/Freetype.h>
 
 #include <entity/EntityManager.h>
 
@@ -56,10 +60,14 @@ private:
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 
+    EntityWrap<ent::Query<component::Text>> mQueryText;
+
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};
 
     imguiui::ImguiUi & mImguiUi;
+
+    arte::Freetype mFreetype;
 
     bool mHello = false;
 };

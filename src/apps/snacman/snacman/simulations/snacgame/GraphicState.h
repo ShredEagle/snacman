@@ -3,13 +3,15 @@
 
 #include "../../SparseSet.h"
 
-#include <functional>
 #include <math/Angle.h>
 #include <math/Color.h>
 #include <math/Homogeneous.h> // TODO #pose remove
 #include <math/Vector.h>
 #include <math/Interpolation/Interpolation.h>
 
+#include <snac-renderer/text/Text.h>
+
+#include <functional>
 #include <vector>
 
 
@@ -25,6 +27,41 @@ struct Entity
     math::Radian<float> mYAngle;
     math::hdr::Rgba_f mColor;
 };
+
+                    
+inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntity, float aInterpolant)
+{
+    return Entity{
+        math::lerp(aLeftEntity.mPosition_world, aRightEntity.mPosition_world,   aInterpolant),
+        math::lerp(aLeftEntity.mScaling,        aRightEntity.mScaling,          aInterpolant),
+        math::lerp(aLeftEntity.mYAngle,         aRightEntity.mYAngle,           aInterpolant),
+        math::lerp(aLeftEntity.mColor,          aRightEntity.mColor,            aInterpolant),
+    };
+}
+
+
+// TODO #generic-render We should watch out for the proliferation of specialized graphics state entities,
+// which is by definition the opposite of genericity.
+struct TextScreen
+{
+    math::Position<3, float> mPosition_unitscreen;
+    std::string mString;
+    std::shared_ptr<snac::Font> mFont;
+    math::hdr::Rgba_f mColor;
+};
+
+
+inline TextScreen interpolate(const TextScreen & aLeftEntity, const TextScreen & aRightEntity, float aInterpolant)
+{
+    return TextScreen{
+        .mPosition_unitscreen = math::lerp(aLeftEntity.mPosition_unitscreen,
+                                           aRightEntity.mPosition_unitscreen,
+                                           aInterpolant),
+        .mString = aLeftEntity.mString,
+        .mFont = aLeftEntity.mFont,
+        .mColor = math::lerp(aLeftEntity.mColor, aRightEntity.mColor, aInterpolant),
+    };
+}
 
 
 struct Camera
@@ -43,9 +80,27 @@ struct GraphicState
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
     Camera mCamera; 
 
+    snac::SparseSet<TextScreen, MaxEntityId> mTextEntities;
+
     std::vector<std::function<void()>> mImguiCommands;
 };
 
+
+template <class T_entity, std::size_t N_universeSize>
+void interpolateEach(float aInterpolant,
+                     const snac::SparseSet<T_entity, N_universeSize> & aLeftSet,
+                     const snac::SparseSet<T_entity, N_universeSize> & aRightSet,
+                     snac::SparseSet<T_entity, N_universeSize> & aOutSet)
+{
+    for(const auto & [id, rightEntity] : aRightSet)
+    {
+        if(aLeftSet.contains(id)) 
+        {
+            const T_entity & leftEntity = aLeftSet[id];    
+            aOutSet.insert(id, interpolate(leftEntity, rightEntity, aInterpolant));
+        }
+    }
+}
 
 // TODO Handle cases where left and right do not have the same entities (i.e. only interpolate the sets intersection).
 inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState & aRight, float aInterpolant)
@@ -57,22 +112,14 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         .mImguiCommands{aRight.mImguiCommands},
     };
 
-    for(const auto & [id, rightEntity] : aRight.mEntities)
-    {
-        if(aLeft.mEntities.contains(id)) 
-        {
-            const Entity & leftEntity = aLeft.mEntities[id];    
-            state.mEntities.insert(
-                id,
-                Entity{
-                    math::lerp(leftEntity.mPosition_world, rightEntity.mPosition_world,   aInterpolant),
-                    math::lerp(leftEntity.mScaling,        rightEntity.mScaling,   aInterpolant),
-                    math::lerp(leftEntity.mYAngle,         rightEntity.mYAngle,           aInterpolant),
-                    math::lerp(leftEntity.mColor,          rightEntity.mColor,            aInterpolant)});
-        }
-    }
+    interpolateEach(aInterpolant, aLeft.mEntities, aRight.mEntities, state.mEntities);
+
+    interpolateEach(aInterpolant, aLeft.mTextEntities, aRight.mTextEntities, state.mTextEntities);
+
+
     return state;
 }
+
 
 } // namespace visu
 } // namespace cubes

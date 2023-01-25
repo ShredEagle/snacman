@@ -31,6 +31,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerMoveState.h
     simulations/snacgame/component/Spawner.h
+    simulations/snacgame/component/Text.h
 
     simulations/snacgame/system/DeterminePlayerAction.h
     simulations/snacgame/system/IntegratePlayerMovement.h

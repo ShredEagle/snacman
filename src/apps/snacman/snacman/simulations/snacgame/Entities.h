@@ -9,6 +9,12 @@
 #include <entity/EntityManager.h>
 
 namespace ad {
+
+// Forward
+namespace snac {
+    struct Font;
+}
+
 namespace snacgame {
 
 void createLevel(ent::Handle<ent::Entity> & aLevelHandle, ent::EntityManager & aWorld,
@@ -36,6 +42,12 @@ createPlayerEntity(ent::EntityManager & mWorld,
                    InputDeviceDirectory & aDeviceDirectory,
                    component::ControllerType aControllerType,
                    int aControllerId = 0);
+
+ent::Handle<ent::Entity> makeText(ent::EntityManager & mWorld,
+                                  ent::Phase & aPhase,
+                                  std::string aString,
+                                  std::shared_ptr<snac::Font> aFont,
+                                  math::hdr::Rgba_f aColor);
 
 } // namespace snacgame
 } // namespace ad

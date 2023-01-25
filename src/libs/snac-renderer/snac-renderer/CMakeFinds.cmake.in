@@ -1,4 +1,5 @@
-@find_package@(Graphics CONFIG @REQUIRED@ COMPONENTS graphics renderer)
+@find_package@(Graphics CONFIG @REQUIRED@ COMPONENTS arte graphics renderer)
+@find_package@(Handy CONFIG @REQUIRED@ COMPONENTS resource)
 @find_package@(Math CONFIG @REQUIRED@ COMPONENTS math)
 
 @find_package@(spdlog CONFIG @REQUIRED@)
