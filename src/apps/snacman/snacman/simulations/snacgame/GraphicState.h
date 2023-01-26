@@ -8,6 +8,7 @@
 #include <math/Homogeneous.h> // TODO #pose remove
 #include <math/Vector.h>
 #include <math/Interpolation/Interpolation.h>
+#include <math/Interpolation/QuaternionInterpolation.h>
 
 #include <snac-renderer/text/Text.h>
 
@@ -23,8 +24,8 @@ namespace visu {
 struct Entity
 {
     math::Position<3, float> mPosition_world;
-    math::Size<3, float> mScaling;
-    math::Radian<float> mYAngle;
+    math::Size<3, float> mScaling; // TODO were is it used?
+    math::Quaternion<float> mOrientation;
     math::hdr::Rgba_f mColor;
 };
 
@@ -34,7 +35,7 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
     return Entity{
         math::lerp(aLeftEntity.mPosition_world, aRightEntity.mPosition_world,   aInterpolant),
         math::lerp(aLeftEntity.mScaling,        aRightEntity.mScaling,          aInterpolant),
-        math::lerp(aLeftEntity.mYAngle,         aRightEntity.mYAngle,           aInterpolant),
+        math::slerp(aLeftEntity.mOrientation,   aRightEntity.mOrientation,      aInterpolant),
         math::lerp(aLeftEntity.mColor,          aRightEntity.mColor,            aInterpolant),
     };
 }

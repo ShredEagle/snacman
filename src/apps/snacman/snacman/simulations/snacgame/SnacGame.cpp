@@ -240,7 +240,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                                         visu::Entity{
                                             .mPosition_world = worldPosition,
                                             .mScaling = aGeometry.mScaling,
-                                            .mYAngle = aGeometry.mYRotation,
+                                            .mOrientation = aGeometry.mOrientation,
                                             .mColor = aGeometry.mColor,
                                         });
                 std::function<void()> func = [worldPosition]() {

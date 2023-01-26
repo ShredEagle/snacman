@@ -2,7 +2,7 @@
 
 
 #include <math/Color.h>
-#include <math/Angle.h>
+#include <math/Quaternion.h>
 #include <math/Vector.h>
 
 
@@ -24,7 +24,7 @@ struct Geometry
     math::Position<2, int> mGridPosition;
     math::Size<3, float> mScaling = math::Size<3, float>{1.f, 1.f, 1.f};
     GeometryLayer mLayer = GeometryLayer::Level;
-    math::Radian<float> mYRotation;
+    math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
     math::hdr::Rgba_f mColor;
     
     //Metadata
