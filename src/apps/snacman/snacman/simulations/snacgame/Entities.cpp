@@ -41,9 +41,9 @@ void createPill(ent::EntityManager & mWorld,
             .mColor = math::hdr::Rgb<float>{1.f, 0.5f, 0.5f} 
         })
         .add(component::Speed{
-            .mRotation = math::Quaternion<float>{
-                math::UnitVec<3, float>{{1.f, 1.f, 1.f}},
-                math::Degree<float>{2.f}
+            .mRotation = AxisAngle{
+                .mAxis = math::UnitVec<3, float>{{1.f, 1.f, 1.f}},
+                .mAngle = math::Degree<float>{60.f}
             },
         })
         ;

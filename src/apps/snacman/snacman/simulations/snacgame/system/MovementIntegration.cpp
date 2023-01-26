@@ -12,9 +12,9 @@ void MovementIntegration::update(float aDelta)
         [aDelta]
         (const component::Speed & aMovement, component::Geometry & aPose) 
         {
-            // TODO understand how to represent rotational velocity here. Can quaternion be used for that?
+            math::Quaternion rotation{aMovement.mRotation.mAxis, aDelta * aMovement.mRotation.mAngle};
             // Quaternion multiplication perform rotation from right to left
-            aPose.mOrientation = /*aDelta * */aMovement.mRotation * aPose.mOrientation;
+            aPose.mOrientation = rotation * aPose.mOrientation;
         }
     );
     mScreenMovables.each(
