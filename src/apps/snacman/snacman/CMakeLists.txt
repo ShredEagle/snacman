@@ -21,7 +21,6 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SnacGame.h
-    simulations/snacgame/SystemMove.h
 
     simulations/snacgame/context/InputDeviceDirectory.h
 
@@ -55,7 +54,6 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/Entities.cpp
     simulations/snacgame/Renderer.cpp
     simulations/snacgame/SnacGame.cpp
-    simulations/snacgame/SystemMove.cpp
 
     simulations/snacgame/system/DeterminePlayerAction.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
