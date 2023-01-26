@@ -4,6 +4,8 @@
 #include "EntityWrap.h"
 #include "Renderer.h"
 #include "snacman/LoopSettings.h"
+#include "snacman/simulations/snacgame/component/Context.h"
+#include "snacman/simulations/snacgame/system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
 
 #include "../../Input.h"
@@ -13,12 +15,15 @@
 #include <graphics/AppInterface.h>
 #include <imguiui/ImguiUi.h>
 #include <markovjunior/Interpreter.h>
+#include <platform/Filesystem.h>
 #include <memory>
-
-class ImguiGameLoop;
 
 namespace ad {
 namespace snacgame {
+
+// TODO: before commit change this
+constexpr int gGridSize = 29;
+constexpr float gCellSize = 2.f;
 
 struct ImguiDisplays
 {
@@ -90,10 +95,9 @@ private:
     snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
 
     ent::EntityManager mWorld;
-    ent::Handle<ent::Entity> mSystems;
-    ent::Handle<ent::Entity> mLevel;
-    ent::Handle<ent::Entity> mContext;
-    EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
+    EntityWrap<component::Context> mContext;
+    EntityWrap<system::SceneStateMachine> mStateMachine;
+    EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 
     // A float would run out of precision too quickly.
@@ -101,8 +105,6 @@ private:
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;
-
-    bool mHello = false;
 };
 
 } // namespace snacgame

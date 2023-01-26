@@ -2,7 +2,7 @@
 
 #include "component/Controller.h"
 #include "component/Geometry.h"
-#include "component/Level.h"
+#include "component/LevelData.h"
 #include "component/PlayerLifeCycle.h"
 #include "component/PlayerMoveState.h"
 #include "component/Spawner.h"
@@ -12,19 +12,12 @@
 namespace ad {
 namespace snacgame {
 
-void createLevel(ent::Handle<ent::Entity> & aLevelHandle,
-                 ent::EntityManager & aWorld,
-                 ent::Phase & aInit,
-                 const markovjunior::Grid & aGrid)
-{
-    aLevelHandle.get(aInit)->add(component::Level(aWorld, aInit, aGrid));
-}
-
 void createPill(ent::EntityManager & mWorld,
                 ent::Phase & aInit,
                 const math::Position<2, int> & aGridPos)
 {
     auto handle = mWorld.addEntity();
+    handle.get(aInit)->add(component::LevelEntity{});
     handle.get(aInit)->add(component::Geometry{
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = aGridPos,
@@ -40,6 +33,7 @@ createPathEntity(ent::EntityManager & mWorld,
                  const math::Position<2, int> & aGridPos)
 {
     auto handle = mWorld.addEntity();
+    handle.get(aInit)->add(component::LevelEntity{});
     handle.get(aInit)->add(component::Geometry{
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = aGridPos,
@@ -55,6 +49,7 @@ createPortalEntity(ent::EntityManager & mWorld,
                    const math::Position<2, int> & aGridPos)
 {
     auto handle = mWorld.addEntity();
+    handle.get(aInit)->add(component::LevelEntity{});
     handle.get(aInit)->add(component::Geometry{
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = aGridPos,
@@ -70,6 +65,7 @@ createCopPenEntity(ent::EntityManager & mWorld,
                    const math::Position<2, int> & aGridPos)
 {
     auto handle = mWorld.addEntity();
+    handle.get(aInit)->add(component::LevelEntity{});
     handle.get(aInit)->add(component::Geometry{
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = aGridPos,
@@ -85,6 +81,7 @@ createPlayerSpawnEntity(ent::EntityManager & mWorld,
                         const math::Position<2, int> & aGridPos)
 {
     auto spawner = mWorld.addEntity();
+    spawner.get(aInit)->add(component::LevelEntity{});
     spawner.get(aInit)->add(component::Geometry{
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = aGridPos,
@@ -111,8 +108,7 @@ createPlayerEntity(ent::EntityManager & mWorld,
         .mGridPosition = math::Position<2, int>::Zero(),
         .mLayer = component::GeometryLayer::Player,
         .mYRotation = math::Degree<float>{0.f},
-        .mColor = math::hdr::gMagenta<float>,
-        .mShouldBeDrawn = false});
+        .mColor = math::hdr::gMagenta<float>});
     playerEntity->add(component::PlayerLifeCycle{});
 
     if (aControllerType == component::ControllerType::Keyboard)
@@ -127,6 +123,20 @@ createPlayerEntity(ent::EntityManager & mWorld,
     playerEntity->add(component::PlayerMoveState{});
 
     return playerHandle;
+}
+
+ent::Handle<ent::Entity>
+createMenuItem(ent::EntityManager &aWorld, ent::Phase & aInit, const math::Position<2, int> &aPos)
+{
+    auto menuItem = aWorld.addEntity();
+    menuItem.get(aInit)->add(component::Geometry{
+        .mSubGridPosition = math::Position<2, float>::Zero(),
+        .mGridPosition = aPos,
+        .mLayer = component::GeometryLayer::Menu,
+        .mYRotation = math::Degree<float>{0.f},
+        .mColor = math::hdr::gMagenta<float>});
+
+    return menuItem;
 }
 } // namespace snacgame
 } // namespace ad

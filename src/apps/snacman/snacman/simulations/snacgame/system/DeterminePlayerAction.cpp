@@ -4,8 +4,7 @@
 #include "snacman/Input.h"
 
 #include "../component/AllowedMovement.h"
-
-#include "../component/Level.h"
+#include "../component/LevelData.h"
 
 namespace ad {
 namespace snacgame {
@@ -16,85 +15,92 @@ constexpr float gTurningZoneHalfWidth = 0.1f;
 void DeterminePlayerAction::update()
 {
     ent::Phase nomutation;
-    auto levelGrid = mLevel.get(nomutation)->get<component::Level>().mLevelGrid;
-    int colCount = mLevel.get(nomutation)->get<component::Level>().mColCount;
-    mPlayer.each([colCount, &levelGrid, &nomutation](
-                     component::Controller & aController,
-                     component::Geometry & aPlayerGeometry,
-                     component::PlayerMoveState & aPlayerMoveState) {
-        int allowedMovementFlag = component::gAllowedMovementNone;
-        int oldMoveState = aPlayerMoveState.mMoveState;
-        int inputMoveFlag = gPlayerMoveFlagNone;
 
-        auto pathUnderPlayerAllowedMove =
-            levelGrid
-                .at(aPlayerGeometry.mGridPosition.x()
-                    + aPlayerGeometry.mGridPosition.y() * colCount)
-                .get(nomutation)
-                ->get<component::AllowedMovement>();
+    mLevel.each([&](component::LevelData & aLevelData,
+                    component::LevelCreated &) {
+        auto tiles = aLevelData.mTiles;
+        int colCount = aLevelData.mSize.height();
+        mPlayer.each([colCount, &tiles](
+                         component::Controller & aController,
+                         component::Geometry & aPlayerGeometry,
+                         component::PlayerMoveState & aPlayerMoveState) {
+            int allowedMovementFlag = component::gAllowedMovementNone;
+            int oldMoveState = aPlayerMoveState.mMoveState;
+            int inputMoveFlag = gPlayerMoveFlagNone;
 
-        if (aPlayerGeometry.mSubGridPosition.y() > 0.f
-            || (pathUnderPlayerAllowedMove.mAllowedMovement
-                    & component::gAllowedMovementUp
-                && aPlayerGeometry.mSubGridPosition.x() > -gTurningZoneHalfWidth
-                && aPlayerGeometry.mSubGridPosition.x()
-                       < gTurningZoneHalfWidth))
-        {
-            allowedMovementFlag |= component::gAllowedMovementUp;
-        }
-        if (aPlayerGeometry.mSubGridPosition.y() < 0.f
-            || (pathUnderPlayerAllowedMove.mAllowedMovement
-                    & component::gAllowedMovementDown
-                && aPlayerGeometry.mSubGridPosition.x() > -gTurningZoneHalfWidth
-                && aPlayerGeometry.mSubGridPosition.x()
-                       < gTurningZoneHalfWidth))
-        {
-            allowedMovementFlag |= component::gAllowedMovementDown;
-        }
-        if (aPlayerGeometry.mSubGridPosition.x() < 0.f
-            || (pathUnderPlayerAllowedMove.mAllowedMovement
-                    & component::gAllowedMovementLeft
-                && aPlayerGeometry.mSubGridPosition.y() > -gTurningZoneHalfWidth
-                && aPlayerGeometry.mSubGridPosition.y()
-                       < gTurningZoneHalfWidth))
-        {
-            allowedMovementFlag |= component::gAllowedMovementLeft;
-        }
-        if (aPlayerGeometry.mSubGridPosition.x() > 0.f
-            || (pathUnderPlayerAllowedMove.mAllowedMovement
-                    & component::gAllowedMovementRight
-                && aPlayerGeometry.mSubGridPosition.y() > -gTurningZoneHalfWidth
-                && aPlayerGeometry.mSubGridPosition.y()
-                       < gTurningZoneHalfWidth))
-        {
-            allowedMovementFlag |= component::gAllowedMovementRight;
-        }
+            auto pathUnderPlayerAllowedMove =
+                tiles.at(aPlayerGeometry.mGridPosition.x()
+                         + aPlayerGeometry.mGridPosition.y() * colCount);
 
-        if ((aPlayerGeometry.mSubGridPosition.y() < 0.f
-             && !(allowedMovementFlag & component::gAllowedMovementUp))
-            || (aPlayerGeometry.mSubGridPosition.y() > 0.f
-                && !(allowedMovementFlag & component::gAllowedMovementDown)))
-        {
-            aPlayerGeometry.mSubGridPosition.y() = 0.f;
-        }
-        if ((aPlayerGeometry.mSubGridPosition.x() > 0.f
-             && !(allowedMovementFlag & component::gAllowedMovementLeft))
-            || (aPlayerGeometry.mSubGridPosition.x() < 0.f
-                && !(allowedMovementFlag & component::gAllowedMovementRight)))
-        {
-            aPlayerGeometry.mSubGridPosition.x() = 0.f;
-        }
+            if (aPlayerGeometry.mSubGridPosition.y() > 0.f
+                || (pathUnderPlayerAllowedMove.mAllowedMove
+                        & component::gAllowedMovementUp
+                    && aPlayerGeometry.mSubGridPosition.x()
+                           > -gTurningZoneHalfWidth
+                    && aPlayerGeometry.mSubGridPosition.x()
+                           < gTurningZoneHalfWidth))
+            {
+                allowedMovementFlag |= component::gAllowedMovementUp;
+            }
+            if (aPlayerGeometry.mSubGridPosition.y() < 0.f
+                || (pathUnderPlayerAllowedMove.mAllowedMove
+                        & component::gAllowedMovementDown
+                    && aPlayerGeometry.mSubGridPosition.x()
+                           > -gTurningZoneHalfWidth
+                    && aPlayerGeometry.mSubGridPosition.x()
+                           < gTurningZoneHalfWidth))
+            {
+                allowedMovementFlag |= component::gAllowedMovementDown;
+            }
+            if (aPlayerGeometry.mSubGridPosition.x() < 0.f
+                || (pathUnderPlayerAllowedMove.mAllowedMove
+                        & component::gAllowedMovementLeft
+                    && aPlayerGeometry.mSubGridPosition.y()
+                           > -gTurningZoneHalfWidth
+                    && aPlayerGeometry.mSubGridPosition.y()
+                           < gTurningZoneHalfWidth))
+            {
+                allowedMovementFlag |= component::gAllowedMovementLeft;
+            }
+            if (aPlayerGeometry.mSubGridPosition.x() > 0.f
+                || (pathUnderPlayerAllowedMove.mAllowedMove
+                        & component::gAllowedMovementRight
+                    && aPlayerGeometry.mSubGridPosition.y()
+                           > -gTurningZoneHalfWidth
+                    && aPlayerGeometry.mSubGridPosition.y()
+                           < gTurningZoneHalfWidth))
+            {
+                allowedMovementFlag |= component::gAllowedMovementRight;
+            }
 
-        inputMoveFlag = aController.mCommandQuery;
+            if ((aPlayerGeometry.mSubGridPosition.y() < 0.f
+                 && !(allowedMovementFlag & component::gAllowedMovementUp))
+                || (aPlayerGeometry.mSubGridPosition.y() > 0.f
+                    && !(allowedMovementFlag
+                         & component::gAllowedMovementDown)))
+            {
+                aPlayerGeometry.mSubGridPosition.y() = 0.f;
+            }
+            if ((aPlayerGeometry.mSubGridPosition.x() > 0.f
+                 && !(allowedMovementFlag & component::gAllowedMovementLeft))
+                || (aPlayerGeometry.mSubGridPosition.x() < 0.f
+                    && !(allowedMovementFlag
+                         & component::gAllowedMovementRight)))
+            {
+                aPlayerGeometry.mSubGridPosition.x() = 0.f;
+            }
 
-        inputMoveFlag &= allowedMovementFlag;
+            inputMoveFlag = aController.mCommandQuery;
 
-        if (inputMoveFlag == gPlayerMoveFlagNone)
-        {
-            inputMoveFlag = oldMoveState & allowedMovementFlag;
-        }
+            inputMoveFlag &= allowedMovementFlag;
 
-        aPlayerMoveState.mMoveState = inputMoveFlag;
+            if (inputMoveFlag == gPlayerMoveFlagNone)
+            {
+                inputMoveFlag = oldMoveState & allowedMovementFlag;
+            }
+
+            aPlayerMoveState.mMoveState = inputMoveFlag;
+        });
     });
 }
 

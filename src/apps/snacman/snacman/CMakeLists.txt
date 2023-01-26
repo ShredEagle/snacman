@@ -29,16 +29,23 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/Context.h
     simulations/snacgame/component/Controller.h
     simulations/snacgame/component/Geometry.h
-    simulations/snacgame/component/Level.h
+    simulations/snacgame/component/LevelData.h
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerMoveState.h
     simulations/snacgame/component/Spawner.h
 
+    simulations/snacgame/scene/GameScene.h
+    simulations/snacgame/scene/MenuScene.h
+    simulations/snacgame/scene/Scene.h
+    simulations/snacgame/scene/SettingsScene.h
+
     simulations/snacgame/system/DeterminePlayerAction.h
     simulations/snacgame/system/IntegratePlayerMovement.h
-    simulations/snacgame/system/SystemOrbitalCamera.h
+    simulations/snacgame/system/LevelCreator.h
     simulations/snacgame/system/PlayerSpawner.h
     simulations/snacgame/system/PlayerInvulFrame.h
+    simulations/snacgame/system/SystemOrbitalCamera.h
+    simulations/snacgame/system/SceneStateMachine.h
 
     detail/Logger.h
 )
@@ -54,11 +61,18 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SystemMove.cpp
 
+    simulations/snacgame/scene/GameScene.cpp
+    simulations/snacgame/scene/MenuScene.cpp
+    simulations/snacgame/scene/Scene.cpp
+    simulations/snacgame/scene/SettingsScene.cpp
+
     simulations/snacgame/system/DeterminePlayerAction.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
+    simulations/snacgame/system/LevelCreator.cpp
     simulations/snacgame/system/SystemOrbitalCamera.cpp
     simulations/snacgame/system/PlayerSpawner.cpp
     simulations/snacgame/system/PlayerInvulFrame.cpp
+    simulations/snacgame/system/SceneStateMachine.cpp
 
     detail/Logger.cpp
 )
