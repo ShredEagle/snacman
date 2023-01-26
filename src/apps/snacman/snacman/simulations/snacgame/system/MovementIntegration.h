@@ -3,8 +3,10 @@
 #include "entity/EntityManager.h"
 #include "entity/Query.h"
 
+#include "../component/Geometry.h"
 #include "../component/MovementScreenSpace.h"
 #include "../component/PoseScreenSpace.h"
+#include "../component/Speed.h"
 
 namespace ad {
 namespace snacgame {
@@ -15,13 +17,15 @@ class MovementIntegration
 {
 public:
     MovementIntegration(ent::EntityManager & aWorld) :
-        mScreenMovable{aWorld}
+        mMovables{aWorld},
+        mScreenMovables{aWorld}
     {}
 
     void update(float aDelta);
 
 private:
-    ent::Query<component::MovementScreenSpace, component::PoseScreenSpace> mScreenMovable;
+    ent::Query<component::Geometry, component::Speed> mMovables;
+    ent::Query<component::MovementScreenSpace, component::PoseScreenSpace> mScreenMovables;
 };
 
 

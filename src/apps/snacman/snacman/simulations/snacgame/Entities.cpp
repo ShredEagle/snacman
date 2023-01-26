@@ -7,6 +7,7 @@
 #include "component/PlayerMoveState.h"
 #include "component/PoseScreenSpace.h"
 #include "component/Spawner.h"
+#include "component/Speed.h"
 #include "component/Text.h"
 
 #include <snac-renderer/text/Text.h>
@@ -29,13 +30,23 @@ void createPill(ent::EntityManager & mWorld,
                 const math::Position<2, int> & aGridPos)
 {
     auto handle = mWorld.addEntity();
-    handle.get(aInit)->add(component::Geometry{
-        .mSubGridPosition = math::Position<2, float>::Zero(),
-        .mGridPosition = aGridPos,
-        .mScaling = math::Size<3, float>{.3f, .3f, .3f},
-        .mLayer = component::GeometryLayer::Player,
-        .mYRotation = math::Degree<float>{15.f},
-        .mColor = math::hdr::Rgb<float>{1.f, 0.5f, 0.5f}});
+    handle.get(aInit)
+        ->add(component::Geometry{
+            .mSubGridPosition = math::Position<2, float>::Zero(),
+            .mGridPosition = aGridPos,
+            .mScaling = math::Size<3, float>{.3f, .3f, .3f},
+            .mLayer = component::GeometryLayer::Player,
+            .mOrientation = math::Quaternion<float>{math::UnitVec<3, float>{{0.f, 1.f, 0.f}},
+                                                    math::Degree<float>{15.f}},
+            .mColor = math::hdr::Rgb<float>{1.f, 0.5f, 0.5f} 
+        })
+        .add(component::Speed{
+            .mRotation = AxisAngle{
+                .mAxis = math::UnitVec<3, float>{{1.f, 1.f, 1.f}},
+                .mAngle = math::Degree<float>{60.f}
+            },
+        })
+        ;
 }
 
 ent::Handle<ent::Entity>
@@ -48,7 +59,6 @@ createPathEntity(ent::EntityManager & mWorld,
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = aGridPos,
         .mLayer = component::GeometryLayer::Level,
-        .mYRotation = math::Degree<float>{0.f},
         .mColor = math::hdr::gWhite<float>});
     return handle;
 }
@@ -63,7 +73,6 @@ createPortalEntity(ent::EntityManager & mWorld,
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = aGridPos,
         .mLayer = component::GeometryLayer::Level,
-        .mYRotation = math::Degree<float>{0.f},
         .mColor = math::hdr::gRed<float>});
     return handle;
 }
@@ -78,7 +87,6 @@ createCopPenEntity(ent::EntityManager & mWorld,
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = aGridPos,
         .mLayer = component::GeometryLayer::Level,
-        .mYRotation = math::Degree<float>{0.f},
         .mColor = math::hdr::gYellow<float>});
     return handle;
 }
@@ -93,7 +101,6 @@ createPlayerSpawnEntity(ent::EntityManager & mWorld,
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = aGridPos,
         .mLayer = component::GeometryLayer::Level,
-        .mYRotation = math::Degree<float>{0.f},
         .mColor = math::hdr::gCyan<float>});
     spawner.get(aInit)->add(component::Spawner{.mSpawnPosition = aGridPos});
 
@@ -114,7 +121,6 @@ createPlayerEntity(ent::EntityManager & mWorld,
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = math::Position<2, int>::Zero(),
         .mLayer = component::GeometryLayer::Player,
-        .mYRotation = math::Degree<float>{0.f},
         .mColor = math::hdr::gMagenta<float>,
         .mShouldBeDrawn = false});
     playerEntity->add(component::PlayerLifeCycle{});

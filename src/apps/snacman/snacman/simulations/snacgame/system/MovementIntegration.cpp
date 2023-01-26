@@ -8,7 +8,16 @@ namespace system {
 void MovementIntegration::update(float aDelta)
 {
     ent::Phase integrate;
-    mScreenMovable.each(
+    mMovables.each(
+        [aDelta]
+        (const component::Speed & aMovement, component::Geometry & aPose) 
+        {
+            math::Quaternion rotation{aMovement.mRotation.mAxis, aDelta * aMovement.mRotation.mAngle};
+            // Quaternion multiplication perform rotation from right to left
+            aPose.mOrientation = rotation * aPose.mOrientation;
+        }
+    );
+    mScreenMovables.each(
         [aDelta]
         (const component::MovementScreenSpace & aMovement, component::PoseScreenSpace & aPose) 
         {
