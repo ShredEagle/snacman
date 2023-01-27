@@ -1,7 +1,8 @@
 #pragma once
 
+#include "component/Controller.h"
 #include "component/Geometry.h"
-#include "context/InputDeviceDirectory.h"
+#include "component/PlayerSlot.h"
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
@@ -29,11 +30,10 @@ createPlayerSpawnEntity(ent::EntityManager & mWorld,
                         ent::Phase & aInit,
                         const math::Position<2, int> & aPos);
 
-ent::Handle<ent::Entity>
-createPlayerEntity(ent::EntityManager & mWorld,
-                   ent::Phase & aInit,
-                   InputDeviceDirectory & aDeviceDirectory,
+void 
+fillSlotWithPlayer(ent::Phase & aInit,
                    component::ControllerType aControllerType,
+                   ent::Handle<ent::Entity> aSlot,
                    int aControllerId = 0);
 
 ent::Handle<ent::Entity> createMenuItem(ent::EntityManager & aWorld,

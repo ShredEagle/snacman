@@ -1,13 +1,13 @@
 #pragma once
 
 #include "snacman/Input.h"
+#include "snacman/Logging.h"
 
-#include <nlohmann/json.hpp>
-#include <GLFW/glfw3.h>
-
-#include <fstream>
 #include <concepts>
+#include <fstream>
+#include <GLFW/glfw3.h>
 #include <initializer_list>
+#include <nlohmann/json.hpp>
 #include <unordered_map>
 
 using json = nlohmann::json;
@@ -17,7 +17,7 @@ namespace snacgame {
 
 constexpr int gPlayerMoveFlagNone = 0;
 
-constexpr int gQuitCommand = 1 << 0;
+constexpr int gPositiveEdge = 1 << 0;
 
 constexpr int gPlayerMoveFlagUp = 1 << 1;
 constexpr int gPlayerMoveFlagDown = 1 << 2;
@@ -33,22 +33,21 @@ constexpr int gGoDown = 1 << 9;
 constexpr int gGoLeft = 1 << 10;
 constexpr int gGoRight = 1 << 11;
 
+constexpr int gQuitCommand = 1 << 12;
 
-template<class T_forward>
-concept Mappable = requires
-{
-    typename std::map<T_forward, int>;
-};
+template <class T_forward>
+concept Mappable = requires { typename std::map<T_forward, int>; };
 
-template<Mappable T_forward, Mappable T_reverse>
+template <Mappable T_forward, Mappable T_reverse>
 struct BidirectionalMap
 {
-    BidirectionalMap(std::initializer_list<std::pair<T_forward, T_reverse>> aInitList) :
-        mMap{createMap(aInitList)},
-        mReverseMap{createReverseMap(aInitList)}
+    BidirectionalMap(
+        std::initializer_list<std::pair<T_forward, T_reverse>> aInitList) :
+        mMap{createMap(aInitList)}, mReverseMap{createReverseMap(aInitList)}
     {}
-    
-    static std::unordered_map<T_forward, T_reverse> createMap(std::vector<std::pair<T_forward, T_reverse>> aInitList)
+
+    static std::unordered_map<T_forward, T_reverse>
+    createMap(std::vector<std::pair<T_forward, T_reverse>> aInitList)
     {
         std::unordered_map<T_forward, T_reverse> newMap;
 
@@ -60,7 +59,8 @@ struct BidirectionalMap
         return newMap;
     }
 
-    static std::unordered_map<T_reverse, T_forward> createReverseMap(std::vector<std::pair<T_forward, T_reverse>> aInitList)
+    static std::unordered_map<T_reverse, T_forward>
+    createReverseMap(std::vector<std::pair<T_forward, T_reverse>> aInitList)
     {
         std::unordered_map<T_reverse, T_forward> newMap;
 
@@ -89,34 +89,34 @@ struct BidirectionalMap
 const inline BidirectionalMap<std::string, int> gCommandFlags{
     {"gPlayerMoveFlagNone", gPlayerMoveFlagNone},
 
-    {"gQuitCommand", gQuitCommand},
+    {"gQuitCommand", gQuitCommand | gPositiveEdge},
 
     {"gPlayerMoveFlagUp", gPlayerMoveFlagUp},
     {"gPlayerMoveFlagDown", gPlayerMoveFlagDown},
     {"gPlayerMoveFlagLeft", gPlayerMoveFlagLeft},
     {"gPlayerMoveFlagRight", gPlayerMoveFlagRight},
 
-    {"gJoin", gJoin},
+    {"gJoin", gJoin | gPositiveEdge},
 
-    {"gSelectItem", gSelectItem},
-    {"gBack", gBack},
+    {"gSelectItem", gSelectItem | gPositiveEdge},
+    {"gBack", gBack | gPositiveEdge},
     {"gGoUp", gGoUp},
     {"gGoDown", gGoDown},
     {"gGoLeft", gGoLeft},
     {"gGoRight", gGoRight},
 };
 
+const inline BidirectionalMap<std::string, GamepadAtomicInput>
+    gGamepadMappingDictionnary{
+        {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisPositive},
+        {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisNegative},
+        {"JOY_LEFT_LEFT", GamepadAtomicInput::leftXAxisNegative},
+        {"JOY_LEFT_RIGHT", GamepadAtomicInput::leftXAxisPositive},
+        {"SELECT", GamepadAtomicInput::guide},
+        {"B", GamepadAtomicInput::b},
+        {"START", GamepadAtomicInput::start},
 
-const inline BidirectionalMap<std::string, GamepadAtomicInput> gGamepadMappingDictionnary{
-    {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisPositive},
-    {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisNegative},
-    {"JOY_LEFT_LEFT", GamepadAtomicInput::leftXAxisNegative},
-    {"JOY_LEFT_RIGHT", GamepadAtomicInput::leftXAxisPositive},
-    {"SELECT", GamepadAtomicInput::guide},
-    {"B", GamepadAtomicInput::b},
-    {"START", GamepadAtomicInput::start},
-
-};
+    };
 
 const inline BidirectionalMap<std::string, int> gKeyboardMappingDictionnary{
     {"ctrl", GLFW_KEY_LEFT_CONTROL},
@@ -129,17 +129,18 @@ const inline BidirectionalMap<std::string, int> gKeyboardMappingDictionnary{
     {"backspace", GLFW_KEY_BACKSPACE},
 };
 
+template <class T_return_type>
+inline T_return_type
+translateMappingValueToInputType(const std::string & aMappingValue);
 
-template<class T_return_type>
-inline T_return_type translateMappingValueToInputType(const std::string & aMappingValue);
-
-template<>
-inline GamepadAtomicInput translateMappingValueToInputType(const std::string & aMappingValue)
+template <>
+inline GamepadAtomicInput
+translateMappingValueToInputType(const std::string & aMappingValue)
 {
     return gGamepadMappingDictionnary.lookup(aMappingValue);
 }
 
-template<>
+template <>
 inline int translateMappingValueToInputType(const std::string & aMappingValue)
 {
     if (aMappingValue.size() == 1)
@@ -174,23 +175,26 @@ public:
         mKeymaps{aMapping}
     {}
 
-    KeyMapping(const filesystem::path & aPath) :
-        mKeymaps{}
+    KeyMapping(const filesystem::path & aPath) : mKeymaps{}
     {
         std::ifstream configStream(aPath);
 
         json data = json::parse(configStream);
 
-        for (const auto & [group, mappings] : data.get<std::map<std::string, std::map<std::string, std::string>>>())
+        for (const auto & [group, mappings] :
+             data.get<
+                 std::map<std::string, std::map<std::string, std::string>>>())
         {
             [[maybe_unused]] auto [it, success] = mKeymaps.insert({group, {}});
-            std::vector<std::pair<T_input_type, int>> & groupMappings = it->second;
+            std::vector<std::pair<T_input_type, int>> & groupMappings =
+                it->second;
             for (const auto & [commandName, key] : mappings)
             {
-                groupMappings.push_back({translateMappingValueToInputType<T_input_type>(key), gCommandFlags.lookup(commandName)});
+                groupMappings.push_back(
+                    {translateMappingValueToInputType<T_input_type>(key),
+                     gCommandFlags.lookup(commandName)});
             }
         }
-
     }
 
     int get(const std::string & aGroup, T_input_type aInput) const
@@ -204,7 +208,8 @@ public:
         }
     }
 
-    void setKeyMapping(const std::string & aGroup, T_input_type aInput, int aCommand)
+    void
+    setKeyMapping(const std::string & aGroup, T_input_type aInput, int aCommand)
     {
         for (auto & [input, command] : mKeymaps.at(aGroup))
         {
@@ -218,37 +223,55 @@ public:
     std::map<std::string, std::vector<std::pair<T_input_type, int>>> mKeymaps;
 };
 
-
 using GamepadMapping = KeyMapping<GamepadAtomicInput>;
 
 using KeyboardMapping = KeyMapping<int>;
 
-inline int convertKeyboardInput(
-        const std::string & aGroup, const KeyboardState & aKeyboardState, const KeyboardMapping & aKeyboardMapping)
+inline int convertKeyboardInput(const std::string & aGroup,
+                                const KeyboardState & aKeyboardState,
+                                const KeyboardMapping & aKeyboardMapping)
 {
     int commandFlags = 0;
 
     for (const auto & [input, command] : aKeyboardMapping.mKeymaps.at(aGroup))
     {
-        InputState state = aKeyboardState.mKeyState.at(static_cast<size_t>(input));
-        commandFlags |= state ? command : 0;
+        InputState state =
+            aKeyboardState.mKeyState.at(static_cast<size_t>(input));
+        ButtonStatus stateWanted = command & gPositiveEdge
+                                       ? ButtonStatus::PositiveEdge
+                                       : ButtonStatus::Pressed;
+        commandFlags |= (static_cast<InputState::Enum_t>(state.mState)
+                         >= static_cast<InputState::Enum_t>(stateWanted))
+                            ? (command & ~gPositiveEdge)
+                            : 0;
+        if (static_cast<int>(state.mState) == 3)
+        {
+            SELOG(info)
+            ("input: {}, state: {}, wanted: {}",
+             gKeyboardMappingDictionnary.reverseLookup(input),
+             static_cast<int>(state.mState),
+             static_cast<int>(stateWanted));
+            SELOG(info)("command: {}", commandFlags);
+        }
     }
 
     return commandFlags;
 }
 
-inline int convertGamepadInput(
-        const std::string & aGroup,
-        const GamepadState & aGamepadState, const GamepadMapping & aGamepadMapping)
+inline int convertGamepadInput(const std::string & aGroup,
+                               const GamepadState & aGamepadState,
+                               const GamepadMapping & aGamepadMapping)
 {
-    //int commandFlags = 0;
+    // int commandFlags = 0;
 
-    //for (const auto & [input, command] : aGamepadMapping.mKeymaps)
+    // for (const auto & [input, command] : aGamepadMapping.mKeymaps)
     //{
-    //    commandFlags |= aGamepadState.mAtomicInputList.at(static_cast<size_t>(input)).isPressed();
-    //}
+    //   GamepadAtomicInput::PositiveEdge
+    //     commandFlags |=
+    //     aGamepadState.mAtomicInputList.at(static_cast<size_t>(input)).isPressed();
+    // }
 
-    //return commandFlags;
+    // return commandFlags;
     throw std::runtime_error("Not implemented.");
 }
 

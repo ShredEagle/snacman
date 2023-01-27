@@ -9,7 +9,7 @@ void SettingsScene::setup(const Transition & aTransition) {}
 void SettingsScene::teardown() {}
 
 std::optional<Transition> SettingsScene::update(float aDelta,
-                                                const RawInput & aInput)
+                                                RawInput & aInput)
 {
     return std::nullopt;
 }

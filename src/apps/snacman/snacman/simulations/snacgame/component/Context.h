@@ -3,8 +3,6 @@
 #include "snacman/Input.h"
 #include "../InputCommandConverter.h"
 
-#include "../context/InputDeviceDirectory.h"
-
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <limits>
@@ -21,14 +19,12 @@ namespace component {
 
 struct Context
 {
-    Context(InputDeviceDirectory aDeviceDirectory) :
-        mInputDeviceDirectory{aDeviceDirectory},
+    Context() :
         mGamepadMapping(gAssetRoot / "settings/gamepad_mapping.json"),
         mKeyboardMapping(gAssetRoot / "settings/keyboard_mapping.json")
     {
     }
 
-    InputDeviceDirectory mInputDeviceDirectory;
     GamepadMapping mGamepadMapping;
     KeyboardMapping mKeyboardMapping;
 

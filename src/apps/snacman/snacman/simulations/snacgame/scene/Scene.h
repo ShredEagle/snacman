@@ -71,7 +71,7 @@ public:
     virtual ~Scene() = default;
 
     virtual std::optional<Transition> update(float aDelta,
-                                             const RawInput & aInput) = 0;
+                                             RawInput & aInput) = 0;
     virtual void setup(const Transition & aTransition) = 0;
     virtual void teardown() = 0;
 

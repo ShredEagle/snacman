@@ -78,11 +78,11 @@ public:
     SnacGame(graphics::AppInterface & aAppInterface,
              imguiui::ImguiUi & aImguiUi);
 
-    bool update(float aDelta, const RawInput & aInput);
+    bool update(float aDelta, RawInput & aInput);
 
     void drawDebugUi(snac::ConfigurableSettings & aSettings,
                      ImguiInhibiter & aInhibiter,
-                     const RawInput & aInput);
+                     RawInput & aInput);
 
     std::unique_ptr<visu::GraphicState> makeGraphicState();
 

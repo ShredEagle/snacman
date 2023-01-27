@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Scene.h"
+#include "entity/Query.h"
+#include "snacman/simulations/snacgame/component/PlayerSlot.h"
 
 #include <string>
 
@@ -11,12 +13,18 @@ namespace scene {
 class MenuScene : public Scene
 {
 public:
-    using Scene::Scene;
+    MenuScene(const std::string & aName,
+              ent::EntityManager & aWorld,
+              EntityWrap<component::Context> & aContext) :
+        Scene(aName, aWorld, aContext), mSlots{mWorld}
+    {}
 
     std::optional<Transition> update(float aDelta,
-                                     const RawInput & aInput) override;
+                                     RawInput & aInput) override;
     void setup(const Transition & aTransition) override;
     void teardown() override;
+private:
+    ent::Query<component::PlayerSlot> mSlots;
 };
 
 } // namespace scene

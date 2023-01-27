@@ -93,15 +93,13 @@ createPlayerSpawnEntity(ent::EntityManager & mWorld,
     return spawner;
 }
 
-ent::Handle<ent::Entity>
-createPlayerEntity(ent::EntityManager & mWorld,
-                   ent::Phase & aInit,
-                   InputDeviceDirectory & aDeviceDirectory,
+void
+fillSlotWithPlayer(ent::Phase & aInit,
                    component::ControllerType aControllerType,
+                   ent::Handle<ent::Entity> aSlot,
                    int aControllerId)
 {
-    auto playerHandle = mWorld.addEntity();
-    auto playerEntity = playerHandle.get(aInit);
+    auto playerEntity = aSlot.get(aInit);
 
     playerEntity->add(component::Geometry{
         .mSubGridPosition = math::Position<2, float>::Zero(),
@@ -109,24 +107,16 @@ createPlayerEntity(ent::EntityManager & mWorld,
         .mLayer = component::GeometryLayer::Player,
         .mYRotation = math::Degree<float>{0.f},
         .mColor = math::hdr::gMagenta<float>});
-    playerEntity->add(component::PlayerLifeCycle{});
-
-    if (aControllerType == component::ControllerType::Keyboard)
-    {
-        aDeviceDirectory.bindPlayerToKeyboard(aInit, playerHandle);
-    }
-    else if (aControllerType == component::ControllerType::Gamepad)
-    {
-        aDeviceDirectory.bindPlayerToGamepad(aInit, playerHandle, aControllerId);
-    }
-
+    playerEntity->add(component::PlayerLifeCycle{.mIsAlive = false});
     playerEntity->add(component::PlayerMoveState{});
+    playerEntity->add(component::Controller{.mType = aControllerType,
+                                            .mControllerId = aControllerId});
 
-    return playerHandle;
 }
 
-ent::Handle<ent::Entity>
-createMenuItem(ent::EntityManager &aWorld, ent::Phase & aInit, const math::Position<2, int> &aPos)
+ent::Handle<ent::Entity> createMenuItem(ent::EntityManager & aWorld,
+                                        ent::Phase & aInit,
+                                        const math::Position<2, int> & aPos)
 {
     auto menuItem = aWorld.addEntity();
     menuItem.get(aInit)->add(component::Geometry{

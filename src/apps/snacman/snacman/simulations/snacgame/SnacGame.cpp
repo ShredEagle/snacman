@@ -3,11 +3,12 @@
 #include "component/Context.h"
 #include "component/Controller.h"
 #include "component/LevelData.h"
-#include "context/InputDeviceDirectory.h"
+#include "component/PlayerSlot.h"
 #include "Entities.h"
 #include "imguiui/ImguiUi.h"
 #include "InputCommandConverter.h"
 #include "snacman/ImguiUtilities.h"
+#include "snacman/simulations/snacgame/component/PlayerSlot.h"
 #include "snacman/simulations/snacgame/scene/Scene.h"
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
@@ -30,7 +31,7 @@ namespace snacgame {
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    imguiui::ImguiUi & aImguiUi) :
     mAppInterface{&aAppInterface},
-    mContext{mWorld, InputDeviceDirectory{}},
+    mContext{mWorld},
     mStateMachine{mWorld, mWorld, gAssetRoot / "scenes/scene_description.json",
                   mContext},
     mSystemOrbitalCamera{mWorld, mWorld},
@@ -38,6 +39,12 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
+
+    // Creating the slot entity those will be used a player entities
+    mWorld.addEntity().get(init)->add(component::PlayerSlot{0, false});
+    mWorld.addEntity().get(init)->add(component::PlayerSlot{1, false});
+    mWorld.addEntity().get(init)->add(component::PlayerSlot{2, false});
+    mWorld.addEntity().get(init)->add(component::PlayerSlot{3, false});
 
     /* createPlayerEntity(mWorld, init, inputDeviceDirectory, */
     /*                    component::ControllerType::Keyboard); */
@@ -48,7 +55,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                            ImguiInhibiter & aInhibiter,
-                           const RawInput & aInput)
+                           RawInput & aInput)
 {
     ent::Phase update;
 
@@ -106,7 +113,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     mImguiUi.mFrameMutex.unlock();
 }
 
-bool SnacGame::update(float aDelta, const RawInput & aInput)
+bool SnacGame::update(float aDelta, RawInput & aInput)
 {
     mSimulationTime += aDelta;
 

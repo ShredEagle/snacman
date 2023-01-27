@@ -1,8 +1,10 @@
 #include "MenuScene.h"
 
+#include "snacman/simulations/snacgame/component/Controller.h"
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
 
 #include "../Entities.h"
+
 #include <optional>
 
 namespace ad {
@@ -13,24 +15,28 @@ void MenuScene::setup(const Transition & Transition)
 {
     ent::Phase init;
     auto start = createMenuItem(mWorld, init, math::Position<2, int>{0, 0});
-    auto quit = createMenuItem(mWorld, init, math::Position<2, int>{0, 0});
+    auto quit = createMenuItem(mWorld, init, math::Position<2, int>{2, 0});
     mOwnedEntities.push_back(start);
     mOwnedEntities.push_back(quit);
 }
 
-void MenuScene::teardown() {
+void MenuScene::teardown()
+{
     ent::Phase destroy;
+
     for (auto handle : mOwnedEntities)
     {
         handle.get(destroy)->erase();
     }
+
+    mOwnedEntities.clear();
 }
 
 std::optional<Transition> MenuScene::update(float aDelta,
-                                            const RawInput & aInput)
+                                            RawInput & aInput)
 {
-    int keyboardCommand =
-        convertKeyboardInput("menu", aInput.mKeyboard, mContext->mKeyboardMapping);
+    int keyboardCommand = convertKeyboardInput("menu", aInput.mKeyboard,
+                                               mContext->mKeyboardMapping);
 
     if (keyboardCommand & gQuitCommand)
     {
@@ -39,6 +45,19 @@ std::optional<Transition> MenuScene::update(float aDelta,
 
     if (keyboardCommand & gSelectItem)
     {
+        ent::Phase bindPlayerPhase;
+
+        mSlots.each([&](ent::Handle<ent::Entity> aHandle,
+                        component::PlayerSlot & aSlot) {
+            if (!aSlot.mFilled && !aInput.mKeyboard.mBound)
+            {
+                fillSlotWithPlayer(bindPlayerPhase,
+                                   component::ControllerType::Keyboard, aHandle,
+                                   0);
+                aInput.mKeyboard.mBound = true;
+            }
+        });
+
         return Transition{.mTransitionName = "start"};
     }
 

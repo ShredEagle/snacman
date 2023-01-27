@@ -86,7 +86,7 @@ void LevelCreator::update()
         {
             for (int j = 1; j < rowCount - 1; ++j)
             {
-                component::Tile tile = tiles.at(i + j * colCount);
+                component::Tile & tile = tiles.at(i + j * colCount);
 
                 if (tiles.at(i + (j + 1) * colCount).mType
                     != component::TileType::Void)

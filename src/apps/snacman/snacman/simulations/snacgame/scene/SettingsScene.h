@@ -14,7 +14,7 @@ public:
     using Scene::Scene;
 
     std::optional<Transition> update(float aDelta,
-                                     const RawInput & aInput) override;
+                                     RawInput & aInput) override;
     void setup(const Transition & Transition) override;
     void teardown() override;
 };

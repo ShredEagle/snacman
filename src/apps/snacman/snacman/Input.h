@@ -105,7 +105,8 @@ enum class GamepadAtomicInput
     leftTrigger,
     rightTrigger,
 
-    End, // keep last
+    End, // keep before positive edge last
+    positiveEdge,
 };
 
 const inline std::map<std::string, GamepadAtomicInput> gGamepadMappingDictionnary{
@@ -129,11 +130,13 @@ struct GamepadState
     float mLeftTrigger = 0.f;
     float mRightTrigger = 0.f;
     std::array<InputState, static_cast<std::size_t>(GamepadAtomicInput::End)> mAtomicInputList;
+    bool mBound = false;
 };
 
 struct KeyboardState
 {
     std::array<InputState, static_cast<std::size_t>(gGlfwKeyboardListSize)> mKeyState;
+    bool mBound = false;
 };
 
 struct MouseState

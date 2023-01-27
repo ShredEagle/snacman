@@ -1,4 +1,8 @@
 #include "GameScene.h"
+
+#include "snacman/Logging.h"
+#include "snacman/simulations/snacgame/component/Controller.h"
+#include "snacman/simulations/snacgame/InputCommandConverter.h"
 #include "snacman/simulations/snacgame/system/LevelCreator.h"
 
 #include "../component/Context.h"
@@ -26,48 +30,77 @@ void GameScene::setup(const Transition & aTransition)
     mLevel.get(init)->add(component::LevelToCreate{});
 }
 
-void GameScene::teardown() {}
+void GameScene::teardown()
+{
+    ent::Phase destroy;
 
-std::optional<Transition> GameScene::update(float aDelta,
-                                            const RawInput & aInput)
+    for (auto handle : mOwnedEntities)
+    {
+        handle.get(destroy)->erase();
+    }
+
+    mOwnedEntities.clear();
+
+    mSystems.get(destroy)->erase();
+    mSystems = mWorld.addEntity();
+
+    mLevel.get(destroy)->erase();
+    mLevel = mWorld.addEntity();
+
+    mTiles.each([&destroy](ent::Handle<ent::Entity> aHandle,
+                           const component::LevelEntity &) {
+        aHandle.get(destroy)->erase();
+    });
+    mPlayers.each([&destroy](ent::Handle<ent::Entity> aHandle,
+                             component::PlayerSlot & aSlot,
+                             component::Controller & aController) {
+        aSlot.mFilled = false
+        aHandle.get(destroy)->remove<component::Controller>();
+        aHandle.get(destroy)->remove<component::Geometry>();
+        aHandle.get(destroy)->remove<component::PlayerLifeCycle>();
+        aHandle.get(destroy)->remove<component::PlayerMoveState>();
+    });
+}
+
+std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
 {
     ent::Phase update;
+
+    bool quit = false;
+
     mSystems.get(update)->get<system::LevelCreator>().update();
-    /* ent::Phase update; */
-    /* InputDeviceDirectory & directory = mContext->mInputDeviceDirectory; */
+    mSlots.each([&](ent::Handle<ent::Entity> aHandle,
+                    component::PlayerSlot & aPlayerSlot) {
+        if (!aPlayerSlot.mFilled)
+        {}
+    });
 
-    /* for (auto & connectedPlayer : directory.mGamepadBindings) */
-    /* { */
-    /*     if (connectedPlayer.mPlayer && connectedPlayer.mPlayer->isValid()) */
-    /*     { */
-    /*         component::Controller & controller = */
-    /*             connectedPlayer.mPlayer->get(update) */
-    /*                 ->get<component::Controller>(); */
-    /*         controller.mCommandQuery = convertGamepadInput( */
-    /*             "player", */
-    /*             aInput.mGamepads.at(connectedPlayer.mRawInputGamepadIndex), */
-    /*             GamepadMapping(mContext->mGamepadMapping)); */
-    /*     } */
-    /* } */
+    mPlayers.each([&](component::PlayerSlot & aPlayerSlot,
+                      component::Controller & aController) {
+        switch (aController.mType)
+        {
+        case component::ControllerType::Keyboard:
+            aController.mCommandQuery = convertKeyboardInput(
+                "player", aInput.mKeyboard, mContext->mKeyboardMapping);
+            break;
+        case component::ControllerType::Gamepad:
+            break;
+        default:
+            break;
+        }
 
-    /* auto & keyboardPlayer = directory.mPlayerBoundToKeyboard; */
+        quit |= aController.mCommandQuery & gQuitCommand;
+    });
 
-    /* if (keyboardPlayer && keyboardPlayer->isValid()) */
-    /* { */
-    /*     component::Controller & keyboard = */
-    /*         keyboardPlayer->get(update)->get<component::Controller>(); */
+    if (quit)
+    {
+        return Transition{.mTransitionName = "back"};
+    }
 
-    /*     keyboard.mCommandQuery = */
-    /*         convertKeyboardInput("player", aInput.mKeyboard, */
-    /*                              KeyboardMapping(mContext->mKeyboardMapping)); */
-
-    /*     quitGame = keyboard.mCommandQuery & gQuitCommand; */
-    /* } */
-
-    /* mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta); */
-    /* mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta); */
-    /* mSystems.get(update)->get<system::DeterminePlayerAction>().update(); */
-    /* mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta); */
+    mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
+    mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
+    mSystems.get(update)->get<system::DeterminePlayerAction>().update();
+    mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
 
     return std::nullopt;
 }

@@ -24,7 +24,6 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/SnacGame.h
     simulations/snacgame/SystemMove.h
 
-    simulations/snacgame/context/InputDeviceDirectory.h
 
     simulations/snacgame/component/Context.h
     simulations/snacgame/component/Controller.h
@@ -32,6 +31,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/LevelData.h
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerMoveState.h
+    simulations/snacgame/component/PlayerSlot.h
     simulations/snacgame/component/Spawner.h
 
     simulations/snacgame/scene/GameScene.h

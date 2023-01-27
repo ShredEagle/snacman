@@ -1,12 +1,13 @@
 #pragma once
 
-#include "entity/Entity.h"
-#include "entity/EntityManager.h"
-#include "entity/Query.h"
-#include "markovjunior/Grid.h"
-#include "math/Matrix.h"
-
+#include "../InputCommandConverter.h"
 #include "../Entities.h"
+
+#include <entity/Entity.h>
+#include <entity/EntityManager.h>
+#include <entity/Query.h>
+#include <markovjunior/Grid.h>
+#include <math/Matrix.h>
 
 namespace ad {
 namespace snacgame {
