@@ -13,11 +13,11 @@ void PlayerInvulFrame::update(float aDelta)
 
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 0)
             {
-                aPlayerGeometry.mShouldBeDrawn = true;
+                aPlayerGeometry.mColor.a() = 1.f;
             }
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 2)
             {
-                aPlayerGeometry.mShouldBeDrawn = false;
+                aPlayerGeometry.mColor.a() = 0.f;
             }
         }
     });

@@ -7,6 +7,9 @@
 #include "component/PoseScreenSpace.h"
 #include "component/Text.h"
 
+#include "snacman/LoopSettings.h"
+#include "component/Context.h"
+#include "system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
 
 #include "../../Input.h"
@@ -27,9 +30,14 @@
 
 #include <memory>
 
+#include <platform/Filesystem.h>
 
 namespace ad {
 namespace snacgame {
+
+// TODO: before commit change this
+constexpr int gGridSize = 29;
+constexpr float gCellSize = 2.f;
 
 struct ImguiDisplays
 {
@@ -83,13 +91,13 @@ public:
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface,
              imguiui::ImguiUi & aImguiUi,
-             const resource::ResourceFinder & aResourceFinder);
+             const resource::ResourceFinder & aResourceFinder, RawInput & aInput);
 
-    bool update(float aDelta, const RawInput & aInput);
+    bool update(float aDelta, RawInput & aInput);
 
     void drawDebugUi(snac::ConfigurableSettings & aSettings,
                      ImguiInhibiter & aInhibiter,
-                     const RawInput & aInput);
+                     RawInput & aInput);
 
     std::unique_ptr<visu::GraphicState> makeGraphicState();
 
@@ -107,10 +115,9 @@ private:
     arte::Freetype mFreetype;
 
     ent::EntityManager mWorld;
-    ent::Handle<ent::Entity> mSystems;
-    ent::Handle<ent::Entity> mLevel;
-    ent::Handle<ent::Entity> mContext;
-    EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera;
+    EntityWrap<component::Context> mContext;
+    EntityWrap<system::SceneStateMachine> mStateMachine;
+    EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
@@ -120,8 +127,6 @@ private:
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;
-
-    bool mHello = false;
 };
 
 } // namespace snacgame

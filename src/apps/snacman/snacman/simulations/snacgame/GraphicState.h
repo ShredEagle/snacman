@@ -84,8 +84,6 @@ struct GraphicState
     Camera mCamera; 
 
     snac::SparseSet<TextScreen, MaxEntityId> mTextEntities;
-
-    std::vector<std::function<void()>> mImguiCommands;
 };
 
 
@@ -112,7 +110,6 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         // TODO #pose
         //.mCamera = math::lerp(aLeft.mCamera.mPosition_world, aRight.mCamera.mPosition_world, aInterpolant),
         .mCamera{aRight.mCamera},
-        .mImguiCommands{aRight.mImguiCommands},
     };
 
     interpolateEach(aInterpolant, aLeft.mEntities, aRight.mEntities, state.mEntities);

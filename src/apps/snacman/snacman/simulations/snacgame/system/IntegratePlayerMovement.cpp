@@ -2,7 +2,7 @@
 
 #include "snac-renderer/Cube.h"
 
-#include "../component/Level.h"
+#include "../component/LevelData.h"
 
 namespace ad {
 namespace snacgame {
@@ -13,10 +13,13 @@ constexpr float gBasePlayerSpeed = 10.f;
 void IntegratePlayerMovement::update(float aDelta)
 {
     ent::Phase nomutation;
-    float cellSize = mLevel.get(nomutation)->get<component::Level>().mCellSize;
-    mPlayer.each(
-        [cellSize, aDelta](component::Geometry & aGeometry,
-                           const component::PlayerMoveState & aMoveState) {
+
+    mLevel.each([&](component::LevelData & aLevelData,
+                    component::LevelCreated &) {
+        float cellSize = aLevelData.mCellSize;
+        mPlayer.each([cellSize, aDelta](
+                         component::Geometry & aGeometry,
+                         const component::PlayerMoveState & aMoveState) {
             if (aMoveState.mMoveState & gPlayerMoveFlagUp)
             {
                 aGeometry.mSubGridPosition +=
@@ -63,6 +66,7 @@ void IntegratePlayerMovement::update(float aDelta)
                 aGeometry.mSubGridPosition.y() = 0.f;
             }
         });
+    });
 }
 
 } // namespace system

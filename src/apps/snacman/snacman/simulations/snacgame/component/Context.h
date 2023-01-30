@@ -3,8 +3,6 @@
 #include "snacman/Input.h"
 #include "../InputCommandConverter.h"
 
-#include "../context/InputDeviceDirectory.h"
-
 #include <platform/Filesystem.h>
 
 #include <resource/ResourceFinder.h>
@@ -19,18 +17,20 @@
 
 namespace ad {
 namespace snacgame {
+
+const inline filesystem::path gAssetRoot{"/home/franz/gamedev/snac-assets"};
+//const inline filesystem::path gAssetRoot{"d:/projects/gamedev/2/snac-assets"};
+
 namespace component {
 
 struct Context
 {
-    Context(InputDeviceDirectory aDeviceDirectory,
-            const resource::ResourceFinder aResourceFinder) :
-        mInputDeviceDirectory{aDeviceDirectory},
+    Context(const resource::ResourceFinder aResourceFinder) :
         mGamepadMapping(*aResourceFinder.find("settings/gamepad_mapping.json")),
         mKeyboardMapping(*aResourceFinder.find("settings/keyboard_mapping.json"))
-    {}
+    {
+    }
 
-    InputDeviceDirectory mInputDeviceDirectory;
     GamepadMapping mGamepadMapping;
     KeyboardMapping mKeyboardMapping;
 
@@ -38,86 +38,62 @@ struct Context
     {
         ImGui::Begin("Keyboard mappings");
         static int selected = -1;
-        for (auto & pair : mKeyboardMapping.mKeymaps)
+        for (auto & [groupName, mappings] : mKeyboardMapping.mKeymaps)
         {
-            int move = pair.second;
-            std::string moveName{""};
-            switch(move)
+            if (ImGui::CollapsingHeader(groupName.c_str()))
             {
-                case gPlayerMoveFlagUp:
-                    moveName = "Up";
-                    break;
-                case gPlayerMoveFlagDown:
-                    moveName = "Down";
-                    break;
-                case gPlayerMoveFlagLeft:
-                    moveName = "Left";
-                    break;
-                case gPlayerMoveFlagRight:
-                    moveName = "Right";
-                    break;
-                case gQuitCommand:
-                    moveName = "Escape";
-                    break;
-            }
-
-            std::string key(1, static_cast<char>(pair.first));
-
-            if (pair.first > std::numeric_limits<char>::max() || key.at(0) == 0)
-            {
-                key = gKeyboardMappingDictionnary.reverseLookup(pair.first);
-            }
-
-            ImGui::Text("%s:", moveName.c_str());
-            ImGui::SameLine();
-            if (ImGui::Selectable(key.c_str(), selected == pair.second))
-            {
-                selected = pair.second;
-
-            }
-            if (selected == pair.second)
-            {
-                int index = 0;
-                for (const InputState & aState : aInput.mKeyboard.mKeyState)
+                for (auto & pair : mappings)
                 {
-                    if (static_cast<ButtonStatus>(aState) == ButtonStatus::PositiveEdge)
+                    int move = pair.second;
+                    std::string moveName{gCommandFlags.reverseLookup(move)};
+
+                    std::string key(1, static_cast<char>(pair.first));
+
+                    if (pair.first > std::numeric_limits<char>::max() || key.at(0) == 0)
                     {
-                        pair.first = index;
-                        selected = -1;
-                        break;
+                        key = gKeyboardMappingDictionnary.reverseLookup(pair.first);
                     }
-                    index++;
+
+                    ImGui::Text("%s:", moveName.c_str());
+                    ImGui::SameLine();
+                    if (ImGui::Selectable(key.c_str(), selected == pair.second))
+                    {
+                        selected = pair.second;
+
+                    }
+                    if (selected == pair.second)
+                    {
+                        int index = 0;
+                        for (const InputState & aState : aInput.mKeyboard.mKeyState)
+                        {
+                            if (static_cast<ButtonStatus>(aState) == ButtonStatus::PositiveEdge)
+                            {
+                                pair.first = index;
+                                selected = -1;
+                                break;
+                            }
+                            index++;
+                        }
+                    }
                 }
             }
         }
         ImGui::End();
 
         ImGui::Begin("Gamepad mappings");
-        for (auto & pair : mGamepadMapping.mKeymaps)
+        for (auto & [groupName, mapping] : mGamepadMapping.mKeymaps)
         {
-            int key = static_cast<int>(pair.first);
-            int move = pair.second;
-            std::string moveName{""};
-            switch(move)
+            if (ImGui::CollapsingHeader(groupName.c_str()))
             {
-                case gPlayerMoveFlagUp:
-                    moveName = "Up";
-                    break;
-                case gPlayerMoveFlagDown:
-                    moveName = "Down";
-                    break;
-                case gPlayerMoveFlagLeft:
-                    moveName = "Left";
-                    break;
-                case gPlayerMoveFlagRight:
-                    moveName = "Right";
-                    break;
-                case gQuitCommand:
-                    moveName = "Escape";
-                    break;
+                for (auto & pair : mapping)
+                {
+                    int key = static_cast<int>(pair.first);
+                    int move = pair.second;
+                    std::string moveName{gCommandFlags.reverseLookup(move)};
+                    ImGui::InputInt(moveName.c_str(), &key);
+                    pair.first = static_cast<GamepadAtomicInput>(key);
+                }
             }
-            ImGui::InputInt(moveName.c_str(), &key);
-            pair.first = static_cast<GamepadAtomicInput>(key);
         }
         ImGui::End();
     }

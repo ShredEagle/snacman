@@ -1,16 +1,15 @@
 #pragma once
 
-
-#include "../InputCommandConverter.h"
 namespace ad {
 namespace snacgame {
 namespace component {
 
-struct AllowedMovement
+struct PlayerSlot
 {
-    int mAllowedMovement = 0;
+    int mIndex;
+    bool mFilled;
 };
 
-} // namespace component
+}
 } // namespace snacgame
 } // namespace ad

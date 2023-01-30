@@ -3,6 +3,7 @@
 #include "entity/EntityManager.h"
 #include "entity/Query.h"
 #include "snacman/Input.h"
+#include "snacman/simulations/snacgame/component/LevelData.h"
 
 #include "../InputCommandConverter.h"
 #include "../component/Controller.h"
@@ -19,7 +20,7 @@ public:
     DeterminePlayerAction(ent::EntityManager & aWorld,
                           ent::Handle<ent::Entity> aLevel) :
         mPlayer{aWorld},
-        mLevel{aLevel}
+        mLevel{aWorld}
     {}
 
     void update();
@@ -29,7 +30,8 @@ private:
                component::Geometry,
                component::PlayerMoveState>
         mPlayer;
-    ent::Handle<ent::Entity> mLevel;
+
+    ent::Query<component::LevelData, component::LevelCreated> mLevel;
 };
 
 } // namespace system

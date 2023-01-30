@@ -350,9 +350,16 @@ void runApplication()
     ConfigurableSettings configurableSettings;
 
     //
+    // Initialize input devices
+    //
+    HidManager hid{glfwApp};
+    RawInput input = hid.initialInput();
+    snacgame::ImguiInhibiter inhibiter;
+
+    //
     // Initialize scene
     //
-    Simu_t scene{*glfwApp.getAppInterface(), imguiUi, resourceFinder};
+    Simu_t scene{*glfwApp.getAppInterface(), imguiUi, resourceFinder, input};
 
     //
     // Initialize rendering subsystem
@@ -377,13 +384,6 @@ void runApplication()
                                             scene.getCameraParameters());
         });
 #endif
-
-    //
-    // Initialize input devices
-    //
-    HidManager hid{glfwApp};
-    RawInput input = hid.initialInput();
-    snacgame::ImguiInhibiter inhibiter;
 
     //
     // Main simulation loop

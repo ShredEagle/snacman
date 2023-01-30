@@ -1,7 +1,6 @@
 #pragma once
 
 
-#include "snacman/simulations/snacgame/InputCommandConverter.h"
 
 namespace ad {
 namespace snacgame {
@@ -16,8 +15,8 @@ enum class ControllerType
 struct Controller
 {
     ControllerType mType = ControllerType::Keyboard;
-    int mId = -1;
-    int mCommandQuery;
+    int mCommandQuery = 0;
+    int mControllerId;
 };
 
 } // namespace component

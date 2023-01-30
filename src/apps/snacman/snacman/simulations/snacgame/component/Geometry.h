@@ -14,6 +14,7 @@ enum class GeometryLayer
 {
     Level,
     Player,
+    Menu,
 };
 
 
@@ -26,9 +27,6 @@ struct Geometry
     GeometryLayer mLayer = GeometryLayer::Level;
     math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
     math::hdr::Rgba_f mColor;
-    
-    //Metadata
-    bool mShouldBeDrawn = true;
 };
 
 

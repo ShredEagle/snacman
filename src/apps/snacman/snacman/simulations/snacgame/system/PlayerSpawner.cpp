@@ -24,7 +24,6 @@ void PlayerSpawner::update(float aDelta)
                         aPlayer.mInvulFrameCounter = component::gBaseInvulFrameDuration;
                         aPlayerGeometry.mGridPosition = aSpawner.mSpawnPosition;
                         aPlayerGeometry.mSubGridPosition = math::Position<2, float>::Zero();
-                        aPlayerGeometry.mShouldBeDrawn = true;
                     }
                 });
             }
