@@ -1,41 +1,41 @@
 #include "Input.h"
 
-#include <GLFW/glfw3.h>
 #include <functional>
+#include <GLFW/glfw3.h>
+#include <ios>
 
 namespace ad {
 namespace snac {
 
-
 namespace {
 
-    void handleButtonEdges(InputState & aInputState, bool aCurrentlyPressed)
+void handleButtonEdges(InputState & aInputState, bool aCurrentlyPressed)
+{
+    if (aInputState && aCurrentlyPressed)
     {
-        if(aInputState && aCurrentlyPressed)
-        {
-            aInputState.mState = ButtonStatus::Pressed;
-        }
-        else if(aInputState && ! aCurrentlyPressed)
-        {
-            aInputState.mState = ButtonStatus::NegativeEdge;
-        }
-        else if(! aInputState && aCurrentlyPressed)
-        {
-            aInputState.mState = ButtonStatus::PositiveEdge;
-        }
-        else
-        {
-            aInputState.mState = ButtonStatus::Released;
-        }
+        aInputState.mState = ButtonStatus::Pressed;
     }
+    else if (aInputState && !aCurrentlyPressed)
+    {
+        aInputState.mState = ButtonStatus::NegativeEdge;
+    }
+    else if (!aInputState && aCurrentlyPressed)
+    {
+        aInputState.mState = ButtonStatus::PositiveEdge;
+    }
+    else
+    {
+        aInputState.mState = ButtonStatus::Released;
+    }
+}
 
 } // anonymous namespace
-
 
 HidManager::HidManager(graphics::ApplicationGlfw & aApplication)
 {
     using namespace std::placeholders;
-    std::shared_ptr<graphics::AppInterface> appInterface = aApplication.getAppInterface();
+    std::shared_ptr<graphics::AppInterface> appInterface =
+        aApplication.getAppInterface();
 
     appInterface->registerCursorPositionCallback(
         std::bind(&HidManager::callbackCursorPosition, this, _1, _2));
@@ -51,16 +51,15 @@ HidManager::HidManager(graphics::ApplicationGlfw & aApplication)
 
     double x, y;
     glfwGetCursorPos(aApplication.getGlfwWindow(), &x, &y);
-    callbackCursorPosition(x, y);  
+    callbackCursorPosition(x, y);
 
-    for(InputState & mouseButton : mMouse.mMouseButtons)
+    for (InputState & mouseButton : mMouse.mMouseButtons)
     {
         mouseButton = false;
     };
 
     mKeyState.fill(false);
 }
-
 
 RawInput HidManager::initialInput() const
 {
@@ -71,8 +70,8 @@ RawInput HidManager::initialInput() const
     };
 }
 
-
-RawInput HidManager::read(const RawInput & aPrevious, const Inhibiter & aInhibiter)
+RawInput HidManager::read(const RawInput & aPrevious,
+                          const Inhibiter & aInhibiter)
 {
     RawInput result{
         .mMouse{mMouse.diff(aPrevious.mMouse)},
@@ -84,7 +83,8 @@ RawInput HidManager::read(const RawInput & aPrevious, const Inhibiter & aInhibit
     {
         for (std::size_t id = 0; id != mMouse.mMouseButtons.size(); ++id)
         {
-            handleButtonEdges(result.mMouse.mMouseButtons.at(id), mMouse.mMouseButtons.at(id));
+            handleButtonEdges(result.mMouse.mMouseButtons.at(id),
+                              mMouse.mMouseButtons.at(id));
         }
 
         result.mMouse.mScrollOffset = mMouse.mScrollOffset;
@@ -94,22 +94,27 @@ RawInput HidManager::read(const RawInput & aPrevious, const Inhibiter & aInhibit
     {
         for (std::size_t id = 0; id != mKeyState.size(); ++id)
         {
-            handleButtonEdges(result.mKeyboard.mKeyState.at(id), mKeyState.at(id));
+            handleButtonEdges(result.mKeyboard.mKeyState.at(id),
+                              mKeyState.at(id));
         }
     }
 
-    for (std::size_t joystickId = 0; joystickId != result.mGamepads.size(); ++joystickId)
+    for (std::size_t joystickId = 0; joystickId != result.mGamepads.size();
+         ++joystickId)
     {
         GamepadState & gamepadState = result.mGamepads.at(joystickId);
         GLFWgamepadstate rawGamepadState;
-        int connected = glfwGetGamepadState(static_cast<int>(joystickId), &rawGamepadState);
+        int connected =
+            glfwGetGamepadState(static_cast<int>(joystickId), &rawGamepadState);
         gamepadState.mConnected = connected;
 
         if (connected)
         {
-            for (std::size_t buttonId = 0; buttonId < result.mGamepads.size(); ++buttonId)
+            for (std::size_t buttonId = 0; buttonId < result.mGamepads.size();
+                 ++buttonId)
             {
-                handleButtonEdges(gamepadState.mButtons.at(buttonId), rawGamepadState.buttons[buttonId]);
+                handleButtonEdges(gamepadState.mButtons.at(buttonId),
+                                  rawGamepadState.buttons[buttonId]);
             }
 
             gamepadState.mLeftJoystick = {
@@ -120,8 +125,17 @@ RawInput HidManager::read(const RawInput & aPrevious, const Inhibiter & aInhibit
                 rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X],
                 rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y],
             };
-            gamepadState.mLeftTrigger = rawGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
-            gamepadState.mRightTrigger = rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+            gamepadState.mLeftTrigger =
+                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+            gamepadState.mRightTrigger =
+                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+
+            gamepadState.mAtomicInputList.at(
+                static_cast<std::size_t>(GamepadAtomicInput::leftYAxisPositive)) =
+                gamepadState.mLeftJoystick.y() > 0.f;
+            gamepadState.mAtomicInputList.at(
+                static_cast<std::size_t>(GamepadAtomicInput::leftYAxisNegative)) =
+                gamepadState.mLeftJoystick.y() < 0.f;
         }
     }
 
@@ -130,25 +144,25 @@ RawInput HidManager::read(const RawInput & aPrevious, const Inhibiter & aInhibit
     return result;
 }
 
-
 void HidManager::callbackCursorPosition(double xpos, double ypos)
 {
-    mMouse.mCursorPosition = {static_cast<float>(xpos), static_cast<float>(ypos)};
+    mMouse.mCursorPosition = {static_cast<float>(xpos),
+                              static_cast<float>(ypos)};
 }
 
-
-void HidManager::callbackMouseButton(int button, int action, int mods, double xpos, double ypos)
+void HidManager::callbackMouseButton(
+    int button, int action, int mods, double xpos, double ypos)
 {
-    //constexpr std::array<int, static_cast<std::size_t>(MouseButton::_End)> gMapping
+    // constexpr std::array<int, static_cast<std::size_t>(MouseButton::_End)>
+    // gMapping
     //{
-    //    GLFW_MOUSE_BUTTON_LEFT,
-    //    GLFW_MOUSE_BUTTON_MIDDLE,
-    //    GLFW_MOUSE_BUTTON_RIGHT,
-    //};
+    //     GLFW_MOUSE_BUTTON_LEFT,
+    //     GLFW_MOUSE_BUTTON_MIDDLE,
+    //     GLFW_MOUSE_BUTTON_RIGHT,
+    // };
 
-    MouseButton mouseButton = [&button]()
-    {
-        switch(button)
+    MouseButton mouseButton = [&button]() {
+        switch (button)
         {
         case GLFW_MOUSE_BUTTON_LEFT:
             return MouseButton::Left;
@@ -163,18 +177,22 @@ void HidManager::callbackMouseButton(int button, int action, int mods, double xp
 
     if (mouseButton != MouseButton::_End)
     {
-        mMouse.mMouseButtons.at(static_cast<ButtonEnum_t>(mouseButton)) = (action != GLFW_RELEASE);
+        mMouse.mMouseButtons.at(static_cast<ButtonEnum_t>(mouseButton)) =
+            (action != GLFW_RELEASE);
     }
 }
-
 
 void HidManager::callbackScroll(double xoffset, double yoffset)
 {
     // In case the callbacks can be called several times...
-    mMouse.mScrollOffset += math::Vec<2, float>{static_cast<float>(xoffset), static_cast<float>(yoffset)};
+    mMouse.mScrollOffset += math::Vec<2, float>{static_cast<float>(xoffset),
+                                                static_cast<float>(yoffset)};
 }
 
-void HidManager::callbackKeyboardStroke(int key, int scancode, int action, int mods)
+void HidManager::callbackKeyboardStroke(int key,
+                                        int scancode,
+                                        int action,
+                                        int mods)
 {
     const char * keyName = glfwGetKeyName(key, 0);
 

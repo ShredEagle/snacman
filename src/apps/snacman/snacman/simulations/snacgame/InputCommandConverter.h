@@ -263,7 +263,22 @@ inline int convertGamepadInput(const std::string & aGroup,
     // }
 
     // return commandFlags;
-    throw std::runtime_error("Not implemented.");
+    int commandFlags = 0;
+
+    for (const auto & [input, command] : aGamepadMapping.mKeymaps.at(aGroup))
+    {
+        InputState state =
+            aGamepadState.mAtomicInputList.at(static_cast<size_t>(input));
+        ButtonStatus stateWanted = command & gPositiveEdge
+                                       ? ButtonStatus::PositiveEdge
+                                       : ButtonStatus::Pressed;
+        commandFlags |= (static_cast<InputState::Enum_t>(state.mState)
+                         >= static_cast<InputState::Enum_t>(stateWanted))
+                            ? (command & ~gPositiveEdge)
+                            : 0;
+    }
+
+    return commandFlags;
 }
 
 } // namespace snacgame
