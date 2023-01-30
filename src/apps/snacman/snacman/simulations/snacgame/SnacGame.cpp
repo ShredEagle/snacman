@@ -29,7 +29,7 @@ namespace ad {
 namespace snacgame {
 
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
-                   imguiui::ImguiUi & aImguiUi) :
+                   imguiui::ImguiUi & aImguiUi, RawInput & aInput) :
     mAppInterface{&aAppInterface},
     mContext{mWorld},
     mStateMachine{mWorld, mWorld, gAssetRoot / "scenes/scene_description.json",
@@ -46,11 +46,8 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mWorld.addEntity().get(init)->add(component::PlayerSlot{2, false});
     mWorld.addEntity().get(init)->add(component::PlayerSlot{3, false});
 
-    /* createPlayerEntity(mWorld, init, inputDeviceDirectory, */
-    /*                    component::ControllerType::Keyboard); */
-
     scene::Scene * scene = mStateMachine->getCurrentScene();
-    scene->setup(scene::Transition{});
+    scene->setup(scene::Transition{}, aInput);
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
@@ -134,7 +131,7 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
         }
         else
         {
-            mStateMachine->changeState(transition.value());
+            mStateMachine->changeState(transition.value(), aInput);
         }
     }
 

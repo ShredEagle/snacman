@@ -15,8 +15,8 @@ public:
 
     std::optional<Transition> update(float aDelta,
                                      RawInput & aInput) override;
-    void setup(const Transition & Transition) override;
-    void teardown() override;
+    void setup(const Transition & Transition, RawInput & aInput) override;
+    void teardown(RawInput & aInput) override;
 };
 
 } // namespace scene

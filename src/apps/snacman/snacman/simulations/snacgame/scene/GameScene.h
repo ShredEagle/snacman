@@ -28,8 +28,8 @@ public:
 
     std::optional<Transition> update(float aDelta,
                                      RawInput & aInput) override;
-    void setup(const Transition & aTransition) override;
-    void teardown() override;
+    void setup(const Transition & aTransition, RawInput & aInput) override;
+    void teardown(RawInput & aInput) override;
 
 private:
     ent::Handle<ent::Entity> mLevel;

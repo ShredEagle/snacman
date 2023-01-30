@@ -23,8 +23,7 @@ public:
     SceneStateMachine(ent::EntityManager & aWorld,
                       const filesystem::path & aPath,
                       EntityWrap<component::Context> & aContext);
-    void changeState(scene::Transition & aTransition);
-    void update(float aDelta, const RawInput & aInput);
+    void changeState(scene::Transition & aTransition, RawInput & aInput);
     scene::Scene * getCurrentScene() const;
 
 private:

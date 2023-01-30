@@ -72,8 +72,8 @@ public:
 
     virtual std::optional<Transition> update(float aDelta,
                                              RawInput & aInput) = 0;
-    virtual void setup(const Transition & aTransition) = 0;
-    virtual void teardown() = 0;
+    virtual void setup(const Transition & aTransition, RawInput & aInput) = 0;
+    virtual void teardown(RawInput & aInput) = 0;
 
     std::string mName;
     std::unordered_map<Transition, SceneId> mStateTransition;

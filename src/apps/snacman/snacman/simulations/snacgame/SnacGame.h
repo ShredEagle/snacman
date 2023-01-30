@@ -76,7 +76,7 @@ public:
 
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface,
-             imguiui::ImguiUi & aImguiUi);
+             imguiui::ImguiUi & aImguiUi, RawInput & aInput);
 
     bool update(float aDelta, RawInput & aInput);
 

@@ -244,15 +244,6 @@ inline int convertKeyboardInput(const std::string & aGroup,
                          >= static_cast<InputState::Enum_t>(stateWanted))
                             ? (command & ~gPositiveEdge)
                             : 0;
-        if (static_cast<int>(state.mState) == 3)
-        {
-            SELOG(info)
-            ("input: {}, state: {}, wanted: {}",
-             gKeyboardMappingDictionnary.reverseLookup(input),
-             static_cast<int>(state.mState),
-             static_cast<int>(stateWanted));
-            SELOG(info)("command: {}", commandFlags);
-        }
     }
 
     return commandFlags;

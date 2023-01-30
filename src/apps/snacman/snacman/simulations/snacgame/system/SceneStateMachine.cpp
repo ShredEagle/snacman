@@ -70,7 +70,7 @@ SceneStateMachine::SceneStateMachine(ent::EntityManager & aWorld,
     }
 }
 
-void SceneStateMachine::changeState(Transition & aTransition)
+void SceneStateMachine::changeState(Transition & aTransition, RawInput & aInput)
 {
     Scene * oldScene =
         mPossibleScene.at(mCurrentSceneId.mIndexInPossibleState).get();
@@ -79,7 +79,7 @@ void SceneStateMachine::changeState(Transition & aTransition)
 
     if (aTransition.shouldTeardown)
     {
-        oldScene->teardown();
+        oldScene->teardown(aInput);
     }
 
     mCurrentSceneId = oldScene->mStateTransition.at(aTransition);
@@ -89,7 +89,7 @@ void SceneStateMachine::changeState(Transition & aTransition)
 
     if (aTransition.shouldSetup)
     {
-        newScene->setup(aTransition);
+        newScene->setup(aTransition, aInput);
     }
 }
 

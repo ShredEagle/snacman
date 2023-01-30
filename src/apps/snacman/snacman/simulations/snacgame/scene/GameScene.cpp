@@ -16,7 +16,7 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void GameScene::setup(const Transition & aTransition)
+void GameScene::setup(const Transition & aTransition, RawInput & aInput)
 {
     ent::Phase init;
     mSystems.get(init)->add(system::PlayerSpawner{mWorld});
@@ -30,16 +30,9 @@ void GameScene::setup(const Transition & aTransition)
     mLevel.get(init)->add(component::LevelToCreate{});
 }
 
-void GameScene::teardown()
+void GameScene::teardown(RawInput & aInput)
 {
     ent::Phase destroy;
-
-    for (auto handle : mOwnedEntities)
-    {
-        handle.get(destroy)->erase();
-    }
-
-    mOwnedEntities.clear();
 
     mSystems.get(destroy)->erase();
     mSystems = mWorld.addEntity();
@@ -51,10 +44,18 @@ void GameScene::teardown()
                            const component::LevelEntity &) {
         aHandle.get(destroy)->erase();
     });
-    mPlayers.each([&destroy](ent::Handle<ent::Entity> aHandle,
+    mPlayers.each([&destroy, &aInput](ent::Handle<ent::Entity> aHandle,
                              component::PlayerSlot & aSlot,
                              component::Controller & aController) {
-        aSlot.mFilled = false
+        aSlot.mFilled = false;
+        if (aController.mType == component::ControllerType::Keyboard)
+        {
+            aInput.mKeyboard.mBound = false;
+        }
+        else if (aController.mType == component::ControllerType::Gamepad)
+        {
+            aInput.mGamepads.at(aController.mControllerId).mBound = false;
+        }
         aHandle.get(destroy)->remove<component::Controller>();
         aHandle.get(destroy)->remove<component::Geometry>();
         aHandle.get(destroy)->remove<component::PlayerLifeCycle>();
@@ -68,7 +69,6 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
 
     bool quit = false;
 
-    mSystems.get(update)->get<system::LevelCreator>().update();
     mSlots.each([&](ent::Handle<ent::Entity> aHandle,
                     component::PlayerSlot & aPlayerSlot) {
         if (!aPlayerSlot.mFilled)
@@ -89,7 +89,7 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
             break;
         }
 
-        quit |= aController.mCommandQuery & gQuitCommand;
+        quit |= static_cast<bool>(aController.mCommandQuery & gQuitCommand);
     });
 
     if (quit)
@@ -97,6 +97,7 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
         return Transition{.mTransitionName = "back"};
     }
 
+    mSystems.get(update)->get<system::LevelCreator>().update();
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();

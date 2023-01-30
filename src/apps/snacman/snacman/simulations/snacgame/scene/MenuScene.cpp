@@ -1,5 +1,6 @@
 #include "MenuScene.h"
 
+#include "snacman/Input.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
 
@@ -11,7 +12,7 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void MenuScene::setup(const Transition & Transition)
+void MenuScene::setup(const Transition & Transition, RawInput & aInput)
 {
     ent::Phase init;
     auto start = createMenuItem(mWorld, init, math::Position<2, int>{0, 0});
@@ -20,7 +21,7 @@ void MenuScene::setup(const Transition & Transition)
     mOwnedEntities.push_back(quit);
 }
 
-void MenuScene::teardown()
+void MenuScene::teardown(RawInput & aInput)
 {
     ent::Phase destroy;
 

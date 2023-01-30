@@ -2,6 +2,7 @@
 
 #include "Scene.h"
 #include "entity/Query.h"
+#include "snacman/Input.h"
 #include "snacman/simulations/snacgame/component/PlayerSlot.h"
 
 #include <string>
@@ -21,8 +22,8 @@ public:
 
     std::optional<Transition> update(float aDelta,
                                      RawInput & aInput) override;
-    void setup(const Transition & aTransition) override;
-    void teardown() override;
+    void setup(const Transition & aTransition, RawInput & aInput) override;
+    void teardown(RawInput & aInput) override;
 private:
     ent::Query<component::PlayerSlot> mSlots;
 };

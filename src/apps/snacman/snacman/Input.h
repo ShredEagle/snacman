@@ -106,19 +106,6 @@ enum class GamepadAtomicInput
     rightTrigger,
 
     End, // keep before positive edge last
-    positiveEdge,
-};
-
-const inline std::map<std::string, GamepadAtomicInput> gGamepadMappingDictionnary{
-    {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisPositive},
-    {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisNegative},
-    {"JOY_LEFT_LEFT", GamepadAtomicInput::leftXAxisNegative},
-    {"JOY_LEFT_RIGHT", GamepadAtomicInput::leftXAxisPositive},
-    {"SELECT", GamepadAtomicInput::guide},
-};
-
-const inline std::map<std::string, int> gKeyboardMappingDictionnary{
-    {"esc", GLFW_KEY_ESCAPE},
 };
 
 struct GamepadState
@@ -213,8 +200,6 @@ private:
     MouseState mMouse;
 
     // TODO could be made more compact, only need a bit per button (Franz says 2 bits per buttons, Release, neg, pos and pressed)
-    // However it would introduce a fucking long list of masks
-    // right now this is sparse because GLFW_KEY_* is sparse
     std::array<bool, static_cast<std::size_t>(gGlfwKeyboardListSize)> mKeyState;
 };
 
