@@ -93,6 +93,8 @@ private:
 template <class T_renderer>
 class RenderThread
 {
+    using Operation = std::function<void(T_renderer &)>;
+
 public:
     RenderThread(graphics::ApplicationGlfw & aGlfwApp,
                  GraphicStateFifo & aStates,
@@ -204,14 +206,29 @@ private:
 
         while (!mStop)
         {
-            // Service all queued operations first
+            // Service all queued operations first.
+            // The implementation takes care not to hold onto the mutex
+            // while executing the operation.
             {
-                std::lock_guard lock{mOperationsMutex};
-                while (!mOperations.empty())
+                while (true /* explicit break in body */)
                 {
-                    // Execute operation then pop it.
-                    mOperations.front()(renderer);
-                    mOperations.pop();
+                    Operation operation;
+                    {
+                        std::lock_guard lock{mOperationsMutex};
+                        if (mOperations.empty())
+                        {
+                            // Breaks the service operations loop.
+                            break;
+                        }
+                        else
+                        {
+                            // Moves the operation out of the queue (and pop it).
+                            operation = std::move(mOperations.front());
+                            mOperations.pop();
+                        }
+                    }
+                    // Execute the operations while the mutex is unlocked.
+                    operation(renderer);
                 }
             }
 
@@ -289,7 +306,7 @@ private:
     graphics::ApplicationGlfw & mApplication;
     std::shared_ptr<graphics::AppInterface::SizeListener> mViewportListening;
 
-    std::queue<std::function<void(T_renderer &)>> mOperations;
+    std::queue<Operation> mOperations;
     std::mutex mOperationsMutex;
     imguiui::ImguiUi & mImguiUi;
 
