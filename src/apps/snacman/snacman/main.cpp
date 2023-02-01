@@ -129,8 +129,7 @@ public:
 
     void resizeViewport(math::Size<2, int> aFramebufferSize)
     {
-        std::lock_guard lock{mOperationsMutex};
-        mOperations.push([=](T_renderer & /*aRenderer*/) {
+        push([=](T_renderer & /*aRenderer*/) {
             glViewport(0, 0, aFramebufferSize.width(),
                        aFramebufferSize.height());
         });
@@ -139,8 +138,7 @@ public:
     void resetProjection(float aAspectRatio,
                          snac::Camera::Parameters aParameters)
     {
-        std::lock_guard lock{mOperationsMutex};
-        mOperations.push([=](T_renderer & aRenderer) {
+        push([=](T_renderer & aRenderer) {
             aRenderer.resetProjection(aAspectRatio, aParameters);
         });
     }
@@ -154,6 +152,12 @@ public:
     }
 
 private:
+    void push(Operation aOperation)
+    {
+        std::lock_guard lock{mOperationsMutex};
+        mOperations.push(std::move(aOperation));
+    }
+
     void stop()
     {
         mStop = true;
