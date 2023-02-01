@@ -16,7 +16,7 @@ class MenuScene : public Scene
 public:
     MenuScene(const std::string & aName,
               ent::EntityManager & aWorld,
-              EntityWrap<component::Context> & aContext) :
+              EntityWrap<component::MappingContext> & aContext) :
         Scene(aName, aWorld, aContext), mSlots{mWorld}
     {}
 

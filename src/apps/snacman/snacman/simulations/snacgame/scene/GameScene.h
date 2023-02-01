@@ -19,7 +19,7 @@ class GameScene : public Scene
 public:
     GameScene(const std::string & aName,
               ent::EntityManager & aWorld,
-              EntityWrap<component::Context> & aContext) :
+              EntityWrap<component::MappingContext> & aContext) :
         Scene(aName, aWorld, aContext), mLevel{mWorld.addEntity()},
         mTiles{mWorld},
         mSlots{mWorld},

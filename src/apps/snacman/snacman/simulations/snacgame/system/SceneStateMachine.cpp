@@ -16,7 +16,7 @@ using namespace ad::snacgame::scene;
 
 SceneStateMachine::SceneStateMachine(ent::EntityManager & aWorld,
                                      const filesystem::path & aPath,
-                                     EntityWrap<component::Context> & aContext)
+                                     EntityWrap<component::MappingContext> & aContext)
 {
     std::ifstream sceneStream(aPath);
 

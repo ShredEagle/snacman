@@ -115,7 +115,8 @@ private:
     arte::Freetype mFreetype;
 
     ent::EntityManager mWorld;
-    EntityWrap<component::Context> mContext;
+    
+    EntityWrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
     EntityWrap<system::SceneStateMachine> mStateMachine;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;

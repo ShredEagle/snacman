@@ -58,7 +58,7 @@ class Scene
 public:
     Scene(const std::string & aName,
           ent::EntityManager & aWorld,
-          EntityWrap<component::Context> & aContext) :
+          EntityWrap<component::MappingContext> & aContext) :
         mName{aName},
         mWorld{aWorld},
         mSystems{mWorld.addEntity()},
@@ -82,7 +82,7 @@ protected:
     ent::EntityManager & mWorld;
     ent::Handle<ent::Entity> mSystems;
     std::vector<ent::Handle<ent::Entity>> mOwnedEntities;
-    EntityWrap<component::Context> & mContext;
+    EntityWrap<component::MappingContext> & mContext;
 };
 
 } // namespace scene

@@ -43,9 +43,9 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    imguiui::ImguiUi & aImguiUi,
                    const resource::ResourceFinder & aResourceFinder, RawInput & aInput) :
     mAppInterface{&aAppInterface},
-    mContext{mWorld, aResourceFinder},
+    mMappingContext{mWorld, aResourceFinder},
     mStateMachine{mWorld, mWorld, gAssetRoot / "scenes/scene_description.json",
-                  mContext},
+                  mMappingContext},
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld},
     mQueryText{mWorld, mWorld},
@@ -105,7 +105,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     }
     if (mImguiDisplays.mShowMappings)
     {
-        mContext->drawUi(aInput);
+        mMappingContext->drawUi(aInput);
     }
     if (mImguiDisplays.mShowImguiDemo)
     {
@@ -140,6 +140,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     mImguiUi.render();
     mImguiUi.mFrameMutex.unlock();
 }
+
 
 bool SnacGame::update(float aDelta, RawInput & aInput)
 {

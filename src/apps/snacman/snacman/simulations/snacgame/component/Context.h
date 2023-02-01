@@ -23,15 +23,12 @@ const inline filesystem::path gAssetRoot{"d:/projects/gamedev/2/snac-assets"};
 
 namespace component {
 
-struct Context
+struct MappingContext
 {
-    Context(const resource::ResourceFinder aResourceFinder) :
+    MappingContext(const resource::ResourceFinder aResourceFinder) :
         mGamepadMapping(*aResourceFinder.find("settings/gamepad_mapping.json")),
         mKeyboardMapping(*aResourceFinder.find("settings/keyboard_mapping.json"))
     {}
-
-    GamepadMapping mGamepadMapping;
-    KeyboardMapping mKeyboardMapping;
 
     void drawUi(const RawInput & aInput)
     {
@@ -96,6 +93,9 @@ struct Context
         }
         ImGui::End();
     }
+
+    GamepadMapping mGamepadMapping;
+    KeyboardMapping mKeyboardMapping;
 };
 
 }
