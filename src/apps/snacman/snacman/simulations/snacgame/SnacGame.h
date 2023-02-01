@@ -7,6 +7,8 @@
 #include "component/PoseScreenSpace.h"
 #include "component/Text.h"
 
+#include "scene/Scene.h"
+
 #include "snacman/LoopSettings.h"
 #include "component/Context.h"
 #include "system/SceneStateMachine.h"
@@ -122,6 +124,8 @@ private:
     EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
 
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
+
+    GameContext mGameContext;
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};

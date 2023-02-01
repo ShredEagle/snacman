@@ -47,12 +47,24 @@ struct hash<ad::snacgame::scene::Transition>
 
 namespace ad {
 namespace snacgame {
+
+// TODO extend (probably with EntityManager)
+// TODO relocate
+struct GameContext
+{
+    resource::ResourceFinder mFinder;
+};
+
+
 namespace scene {
+
 
 struct SceneId
 {
     std::size_t mIndexInPossibleState;
 };
+
+
 class Scene
 {
 public:
@@ -70,7 +82,8 @@ public:
     Scene & operator=(Scene &&) = delete;
     virtual ~Scene() = default;
 
-    virtual std::optional<Transition> update(float aDelta,
+    virtual std::optional<Transition> update(GameContext & aContext,
+                                             float aDelta,
                                              RawInput & aInput) = 0;
     virtual void setup(const Transition & aTransition, RawInput & aInput) = 0;
     virtual void teardown(RawInput & aInput) = 0;

@@ -65,7 +65,9 @@ void GameScene::teardown(RawInput & aInput)
     });
 }
 
-std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
+std::optional<Transition> GameScene::update(GameContext & aContext,
+                                            float aDelta,
+                                            RawInput & aInput)
 {
     ent::Phase update;
 

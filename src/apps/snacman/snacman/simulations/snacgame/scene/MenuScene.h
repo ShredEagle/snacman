@@ -20,7 +20,8 @@ public:
         Scene(aName, aWorld, aContext), mSlots{mWorld}
     {}
 
-    std::optional<Transition> update(float aDelta,
+    std::optional<Transition> update(GameContext & aContext,
+                                     float aDelta,
                                      RawInput & aInput) override;
     void setup(const Transition & aTransition, RawInput & aInput) override;
     void teardown(RawInput & aInput) override;

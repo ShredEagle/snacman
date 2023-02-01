@@ -33,7 +33,8 @@ void MenuScene::teardown(RawInput & aInput)
     mOwnedEntities.clear();
 }
 
-std::optional<Transition> MenuScene::update(float aDelta,
+std::optional<Transition> MenuScene::update(GameContext & aContext,
+                                            float aDelta,
                                             RawInput & aInput)
 {
     int keyboardCommand = convertKeyboardInput("menu", aInput.mKeyboard,

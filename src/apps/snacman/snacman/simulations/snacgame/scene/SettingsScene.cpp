@@ -8,7 +8,8 @@ void SettingsScene::setup(const Transition & aTransition, RawInput & aInput) {}
 
 void SettingsScene::teardown(RawInput & aInput) {}
 
-std::optional<Transition> SettingsScene::update(float aDelta,
+std::optional<Transition> SettingsScene::update(GameContext & aContext,
+                                                float aDelta,
                                                 RawInput & aInput)
 {
     return std::nullopt;

@@ -11,7 +11,6 @@
 #include "component/PlayerSlot.h"
 #include "snacman/ImguiUtilities.h"
 #include "snacman/simulations/snacgame/component/PlayerSlot.h"
-#include "snacman/simulations/snacgame/scene/Scene.h"
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
 #include "system/MovementIntegration.h"
@@ -49,6 +48,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld},
     mQueryText{mWorld, mWorld},
+    mGameContext{.mFinder = aResourceFinder},
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
@@ -151,7 +151,7 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
                                  mAppInterface->getWindowSize().height());
 
     std::optional<scene::Transition> transition =
-        mStateMachine->getCurrentScene()->update(aDelta, aInput);
+        mStateMachine->getCurrentScene()->update(mGameContext, aDelta, aInput);
 
     if (transition)
     {
