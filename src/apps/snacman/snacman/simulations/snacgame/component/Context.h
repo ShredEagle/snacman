@@ -18,8 +18,8 @@
 namespace ad {
 namespace snacgame {
 
-const inline filesystem::path gAssetRoot{"/home/franz/gamedev/snac-assets"};
-//const inline filesystem::path gAssetRoot{"d:/projects/gamedev/2/snac-assets"};
+//const inline filesystem::path gAssetRoot{"/home/franz/utilise-le-resource-finder/gamedev/snac-assets"};
+const inline filesystem::path gAssetRoot{"d:/projects/gamedev/2/snac-assets"};
 
 namespace component {
 
@@ -28,8 +28,7 @@ struct Context
     Context(const resource::ResourceFinder aResourceFinder) :
         mGamepadMapping(*aResourceFinder.find("settings/gamepad_mapping.json")),
         mKeyboardMapping(*aResourceFinder.find("settings/keyboard_mapping.json"))
-    {
-    }
+    {}
 
     GamepadMapping mGamepadMapping;
     KeyboardMapping mKeyboardMapping;
