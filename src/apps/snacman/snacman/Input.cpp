@@ -1,10 +1,74 @@
 #include "Input.h"
+#include "snacman/Logging.h"
 
 #include <functional>
-#include <GLFW/glfw3.h>
 #include <ios>
 
 namespace ad {
+
+AxisStatus & AxisStatus::operator =(const float & aRhs)
+{
+    mPrevious = mCurrent;
+    mCurrent = aRhs;
+
+    return *this;
+}
+
+AxisStatus::operator ButtonStatus() const
+{
+    // Conversion table looks like this
+    // p    0 1 0 1
+    // ~p   1 0 1 0
+    // c    0 0 1 1
+    // r    1 0 3 2
+    //
+    // with ButtonStatus arranged as it is this makes an easy conversion
+    // from AxisStatus to ButtonStatus
+    int previousBit = static_cast<int>(std::abs(mPrevious) >= gJoystickDeadzone) << 0;
+    int currentBit = static_cast<int>(std::abs(mCurrent) >= gJoystickDeadzone) << 1;
+
+    return static_cast<ButtonStatus>(
+        ~previousBit & currentBit
+    );
+}
+
+AxisStatus::operator float() const
+{
+    return mCurrent;
+}
+
+InputState::InputState(const bool & aBool) :
+    mState{aBool ? ButtonStatus::Pressed : ButtonStatus::Released}
+{}
+InputState::InputState(const float & aFloat) :
+    mState{AxisStatus{aFloat}}
+{}
+
+InputState & InputState::operator =(const bool & aRhs)
+{
+    std::get<ButtonStatus>(mState) = aRhs ? ButtonStatus::Pressed : ButtonStatus::Released;
+    return *this;
+}
+
+InputState & InputState::operator =(const float & aRhs)
+{
+    std::get<AxisStatus>(mState) = aRhs;
+    return *this;
+}
+
+InputState::operator AxisStatus() const
+{ return std::get<AxisStatus>(mState); }
+
+InputState::operator ButtonStatus() const
+{ return std::get<ButtonStatus>(mState); }
+
+InputState::operator bool() const
+{ return isPressed(); }
+
+bool InputState::isPressed() const
+{ return mState >= std::variant<ButtonStatus, AxisStatus>{ButtonStatus::Pressed}; }
+
+
 namespace snac {
 
 namespace {
@@ -110,32 +174,16 @@ RawInput HidManager::read(const RawInput & aPrevious,
 
         if (connected)
         {
-            for (std::size_t buttonId = 0; buttonId < result.mGamepads.size();
-                 ++buttonId)
+            for (std::size_t buttonId = 0; buttonId < gamepadState.mButtons.size(); ++buttonId)
             {
                 handleButtonEdges(gamepadState.mButtons.at(buttonId),
                                   rawGamepadState.buttons[buttonId]);
             }
 
-            gamepadState.mLeftJoystick = {
-                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_X],
-                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y],
-            };
-            gamepadState.mRightJoystick = {
-                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X],
-                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y],
-            };
-            gamepadState.mLeftTrigger =
-                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
-            gamepadState.mRightTrigger =
-                rawGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
-
-            gamepadState.mAtomicInputList.at(
-                static_cast<std::size_t>(GamepadAtomicInput::leftYAxisPositive)) =
-                gamepadState.mLeftJoystick.y() > 0.f;
-            gamepadState.mAtomicInputList.at(
-                static_cast<std::size_t>(GamepadAtomicInput::leftYAxisNegative)) =
-                gamepadState.mLeftJoystick.y() < 0.f;
+            for (std::size_t axisId = 0; axisId < gamepadState.mAxis.size(); ++axisId)
+            {
+                gamepadState.mAxis.at(axisId) = rawGamepadState.axes[axisId];
+            }
         }
     }
 

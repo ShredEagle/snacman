@@ -3,6 +3,8 @@
 #include "component/Controller.h"
 #include "component/Geometry.h"
 #include "component/PlayerSlot.h"
+#include "entity/Query.h"
+#include "snacman/Input.h"
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>

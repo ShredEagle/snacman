@@ -1,6 +1,7 @@
 #include "GameScene.h"
 
 #include "snacman/Logging.h"
+#include "snacman/simulations/snacgame/Entities.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
 #include "snacman/simulations/snacgame/system/LevelCreator.h"
@@ -46,9 +47,10 @@ void GameScene::teardown(RawInput & aInput)
                            const component::LevelEntity &) {
         aHandle.get(destroy)->erase();
     });
+
     mPlayers.each([&destroy, &aInput](ent::Handle<ent::Entity> aHandle,
-                             component::PlayerSlot & aSlot,
-                             component::Controller & aController) {
+                                      component::PlayerSlot & aSlot,
+                                      component::Controller & aController) {
         aSlot.mFilled = false;
         if (aController.mType == component::ControllerType::Keyboard)
         {
@@ -74,7 +76,36 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
     mSlots.each([&](ent::Handle<ent::Entity> aHandle,
                     component::PlayerSlot & aPlayerSlot) {
         if (!aPlayerSlot.mFilled)
-        {}
+        {
+            if (!aInput.mKeyboard.mBound)
+            {
+                int commandQuery = convertKeyboardInput("unbound",
+                        aInput.mKeyboard, mContext->mKeyboardMapping);
+                if (commandQuery & gJoin)
+                {
+                    fillSlotWithPlayer(update, component::ControllerType::Keyboard, aHandle, 0);
+                    aInput.mKeyboard.mBound = true;
+                }
+            }
+            else
+            {
+                for (std::size_t index = 0; index < aInput.mGamepads.size();
+                     ++index)
+                {
+                    GamepadState & gamepad = aInput.mGamepads.at(index);
+                    if (!gamepad.mBound)
+                    {
+                        int commandQuery = convertGamepadInput("unbound",
+                                gamepad, mContext->mGamepadMapping);
+                        if (commandQuery & gJoin)
+                        {
+                            fillSlotWithPlayer(update, component::ControllerType::Gamepad, aHandle, index);
+                            gamepad.mBound = true;
+                        }
+                    }
+                }
+            }
+        }
     });
 
     mPlayers.each([&](component::PlayerSlot & aPlayerSlot,
@@ -86,6 +117,9 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
                 "player", aInput.mKeyboard, mContext->mKeyboardMapping);
             break;
         case component::ControllerType::Gamepad:
+            aController.mCommandQuery = convertGamepadInput(
+                "player", aInput.mGamepads.at(aController.mControllerId),
+                mContext->mGamepadMapping);
             break;
         default:
             break;

@@ -33,8 +33,7 @@ void MenuScene::teardown(RawInput & aInput)
     mOwnedEntities.clear();
 }
 
-std::optional<Transition> MenuScene::update(float aDelta,
-                                            RawInput & aInput)
+std::optional<Transition> MenuScene::update(float aDelta, RawInput & aInput)
 {
     int keyboardCommand = convertKeyboardInput("menu", aInput.mKeyboard,
                                                mContext->mKeyboardMapping);
@@ -44,9 +43,10 @@ std::optional<Transition> MenuScene::update(float aDelta,
         return Transition{.mTransitionName = gQuitTransitionName};
     }
 
+    ent::Phase bindPlayerPhase;
+
     if (keyboardCommand & gSelectItem)
     {
-        ent::Phase bindPlayerPhase;
 
         mSlots.each([&](ent::Handle<ent::Entity> aHandle,
                         component::PlayerSlot & aSlot) {
@@ -60,6 +60,35 @@ std::optional<Transition> MenuScene::update(float aDelta,
         });
 
         return Transition{.mTransitionName = "start"};
+    }
+
+    for (std::size_t index = 0; index < aInput.mGamepads.size(); ++index)
+    {
+        GamepadState & rawGamepad = aInput.mGamepads.at(index);
+        int gamepadCommand =
+            convertGamepadInput("menu", rawGamepad, mContext->mGamepadMapping);
+
+        if (gamepadCommand & gQuitCommand)
+        {
+            return Transition{.mTransitionName = gQuitTransitionName};
+        }
+
+        if (gamepadCommand & gSelectItem)
+        {
+
+            mSlots.each([&](ent::Handle<ent::Entity> aHandle,
+                            component::PlayerSlot & aSlot) {
+                if (!aSlot.mFilled && !rawGamepad.mBound)
+                {
+                    fillSlotWithPlayer(bindPlayerPhase,
+                                       component::ControllerType::Gamepad,
+                                       aHandle, index);
+                    rawGamepad.mBound = true;
+                }
+            });
+
+            return Transition{.mTransitionName = "start"};
+        }
     }
 
     return std::nullopt;

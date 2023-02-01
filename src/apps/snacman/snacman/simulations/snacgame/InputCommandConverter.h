@@ -108,12 +108,16 @@ const inline BidirectionalMap<std::string, int> gCommandFlags{
 
 const inline BidirectionalMap<std::string, GamepadAtomicInput>
     gGamepadMappingDictionnary{
-        {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisPositive},
-        {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisNegative},
+        {"A", GamepadAtomicInput::a},
+        {"B", GamepadAtomicInput::b},
+        {"X", GamepadAtomicInput::x},
+        {"Y", GamepadAtomicInput::y},
+        {"LEFT_BUMPER", GamepadAtomicInput::leftBumper},
+        {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisNegative},
+        {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisPositive},
         {"JOY_LEFT_LEFT", GamepadAtomicInput::leftXAxisNegative},
         {"JOY_LEFT_RIGHT", GamepadAtomicInput::leftXAxisPositive},
-        {"SELECT", GamepadAtomicInput::guide},
-        {"B", GamepadAtomicInput::b},
+        {"SELECT", GamepadAtomicInput::back},
         {"START", GamepadAtomicInput::start},
 
     };
@@ -235,12 +239,13 @@ inline int convertKeyboardInput(const std::string & aGroup,
 
     for (const auto & [input, command] : aKeyboardMapping.mKeymaps.at(aGroup))
     {
-        InputState state =
+        const InputState & state =
             aKeyboardState.mKeyState.at(static_cast<size_t>(input));
         ButtonStatus stateWanted = command & gPositiveEdge
                                        ? ButtonStatus::PositiveEdge
                                        : ButtonStatus::Pressed;
-        commandFlags |= (static_cast<InputState::Enum_t>(state.mState)
+        commandFlags |= (static_cast<InputState::Enum_t>(
+                             std::get<ButtonStatus>(state.mState))
                          >= static_cast<InputState::Enum_t>(stateWanted))
                             ? (command & ~gPositiveEdge)
                             : 0;
@@ -253,29 +258,44 @@ inline int convertGamepadInput(const std::string & aGroup,
                                const GamepadState & aGamepadState,
                                const GamepadMapping & aGamepadMapping)
 {
-    // int commandFlags = 0;
-
-    // for (const auto & [input, command] : aGamepadMapping.mKeymaps)
-    //{
-    //   GamepadAtomicInput::PositiveEdge
-    //     commandFlags |=
-    //     aGamepadState.mAtomicInputList.at(static_cast<size_t>(input)).isPressed();
-    // }
-
-    // return commandFlags;
     int commandFlags = 0;
 
     for (const auto & [input, command] : aGamepadMapping.mKeymaps.at(aGroup))
     {
-        InputState state =
-            aGamepadState.mAtomicInputList.at(static_cast<size_t>(input));
-        ButtonStatus stateWanted = command & gPositiveEdge
-                                       ? ButtonStatus::PositiveEdge
-                                       : ButtonStatus::Pressed;
-        commandFlags |= (static_cast<InputState::Enum_t>(state.mState)
-                         >= static_cast<InputState::Enum_t>(stateWanted))
-                            ? (command & ~gPositiveEdge)
-                            : 0;
+        if (input <= GamepadAtomicInput::lastButton)
+        {
+            const InputState & state =
+                aGamepadState.mButtons.at(static_cast<int>(input));
+            ButtonStatus stateWanted = command & gPositiveEdge
+                                           ? ButtonStatus::PositiveEdge
+                                           : ButtonStatus::Pressed;
+            commandFlags |= (static_cast<InputState::Enum_t>(
+                                 std::get<ButtonStatus>(state.mState))
+                             >= static_cast<InputState::Enum_t>(stateWanted))
+                                ? (command & ~gPositiveEdge)
+                                : 0;
+        }
+        else
+        {
+            int index = static_cast<int>(input)
+                & ~static_cast<int>(GamepadAtomicInput::axisFlag)
+                & ~static_cast<int>(GamepadAtomicInput::positiveFlag);
+            const AxisStatus & state = aGamepadState.mAxis.at(index);
+
+            if (static_cast<int>(input)
+                & static_cast<int>(GamepadAtomicInput::positiveFlag))
+            {
+                commandFlags |= (static_cast<float>(state) > gJoystickDeadzone)
+                                    ? (command & ~gPositiveEdge)
+                                    : 0;
+            }
+            else
+            {
+                commandFlags |= (static_cast<float>(state) < -gJoystickDeadzone)
+                                    ? (command & ~gPositiveEdge)
+                                    : 0;
+            }
+        }
     }
 
     return commandFlags;
