@@ -6,7 +6,6 @@ set(REPO_FOLDER ${PROJECT_SOURCE_DIR})
 configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
-    Entities.h
     GraphicState.h
     ImguiUtilities.h
     Input.h
@@ -54,7 +53,6 @@ set(${TARGET_NAME}_HEADERS
 set(${TARGET_NAME}_SOURCES
     main.cpp
 
-    Entities.cpp
     Input.cpp
 
     simulations/snacgame/Entities.cpp
