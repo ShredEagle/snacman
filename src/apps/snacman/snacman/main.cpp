@@ -380,14 +380,14 @@ void runApplication()
     //
     // Initialize scene
     //
-    Simu_t scene{*glfwApp.getAppInterface(), imguiUi, resourceFinder, input};
+    Simu_t simulation{*glfwApp.getAppInterface(), imguiUi, resourceFinder, input};
 
     //
     // Initialize rendering subsystem
     //
 
     // Initialize the renderer
-    Simu_t::Renderer_t renderer = scene.makeRenderer(resourceFinder);
+    Simu_t::Renderer_t renderer = simulation.makeRenderer(resourceFinder);
 
     // Context must be removed from this thread before it can be made current on
     // the render thread.
@@ -420,21 +420,21 @@ void runApplication()
         //
         // Simulate one step
         //
-        if (scene.update(
+        if (simulation.update(
                 (float) asSeconds(configurableSettings.mSimulationDelta),
                 input))
         {
             break;
         }
 
-        scene.drawDebugUi(configurableSettings, inhibiter, input);
+        simulation.drawDebugUi(configurableSettings, inhibiter, input);
         // Pretend update took longer if requested by user.
         sleepBusy(configurableSettings.mUpdateDuration, beginStepTime);
 
         //
         // Push the graphic state for the latest simulated state
         //
-        graphicStates.push(scene.makeGraphicState());
+        graphicStates.push(simulation.makeGraphicState());
 
         // Regularly check if the rendering thread did not throw
         renderingThread.checkRethrow();
