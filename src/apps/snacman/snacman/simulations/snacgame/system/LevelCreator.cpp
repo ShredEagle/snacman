@@ -53,29 +53,34 @@ void LevelCreator::update()
                     switch (value)
                     {
                     case 'W':
-                        tiles.push_back(component::Tile{.mType = component::TileType::Path});
+                        tiles.push_back(component::Tile{
+                            .mType = component::TileType::Path});
                         createPathEntity(*mWorld, createLevelPhase,
                                          math::Position<2, int>{x, y});
                         createPill(*mWorld, createLevelPhase,
                                    math::Position<2, int>{x, y});
                         break;
                     case 'K':
-                        tiles.push_back(component::Tile{.mType = component::TileType::Portal});
+                        tiles.push_back(component::Tile{
+                            .mType = component::TileType::Portal});
                         createPortalEntity(*mWorld, createLevelPhase,
                                            math::Position<2, int>{x, y});
                         break;
                     case 'O':
-                        tiles.push_back(component::Tile{.mType = component::TileType::Pen});
+                        tiles.push_back(
+                            component::Tile{.mType = component::TileType::Pen});
                         createCopPenEntity(*mWorld, createLevelPhase,
                                            math::Position<2, int>{x, y});
                         break;
                     case 'U':
-                        tiles.push_back(component::Tile{.mType = component::TileType::Spawn});
+                        tiles.push_back(component::Tile{
+                            .mType = component::TileType::Spawn});
                         createPlayerSpawnEntity(*mWorld, createLevelPhase,
                                                 math::Position<2, int>{x, y});
                         break;
                     default:
-                        tiles.push_back(component::Tile{.mType = component::TileType::Void});
+                        tiles.push_back(component::Tile{
+                            .mType = component::TileType::Void});
                         break;
                     }
                 }

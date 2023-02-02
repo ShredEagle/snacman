@@ -20,7 +20,7 @@ class DeterminePlayerAction
 public:
     DeterminePlayerAction(ent::EntityManager & aWorld,
                           ent::Handle<ent::Entity> aLevel) :
-        mLevel{aWorld}
+        mPlayer{aWorld}, mLevel{aWorld}
     {}
 
     void update();

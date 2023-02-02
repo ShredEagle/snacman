@@ -12,8 +12,7 @@ class LevelCreator
 {
 public:
     LevelCreator(ent::EntityManager * aWorld) :
-        mWorld{aWorld},
-        mCreatable{*aWorld}
+        mWorld{aWorld}, mCreatable{*aWorld}
     {}
 
     void update();
