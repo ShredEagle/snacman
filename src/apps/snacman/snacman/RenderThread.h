@@ -3,7 +3,6 @@
 
 #include "GraphicState.h"
 
-#include "simulations/cubes/Cubes.h"
 #include "simulations/snacgame/SnacGame.h"
 
 #include <future>

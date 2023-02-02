@@ -23,7 +23,6 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/Renderer.h
     simulations/snacgame/SnacGame.h
 
-
     simulations/snacgame/component/Context.h
     simulations/snacgame/component/Controller.h
     simulations/snacgame/component/Geometry.h
