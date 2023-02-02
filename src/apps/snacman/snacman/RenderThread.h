@@ -44,6 +44,8 @@ class EntryBuffer
     using GraphicStateFifo_t = GraphicStateFifo<T_renderer>;
 
 public:
+    static constexpr std::size_t BufferDepth = 2;
+
     /// \brief Construct the buffer, block until it could initialize all its
     /// entries.
     EntryBuffer(GraphicStateFifo_t & aStateFifo)
@@ -88,7 +90,7 @@ public:
 private:
     std::size_t back() const { return (mFront + 1) % 2; }
 
-    std::array<typename GraphicStateFifo_t::Entry, 2> mDoubleBuffer;
+    std::array<typename GraphicStateFifo_t::Entry, BufferDepth> mDoubleBuffer;
     std::size_t mFront = 1;
 };
 
@@ -164,12 +166,14 @@ public:
         unsigned int aPixelHeight,
         resource::ResourceFinder & aResource)
     {
-        std::promise<snac::Font> promise;
-        std::future<snac::Font> future = promise.get_future();
-        push([promise = std::move(promise), path = std::move(aFont), aPixelHeight, &aResource]
-             (T_renderer & aRenderer) 
+        // std::function require the type-erased functor to be copy constructible.
+        // all captured types must be copyable.
+        auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Font>>>();
+        std::future<std::shared_ptr<snac::Font>> future = promise->get_future();
+        push([promise = std::move(promise), font = std::move(aFont), aPixelHeight, &aResource]
+             (T_renderer & aRenderer) mutable
              {
-                promise = aRenderer.loadFont(aFont, aPixelHeight, aResource);
+                promise->set_value(aRenderer.loadFont(font, aPixelHeight, aResource));
              });
         return future;
     }
@@ -207,6 +211,34 @@ private:
             mThrew = true;
         }
     }
+            
+    void serviceOperations(T_renderer & aRenderer)
+    {
+        // The implementation takes care not to hold onto the mutex
+        // while executing the operation.
+        {
+            while (true /* explicit break in body */)
+            {
+                Operation operation;
+                {
+                    std::lock_guard lock{mOperationsMutex};
+                    if (mOperations.empty())
+                    {
+                        // Breaks the service operations loop.
+                        break;
+                    }
+                    else
+                    {
+                        // Moves the operation out of the queue (and pop it).
+                        operation = std::move(mOperations.front());
+                        mOperations.pop();
+                    }
+                }
+                // Execute the operations while the mutex is unlocked.
+                operation(aRenderer);
+            }
+        }
+    }
 
     void run_impl(GraphicStateFifo_t & aStates, T_renderer && aRenderer)
     {
@@ -238,6 +270,15 @@ private:
         // Used by non-interpolating path, to decide if frame is dirty.
         Clock::time_point renderedPushTime;
 
+        // If the client is waiting on a future from this thread 
+        // before producing the two first states, we must service to avoid a deadlock.
+        while(aStates.size() < EntryBuffer<T_renderer>::BufferDepth)
+        {
+            // Note: this is busy looping at the moment.
+            // This should only be for a brief period at the beginning.
+            serviceOperations(aRenderer);
+        }
+
         // Initialize the buffer with the required number of entries (2 for
         // double buffering) This is blocking call, done last to offer more
         // opportunities for the entries to already be in the queue
@@ -247,30 +288,7 @@ private:
         while (!mStop)
         {
             // Service all queued operations first.
-            // The implementation takes care not to hold onto the mutex
-            // while executing the operation.
-            {
-                while (true /* explicit break in body */)
-                {
-                    Operation operation;
-                    {
-                        std::lock_guard lock{mOperationsMutex};
-                        if (mOperations.empty())
-                        {
-                            // Breaks the service operations loop.
-                            break;
-                        }
-                        else
-                        {
-                            // Moves the operation out of the queue (and pop it).
-                            operation = std::move(mOperations.front());
-                            mOperations.pop();
-                        }
-                    }
-                    // Execute the operations while the mutex is unlocked.
-                    operation(renderer);
-                }
-            }
+            serviceOperations(aRenderer);
 
             // TODO simulate delay in the render thread:
             // * Thread iteration time (simulate what CPU compuations run on the
