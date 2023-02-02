@@ -21,10 +21,10 @@ public:
         Scene(aName, aWorld, aContext), mSlots{mWorld}
     {}
 
-    std::optional<Transition> update(float aDelta,
-                                     RawInput & aInput) override;
+    std::optional<Transition> update(float aDelta, RawInput & aInput) override;
     void setup(const Transition & aTransition, RawInput & aInput) override;
     void teardown(RawInput & aInput) override;
+
 private:
     ent::Query<component::PlayerSlot> mSlots;
 };

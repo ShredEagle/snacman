@@ -4,6 +4,7 @@
 
 #include "../../../Input.h"
 #include "../component/Controller.h"
+#include "../component/PlayerSlot.h"
 #include "../Entities.h"
 #include "../InputCommandConverter.h"
 
@@ -46,21 +47,13 @@ std::optional<Transition> MenuScene::update(float aDelta, RawInput & aInput)
 
     ent::Phase bindPlayerPhase;
 
+    bool boundPlayer = false;
+
     if (keyboardCommand & gSelectItem)
     {
-
-        mSlots.each([&](ent::Handle<ent::Entity> aHandle,
-                        component::PlayerSlot & aSlot) {
-            if (!aSlot.mFilled && !aInput.mKeyboard.mBound)
-            {
-                fillSlotWithPlayer(bindPlayerPhase,
-                                   component::ControllerType::Keyboard, aHandle,
-                                   0);
-                aInput.mKeyboard.mBound = true;
-            }
-        });
-
-        return Transition{.mTransitionName = "start"};
+        boundPlayer =
+            findSlotAndBind(bindPlayerPhase, mSlots, ControllerType::Keyboard,
+                            gKeyboardControllerIndex);
     }
 
     for (std::size_t index = 0; index < aInput.mGamepads.size(); ++index)
@@ -76,20 +69,14 @@ std::optional<Transition> MenuScene::update(float aDelta, RawInput & aInput)
 
         if (gamepadCommand & gSelectItem)
         {
-
-            mSlots.each([&](ent::Handle<ent::Entity> aHandle,
-                            component::PlayerSlot & aSlot) {
-                if (!aSlot.mFilled && !rawGamepad.mBound)
-                {
-                    fillSlotWithPlayer(bindPlayerPhase,
-                                       component::ControllerType::Gamepad,
-                                       aHandle, index);
-                    rawGamepad.mBound = true;
-                }
-            });
-
-            return Transition{.mTransitionName = "start"};
+            boundPlayer |= findSlotAndBind(bindPlayerPhase, mSlots,
+                                           ControllerType::Gamepad, index);
         }
+    }
+
+    if (boundPlayer)
+    {
+        return Transition{.mTransitionName = "start"};
     }
 
     return std::nullopt;

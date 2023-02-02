@@ -25,6 +25,9 @@ constexpr std::size_t gGlfwKeyboardListSize = GLFW_KEY_LAST + 1;
 constexpr float gJoystickDeadzone = 0.4f;
 constexpr float gTriggerDeadzone = 0.1f;
 
+// This can't be between 0 and 15 (those are controller index)
+constexpr int gKeyboardControllerIndex = -1;
+
 using ButtonEnum_t = std::int8_t;
 
 enum class ButtonStatus : ButtonEnum_t
@@ -142,25 +145,29 @@ enum class GamepadAtomicInput
     rightTrigger = GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER | axisFlag,
 };
 
+enum class ControllerType
+{
+    Keyboard,
+    Gamepad,
+};
+
 struct GamepadState
 {
     GamepadState()
     {
         for (auto & axis : mAxis)
         {
-            axis.mState = AxisStatus{0.f};
+            axis.mState = AxisStatus{0.f, 0.f};
         }
     }
     bool mConnected = false;
     std::array<InputState, gGlfwButtonListSize> mButtons;
     std::array<InputState, gGlfwAxisListSize> mAxis;
-    bool mBound = false;
 };
 
 struct KeyboardState
 {
     std::array<InputState, static_cast<std::size_t>(gGlfwKeyboardListSize)> mKeyState;
-    bool mBound = false;
 };
 
 struct MouseState

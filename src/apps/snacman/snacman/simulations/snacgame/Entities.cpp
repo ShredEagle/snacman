@@ -11,6 +11,7 @@
 #include "component/Spawner.h"
 #include "component/Speed.h"
 #include "component/Text.h"
+#include "snacman/Input.h"
 
 #include <math/Color.h>
 #include <snac-renderer/text/Text.h>
@@ -109,7 +110,7 @@ createPlayerSpawnEntity(ent::EntityManager & mWorld,
 }
 
 void fillSlotWithPlayer(ent::Phase & aInit,
-                        component::ControllerType aControllerType,
+                        ControllerType aControllerType,
                         ent::Handle<ent::Entity> aSlot,
                         int aControllerId)
 {
@@ -159,6 +160,24 @@ ent::Handle<ent::Entity> makeText(ent::EntityManager & mWorld,
         .add(component::PoseScreenSpace{.mPosition_u = aPosition_unitscreen});
 
     return handle;
+}
+
+bool findSlotAndBind(ent::Phase & aBindPhase,
+                     ent::Query<component::PlayerSlot> & aSlots,
+                     ControllerType aType,
+                     int aIndex)
+{
+    std::optional<ent::Handle<ent::Entity>> freeSlot = snac::getFirstHandle(
+        aSlots,
+        [](component::PlayerSlot & aSlot) { return !aSlot.mFilled; });
+
+    if (freeSlot)
+    {
+        fillSlotWithPlayer(aBindPhase, aType, *freeSlot, aIndex);
+        return true;
+    }
+
+    return false;
 }
 
 } // namespace snacgame
