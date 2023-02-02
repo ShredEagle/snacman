@@ -141,8 +141,8 @@ enum class GamepadAtomicInput
     rightXAxisNegative = GLFW_GAMEPAD_AXIS_RIGHT_X | axisFlag,
     rightYAxisPositive = GLFW_GAMEPAD_AXIS_RIGHT_Y | axisFlag | positiveFlag,
     rightYAxisNegative = GLFW_GAMEPAD_AXIS_RIGHT_Y | axisFlag,
-    leftTrigger = GLFW_GAMEPAD_AXIS_LEFT_TRIGGER | axisFlag,
-    rightTrigger = GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER | axisFlag,
+    leftTrigger = GLFW_GAMEPAD_AXIS_LEFT_TRIGGER | axisFlag | positiveFlag,
+    rightTrigger = GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER | axisFlag | positiveFlag,
 };
 
 enum class ControllerType

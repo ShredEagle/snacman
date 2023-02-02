@@ -1,5 +1,6 @@
 #include "Input.h"
 
+#include <GLFW/glfw3.h>
 #include <functional>
 #include <ios>
 
@@ -27,7 +28,7 @@ AxisStatus::operator ButtonStatus() const
     int currentBit = static_cast<int>(std::abs(mCurrent) >= gJoystickDeadzone) << 1;
 
     return static_cast<ButtonStatus>(
-        ~previousBit & currentBit
+        (~previousBit & 1 << 0) | (currentBit & 1 << 1)
     );
 }
 
@@ -181,7 +182,12 @@ RawInput HidManager::read(const RawInput & aPrevious,
 
             for (std::size_t axisId = 0; axisId < gamepadState.mAxis.size(); ++axisId)
             {
-                gamepadState.mAxis.at(axisId) = rawGamepadState.axes[axisId];
+                float axisValue = rawGamepadState.axes[axisId];
+                if (axisId == GLFW_GAMEPAD_AXIS_LEFT_TRIGGER || axisId == GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER)
+                {
+                    axisValue = (axisValue + 1.f) / 2.f;
+                }
+                gamepadState.mAxis.at(axisId) = axisValue;
             }
         }
     }
