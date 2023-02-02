@@ -48,13 +48,7 @@ struct hash<ad::snacgame::scene::Transition>
 namespace ad {
 namespace snacgame {
 
-// TODO extend (probably with EntityManager)
-// TODO relocate
-struct GameContext
-{
-    resource::ResourceFinder mFinder;
-};
-
+struct GameContext;
 
 namespace scene {
 

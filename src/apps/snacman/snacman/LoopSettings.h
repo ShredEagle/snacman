@@ -5,8 +5,6 @@
 namespace ad {
 namespace snac {
 
-using ms = std::chrono::milliseconds;
-
 constexpr Clock::duration gSimulationDelta = Clock::duration{std::chrono::seconds{1}} / 60;
 
 struct ConfigurableSettings

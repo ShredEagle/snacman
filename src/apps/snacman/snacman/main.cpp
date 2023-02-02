@@ -1,3 +1,4 @@
+#include "Input.h"
 #include "Logging.h"
 #include "LoopSettings.h"
 #include "RenderThread.h"
@@ -5,21 +6,32 @@
 
 #include <build_info.h>
 
+#include "simulations/snacgame/SnacGame.h"
+
+
 // TODO we should not include something from detail.
 // So either move it out of detail, either use nholmann directly
 #include <arte/detail/Json.h>
 
 #include <graphics/ApplicationGlfw.h>
+
 #include <imguiui/ImguiUi.h>
+
 #include <math/VectorUtilities.h>
 
 #include <platform/Path.h>
 
 #include <resource/ResourceFinder.h>
 
+#include <fstream>
+
 
 using namespace ad;
 using namespace ad::snac;
+
+
+// TODO find a better place than global
+constexpr bool gWaitByBusyLoop = true;
 
 
 resource::ResourceFinder makeResourceFinder()
@@ -69,6 +81,21 @@ void runApplication()
     ConfigurableSettings configurableSettings;
 
     //
+    // Initialize rendering subsystem
+    //
+
+    // Initialize the renderer
+    snacgame::Renderer renderer{*glfwApp.getAppInterface(), resourceFinder};
+
+    // Context must be removed from this thread before it can be made current on
+    // the render thread.
+    glfwApp.removeCurrentContext();
+
+    GraphicStateFifo<snacgame::Renderer> graphicStates;
+    RenderThread renderingThread{glfwApp, graphicStates, std::move(renderer),
+                                 imguiUi, configurableSettings.mInterpolate};
+
+    //
     // Initialize input devices
     //
     HidManager hid{glfwApp};
@@ -78,31 +105,8 @@ void runApplication()
     //
     // Initialize scene
     //
-    Simu_t simulation{*glfwApp.getAppInterface(), imguiUi, resourceFinder, input};
+    snacgame::SnacGame simulation{*glfwApp.getAppInterface(), renderingThread, imguiUi, resourceFinder, input};
 
-    //
-    // Initialize rendering subsystem
-    //
-
-    // Initialize the renderer
-    Simu_t::Renderer_t renderer = simulation.makeRenderer(resourceFinder);
-
-    // Context must be removed from this thread before it can be made current on
-    // the render thread.
-    glfwApp.removeCurrentContext();
-
-    GraphicStateFifo graphicStates;
-    RenderThread renderingThread{glfwApp, graphicStates, std::move(renderer),
-                                 imguiUi, configurableSettings.mInterpolate};
-
-#if defined(CUBE_SCENE)
-    // Reset the camera projection when the window size changes
-    auto mWindowSizeListening = glfwApp.getAppInterface()->listenWindowResize(
-        [&renderingThread, &scene](math::Size<2, int> aWindowSize) {
-            renderingThread.resetProjection(math::getRatio<float>(aWindowSize),
-                                            scene.getCameraParameters());
-        });
-#endif
 
     //
     // Main simulation loop

@@ -1,6 +1,7 @@
 #include "SnacGame.h"
 
 #include "Entities.h"
+#include "GameContext.h"
 #include "InputCommandConverter.h"
 
 #include "component/MovementScreenSpace.h"
@@ -39,8 +40,10 @@ namespace ad {
 namespace snacgame {
 
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
+                   snac::RenderThread<Renderer_t> & aRenderThread,
                    imguiui::ImguiUi & aImguiUi,
-                   const resource::ResourceFinder & aResourceFinder, RawInput & aInput) :
+                   const resource::ResourceFinder & aResourceFinder,
+                   RawInput & aInput) :
     mAppInterface{&aAppInterface},
     mMappingContext{mWorld, aResourceFinder},
     mStateMachine{mWorld, mWorld, gAssetRoot / "scenes/scene_description.json",
@@ -48,7 +51,11 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld},
     mQueryText{mWorld, mWorld},
-    mGameContext{.mFinder = aResourceFinder},
+    mGameContext{
+        .mResource = aResourceFinder,
+        .mWorld = mWorld,
+        .mRenderThread = aRenderThread,
+    },
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
@@ -62,23 +69,18 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(scene::Transition{}, aInput);
 
-    ent::Handle<ent::Entity> title = 
-        makeText(mWorld,
-                init,
-                "Snacman!",
-                // TODO this should be done within the ResourceManager, here only fetching the Font via name + size
-                std::make_shared<snac::Font>(
-                    mFreetype,
-                    *aResourceFinder.find("fonts/Comfortaa-Regular.ttf"),
-                    120,
-                    snac::makeDefaultTextProgram(aResourceFinder)
-                ),
-                math::hdr::gYellow<float>,
-                math::Position<2, float>{-0.5f, 0.f});
-    // TODO Remove, this is a silly demonstration.
-    title.get(init)->add(component::MovementScreenSpace{
-        .mAngularSpeed = math::Radian<float>{math::pi<float> / 2.f}
-    });
+    //ent::Handle<ent::Entity> title = 
+    //    makeText(mWorld,
+    //            init,
+    //            "Snacman!",
+    //            // TODO this should be done within the ResourceManager, here only fetching the Font via name + size
+    //            mWorld.mRender
+    //            math::hdr::gYellow<float>,
+    //            math::Position<2, float>{-0.5f, 0.f});
+    //// TODO Remove, this is a silly demonstration.
+    //title.get(init)->add(component::MovementScreenSpace{
+    //    .mAngularSpeed = math::Radian<float>{math::pi<float> / 2.f}
+    //});
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
@@ -147,7 +149,8 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
     mSimulationTime += aDelta;
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
-    mSystemOrbitalCamera->update(aInput, getCameraParameters().vFov,
+    mSystemOrbitalCamera->update(aInput,
+                                 snac::Camera::gDefaults.vFov, // TODO Should be dynamic
                                  mAppInterface->getWindowSize().height());
 
     std::optional<scene::Transition> transition =
@@ -233,19 +236,6 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     return state;
 }
 
-snac::Camera::Parameters SnacGame::getCameraParameters() const
-{
-    return mCameraParameters;
-}
-
-SnacGame::Renderer_t SnacGame::makeRenderer(const resource::ResourceFinder & aResourceFinder) const
-{
-    return Renderer_t{
-        *mAppInterface,
-        getCameraParameters(),
-        aResourceFinder
-    };
-}
 
 } // namespace snacgame
 } // namespace ad

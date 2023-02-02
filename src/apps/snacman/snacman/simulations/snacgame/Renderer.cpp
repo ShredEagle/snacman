@@ -6,6 +6,8 @@
 
 #include <snac-renderer/text/Text.h>
 
+#include <platform/Filesystem.h>
+
 
 namespace ad {
 namespace snacgame {
@@ -91,9 +93,10 @@ snac::InstanceStream initializeInstanceStream()
 }
 
 
-Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Camera::Parameters aCameraParameters, const resource::ResourceFinder & aResourceFinder) :
+Renderer::Renderer(graphics::AppInterface & aAppInterface,
+                   const resource::ResourceFinder & aResourceFinder) :
     mAppInterface{aAppInterface},
-    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), aCameraParameters},
+    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults},
     mCubeMesh{std::move(*Renderer::LoadShape(aResourceFinder))},
     mCubeInstances{initializeInstanceStream()}
 {}
@@ -120,6 +123,19 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(const resource::ResourceFinder &
     });
 
     return mesh;
+}
+
+
+std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
+                                               unsigned int aPixelHeight,
+                                               resource::ResourceFinder & aResource)
+{
+    return std::make_shared<snac::Font>(
+        mFreetype,
+        *aResource.find(aFont),
+        aPixelHeight,
+        snac::makeDefaultTextProgram(aResource)
+    );
 }
 
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EntityWrap.h"
+#include "GameContext.h"
 #include "Renderer.h"
 
 #include "component/Geometry.h"
@@ -92,6 +93,7 @@ public:
 
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface,
+             snac::RenderThread<Renderer_t> & aRenderThread,
              imguiui::ImguiUi & aImguiUi,
              const resource::ResourceFinder & aResourceFinder, RawInput & aInput);
 
@@ -103,18 +105,11 @@ public:
 
     std::unique_ptr<visu::GraphicState> makeGraphicState();
 
-    snac::Camera::Parameters getCameraParameters() const;
-
     // TODO remove finder
     Renderer_t makeRenderer(const resource::ResourceFinder & aResourceFinder) const;
 
 private:
     graphics::AppInterface * mAppInterface;
-    snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
-
-    // Must appear before the EntityManager, because the EntityManager
-    // might contain Freetype FontFaces, and the Freetype object must outlive them.
-    arte::Freetype mFreetype;
 
     ent::EntityManager mWorld;
     

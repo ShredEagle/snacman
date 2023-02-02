@@ -2,39 +2,43 @@
 
 
 #include "GraphicState.h"
+#include "Logging.h"
+#include "Timing.h"
 
-#include "simulations/snacgame/SnacGame.h"
+#include <graphics/ApplicationGlfw.h>
+
+#include <imguiui/ImguiUi.h>
+
+#include <resource/ResourceFinder.h>
+
+#include <snac-renderer/Camera.h>
+#include <snac-renderer/Mesh.h>
+#include <snac-renderer/text/Text.h>
 
 #include <future>
 #include <queue>
 #include <thread>
 
 
-// #define BAWLS_SCENE
-#define SNAC_SCENE
-
-#if defined(SNAC_SCENE)
-using Simu_t = ad::snacgame::SnacGame;
-#endif
-
-
 namespace ad {
 namespace snac {
 
 
-using GraphicStateFifo = StateFifo<Simu_t::Renderer_t::GraphicState_t>;
+template <class T_renderer>
+using GraphicStateFifo = StateFifo<typename T_renderer::GraphicState_t>;
 
-constexpr bool gWaitByBusyLoop = true;
-// TODO find a better place than global
 
 /// \brief A double buffer implementation, consuming entries from a
 /// GraphicStateFifo.
+template <class T_renderer>
 class EntryBuffer
 {
+    using GraphicStateFifo_t = GraphicStateFifo<T_renderer>;
+
 public:
     /// \brief Construct the buffer, block until it could initialize all its
     /// entries.
-    EntryBuffer(GraphicStateFifo & aStateFifo)
+    EntryBuffer(GraphicStateFifo_t & aStateFifo)
     {
         for (std::size_t i = 0; i != std::size(mDoubleBuffer); ++i)
         {
@@ -49,12 +53,12 @@ public:
         consume(aStateFifo);
     }
 
-    const GraphicStateFifo::Entry & current() const
+    const typename GraphicStateFifo_t::Entry & current() const
     {
         return mDoubleBuffer[mFront];
     }
 
-    const GraphicStateFifo::Entry & previous() const
+    const typename GraphicStateFifo_t::Entry & previous() const
     {
         return mDoubleBuffer[back()];
     }
@@ -63,7 +67,7 @@ public:
     ///
     /// Ensures the buffer current() and previous() entries are
     /// up-to-date at the time of return (modulo return branching duration).
-    void consume(GraphicStateFifo & aStateFifo)
+    void consume(GraphicStateFifo_t & aStateFifo)
     {
         while (!aStateFifo.empty())
         {
@@ -76,7 +80,7 @@ public:
 private:
     std::size_t back() const { return (mFront + 1) % 2; }
 
-    std::array<GraphicStateFifo::Entry, 2> mDoubleBuffer;
+    std::array<typename GraphicStateFifo_t::Entry, 2> mDoubleBuffer;
     std::size_t mFront = 1;
 };
 
@@ -84,11 +88,12 @@ private:
 template <class T_renderer>
 class RenderThread
 {
+    using GraphicStateFifo_t = GraphicStateFifo<T_renderer>;
     using Operation = std::function<void(T_renderer &)>;
 
 public:
     RenderThread(graphics::ApplicationGlfw & aGlfwApp,
-                 GraphicStateFifo & aStates,
+                 GraphicStateFifo_t & aStates,
                  T_renderer && aRenderer,
                  imguiui::ImguiUi & aImguiUi,
                  std::atomic<bool> & aInterpolate) :
@@ -146,6 +151,21 @@ public:
         return future;
     }
 
+    std::future<std::shared_ptr<snac::Font>> loadFont(
+        filesystem::path aFont,
+        unsigned int aPixelHeight,
+        resource::ResourceFinder & aResource)
+    {
+        std::promise<snac::Font> promise;
+        std::future<snac::Font> future = promise.get_future();
+        push([promise = std::move(promise), path = std::move(aFont), aPixelHeight, &aResource]
+             (T_renderer & aRenderer) 
+             {
+                promise = aRenderer.loadFont(aFont, aPixelHeight, aResource);
+             });
+        return future;
+    }
+
     void checkRethrow()
     {
         if (mThrew)
@@ -167,7 +187,7 @@ private:
         mThread.join();
     }
 
-    void run(GraphicStateFifo & aStates, T_renderer && aRenderer)
+    void run(GraphicStateFifo_t & aStates, T_renderer && aRenderer)
     {
         try
         {
@@ -180,7 +200,7 @@ private:
         }
     }
 
-    void run_impl(GraphicStateFifo & aStates, T_renderer && aRenderer)
+    void run_impl(GraphicStateFifo_t & aStates, T_renderer && aRenderer)
     {
         SELOG(info)("Render thread started");
 
@@ -208,7 +228,7 @@ private:
         // Initialize the buffer with the required number of entries (2 for
         // double buffering) This is blocking call, done last to offer more
         // opportunities for the entries to already be in the queue
-        EntryBuffer entries{aStates};
+        EntryBuffer<T_renderer> entries{aStates};
         SELOG(info)("Render thread initialized states buffer.");
 
         while (!mStop)
