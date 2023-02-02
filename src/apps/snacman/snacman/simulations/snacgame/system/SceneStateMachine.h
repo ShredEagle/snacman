@@ -1,13 +1,14 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/scene/Scene.h"
+#include "../scene/Scene.h"
+
+#include <entity/EntityManager.h>
+#include <platform/Filesystem.h>
 
 #include <algorithm>
-#include <entity/EntityManager.h>
 #include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
-#include <platform/Filesystem.h>
 
 namespace ad {
 namespace snacgame {

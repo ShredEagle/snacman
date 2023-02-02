@@ -2,15 +2,11 @@
 
 
 
+#include "snacman/Input.h"
+
 namespace ad {
 namespace snacgame {
 namespace component {
-
-enum class ControllerType
-{
-    Keyboard,
-    Gamepad,
-};
 
 struct Controller
 {

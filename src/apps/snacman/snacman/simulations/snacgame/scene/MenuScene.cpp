@@ -1,10 +1,12 @@
 #include "MenuScene.h"
 
-#include "snacman/Input.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
-#include "snacman/simulations/snacgame/InputCommandConverter.h"
+#include "../SnacGame.h"
 
+#include "../../../Input.h"
+#include "../component/Controller.h"
+#include "../component/PlayerSlot.h"
 #include "../Entities.h"
+#include "../InputCommandConverter.h"
 
 #include <optional>
 
@@ -33,8 +35,7 @@ void MenuScene::teardown(RawInput & aInput)
     mOwnedEntities.clear();
 }
 
-std::optional<Transition> MenuScene::update(float aDelta,
-                                            RawInput & aInput)
+std::optional<Transition> MenuScene::update(float aDelta, RawInput & aInput)
 {
     int keyboardCommand = convertKeyboardInput("menu", aInput.mKeyboard,
                                                mContext->mKeyboardMapping);
@@ -44,21 +45,37 @@ std::optional<Transition> MenuScene::update(float aDelta,
         return Transition{.mTransitionName = gQuitTransitionName};
     }
 
+    ent::Phase bindPlayerPhase;
+
+    bool boundPlayer = false;
+
     if (keyboardCommand & gSelectItem)
     {
-        ent::Phase bindPlayerPhase;
+        boundPlayer =
+            findSlotAndBind(bindPlayerPhase, mSlots, ControllerType::Keyboard,
+                            gKeyboardControllerIndex);
+    }
 
-        mSlots.each([&](ent::Handle<ent::Entity> aHandle,
-                        component::PlayerSlot & aSlot) {
-            if (!aSlot.mFilled && !aInput.mKeyboard.mBound)
-            {
-                fillSlotWithPlayer(bindPlayerPhase,
-                                   component::ControllerType::Keyboard, aHandle,
-                                   0);
-                aInput.mKeyboard.mBound = true;
-            }
-        });
+    for (std::size_t index = 0; index < aInput.mGamepads.size(); ++index)
+    {
+        GamepadState & rawGamepad = aInput.mGamepads.at(index);
+        int gamepadCommand =
+            convertGamepadInput("menu", rawGamepad, mContext->mGamepadMapping);
 
+        if (gamepadCommand & gQuitCommand)
+        {
+            return Transition{.mTransitionName = gQuitTransitionName};
+        }
+
+        if (gamepadCommand & gSelectItem)
+        {
+            boundPlayer |= findSlotAndBind(bindPlayerPhase, mSlots,
+                                           ControllerType::Gamepad, static_cast<int>(index));
+        }
+    }
+
+    if (boundPlayer)
+    {
         return Transition{.mTransitionName = "start"};
     }
 

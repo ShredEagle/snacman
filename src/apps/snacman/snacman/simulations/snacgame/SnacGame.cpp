@@ -1,17 +1,14 @@
 #include "SnacGame.h"
 
-#include "Entities.h"
-#include "InputCommandConverter.h"
-
-#include "component/MovementScreenSpace.h"
-
 #include "component/Context.h"
 #include "component/Controller.h"
 #include "component/LevelData.h"
+#include "component/MovementScreenSpace.h"
 #include "component/PlayerSlot.h"
+#include "Entities.h"
+#include "InputCommandConverter.h"
+#include "scene/Scene.h"
 #include "snacman/ImguiUtilities.h"
-#include "snacman/simulations/snacgame/component/PlayerSlot.h"
-#include "snacman/simulations/snacgame/scene/Scene.h"
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
 #include "system/MovementIntegration.h"
@@ -19,21 +16,15 @@
 #include "system/PlayerSpawner.h"
 #include "system/SceneStateMachine.h"
 
-#include <snacman/ImguiUtilities.h>
-
-#include <imguiui/ImguiUi.h>
-
-#include <snac-renderer/text/Text.h>
-
+#include <chrono>
+#include <GLFW/glfw3.h>
 #include <imgui.h>
+#include <imguiui/ImguiUi.h>
 #include <markovjunior/Grid.h>
-
 #include <math/Color.h>
 #include <math/VectorUtilities.h>
-
-#include <GLFW/glfw3.h>
-#include <chrono>
 #include <optional>
+#include <snac-renderer/text/Text.h>
 #include <string>
 
 namespace ad {
@@ -41,7 +32,8 @@ namespace snacgame {
 
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    imguiui::ImguiUi & aImguiUi,
-                   const resource::ResourceFinder & aResourceFinder, RawInput & aInput) :
+                   const resource::ResourceFinder & aResourceFinder,
+                   RawInput & aInput) :
     mAppInterface{&aAppInterface},
     mContext{mWorld, aResourceFinder},
     mStateMachine{mWorld, mWorld, gAssetRoot / "scenes/scene_description.json",
@@ -62,23 +54,17 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(scene::Transition{}, aInput);
 
-    ent::Handle<ent::Entity> title = 
-        makeText(mWorld,
-                init,
-                "Snacman!",
-                // TODO this should be done within the ResourceManager, here only fetching the Font via name + size
-                std::make_shared<snac::Font>(
-                    mFreetype,
-                    *aResourceFinder.find("fonts/Comfortaa-Regular.ttf"),
-                    120,
-                    snac::makeDefaultTextProgram(aResourceFinder)
-                ),
-                math::hdr::gYellow<float>,
-                math::Position<2, float>{-0.5f, 0.f});
+    ent::Handle<ent::Entity> title = makeText(
+        mWorld, init, "Snacman!",
+        // TODO this should be done within the ResourceManager, here only
+        // fetching the Font via name + size
+        std::make_shared<snac::Font>(
+            mFreetype, *aResourceFinder.find("fonts/Comfortaa-Regular.ttf"),
+            120, snac::makeDefaultTextProgram(aResourceFinder)),
+        math::hdr::gYellow<float>, math::Position<2, float>{-0.5f, 0.f});
     // TODO Remove, this is a silly demonstration.
     title.get(init)->add(component::MovementScreenSpace{
-        .mAngularSpeed = math::Radian<float>{math::pi<float> / 2.f}
-    });
+        .mAngularSpeed = math::Radian<float>{math::pi<float> / 2.f}});
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
@@ -155,8 +141,8 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
     if (transition)
     {
         if (transition.value().mTransitionName.compare(
-               scene::gQuitTransitionName)
-               == 0)
+                scene::gQuitTransitionName)
+            == 0)
         {
             return true;
         }
@@ -179,13 +165,11 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     const int mColCount = gGridSize;
 
     mQueryRenderable.get(nomutation)
-        .each([cellSize, &state](
-                  ent::Handle<ent::Entity> aHandle,
-                  component::Geometry & aGeometry) {
-            float yCoord =
-                aGeometry.mLayer == component::GeometryLayer::Level
-                    ? 0.f
-                    : cellSize;
+        .each([cellSize, &state](ent::Handle<ent::Entity> aHandle,
+                                 component::Geometry & aGeometry) {
+            float yCoord = aGeometry.mLayer == component::GeometryLayer::Level
+                               ? 0.f
+                               : cellSize;
             auto worldPosition = math::Position<3, float>{
                 -(float) mRowCount
                     + (float) aGeometry.mGridPosition.y() * cellSize
@@ -211,22 +195,20 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     //
     // Text
     //
-    mQueryText.get(nomutation).each(
-        [&state](ent::Handle<ent::Entity> aHandle, component::Text & aText, component::PoseScreenSpace & aPose)
-        {
+    mQueryText.get(nomutation)
+        .each([&state](ent::Handle<ent::Entity> aHandle,
+                       component::Text & aText,
+                       component::PoseScreenSpace & aPose) {
             state->mTextEntities.insert(
-                aHandle.id(),
-                visu::TextScreen{
-                    // TODO
-                    .mPosition_unitscreen = aPose.mPosition_u, 
-                    .mOrientation = aPose.mRotationCCW,
-                    .mString = aText.mString,
-                    .mFont = aText.mFont,
-                    .mColor = aText.mColor,
-            });
-        }
-    );
-
+                aHandle.id(), visu::TextScreen{
+                                  // TODO
+                                  .mPosition_unitscreen = aPose.mPosition_u,
+                                  .mOrientation = aPose.mRotationCCW,
+                                  .mString = aText.mString,
+                                  .mFont = aText.mFont,
+                                  .mColor = aText.mColor,
+                              });
+        });
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
     return state;
@@ -237,13 +219,10 @@ snac::Camera::Parameters SnacGame::getCameraParameters() const
     return mCameraParameters;
 }
 
-SnacGame::Renderer_t SnacGame::makeRenderer(const resource::ResourceFinder & aResourceFinder) const
+SnacGame::Renderer_t
+SnacGame::makeRenderer(const resource::ResourceFinder & aResourceFinder) const
 {
-    return Renderer_t{
-        *mAppInterface,
-        getCameraParameters(),
-        aResourceFinder
-    };
+    return Renderer_t{*mAppInterface, getCameraParameters(), aResourceFinder};
 }
 
 } // namespace snacgame

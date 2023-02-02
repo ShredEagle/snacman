@@ -1,12 +1,13 @@
 #pragma once
 
-
+#include <cmath>
 #include <graphics/AppInterface.h>
 #include <graphics/ApplicationGlfw.h>
 
 #include <math/Vector.h>
 
 #include <type_traits>
+#include <variant>
 
 namespace ad {
 
@@ -16,14 +17,61 @@ namespace graphics
     class ApplicationGlfw;
 } // namespace graphics
 
+constexpr std::size_t gGlfwButtonListSize = GLFW_GAMEPAD_BUTTON_LAST + 1;
+constexpr std::size_t gGlfwAxisListSize = GLFW_GAMEPAD_AXIS_LAST + 1;
+constexpr std::size_t gGlfwJoystickListSize = GLFW_JOYSTICK_LAST + 1;
+constexpr std::size_t gGlfwKeyboardListSize = GLFW_KEY_LAST + 1;
+
+constexpr float gJoystickDeadzone = 0.4f;
+constexpr float gTriggerDeadzone = 0.1f;
+
+// This can't be between 0 and 15 (those are controller index)
+constexpr int gKeyboardControllerIndex = -1;
+
 using ButtonEnum_t = std::int8_t;
 
 enum class ButtonStatus : ButtonEnum_t
 {
-    Released,
-    NegativeEdge, // just released
-    Pressed,
-    PositiveEdge, // just pressed
+    // Values are set because their values
+    // is important for AxisStatus to 
+    // ButtonStatus conversion
+    NegativeEdge = 0, // just released
+    Released = 1,
+    Pressed = 2,
+    PositiveEdge = 3, // just pressed
+};
+
+enum class AxisName : ButtonEnum_t
+{
+    LeftX = GLFW_GAMEPAD_AXIS_LEFT_X,
+    LeftY = GLFW_GAMEPAD_AXIS_LEFT_Y,
+    RightX = GLFW_GAMEPAD_AXIS_RIGHT_X,
+    RightY = GLFW_GAMEPAD_AXIS_RIGHT_Y,
+    LeftTrigger = GLFW_GAMEPAD_AXIS_LEFT_TRIGGER,
+    RightTrigger = GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER,
+};
+
+struct AxisStatus
+{
+    AxisStatus & operator =(const float & aRhs);
+    
+    operator ButtonStatus() const;
+
+    operator float() const;
+
+    bool operator ==(const AxisStatus & aRhs) const
+    { return mCurrent == aRhs.mCurrent; }
+    bool operator >(const AxisStatus & aRhs) const
+    { return mCurrent > aRhs.mCurrent; }
+    bool operator <(const AxisStatus & aRhs) const
+    { return mCurrent > aRhs.mCurrent; }
+    bool operator <=(const AxisStatus & aRhs) const
+    { return *this < aRhs || *this == aRhs; }
+    bool operator >=(const AxisStatus & aRhs) const
+    { return *this > aRhs || *this == aRhs; }
+
+    float mPrevious;
+    float mCurrent;
 };
 
 struct InputState
@@ -31,20 +79,21 @@ struct InputState
     using Enum_t = std::underlying_type_t<ButtonStatus>;
 
     InputState() = default;
-    InputState(const bool & aBool) :
-        mState{aBool ? ButtonStatus::Pressed : ButtonStatus::Released}
-    {}
+    InputState(const bool & aBool);
+    InputState(const float & aFloat);
 
-    operator ButtonStatus() const
-    { return mState; }
+    InputState & operator =(const bool & aRhs);
+    InputState & operator =(const float & aRhs);
 
-    operator bool() const
-    { return isPressed(); }
+    operator AxisStatus() const;
 
-    bool isPressed() const
-    { return static_cast<Enum_t>(mState) >= static_cast<Enum_t>(ButtonStatus::Pressed); }
+    operator ButtonStatus() const;
 
-    ButtonStatus mState{ButtonStatus::Released};
+    operator bool() const;
+
+    bool isPressed() const;
+
+    std::variant<ButtonStatus, AxisStatus> mState{ButtonStatus::Released};
 };
 
 // Note: used to index into an array of ButtonStatus
@@ -54,76 +103,71 @@ enum class MouseButton
     Middle,
     Right,
 
-    _End/* Keep last
-*/};
+    _End/* Keep last */
+};
 
-constexpr std::size_t gGlfwButtonListSize = GLFW_GAMEPAD_BUTTON_LAST + 1;
-constexpr std::size_t gGlfwJoystickListSize = GLFW_JOYSTICK_LAST + 1;
-constexpr std::size_t gGlfwKeyboardListSize = GLFW_KEY_LAST + 1;
-
-constexpr float gJoystickDeadzone = 0.1f;
-constexpr float gTriggerDeadzone = 0.1f;
-
-// What is a mapping
-// a mapping links an input device type and an atomic command
-// to an action
-// For snacman there will be a mapping for keyboard
-// and a mapping for gamepad
-// There won't be a mapping that mix device type
-// a player will be linked to a keyboard or a gamepad
-// and its action will be extracted from that device
-
-
-// Gamepad command needs to be enriched to be able to map
-// action to a signed axis command
-// one other solution would be to simplify with only one
-// command for all axis and associate a move action to that
-// command and do the differentiation in a system
-// if so axis should be one command and dpad should be one command
 enum class GamepadAtomicInput
 {
-    leftXAxisPositive,
-    leftXAxisNegative,
-    leftYAxisPositive,
-    leftYAxisNegative,
-    rightXAxisPositive,
-    rightXAxisNegative,
-    rightYAxisPositive,
-    rightYAxisNegative,
-    a,
-    b,
-    x,
-    y,
-    start,
-    guide,
-    dPadRight,
-    dPadLeft,
-    dPadUp,
-    dPadDown,
-    leftBumper,
-    rightBumper,
-    leftTrigger,
-    rightTrigger,
+    a = GLFW_GAMEPAD_BUTTON_A,
+    b = GLFW_GAMEPAD_BUTTON_B,
+    x = GLFW_GAMEPAD_BUTTON_X,
+    y = GLFW_GAMEPAD_BUTTON_Y,
+    leftBumper = GLFW_GAMEPAD_BUTTON_LEFT_BUMPER,
+    rightBumper = GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER,
+    back = GLFW_GAMEPAD_BUTTON_BACK,
+    start = GLFW_GAMEPAD_BUTTON_START,
+    guide = GLFW_GAMEPAD_BUTTON_GUIDE,
+    leftThumb = GLFW_GAMEPAD_BUTTON_LEFT_THUMB,
+    rightThumb = GLFW_GAMEPAD_BUTTON_RIGHT_THUMB,
+    dPadUp = GLFW_GAMEPAD_BUTTON_DPAD_UP,
+    dPadDown = GLFW_GAMEPAD_BUTTON_DPAD_DOWN,
+    dPadRight = GLFW_GAMEPAD_BUTTON_DPAD_RIGHT,
+    dPadLeft = GLFW_GAMEPAD_BUTTON_DPAD_LEFT,
 
-    End, // keep before positive edge last
+    lastButton = GLFW_GAMEPAD_BUTTON_LAST,
+
+    // We can't separate axis from buttons
+    // because the mapping maps a GamepadAtomicInput
+    // To a specific player command
+    // Thus we need gamepad atomic input to be one enum
+    // not two. This is why we flag axis atomic inputs
+    axisFlag = 1 << 4,
+    positiveFlag = 1 << 5,
+    leftXAxisPositive = GLFW_GAMEPAD_AXIS_LEFT_X | axisFlag | positiveFlag,
+    leftXAxisNegative = GLFW_GAMEPAD_AXIS_LEFT_X | axisFlag,
+    leftYAxisPositive = GLFW_GAMEPAD_AXIS_LEFT_Y | axisFlag | positiveFlag,
+    leftYAxisNegative = GLFW_GAMEPAD_AXIS_LEFT_Y | axisFlag,
+    rightXAxisPositive = GLFW_GAMEPAD_AXIS_RIGHT_X | axisFlag | positiveFlag,
+    rightXAxisNegative = GLFW_GAMEPAD_AXIS_RIGHT_X | axisFlag,
+    rightYAxisPositive = GLFW_GAMEPAD_AXIS_RIGHT_Y | axisFlag | positiveFlag,
+    rightYAxisNegative = GLFW_GAMEPAD_AXIS_RIGHT_Y | axisFlag,
+    leftTrigger = GLFW_GAMEPAD_AXIS_LEFT_TRIGGER | axisFlag | positiveFlag,
+    rightTrigger = GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER | axisFlag | positiveFlag,
+};
+
+enum class ControllerType
+{
+    Keyboard,
+    Gamepad,
 };
 
 struct GamepadState
 {
+    GamepadState()
+    {
+        for (auto & axis : mAxis)
+        {
+            axis.mState = AxisStatus{0.f, 0.f};
+        }
+    }
     bool mConnected = false;
     std::array<InputState, gGlfwButtonListSize> mButtons;
-    math::Vec<2, float> mLeftJoystick;
-    math::Vec<2, float> mRightJoystick;
-    float mLeftTrigger = 0.f;
-    float mRightTrigger = 0.f;
-    std::array<InputState, static_cast<std::size_t>(GamepadAtomicInput::End)> mAtomicInputList;
-    bool mBound = false;
+    std::array<InputState, gGlfwAxisListSize> mAxis;
 };
 
 struct KeyboardState
 {
     std::array<InputState, static_cast<std::size_t>(gGlfwKeyboardListSize)> mKeyState;
-    bool mBound = false;
 };
 
 struct MouseState

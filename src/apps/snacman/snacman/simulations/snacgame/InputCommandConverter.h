@@ -1,7 +1,6 @@
 #pragma once
 
 #include "snacman/Input.h"
-#include "snacman/Logging.h"
 
 #include <concepts>
 #include <fstream>
@@ -108,14 +107,30 @@ const inline BidirectionalMap<std::string, int> gCommandFlags{
 
 const inline BidirectionalMap<std::string, GamepadAtomicInput>
     gGamepadMappingDictionnary{
-        {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisPositive},
-        {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisNegative},
+        {"A", GamepadAtomicInput::a},
+        {"B", GamepadAtomicInput::b},
+        {"X", GamepadAtomicInput::x},
+        {"Y", GamepadAtomicInput::y},
+        {"LEFT_BUMPER", GamepadAtomicInput::leftBumper},
+        {"RIGHT_BUMPER", GamepadAtomicInput::rightBumper},
+        {"SELECT", GamepadAtomicInput::back},
+        {"START", GamepadAtomicInput::start},
+        {"LEFT_THUMB", GamepadAtomicInput::leftThumb},
+        {"RIGHT_THUMB", GamepadAtomicInput::rightThumb},
+        {"DPAD_UP", GamepadAtomicInput::dPadUp},
+        {"DPAD_DOWN", GamepadAtomicInput::dPadDown},
+        {"DPAD_LEFT", GamepadAtomicInput::dPadLeft},
+        {"DPAD_RIGHT", GamepadAtomicInput::dPadRight},
+        {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisNegative},
+        {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisPositive},
         {"JOY_LEFT_LEFT", GamepadAtomicInput::leftXAxisNegative},
         {"JOY_LEFT_RIGHT", GamepadAtomicInput::leftXAxisPositive},
-        {"SELECT", GamepadAtomicInput::guide},
-        {"B", GamepadAtomicInput::b},
-        {"START", GamepadAtomicInput::start},
-
+        {"JOY_RIGHT_UP", GamepadAtomicInput::rightYAxisNegative},
+        {"JOY_RIGHT_DOWN", GamepadAtomicInput::rightYAxisPositive},
+        {"JOY_RIGHT_LEFT", GamepadAtomicInput::rightXAxisNegative},
+        {"JOY_RIGHT_RIGHT", GamepadAtomicInput::rightXAxisPositive},
+        {"LEFT_TRIGGER", GamepadAtomicInput::leftTrigger},
+        {"RIGHT_TRIGGER", GamepadAtomicInput::rightTrigger},
     };
 
 const inline BidirectionalMap<std::string, int> gKeyboardMappingDictionnary{
@@ -235,12 +250,13 @@ inline int convertKeyboardInput(const std::string & aGroup,
 
     for (const auto & [input, command] : aKeyboardMapping.mKeymaps.at(aGroup))
     {
-        InputState state =
+        const InputState & state =
             aKeyboardState.mKeyState.at(static_cast<size_t>(input));
         ButtonStatus stateWanted = command & gPositiveEdge
                                        ? ButtonStatus::PositiveEdge
                                        : ButtonStatus::Pressed;
-        commandFlags |= (static_cast<InputState::Enum_t>(state.mState)
+        commandFlags |= (static_cast<InputState::Enum_t>(
+                             std::get<ButtonStatus>(state.mState))
                          >= static_cast<InputState::Enum_t>(stateWanted))
                             ? (command & ~gPositiveEdge)
                             : 0;
@@ -253,17 +269,47 @@ inline int convertGamepadInput(const std::string & aGroup,
                                const GamepadState & aGamepadState,
                                const GamepadMapping & aGamepadMapping)
 {
-    // int commandFlags = 0;
+    int commandFlags = 0;
 
-    // for (const auto & [input, command] : aGamepadMapping.mKeymaps)
-    //{
-    //   GamepadAtomicInput::PositiveEdge
-    //     commandFlags |=
-    //     aGamepadState.mAtomicInputList.at(static_cast<size_t>(input)).isPressed();
-    // }
+    for (const auto & [input, command] : aGamepadMapping.mKeymaps.at(aGroup))
+    {
+        if (input <= GamepadAtomicInput::lastButton)
+        {
+            const InputState & state =
+                aGamepadState.mButtons.at(static_cast<int>(input));
+            ButtonStatus stateWanted = command & gPositiveEdge
+                                           ? ButtonStatus::PositiveEdge
+                                           : ButtonStatus::Pressed;
+            commandFlags |= (static_cast<InputState::Enum_t>(
+                                 std::get<ButtonStatus>(state.mState))
+                             >= static_cast<InputState::Enum_t>(stateWanted))
+                                ? (command & ~gPositiveEdge)
+                                : 0;
+        }
+        else
+        {
+            int index = static_cast<int>(input)
+                & ~static_cast<int>(GamepadAtomicInput::axisFlag)
+                & ~static_cast<int>(GamepadAtomicInput::positiveFlag);
+            const AxisStatus & state = aGamepadState.mAxis.at(index);
 
-    // return commandFlags;
-    throw std::runtime_error("Not implemented.");
+            if (static_cast<int>(input)
+                & static_cast<int>(GamepadAtomicInput::positiveFlag))
+            {
+                commandFlags |= (static_cast<float>(state) > gJoystickDeadzone)
+                                    ? (command & ~gPositiveEdge)
+                                    : 0;
+            }
+            else
+            {
+                commandFlags |= (static_cast<float>(state) < -gJoystickDeadzone)
+                                    ? (command & ~gPositiveEdge)
+                                    : 0;
+            }
+        }
+    }
+
+    return commandFlags;
 }
 
 } // namespace snacgame

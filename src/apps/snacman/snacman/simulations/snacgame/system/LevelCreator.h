@@ -1,7 +1,8 @@
 #pragma once
 
-#include "entity/Query.h"
 #include "../component/LevelData.h"
+
+#include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {
@@ -11,8 +12,7 @@ class LevelCreator
 {
 public:
     LevelCreator(ent::EntityManager * aWorld) :
-        mWorld{aWorld},
-        mCreatable{*aWorld}
+        mWorld{aWorld}, mCreatable{*aWorld}
     {}
 
     void update();

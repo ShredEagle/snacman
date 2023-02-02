@@ -2,7 +2,6 @@
 
 #include "math/Color.h"
 #include "snacman/Input.h"
-#include "snacman/Logging.h"
 
 #include "../component/AllowedMovement.h"
 #include "../component/LevelData.h"
@@ -91,9 +90,7 @@ void DeterminePlayerAction::update()
                 aPlayerGeometry.mSubGridPosition.x() = 0.f;
             }
 
-            SELOG(info)("allowed move: {}", allowedMovementFlag);
             inputMoveFlag = aController.mCommandQuery;
-            SELOG(info)("inputMoveFlag: {}", aController.mCommandQuery);
 
             inputMoveFlag &= allowedMovementFlag;
 
@@ -103,7 +100,6 @@ void DeterminePlayerAction::update()
             }
 
             aPlayerMoveState.mMoveState = inputMoveFlag;
-            SELOG(info)("aPlayerMoveState: {}", aPlayerMoveState.mMoveState);
         });
     });
 }
