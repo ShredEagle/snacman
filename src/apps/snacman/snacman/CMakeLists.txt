@@ -11,6 +11,7 @@ set(${TARGET_NAME}_HEADERS
     Input.h
     Logging.h
     LoopSettings.h
+    QueryManipulation.h
     SparseSet.h
     Timing.h
 
