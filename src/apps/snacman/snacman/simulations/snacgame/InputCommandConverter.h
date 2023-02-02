@@ -113,13 +113,25 @@ const inline BidirectionalMap<std::string, GamepadAtomicInput>
         {"X", GamepadAtomicInput::x},
         {"Y", GamepadAtomicInput::y},
         {"LEFT_BUMPER", GamepadAtomicInput::leftBumper},
+        {"RIGHT_BUMPER", GamepadAtomicInput::rightBumper},
+        {"SELECT", GamepadAtomicInput::back},
+        {"START", GamepadAtomicInput::start},
+        {"LEFT_THUMB", GamepadAtomicInput::leftThumb},
+        {"RIGHT_THUMB", GamepadAtomicInput::rightThumb},
+        {"DPAD_UP", GamepadAtomicInput::dPadUp},
+        {"DPAD_DOWN", GamepadAtomicInput::dPadDown},
+        {"DPAD_LEFT", GamepadAtomicInput::dPadLeft},
+        {"DPAD_RIGHT", GamepadAtomicInput::dPadRight},
         {"JOY_LEFT_UP", GamepadAtomicInput::leftYAxisNegative},
         {"JOY_LEFT_DOWN", GamepadAtomicInput::leftYAxisPositive},
         {"JOY_LEFT_LEFT", GamepadAtomicInput::leftXAxisNegative},
         {"JOY_LEFT_RIGHT", GamepadAtomicInput::leftXAxisPositive},
-        {"SELECT", GamepadAtomicInput::back},
-        {"START", GamepadAtomicInput::start},
-
+        {"JOY_RIGHT_UP", GamepadAtomicInput::rightYAxisNegative},
+        {"JOY_RIGHT_DOWN", GamepadAtomicInput::rightYAxisPositive},
+        {"JOY_RIGHT_LEFT", GamepadAtomicInput::rightXAxisNegative},
+        {"JOY_RIGHT_RIGHT", GamepadAtomicInput::rightXAxisPositive},
+        {"LEFT_TRIGGER", GamepadAtomicInput::leftTrigger},
+        {"RIGHT_TRIGGER", GamepadAtomicInput::rightTrigger},
     };
 
 const inline BidirectionalMap<std::string, int> gKeyboardMappingDictionnary{
