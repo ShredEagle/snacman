@@ -19,6 +19,14 @@
 #include <queue>
 #include <thread>
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN 
+#define NOMINMAX 
+#include <windows.h>
+#include <processthreadsapi.h>
+#undef NOMINMAX 
+#undef WIN32_LEAN_AND_MEAN 
+#endif
 
 namespace ad {
 namespace snac {
@@ -203,6 +211,11 @@ private:
     void run_impl(GraphicStateFifo_t & aStates, T_renderer && aRenderer)
     {
         SELOG(info)("Render thread started");
+
+#if defined(_WIN32)
+        HRESULT r;
+        r = SetThreadDescription(GetCurrentThread(), L"RenderThread");
+#endif
 
         // The context must be made current on this thread before it can call GL
         // functions.
