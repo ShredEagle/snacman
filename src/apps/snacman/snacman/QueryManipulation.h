@@ -1,5 +1,4 @@
 
-#include <bits/utility.h>
 #include <entity/Entity.h>
 #include <entity/Query.h>
 #include <handy/FunctionTraits.h>

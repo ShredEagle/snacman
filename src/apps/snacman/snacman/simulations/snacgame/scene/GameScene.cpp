@@ -122,7 +122,7 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
             if (gamepadCommand & gJoin)
             {
                 findSlotAndBind(bindPlayerPhase, mSlots,
-                                               ControllerType::Gamepad, index);
+                                               ControllerType::Gamepad, static_cast<int>(index));
             }
         }
     }

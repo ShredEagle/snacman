@@ -70,7 +70,7 @@ std::optional<Transition> MenuScene::update(float aDelta, RawInput & aInput)
         if (gamepadCommand & gSelectItem)
         {
             boundPlayer |= findSlotAndBind(bindPlayerPhase, mSlots,
-                                           ControllerType::Gamepad, index);
+                                           ControllerType::Gamepad, static_cast<int>(index));
         }
     }
 
