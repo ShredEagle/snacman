@@ -69,18 +69,19 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(scene::Transition{}, aInput);
 
-    //ent::Handle<ent::Entity> title = 
-    //    makeText(mWorld,
-    //            init,
-    //            "Snacman!",
-    //            // TODO this should be done within the ResourceManager, here only fetching the Font via name + size
-    //            mWorld.mRender
-    //            math::hdr::gYellow<float>,
-    //            math::Position<2, float>{-0.5f, 0.f});
-    //// TODO Remove, this is a silly demonstration.
-    //title.get(init)->add(component::MovementScreenSpace{
-    //    .mAngularSpeed = math::Radian<float>{math::pi<float> / 2.f}
-    //});
+    
+    ent::Handle<ent::Entity> title = 
+        makeText(mWorld,
+                 init,
+                 "Snacman!",
+                 mGameContext.mRenderThread.loadFont("fonts/Comfortaa-Regular.ttf", 120, mGameContext.mResource)
+                    .get(), // synchronize the call
+                 math::hdr::gYellow<float>,
+                 math::Position<2, float>{-0.5f, 0.f});
+    // TODO Remove, this is a silly demonstration.
+    title.get(init)->add(component::MovementScreenSpace{
+        .mAngularSpeed = math::Radian<float>{math::pi<float> / 2.f}
+    });
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
