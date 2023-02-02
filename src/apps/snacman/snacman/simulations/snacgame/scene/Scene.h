@@ -4,6 +4,7 @@
 #include "snacman/Input.h"
 #include "snacman/simulations/snacgame/EntityWrap.h"
 
+#include "../GameContext.h"
 #include "../component/Context.h"
 
 #include <entity/Entity.h>
@@ -79,7 +80,9 @@ public:
     virtual std::optional<Transition> update(GameContext & aContext,
                                              float aDelta,
                                              RawInput & aInput) = 0;
-    virtual void setup(const Transition & aTransition, RawInput & aInput) = 0;
+
+    virtual void setup(GameContext & aContext, const Transition & aTransition, RawInput & aInput) = 0;
+
     virtual void teardown(RawInput & aInput) = 0;
 
     std::string mName;

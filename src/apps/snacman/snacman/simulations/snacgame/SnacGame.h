@@ -7,6 +7,7 @@
 #include "component/Geometry.h"
 #include "component/PoseScreenSpace.h"
 #include "component/Text.h"
+#include "component/VisualMesh.h"
 
 #include "scene/Scene.h"
 
@@ -113,10 +114,11 @@ private:
 
     ent::EntityManager mWorld;
     
+    // TODO use the ent::Wrap
     EntityWrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
     EntityWrap<system::SceneStateMachine> mStateMachine;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
-    EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
+    EntityWrap<ent::Query<component::Geometry, component::VisualMesh>> mQueryRenderable;
 
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
 

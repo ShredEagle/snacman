@@ -97,8 +97,7 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface,
                    const resource::ResourceFinder & aResourceFinder) :
     mAppInterface{aAppInterface},
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults},
-    mCubeMesh{std::move(*Renderer::LoadShape(aResourceFinder))},
-    mCubeInstances{initializeInstanceStream()}
+    mMeshInstances{initializeInstanceStream()}
 {}
 
 void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
@@ -142,10 +141,10 @@ std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
 void Renderer::render(const visu::GraphicState & aState)
 {
     // Stream the instance buffer data
-    std::vector<PoseColor> instanceBufferData;
+    std::map<snac::Mesh *, std::vector<PoseColor>> sortedMeshes;
     for (const visu::Entity & entity : aState.mEntities)
     {
-        instanceBufferData.push_back(PoseColor{
+        sortedMeshes[entity.mMesh.get()].push_back(PoseColor{
             .pose = 
                 math::trans3d::scale(entity.mScaling)
                 * entity.mOrientation.toRotationMatrix()
@@ -172,8 +171,11 @@ void Renderer::render(const visu::GraphicState & aState)
          {snac::BlockSemantic::Viewing, &mCamera.mViewing},
     };
 
-    mCubeInstances.respecifyData(std::span{instanceBufferData});
-    mRenderer.render(mCubeMesh, mCubeInstances, uniforms, uniformBlocks);
+    for (const auto & [mesh, instances] : sortedMeshes)
+    {
+        mMeshInstances.respecifyData(std::span{instances});
+        mRenderer.render(*mesh, mMeshInstances, uniforms, uniformBlocks);
+    }
 
     //
     // Text

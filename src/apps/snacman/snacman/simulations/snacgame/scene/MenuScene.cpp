@@ -12,11 +12,11 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void MenuScene::setup(const Transition & Transition, RawInput & aInput)
+void MenuScene::setup(GameContext & aContext, const Transition & Transition, RawInput & aInput)
 {
     ent::Phase init;
-    auto start = createMenuItem(mWorld, init, math::Position<2, int>{0, 0});
-    auto quit = createMenuItem(mWorld, init, math::Position<2, int>{2, 0});
+    auto start = createMenuItem(aContext, init, math::Position<2, int>{0, 0});
+    auto quit = createMenuItem(aContext, init, math::Position<2, int>{2, 0});
     mOwnedEntities.push_back(start);
     mOwnedEntities.push_back(quit);
 }
@@ -53,7 +53,8 @@ std::optional<Transition> MenuScene::update(GameContext & aContext,
                         component::PlayerSlot & aSlot) {
             if (!aSlot.mFilled && !aInput.mKeyboard.mBound)
             {
-                fillSlotWithPlayer(bindPlayerPhase,
+                fillSlotWithPlayer(aContext,
+                                   bindPlayerPhase,
                                    component::ControllerType::Keyboard, aHandle,
                                    0);
                 aInput.mKeyboard.mBound = true;

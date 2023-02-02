@@ -17,39 +17,44 @@ namespace snac {
 
 namespace snacgame {
 
-void createPill(ent::EntityManager & aWorld,
+
+struct GameContext;
+
+
+void createPill(GameContext & aContext,
                 ent::Phase & aInit,
                 const math::Position<2, int> & Pos);
-ent::Handle<ent::Entity> createPathEntity(ent::EntityManager & mWorld,
+ent::Handle<ent::Entity> createPathEntity(GameContext & aContext,
                                           ent::Phase & aInit,
                                           const math::Position<2, int> & aPos);
 ent::Handle<ent::Entity>
-createPortalEntity(ent::EntityManager & mWorld,
+createPortalEntity(GameContext & aContext,
                    ent::Phase & aInit,
                    const math::Position<2, int> & aPos);
 ent::Handle<ent::Entity>
-createCopPenEntity(ent::EntityManager & mWorld,
+createCopPenEntity(GameContext & aContext,
                    ent::Phase & aInit,
                    const math::Position<2, int> & aPos);
 ent::Handle<ent::Entity>
-createPlayerSpawnEntity(ent::EntityManager & mWorld,
+createPlayerSpawnEntity(GameContext & aContext,
                         ent::Phase & aInit,
                         const math::Position<2, int> & aPos);
 
 void 
-fillSlotWithPlayer(ent::Phase & aInit,
+fillSlotWithPlayer(GameContext & aContext,
+                   ent::Phase & aInit,
                    component::ControllerType aControllerType,
                    ent::Handle<ent::Entity> aSlot,
                    int aControllerId = 0);
 
-ent::Handle<ent::Entity> makeText(ent::EntityManager & mWorld,
+ent::Handle<ent::Entity> makeText(GameContext & aContext,
                                   ent::Phase & aPhase,
                                   std::string aString,
                                   std::shared_ptr<snac::Font> aFont,
                                   math::hdr::Rgba_f aColor,
                                   math::Position<2, float> aPosition_unitscreen);
 
-ent::Handle<ent::Entity> createMenuItem(ent::EntityManager & aWorld,
+ent::Handle<ent::Entity> createMenuItem(GameContext & aContext,
                                         ent::Phase & aInit,
                                         const math::Position<2, int> & aPos);
 

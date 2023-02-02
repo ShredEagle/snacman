@@ -18,6 +18,7 @@ set(${TARGET_NAME}_HEADERS
 
     simulations/snacgame/EntityWrap.h
     simulations/snacgame/Entities.h
+    simulations/snacgame/GameContext.h
     simulations/snacgame/GraphicState.h
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/Renderer.h

@@ -67,11 +67,11 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mWorld.addEntity().get(init)->add(component::PlayerSlot{3, false});
 
     scene::Scene * scene = mStateMachine->getCurrentScene();
-    scene->setup(scene::Transition{}, aInput);
+    scene->setup(mGameContext, scene::Transition{}, aInput);
 
     
     ent::Handle<ent::Entity> title = 
-        makeText(mWorld,
+        makeText(mGameContext,
                  init,
                  "Snacman!",
                  mGameContext.mRenderThread.loadFont("fonts/Comfortaa-Regular.ttf", 120, mGameContext.mResource)
@@ -161,18 +161,19 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
     {
         if (transition.value().mTransitionName.compare(
                scene::gQuitTransitionName)
-               == 0)
+            == 0)
         {
             return true;
         }
         else
         {
-            mStateMachine->changeState(transition.value(), aInput);
+            mStateMachine->changeState(mGameContext, transition.value(), aInput);
         }
     }
 
     return false;
 }
+
 
 std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 {
@@ -186,7 +187,8 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     mQueryRenderable.get(nomutation)
         .each([cellSize, &state](
                   ent::Handle<ent::Entity> aHandle,
-                  component::Geometry & aGeometry) {
+                  const component::Geometry & aGeometry,
+                  const component::VisualMesh & aVisualMesh) {
             float yCoord =
                 aGeometry.mLayer == component::GeometryLayer::Level
                     ? 0.f
@@ -206,6 +208,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                                         .mScaling = aGeometry.mScaling,
                                         .mOrientation = aGeometry.mOrientation,
                                         .mColor = aGeometry.mColor,
+                                        .mMesh = aVisualMesh.mMesh,
                                     });
             std::function<void()> func = [worldPosition]() {
                 float stuff = worldPosition.x();

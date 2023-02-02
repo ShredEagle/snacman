@@ -4,7 +4,7 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void SettingsScene::setup(const Transition & aTransition, RawInput & aInput) {}
+void SettingsScene::setup(GameContext &, const Transition & aTransition, RawInput & aInput) {}
 
 void SettingsScene::teardown(RawInput & aInput) {}
 

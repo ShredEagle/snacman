@@ -54,14 +54,9 @@ public:
 
 private:
     graphics::AppInterface & mAppInterface;
-
     snac::Renderer mRenderer;
-
     snac::Camera mCamera;
-
-    snac::Mesh mCubeMesh;
-    snac::InstanceStream mCubeInstances;
-
+    snac::InstanceStream mMeshInstances;
     TextRenderer mTextRenderer;
 
     // Must outlive all FontFaces, thus it must outlive the EntityManager,

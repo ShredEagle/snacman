@@ -1,7 +1,11 @@
 #pragma once
 
-#include "entity/Query.h"
+
+#include "../GameContext.h"
 #include "../component/LevelData.h"
+
+#include <entity/Query.h>
+
 
 namespace ad {
 namespace snacgame {
@@ -15,10 +19,10 @@ public:
         mCreatable{*aWorld}
     {}
 
-    void update();
+    void update(GameContext & aContext);
 
 private:
-    ent::EntityManager * mWorld;
+    ent::EntityManager * mWorld; // TODO remove
     ent::Query<component::LevelData, component::LevelToCreate> mCreatable;
 };
 

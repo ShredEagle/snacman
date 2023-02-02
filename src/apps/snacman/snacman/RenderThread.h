@@ -149,14 +149,16 @@ public:
         });
     }
 
-    std::future<snac::Mesh> loadShape()
+    std::future<std::shared_ptr<snac::Mesh>> loadShape(resource::ResourceFinder & aResource)
     {
-        std::promise<snac::Mesh> promise;
-        std::future<snac::Mesh> future = promise.get_future();
-        push([promise = std::move(promise)]
+        // std::function require the type-erased functor to be copy constructible.
+        // all captured types must be copyable.
+        auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Mesh>>>();
+        std::future<std::shared_ptr<snac::Mesh>> future = promise->get_future();
+        push([promise = std::move(promise), &aResource]
              (T_renderer & aRenderer) 
              {
-                promise = aRenderer.loadShape();
+                promise->set_value(aRenderer.LoadShape(aResource));
              });
         return future;
     }

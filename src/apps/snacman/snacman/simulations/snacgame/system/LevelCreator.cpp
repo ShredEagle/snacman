@@ -9,7 +9,7 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
-void LevelCreator::update()
+void LevelCreator::update(GameContext & aContext)
 {
     ent::Phase createLevelPhase;
     mCreatable.each([&](ent::Handle<ent::Entity> aHandle,
@@ -54,24 +54,26 @@ void LevelCreator::update()
                     {
                     case 'W':
                         tiles.push_back(component::Tile{.mType = component::TileType::Path});
-                        createPathEntity(*mWorld, createLevelPhase,
+                        createPathEntity(aContext, 
+                                         createLevelPhase,
                                          math::Position<2, int>{x, y});
-                        createPill(*mWorld, createLevelPhase,
+                        createPill(aContext,
+                                   createLevelPhase,
                                    math::Position<2, int>{x, y});
                         break;
                     case 'K':
                         tiles.push_back(component::Tile{.mType = component::TileType::Portal});
-                        createPortalEntity(*mWorld, createLevelPhase,
+                        createPortalEntity(aContext, createLevelPhase,
                                            math::Position<2, int>{x, y});
                         break;
                     case 'O':
                         tiles.push_back(component::Tile{.mType = component::TileType::Pen});
-                        createCopPenEntity(*mWorld, createLevelPhase,
+                        createCopPenEntity(aContext, createLevelPhase,
                                            math::Position<2, int>{x, y});
                         break;
                     case 'U':
                         tiles.push_back(component::Tile{.mType = component::TileType::Spawn});
-                        createPlayerSpawnEntity(*mWorld, createLevelPhase,
+                        createPlayerSpawnEntity(aContext, createLevelPhase,
                                                 math::Position<2, int>{x, y});
                         break;
                     default:

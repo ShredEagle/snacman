@@ -17,7 +17,7 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void GameScene::setup(const Transition & aTransition, RawInput & aInput)
+void GameScene::setup(GameContext &, const Transition & aTransition, RawInput & aInput)
 {
     ent::Phase init;
     mSystems.get(init)->add(system::PlayerSpawner{mWorld});
@@ -101,7 +101,7 @@ std::optional<Transition> GameScene::update(GameContext & aContext,
         return Transition{.mTransitionName = "back"};
     }
 
-    mSystems.get(update)->get<system::LevelCreator>().update();
+    mSystems.get(update)->get<system::LevelCreator>().update(aContext);
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();
