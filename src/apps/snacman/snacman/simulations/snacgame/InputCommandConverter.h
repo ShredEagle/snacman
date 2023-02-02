@@ -1,7 +1,6 @@
 #pragma once
 
 #include "snacman/Input.h"
-#include "snacman/Logging.h"
 
 #include <concepts>
 #include <fstream>

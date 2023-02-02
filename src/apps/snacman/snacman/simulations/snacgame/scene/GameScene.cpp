@@ -1,7 +1,6 @@
 #include "GameScene.h"
 
 #include "snacman/Input.h"
-#include "snacman/Logging.h"
 
 #include "../component/Context.h"
 #include "../component/Controller.h"

@@ -2,7 +2,6 @@
 
 #include "math/Color.h"
 #include "snacman/Input.h"
-#include "snacman/Logging.h"
 
 #include "../component/AllowedMovement.h"
 #include "../component/LevelData.h"

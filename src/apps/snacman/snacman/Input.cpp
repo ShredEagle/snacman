@@ -1,5 +1,4 @@
 #include "Input.h"
-#include "snacman/Logging.h"
 
 #include <functional>
 #include <ios>
