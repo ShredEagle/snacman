@@ -14,7 +14,7 @@ namespace ad {
 
 // Forward
 namespace snac {
-    struct Font;
+struct Font;
 }
 
 namespace snacgame {
@@ -44,12 +44,14 @@ fillSlotWithPlayer(ent::Phase & aInit,
                    ent::Handle<ent::Entity> aSlot,
                    int aControllerId = 0);
 
-ent::Handle<ent::Entity> makeText(ent::EntityManager & mWorld,
-                                  ent::Phase & aPhase,
-                                  std::string aString,
-                                  std::shared_ptr<snac::Font> aFont,
-                                  math::hdr::Rgba_f aColor,
-                                  math::Position<2, float> aPosition_unitscreen);
+
+ent::Handle<ent::Entity>
+makeText(ent::EntityManager & mWorld,
+         ent::Phase & aPhase,
+         std::string aString,
+         std::shared_ptr<snac::Font> aFont,
+         math::hdr::Rgba_f aColor,
+         math::Position<2, float> aPosition_unitscreen);
 
 ent::Handle<ent::Entity> createMenuItem(ent::EntityManager & aWorld,
                                         ent::Phase & aInit,

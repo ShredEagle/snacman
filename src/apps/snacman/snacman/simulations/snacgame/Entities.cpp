@@ -48,12 +48,13 @@ createPathEntity(ent::EntityManager & mWorld,
                  const math::Position<2, int> & aGridPos)
 {
     auto handle = mWorld.addEntity();
-    handle.get(aInit)->add(component::LevelEntity{});
-    handle.get(aInit)->add(component::Geometry{
-        .mSubGridPosition = math::Position<2, float>::Zero(),
-        .mGridPosition = aGridPos,
-        .mLayer = component::GeometryLayer::Level,
-        .mColor = math::hdr::gWhite<float>});
+    handle.get(aInit)
+        ->add(component::LevelEntity{})
+        .add(component::Geometry{
+            .mSubGridPosition = math::Position<2, float>::Zero(),
+            .mGridPosition = aGridPos,
+            .mLayer = component::GeometryLayer::Level,
+            .mColor = math::hdr::gWhite<float>});
     return handle;
 }
 
@@ -63,12 +64,13 @@ createPortalEntity(ent::EntityManager & mWorld,
                    const math::Position<2, int> & aGridPos)
 {
     auto handle = mWorld.addEntity();
-    handle.get(aInit)->add(component::LevelEntity{});
-    handle.get(aInit)->add(component::Geometry{
-        .mSubGridPosition = math::Position<2, float>::Zero(),
-        .mGridPosition = aGridPos,
-        .mLayer = component::GeometryLayer::Level,
-        .mColor = math::hdr::gRed<float>});
+    handle.get(aInit)
+        ->add(component::LevelEntity{})
+        .add(component::Geometry{
+            .mSubGridPosition = math::Position<2, float>::Zero(),
+            .mGridPosition = aGridPos,
+            .mLayer = component::GeometryLayer::Level,
+            .mColor = math::hdr::gRed<float>});
     return handle;
 }
 
@@ -78,12 +80,13 @@ createCopPenEntity(ent::EntityManager & mWorld,
                    const math::Position<2, int> & aGridPos)
 {
     auto handle = mWorld.addEntity();
-    handle.get(aInit)->add(component::LevelEntity{});
-    handle.get(aInit)->add(component::Geometry{
-        .mSubGridPosition = math::Position<2, float>::Zero(),
-        .mGridPosition = aGridPos,
-        .mLayer = component::GeometryLayer::Level,
-        .mColor = math::hdr::gYellow<float>});
+    handle.get(aInit)
+        ->add(component::LevelEntity{})
+        .add(component::Geometry{
+            .mSubGridPosition = math::Position<2, float>::Zero(),
+            .mGridPosition = aGridPos,
+            .mLayer = component::GeometryLayer::Level,
+            .mColor = math::hdr::gYellow<float>});
     return handle;
 }
 
@@ -93,12 +96,13 @@ createPlayerSpawnEntity(ent::EntityManager & mWorld,
                         const math::Position<2, int> & aGridPos)
 {
     auto spawner = mWorld.addEntity();
-    spawner.get(aInit)->add(component::LevelEntity{});
-    spawner.get(aInit)->add(component::Geometry{
-        .mSubGridPosition = math::Position<2, float>::Zero(),
-        .mGridPosition = aGridPos,
-        .mLayer = component::GeometryLayer::Level,
-        .mColor = math::hdr::gCyan<float>});
+    spawner.get(aInit)
+        ->add(component::LevelEntity{})
+        .add(component::Geometry{
+            .mSubGridPosition = math::Position<2, float>::Zero(),
+            .mGridPosition = aGridPos,
+            .mLayer = component::GeometryLayer::Level,
+            .mColor = math::hdr::gCyan<float>});
     spawner.get(aInit)->add(component::Spawner{.mSpawnPosition = aGridPos});
 
     return spawner;
@@ -111,15 +115,16 @@ void fillSlotWithPlayer(ent::Phase & aInit,
 {
     auto playerEntity = aSlot.get(aInit);
 
-    playerEntity->add(component::Geometry{
-        .mSubGridPosition = math::Position<2, float>::Zero(),
-        .mGridPosition = math::Position<2, int>::Zero(),
-        .mLayer = component::GeometryLayer::Player,
-        .mColor = math::hdr::gMagenta<float>});
-    playerEntity->add(component::PlayerLifeCycle{.mIsAlive = false});
-    playerEntity->add(component::PlayerMoveState{});
-    playerEntity->add(component::Controller{.mType = aControllerType,
-                                            .mControllerId = aControllerId});
+    playerEntity
+        ->add(component::Geometry{
+            .mSubGridPosition = math::Position<2, float>::Zero(),
+            .mGridPosition = math::Position<2, int>::Zero(),
+            .mLayer = component::GeometryLayer::Player,
+            .mColor = math::hdr::gMagenta<float>})
+        .add(component::PlayerLifeCycle{.mIsAlive = false})
+        .add(component::PlayerMoveState{})
+        .add(component::Controller{.mType = aControllerType,
+                                   .mControllerId = aControllerId});
 }
 
 ent::Handle<ent::Entity> createMenuItem(ent::EntityManager & aWorld,
