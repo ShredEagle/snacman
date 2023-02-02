@@ -1,5 +1,7 @@
 #include "Entities.h"
 
+#include "../../QueryManipulation.h"
+
 #include "component/Controller.h"
 #include "component/Geometry.h"
 #include "component/LevelData.h"

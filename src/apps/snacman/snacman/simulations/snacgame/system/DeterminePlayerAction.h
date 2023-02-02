@@ -1,14 +1,15 @@
 #pragma once
 
-#include "entity/EntityManager.h"
-#include "entity/Query.h"
 #include "snacman/Input.h"
-#include "snacman/simulations/snacgame/component/LevelData.h"
 
-#include "../InputCommandConverter.h"
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
+#include "../component/LevelData.h"
 #include "../component/PlayerMoveState.h"
+#include "../InputCommandConverter.h"
+
+#include <entity/EntityManager.h>
+#include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {
@@ -19,7 +20,6 @@ class DeterminePlayerAction
 public:
     DeterminePlayerAction(ent::EntityManager & aWorld,
                           ent::Handle<ent::Entity> aLevel) :
-        mPlayer{aWorld},
         mLevel{aWorld}
     {}
 

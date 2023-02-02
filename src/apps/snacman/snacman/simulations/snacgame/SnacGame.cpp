@@ -1,17 +1,14 @@
 #include "SnacGame.h"
 
-#include "Entities.h"
-#include "InputCommandConverter.h"
-
-#include "component/MovementScreenSpace.h"
-
 #include "component/Context.h"
 #include "component/Controller.h"
 #include "component/LevelData.h"
+#include "component/MovementScreenSpace.h"
 #include "component/PlayerSlot.h"
+#include "Entities.h"
+#include "InputCommandConverter.h"
+#include "scene/Scene.h"
 #include "snacman/ImguiUtilities.h"
-#include "snacman/simulations/snacgame/component/PlayerSlot.h"
-#include "snacman/simulations/snacgame/scene/Scene.h"
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
 #include "system/MovementIntegration.h"
@@ -19,21 +16,15 @@
 #include "system/PlayerSpawner.h"
 #include "system/SceneStateMachine.h"
 
-#include <snacman/ImguiUtilities.h>
-
-#include <imguiui/ImguiUi.h>
-
-#include <snac-renderer/text/Text.h>
-
+#include <chrono>
+#include <GLFW/glfw3.h>
 #include <imgui.h>
+#include <imguiui/ImguiUi.h>
 #include <markovjunior/Grid.h>
-
 #include <math/Color.h>
 #include <math/VectorUtilities.h>
-
-#include <GLFW/glfw3.h>
-#include <chrono>
 #include <optional>
+#include <snac-renderer/text/Text.h>
 #include <string>
 
 namespace ad {

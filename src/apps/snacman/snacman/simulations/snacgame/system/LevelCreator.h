@@ -1,7 +1,8 @@
 #pragma once
 
-#include "entity/Query.h"
 #include "../component/LevelData.h"
+
+#include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {

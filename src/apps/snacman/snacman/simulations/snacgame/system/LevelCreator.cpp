@@ -1,9 +1,9 @@
 #include "LevelCreator.h"
 
-#include "entity/Entity.h"
-#include "markovjunior/Interpreter.h"
-
 #include "../component/LevelData.h"
+
+#include <entity/Entity.h>
+#include <markovjunior/Interpreter.h>
 
 namespace ad {
 namespace snacgame {

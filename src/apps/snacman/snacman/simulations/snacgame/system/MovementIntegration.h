@@ -1,12 +1,12 @@
 #pragma once
 
-#include "entity/EntityManager.h"
-#include "entity/Query.h"
-
 #include "../component/Geometry.h"
 #include "../component/MovementScreenSpace.h"
 #include "../component/PoseScreenSpace.h"
 #include "../component/Speed.h"
+
+#include <entity/EntityManager.h>
+#include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {

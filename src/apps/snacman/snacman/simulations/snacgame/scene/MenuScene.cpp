@@ -1,10 +1,11 @@
 #include "MenuScene.h"
 
-#include "snacman/Input.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
-#include "snacman/simulations/snacgame/InputCommandConverter.h"
+#include "../SnacGame.h"
 
+#include "../../../Input.h"
+#include "../component/Controller.h"
 #include "../Entities.h"
+#include "../InputCommandConverter.h"
 
 #include <optional>
 

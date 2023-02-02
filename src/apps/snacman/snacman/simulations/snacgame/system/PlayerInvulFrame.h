@@ -1,10 +1,10 @@
 #pragma once
 
-#include "entity/EntityManager.h"
-#include "entity/Query.h"
-
 #include "../component/Geometry.h"
 #include "../component/PlayerLifeCycle.h"
+
+#include <entity/EntityManager.h>
+#include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {

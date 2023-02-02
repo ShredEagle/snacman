@@ -1,10 +1,11 @@
 #pragma once
 
 #include "Scene.h"
-#include "entity/Query.h"
 #include "snacman/Input.h"
-#include "snacman/simulations/snacgame/component/PlayerSlot.h"
 
+#include "../component/PlayerSlot.h"
+
+#include <entity/Query.h>
 #include <string>
 
 namespace ad {

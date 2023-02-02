@@ -1,13 +1,13 @@
 #pragma once
 
 #include "Scene.h"
-#include "snacman/simulations/snacgame/component/LevelData.h"
 
 #include "../component/Controller.h"
+#include "../component/LevelData.h"
 #include "../component/PlayerSlot.h"
 
-#include <entity/Query.h>
 #include <entity/EntityManager.h>
+#include <entity/Query.h>
 #include <string>
 
 namespace ad {

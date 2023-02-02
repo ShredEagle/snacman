@@ -1,16 +1,16 @@
 #include "GameScene.h"
 
 #include "snacman/Logging.h"
-#include "snacman/simulations/snacgame/Entities.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
-#include "snacman/simulations/snacgame/InputCommandConverter.h"
-#include "snacman/simulations/snacgame/system/LevelCreator.h"
-#include "snacman/simulations/snacgame/system/MovementIntegration.h"
 
 #include "../component/Context.h"
+#include "../component/Controller.h"
 #include "../component/LevelData.h"
+#include "../Entities.h"
+#include "../InputCommandConverter.h"
 #include "../system/DeterminePlayerAction.h"
 #include "../system/IntegratePlayerMovement.h"
+#include "../system/LevelCreator.h"
+#include "../system/MovementIntegration.h"
 #include "../system/PlayerInvulFrame.h"
 #include "../system/PlayerSpawner.h"
 

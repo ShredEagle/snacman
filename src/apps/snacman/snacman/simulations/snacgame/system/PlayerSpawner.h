@@ -4,8 +4,8 @@
 #include "../component/Spawner.h"
 #include "../component/Geometry.h"
 
-#include "entity/EntityManager.h"
-#include "entity/Query.h"
+#include <entity/EntityManager.h>
+#include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {

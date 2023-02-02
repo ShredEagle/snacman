@@ -1,14 +1,14 @@
 #pragma once
 
-#include "markovjunior/Grid.h"
 #include "snacman/Input.h"
-#include "snacman/simulations/snacgame/EntityWrap.h"
 
 #include "../component/Context.h"
+#include "../EntityWrap.h"
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
 #include <map>
+#include <markovjunior/Grid.h>
 #include <optional>
 #include <string>
 
