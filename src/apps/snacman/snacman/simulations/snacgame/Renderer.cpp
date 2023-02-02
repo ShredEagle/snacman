@@ -94,24 +94,32 @@ snac::InstanceStream initializeInstanceStream()
 Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Camera::Parameters aCameraParameters, const resource::ResourceFinder & aResourceFinder) :
     mAppInterface{aAppInterface},
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), aCameraParameters},
-    mCubeMesh{.mStream = snac::makeCube()},
+    mCubeMesh{std::move(*Renderer::LoadShape(aResourceFinder))},
     mCubeInstances{initializeInstanceStream()}
+{}
+
+void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
 {
-    mCubeMesh.mMaterial = std::make_shared<snac::Material>();
-    mCubeMesh.mMaterial->mEffect = std::make_shared<snac::Effect>(snac::Effect{
+    mCamera.resetProjection(aAspectRatio, aParameters);
+}
+
+
+std::shared_ptr<snac::Mesh> Renderer::LoadShape(const resource::ResourceFinder & aResourceFinder)
+{
+    auto mesh = std::make_shared<snac::Mesh>(snac::Mesh{.mStream = snac::makeCube()}); 
+
+    mesh->mMaterial = std::make_shared<snac::Material>();
+    mesh->mMaterial->mEffect = std::make_shared<snac::Effect>(snac::Effect{
         .mProgram = {
             graphics::makeLinkedProgram({
                 {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Cubes.vert"))},
                 {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Cubes.frag"))},
             }),
             "PhongLighting"
-        }
+        },
     });
-}
 
-void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
-{
-    mCamera.resetProjection(aAspectRatio, aParameters);
+    return mesh;
 }
 
 

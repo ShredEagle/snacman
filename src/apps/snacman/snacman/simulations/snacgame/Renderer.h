@@ -44,6 +44,9 @@ public:
 
     void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
+    // TODO Extend beyond cubes.
+    static std::shared_ptr<snac::Mesh> LoadShape(const resource::ResourceFinder & aResourceFinder);
+
     void render(const visu::GraphicState & aState);
 
 private:
