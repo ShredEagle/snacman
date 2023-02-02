@@ -91,9 +91,7 @@ void DeterminePlayerAction::update()
                 aPlayerGeometry.mSubGridPosition.x() = 0.f;
             }
 
-            SELOG(info)("allowed move: {}", allowedMovementFlag);
             inputMoveFlag = aController.mCommandQuery;
-            SELOG(info)("inputMoveFlag: {}", aController.mCommandQuery);
 
             inputMoveFlag &= allowedMovementFlag;
 
@@ -103,7 +101,6 @@ void DeterminePlayerAction::update()
             }
 
             aPlayerMoveState.mMoveState = inputMoveFlag;
-            SELOG(info)("aPlayerMoveState: {}", aPlayerMoveState.mMoveState);
         });
     });
 }
