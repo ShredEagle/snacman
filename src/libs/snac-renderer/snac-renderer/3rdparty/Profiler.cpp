@@ -283,15 +283,15 @@ void Profiler::print(std::string& stats)
     entry.accumulated = false;
   }
 
-  printf("Timer null;\t N/A %6d; CPU %6d;\n", 0, (uint32_t)m_data->cpuTime.getAveraged());
+  stats += format("Timer Frame;\t N/A %6d; CPU %6d; (microseconds)\n", 0, (uint32_t)m_data->cpuTime.getAveraged());
 
-  for(uint32_t i = 0; i < m_data->numLastSections; i++)
+  std::string singleShotStats;
+
+  for(uint32_t i = 0; i < m_data->entries.size(); i++)
   {
+    static const int nameWidth = 40;
     static const char* spaces = "        ";  // 8
     Entry&             entry  = m_data->entries[i];
-
-    if(entry.level == LEVEL_SINGLESHOT)
-      continue;
 
     uint32_t level = 7 - (entry.level > 7 ? 7 : entry.level);
 
@@ -301,16 +301,30 @@ void Profiler::print(std::string& stats)
 
     const char* gpuname = entry.api ? entry.api : "N/A";
 
-    if(info.accumulated)
+    if(entry.level == LEVEL_SINGLESHOT)
     {
-      stats += format("%sTimer %s;\t %s %6d; CPU %6d; (microseconds, accumulated loop)\n", &spaces[level], entry.name,
+      singleShotStats += format("\n%sTimer %-*s;\t %s %6d; CPU %6d; (microseconds)", " ", nameWidth, entry.name,
                       gpuname, (uint32_t)(info.gpu.average), (uint32_t)(info.cpu.average));
+
     }
     else
     {
-      stats += format("%sTimer %s;\t %s %6d; CPU %6d; (microseconds, avg %d)\n", &spaces[level], entry.name, gpuname,
-                      (uint32_t)(info.gpu.average), (uint32_t)(info.cpu.average), (uint32_t)entry.cpuTime.numValid);
+      if(info.accumulated)
+      {
+        stats += format("%sTimer %-*s;\t %s %6d; CPU %6d; (microseconds, accumulated loop)\n", &spaces[level], nameWidth, entry.name,
+                        gpuname, (uint32_t)(info.gpu.average), (uint32_t)(info.cpu.average));
+      }
+      else
+      {
+        stats += format("%sTimer %-*s;\t %s %6d; CPU %6d; (microseconds, avg %d)\n", &spaces[level], nameWidth, entry.name, gpuname,
+                        (uint32_t)(info.gpu.average), (uint32_t)(info.cpu.average), (uint32_t)entry.cpuTime.numValid);
+      }
     }
+  }
+
+  if (!singleShotStats.empty())
+  {
+    stats += "\nSINGLE SHOTS:" + std::move(singleShotStats);
   }
 }
 
