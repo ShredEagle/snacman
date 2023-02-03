@@ -46,10 +46,18 @@ public:
         return result;
     }
 
+
     bool empty()
     {
         std::lock_guard lock{mMutex};
         return mStore.empty();
+    }
+
+
+    std::size_t size()
+    {
+        std::lock_guard lock{mMutex};
+        return mStore.size();
     }
 
 

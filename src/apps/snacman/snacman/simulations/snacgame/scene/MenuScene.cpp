@@ -14,11 +14,11 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void MenuScene::setup(const Transition & Transition, RawInput & aInput)
+void MenuScene::setup(GameContext & aContext, const Transition & Transition, RawInput & aInput)
 {
     ent::Phase init;
-    auto start = createMenuItem(mWorld, init, math::Position<2, int>{0, 0});
-    auto quit = createMenuItem(mWorld, init, math::Position<2, int>{2, 0});
+    auto start = createMenuItem(aContext, init, math::Position<2, int>{0, 0});
+    auto quit = createMenuItem(aContext, init, math::Position<2, int>{2, 0});
     mOwnedEntities.push_back(start);
     mOwnedEntities.push_back(quit);
 }
@@ -35,7 +35,9 @@ void MenuScene::teardown(RawInput & aInput)
     mOwnedEntities.clear();
 }
 
-std::optional<Transition> MenuScene::update(float aDelta, RawInput & aInput)
+std::optional<Transition> MenuScene::update(GameContext & aContext,
+                                            float aDelta,
+                                            RawInput & aInput)
 {
     int keyboardCommand = convertKeyboardInput("menu", aInput.mKeyboard,
                                                mContext->mKeyboardMapping);
@@ -52,7 +54,7 @@ std::optional<Transition> MenuScene::update(float aDelta, RawInput & aInput)
     if (keyboardCommand & gSelectItem)
     {
         boundPlayer =
-            findSlotAndBind(bindPlayerPhase, mSlots, ControllerType::Keyboard,
+            findSlotAndBind(aContext, bindPlayerPhase, mSlots, ControllerType::Keyboard,
                             gKeyboardControllerIndex);
     }
 
@@ -69,7 +71,7 @@ std::optional<Transition> MenuScene::update(float aDelta, RawInput & aInput)
 
         if (gamepadCommand & gSelectItem)
         {
-            boundPlayer |= findSlotAndBind(bindPlayerPhase, mSlots,
+            boundPlayer |= findSlotAndBind(aContext, bindPlayerPhase, mSlots,
                                            ControllerType::Gamepad, static_cast<int>(index));
         }
     }

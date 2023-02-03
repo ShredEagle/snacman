@@ -15,6 +15,8 @@ set(${TARGET_NAME}_HEADERS
     UniformParameters.h
 
     text/Text.h
+
+    3rdparty/Profiler.hpp
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -30,6 +32,8 @@ set(${TARGET_NAME}_SOURCES
     ShaderResource.cpp
 
     text/Text.cpp
+
+    3rdparty/Profiler.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../GameContext.h"
 #include "../component/LevelData.h"
 
 #include <entity/Query.h>
@@ -12,13 +13,12 @@ class LevelCreator
 {
 public:
     LevelCreator(ent::EntityManager * aWorld) :
-        mWorld{aWorld}, mCreatable{*aWorld}
+        mCreatable{*aWorld}
     {}
 
-    void update();
+    void update(GameContext & aContext);
 
 private:
-    ent::EntityManager * mWorld;
     ent::Query<component::LevelData, component::LevelToCreate> mCreatable;
 };
 

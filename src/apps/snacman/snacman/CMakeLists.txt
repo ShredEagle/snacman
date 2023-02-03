@@ -12,16 +12,17 @@ set(${TARGET_NAME}_HEADERS
     Logging.h
     LoopSettings.h
     QueryManipulation.h
+    RenderThread.h
     SparseSet.h
     Timing.h
 
     simulations/snacgame/EntityWrap.h
     simulations/snacgame/Entities.h
+    simulations/snacgame/GameContext.h
     simulations/snacgame/GraphicState.h
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SnacGame.h
-
 
     simulations/snacgame/component/Context.h
     simulations/snacgame/component/Controller.h

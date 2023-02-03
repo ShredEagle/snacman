@@ -39,24 +39,29 @@ public:
     using GraphicState_t = visu::GraphicState;
 
     Renderer(graphics::AppInterface & aAppInterface,
-             snac::Camera::Parameters aCameraParameters,
              const resource::ResourceFinder & aResourceFinder /* TODO remove when not used anymore*/);
 
     void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
+
+    // TODO Extend beyond cubes.
+    static std::shared_ptr<snac::Mesh> LoadShape(const resource::ResourceFinder & aResourceFinder);
+
+    std::shared_ptr<snac::Font> loadFont(filesystem::path aFont,
+                                         unsigned int aPixelHeight,
+                                         resource::ResourceFinder & aResource);
 
     void render(const visu::GraphicState & aState);
 
 private:
     graphics::AppInterface & mAppInterface;
-
     snac::Renderer mRenderer;
-
     snac::Camera mCamera;
-
-    snac::Mesh mCubeMesh;
-    snac::InstanceStream mCubeInstances;
-
+    snac::InstanceStream mMeshInstances;
     TextRenderer mTextRenderer;
+
+    // Must outlive all FontFaces, thus it must outlive the EntityManager,
+    // which might contain Freetype FontFaces. 
+    arte::Freetype mFreetype;
 };
 
 

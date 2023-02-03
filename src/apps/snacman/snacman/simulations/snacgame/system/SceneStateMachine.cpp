@@ -16,7 +16,7 @@ using namespace ad::snacgame::scene;
 
 SceneStateMachine::SceneStateMachine(ent::EntityManager & aWorld,
                                      const filesystem::path & aPath,
-                                     EntityWrap<component::Context> & aContext)
+                                     EntityWrap<component::MappingContext> & aContext)
 {
     std::ifstream sceneStream(aPath);
 
@@ -70,7 +70,7 @@ SceneStateMachine::SceneStateMachine(ent::EntityManager & aWorld,
     }
 }
 
-void SceneStateMachine::changeState(Transition & aTransition, RawInput & aInput)
+void SceneStateMachine::changeState(GameContext & aContext, Transition & aTransition, RawInput & aInput)
 {
     Scene * oldScene =
         mPossibleScene.at(mCurrentSceneId.mIndexInPossibleState).get();
@@ -89,7 +89,7 @@ void SceneStateMachine::changeState(Transition & aTransition, RawInput & aInput)
 
     if (aTransition.shouldSetup)
     {
-        newScene->setup(aTransition, aInput);
+        newScene->setup(aContext, aTransition, aInput);
     }
 }
 

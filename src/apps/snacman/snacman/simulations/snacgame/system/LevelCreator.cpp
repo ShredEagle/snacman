@@ -9,7 +9,7 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
-void LevelCreator::update()
+void LevelCreator::update(GameContext & aContext)
 {
     ent::Phase createLevelPhase;
     mCreatable.each([&](ent::Handle<ent::Entity> aHandle,
@@ -53,29 +53,27 @@ void LevelCreator::update()
                     switch (value)
                     {
                     case 'W':
-                        tiles.push_back(component::Tile{
-                            .mType = component::TileType::Path});
-                        createPathEntity(*mWorld, createLevelPhase,
+                        tiles.push_back(component::Tile{.mType = component::TileType::Path});
+                        createPathEntity(aContext, 
+                                         createLevelPhase,
                                          math::Position<2, int>{x, y});
-                        createPill(*mWorld, createLevelPhase,
+                        createPill(aContext,
+                                   createLevelPhase,
                                    math::Position<2, int>{x, y});
                         break;
                     case 'K':
-                        tiles.push_back(component::Tile{
-                            .mType = component::TileType::Portal});
-                        createPortalEntity(*mWorld, createLevelPhase,
+                        tiles.push_back(component::Tile{.mType = component::TileType::Portal});
+                        createPortalEntity(aContext, createLevelPhase,
                                            math::Position<2, int>{x, y});
                         break;
                     case 'O':
-                        tiles.push_back(
-                            component::Tile{.mType = component::TileType::Pen});
-                        createCopPenEntity(*mWorld, createLevelPhase,
+                        tiles.push_back(component::Tile{.mType = component::TileType::Pen});
+                        createCopPenEntity(aContext, createLevelPhase,
                                            math::Position<2, int>{x, y});
                         break;
                     case 'U':
-                        tiles.push_back(component::Tile{
-                            .mType = component::TileType::Spawn});
-                        createPlayerSpawnEntity(*mWorld, createLevelPhase,
+                        tiles.push_back(component::Tile{.mType = component::TileType::Spawn});
+                        createPlayerSpawnEntity(aContext, createLevelPhase,
                                                 math::Position<2, int>{x, y});
                         break;
                     default:

@@ -1,11 +1,15 @@
 #pragma once
 
 #include "EntityWrap.h"
+#include "GameContext.h"
 #include "Renderer.h"
 
 #include "component/Geometry.h"
 #include "component/PoseScreenSpace.h"
 #include "component/Text.h"
+#include "component/VisualMesh.h"
+
+#include "scene/Scene.h"
 
 #include "snacman/LoopSettings.h"
 #include "component/Context.h"
@@ -90,6 +94,7 @@ public:
 
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface,
+             snac::RenderThread<Renderer_t> & aRenderThread,
              imguiui::ImguiUi & aImguiUi,
              const resource::ResourceFinder & aResourceFinder, RawInput & aInput);
 
@@ -101,26 +106,20 @@ public:
 
     std::unique_ptr<visu::GraphicState> makeGraphicState();
 
-    snac::Camera::Parameters getCameraParameters() const;
-
-    // TODO remove finder
-    Renderer_t makeRenderer(const resource::ResourceFinder & aResourceFinder) const;
-
 private:
     graphics::AppInterface * mAppInterface;
-    snac::Camera::Parameters mCameraParameters = snac::Camera::gDefaults;
-
-    // Must appear before the EntityManager, because the EntityManager
-    // might contain Freetype FontFaces, and the Freetype object must outlive them.
-    arte::Freetype mFreetype;
 
     ent::EntityManager mWorld;
-    EntityWrap<component::Context> mContext;
+    
+    // TODO use the ent::Wrap
+    EntityWrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
     EntityWrap<system::SceneStateMachine> mStateMachine;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
-    EntityWrap<ent::Query<component::Geometry>> mQueryRenderable;
+    EntityWrap<ent::Query<component::Geometry, component::VisualMesh>> mQueryRenderable;
 
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
+
+    GameContext mGameContext;
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};

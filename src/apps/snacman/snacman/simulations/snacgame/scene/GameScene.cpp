@@ -20,7 +20,7 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void GameScene::setup(const Transition & aTransition, RawInput & aInput)
+void GameScene::setup(GameContext &, const Transition & aTransition, RawInput & aInput)
 {
     ent::Phase init;
     mSystems.get(init)->add(system::PlayerSpawner{mWorld});
@@ -62,7 +62,9 @@ void GameScene::teardown(RawInput & aInput)
     });
 }
 
-std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
+std::optional<Transition> GameScene::update(GameContext & aContext,
+                                            float aDelta,
+                                            RawInput & aInput)
 {
     ent::Phase update;
 
@@ -103,7 +105,7 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
 
         if (keyboardCommand & gJoin)
         {
-            findSlotAndBind(bindPlayerPhase, mSlots, ControllerType::Keyboard,
+            findSlotAndBind(aContext, bindPlayerPhase, mSlots, ControllerType::Keyboard,
                             gKeyboardControllerIndex);
         }
     }
@@ -120,7 +122,7 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
 
             if (gamepadCommand & gJoin)
             {
-                findSlotAndBind(bindPlayerPhase, mSlots,
+                findSlotAndBind(aContext, bindPlayerPhase, mSlots,
                                                ControllerType::Gamepad, static_cast<int>(index));
             }
         }
@@ -131,7 +133,7 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
         return Transition{.mTransitionName = "back"};
     }
 
-    mSystems.get(update)->get<system::LevelCreator>().update();
+    mSystems.get(update)->get<system::LevelCreator>().update(aContext);
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();

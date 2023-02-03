@@ -23,8 +23,8 @@ class SceneStateMachine
 public:
     SceneStateMachine(ent::EntityManager & aWorld,
                       const filesystem::path & aPath,
-                      EntityWrap<component::Context> & aContext);
-    void changeState(scene::Transition & aTransition, RawInput & aInput);
+                      EntityWrap<component::MappingContext> & aContext);
+    void changeState(GameContext & aContext, scene::Transition & aTransition, RawInput & aInput);
     scene::Scene * getCurrentScene() const;
 
 private:

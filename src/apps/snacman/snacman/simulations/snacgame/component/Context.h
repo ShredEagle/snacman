@@ -20,16 +20,13 @@ const inline filesystem::path gAssetRoot{"/home/franz/gamedev/snac-assets"};
 
 namespace component {
 
-struct Context
+struct MappingContext
 {
-    Context(const resource::ResourceFinder aResourceFinder) :
+    MappingContext(const resource::ResourceFinder aResourceFinder) :
         mGamepadMapping(*aResourceFinder.find("settings/gamepad_mapping.json")),
         mKeyboardMapping(
             *aResourceFinder.find("settings/keyboard_mapping.json"))
     {}
-
-    GamepadMapping mGamepadMapping;
-    KeyboardMapping mKeyboardMapping;
 
     void drawUi(const RawInput & aInput)
     {
@@ -132,14 +129,18 @@ struct Context
                                 if (static_cast<ButtonStatus>(status)
                                     == ButtonStatus::PositiveEdge)
                                 {
-                                    int stuff = index
-                                                | static_cast<int>(
+                                    int stuff =
+                                        index
+                                        | static_cast<int>(
+                                            GamepadAtomicInput::axisFlag)
+                                        | static_cast<int>(
+                                            status.mCurrent > 0.f
+                                                ? static_cast<int>(
                                                     GamepadAtomicInput::
-                                                        axisFlag)
-                                                | static_cast<int>(status.mCurrent > 0.f
-                                            ? static_cast<int>(GamepadAtomicInput::positiveFlag)
-                                            : 0);
-                                    GamepadAtomicInput newStuff = static_cast<GamepadAtomicInput>(stuff);
+                                                        positiveFlag)
+                                                : 0);
+                                    GamepadAtomicInput newStuff =
+                                        static_cast<GamepadAtomicInput>(stuff);
                                     pair.first = newStuff;
                                     gamepadSelected = -1;
                                     break;
@@ -152,6 +153,9 @@ struct Context
         }
         ImGui::End();
     }
+
+    GamepadMapping mGamepadMapping;
+    KeyboardMapping mKeyboardMapping;
 };
 
 } // namespace component

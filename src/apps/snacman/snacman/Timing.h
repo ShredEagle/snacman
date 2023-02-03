@@ -11,6 +11,8 @@ namespace snac {
 
 using Clock = std::chrono::high_resolution_clock;
 
+using ms = std::chrono::milliseconds;
+
 
 constexpr double asSeconds(Clock::duration aDuration)
 {

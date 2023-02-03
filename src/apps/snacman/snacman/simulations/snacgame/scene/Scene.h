@@ -2,6 +2,7 @@
 
 #include "snacman/Input.h"
 
+#include "../GameContext.h"
 #include "../component/Context.h"
 #include "../EntityWrap.h"
 
@@ -47,18 +48,24 @@ struct hash<ad::snacgame::scene::Transition>
 
 namespace ad {
 namespace snacgame {
+
+struct GameContext;
+
 namespace scene {
+
 
 struct SceneId
 {
     std::size_t mIndexInPossibleState;
 };
+
+
 class Scene
 {
 public:
     Scene(const std::string & aName,
           ent::EntityManager & aWorld,
-          EntityWrap<component::Context> & aContext) :
+          EntityWrap<component::MappingContext> & aContext) :
         mName{aName},
         mWorld{aWorld},
         mSystems{mWorld.addEntity()},
@@ -70,9 +77,12 @@ public:
     Scene & operator=(Scene &&) = delete;
     virtual ~Scene() = default;
 
-    virtual std::optional<Transition> update(float aDelta,
+    virtual std::optional<Transition> update(GameContext & aContext,
+                                             float aDelta,
                                              RawInput & aInput) = 0;
-    virtual void setup(const Transition & aTransition, RawInput & aInput) = 0;
+
+    virtual void setup(GameContext & aContext, const Transition & aTransition, RawInput & aInput) = 0;
+
     virtual void teardown(RawInput & aInput) = 0;
 
     std::string mName;
@@ -82,7 +92,7 @@ protected:
     ent::EntityManager & mWorld;
     ent::Handle<ent::Entity> mSystems;
     std::vector<ent::Handle<ent::Entity>> mOwnedEntities;
-    EntityWrap<component::Context> & mContext;
+    EntityWrap<component::MappingContext> & mContext;
 };
 
 } // namespace scene

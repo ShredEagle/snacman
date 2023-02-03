@@ -19,16 +19,19 @@ class GameScene : public Scene
 public:
     GameScene(const std::string & aName,
               ent::EntityManager & aWorld,
-              EntityWrap<component::Context> & aContext) :
-        Scene(aName, aWorld, aContext),
-        mLevel{mWorld.addEntity()},
+              EntityWrap<component::MappingContext> & aContext) :
+        Scene(aName, aWorld, aContext), mLevel{mWorld.addEntity()},
         mTiles{mWorld},
         mSlots{mWorld},
         mPlayers{mWorld}
     {}
 
-    std::optional<Transition> update(float aDelta, RawInput & aInput) override;
-    void setup(const Transition & aTransition, RawInput & aInput) override;
+    std::optional<Transition> update(GameContext & aContext,
+                                     float aDelta,
+                                     RawInput & aInput) override;
+
+    void setup(GameContext & aContext, const Transition & aTransition, RawInput & aInput) override;
+
     void teardown(RawInput & aInput) override;
 
 private:

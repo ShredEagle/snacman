@@ -1,6 +1,7 @@
 #include "Entities.h"
 
 #include "../../QueryManipulation.h"
+#include "GameContext.h"
 
 #include "component/Controller.h"
 #include "component/Geometry.h"
@@ -12,6 +13,7 @@
 #include "component/Speed.h"
 #include "component/Text.h"
 #include "snacman/Input.h"
+#include "component/VisualMesh.h"
 
 #include <math/Color.h>
 #include <snac-renderer/text/Text.h>
@@ -19,11 +21,11 @@
 namespace ad {
 namespace snacgame {
 
-void createPill(ent::EntityManager & mWorld,
+void createPill(GameContext & aContext,
                 ent::Phase & aInit,
                 const math::Position<2, int> & aGridPos)
 {
-    auto handle = mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity();
     handle.get(aInit)
         ->add(component::Geometry{
             .mSubGridPosition = math::Position<2, float>::Zero(),
@@ -39,117 +41,146 @@ void createPill(ent::EntityManager & mWorld,
                 AxisAngle{.mAxis = math::UnitVec<3, float>{{1.f, 1.f, 1.f}},
                           .mAngle = math::Degree<float>{60.f}},
         })
-        .add(component::LevelEntity{});
+        .add(component::VisualMesh{
+            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+        })
+        .add(component::LevelEntity{})
+        ;
     ;
 }
 
 ent::Handle<ent::Entity>
-createPathEntity(ent::EntityManager & mWorld,
+createPathEntity(GameContext & aContext,
                  ent::Phase & aInit,
                  const math::Position<2, int> & aGridPos)
 {
-    auto handle = mWorld.addEntity();
-    handle.get(aInit)
-        ->add(component::LevelEntity{})
+    auto handle = aContext.mWorld.addEntity();
+    handle.get(aInit)->add(component::LevelEntity{})
         .add(component::Geometry{
             .mSubGridPosition = math::Position<2, float>::Zero(),
             .mGridPosition = aGridPos,
             .mLayer = component::GeometryLayer::Level,
-            .mColor = math::hdr::gWhite<float>});
+            .mColor = math::hdr::gWhite<float>})
+        .add(component::VisualMesh{
+            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+        })
+        ;
+    ;
     return handle;
 }
 
 ent::Handle<ent::Entity>
-createPortalEntity(ent::EntityManager & mWorld,
+createPortalEntity(GameContext & aContext,
                    ent::Phase & aInit,
                    const math::Position<2, int> & aGridPos)
 {
-    auto handle = mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity();
+    handle.get(aInit)->add(component::LevelEntity{});
     handle.get(aInit)
-        ->add(component::LevelEntity{})
-        .add(component::Geometry{
+        ->add(component::Geometry{
             .mSubGridPosition = math::Position<2, float>::Zero(),
             .mGridPosition = aGridPos,
             .mLayer = component::GeometryLayer::Level,
-            .mColor = math::hdr::gRed<float>});
+            .mColor = math::hdr::gRed<float>})
+        .add(component::VisualMesh{
+            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+        })
+        ;
     return handle;
 }
 
 ent::Handle<ent::Entity>
-createCopPenEntity(ent::EntityManager & mWorld,
+createCopPenEntity(GameContext & aContext,
                    ent::Phase & aInit,
                    const math::Position<2, int> & aGridPos)
 {
-    auto handle = mWorld.addEntity();
-    handle.get(aInit)
-        ->add(component::LevelEntity{})
-        .add(component::Geometry{
+    auto handle = aContext.mWorld.addEntity();
+    handle.get(aInit)->add(component::LevelEntity{});
+    handle.get(aInit)->add(component::Geometry{
             .mSubGridPosition = math::Position<2, float>::Zero(),
             .mGridPosition = aGridPos,
             .mLayer = component::GeometryLayer::Level,
-            .mColor = math::hdr::gYellow<float>});
+            .mColor = math::hdr::gYellow<float>})
+        .add(component::VisualMesh{
+            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+        })
+        ;
     return handle;
 }
 
 ent::Handle<ent::Entity>
-createPlayerSpawnEntity(ent::EntityManager & mWorld,
+createPlayerSpawnEntity(GameContext & aContext,
                         ent::Phase & aInit,
                         const math::Position<2, int> & aGridPos)
 {
-    auto spawner = mWorld.addEntity();
-    spawner.get(aInit)
-        ->add(component::LevelEntity{})
-        .add(component::Geometry{
+    auto spawner = aContext.mWorld.addEntity();
+    spawner.get(aInit)->add(component::LevelEntity{});
+    spawner.get(aInit)->add(component::Geometry{
             .mSubGridPosition = math::Position<2, float>::Zero(),
             .mGridPosition = aGridPos,
             .mLayer = component::GeometryLayer::Level,
-            .mColor = math::hdr::gCyan<float>});
+            .mColor = math::hdr::gCyan<float>})
+        .add(component::VisualMesh{
+            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+        })
+        ;
     spawner.get(aInit)->add(component::Spawner{.mSpawnPosition = aGridPos});
 
     return spawner;
 }
 
-void fillSlotWithPlayer(ent::Phase & aInit,
+void fillSlotWithPlayer(GameContext & aContext,
+                        ent::Phase & aInit,
                         ControllerType aControllerType,
                         ent::Handle<ent::Entity> aSlot,
                         int aControllerId)
 {
     auto playerEntity = aSlot.get(aInit);
 
+    playerEntity->add(component::Geometry{
+        .mSubGridPosition = math::Position<2, float>::Zero(),
+        .mGridPosition = math::Position<2, int>::Zero(),
+        .mLayer = component::GeometryLayer::Player,
+        .mColor = math::hdr::gMagenta<float>});
+    playerEntity->add(component::PlayerLifeCycle{.mIsAlive = false});
+    playerEntity->add(component::PlayerMoveState{});
     playerEntity
-        ->add(component::Geometry{
-            .mSubGridPosition = math::Position<2, float>::Zero(),
-            .mGridPosition = math::Position<2, int>::Zero(),
-            .mLayer = component::GeometryLayer::Player,
-            .mColor = math::hdr::gMagenta<float>})
-        .add(component::PlayerLifeCycle{.mIsAlive = false})
-        .add(component::PlayerMoveState{})
-        .add(component::Controller{.mType = aControllerType,
-                                   .mControllerId = aControllerId});
+        ->add(component::Controller{
+            .mType = aControllerType,
+            .mControllerId = aControllerId
+        })
+        .add(component::VisualMesh{
+            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+        })
+        ;
 }
 
-ent::Handle<ent::Entity> createMenuItem(ent::EntityManager & aWorld,
+ent::Handle<ent::Entity> createMenuItem(GameContext & aContext,
                                         ent::Phase & aInit,
                                         const math::Position<2, int> & aPos)
 {
-    auto menuItem = aWorld.addEntity();
+    auto menuItem = aContext.mWorld.addEntity();
     menuItem.get(aInit)->add(component::Geometry{
-        .mSubGridPosition = math::Position<2, float>::Zero(),
-        .mGridPosition = aPos,
-        .mLayer = component::GeometryLayer::Menu,
-        .mColor = math::hdr::gMagenta<float>});
+            .mSubGridPosition = math::Position<2, float>::Zero(),
+            .mGridPosition = aPos,
+            .mLayer = component::GeometryLayer::Menu,
+            .mColor = math::hdr::gMagenta<float>})
+        .add(component::VisualMesh{
+            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+        })
+        ;
 
     return menuItem;
 }
 
-ent::Handle<ent::Entity> makeText(ent::EntityManager & mWorld,
+ent::Handle<ent::Entity> makeText(GameContext & aContext,
                                   ent::Phase & aPhase,
                                   std::string aString,
                                   std::shared_ptr<snac::Font> aFont,
                                   math::hdr::Rgba_f aColor,
                                   math::Position<2, float> aPosition_unitscreen)
 {
-    auto handle = mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity();
 
     handle.get(aPhase)
         ->add(component::Text{
@@ -162,7 +193,7 @@ ent::Handle<ent::Entity> makeText(ent::EntityManager & mWorld,
     return handle;
 }
 
-bool findSlotAndBind(ent::Phase & aBindPhase,
+bool findSlotAndBind(GameContext & aContext, ent::Phase & aBindPhase,
                      ent::Query<component::PlayerSlot> & aSlots,
                      ControllerType aType,
                      int aIndex)
@@ -173,7 +204,7 @@ bool findSlotAndBind(ent::Phase & aBindPhase,
 
     if (freeSlot)
     {
-        fillSlotWithPlayer(aBindPhase, aType, *freeSlot, aIndex);
+        fillSlotWithPlayer(aContext, aBindPhase, aType, *freeSlot, aIndex);
         return true;
     }
 

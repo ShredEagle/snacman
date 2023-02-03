@@ -6,6 +6,8 @@
 
 #include <snac-renderer/text/Text.h>
 
+#include <platform/Filesystem.h>
+
 
 namespace ad {
 namespace snacgame {
@@ -91,23 +93,12 @@ snac::InstanceStream initializeInstanceStream()
 }
 
 
-Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Camera::Parameters aCameraParameters, const resource::ResourceFinder & aResourceFinder) :
+Renderer::Renderer(graphics::AppInterface & aAppInterface,
+                   const resource::ResourceFinder & aResourceFinder) :
     mAppInterface{aAppInterface},
-    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), aCameraParameters},
-    mCubeMesh{.mStream = snac::makeCube()},
-    mCubeInstances{initializeInstanceStream()}
-{
-    mCubeMesh.mMaterial = std::make_shared<snac::Material>();
-    mCubeMesh.mMaterial->mEffect = std::make_shared<snac::Effect>(snac::Effect{
-        .mProgram = {
-            graphics::makeLinkedProgram({
-                {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Cubes.vert"))},
-                {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Cubes.frag"))},
-            }),
-            "PhongLighting"
-        }
-    });
-}
+    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults},
+    mMeshInstances{initializeInstanceStream()}
+{}
 
 void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
 {
@@ -115,13 +106,45 @@ void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aPar
 }
 
 
+std::shared_ptr<snac::Mesh> Renderer::LoadShape(const resource::ResourceFinder & aResourceFinder)
+{
+    auto mesh = std::make_shared<snac::Mesh>(snac::Mesh{.mStream = snac::makeCube()}); 
+
+    mesh->mMaterial = std::make_shared<snac::Material>();
+    mesh->mMaterial->mEffect = std::make_shared<snac::Effect>(snac::Effect{
+        .mProgram = {
+            graphics::makeLinkedProgram({
+                {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Cubes.vert"))},
+                {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Cubes.frag"))},
+            }),
+            "PhongLighting"
+        },
+    });
+
+    return mesh;
+}
+
+
+std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
+                                               unsigned int aPixelHeight,
+                                               resource::ResourceFinder & aResource)
+{
+    return std::make_shared<snac::Font>(
+        mFreetype,
+        *aResource.find(aFont),
+        aPixelHeight,
+        snac::makeDefaultTextProgram(aResource)
+    );
+}
+
+
 void Renderer::render(const visu::GraphicState & aState)
 {
     // Stream the instance buffer data
-    std::vector<PoseColor> instanceBufferData;
+    std::map<snac::Mesh *, std::vector<PoseColor>> sortedMeshes;
     for (const visu::Entity & entity : aState.mEntities)
     {
-        instanceBufferData.push_back(PoseColor{
+        sortedMeshes[entity.mMesh.get()].push_back(PoseColor{
             .pose = 
                 math::trans3d::scale(entity.mScaling)
                 * entity.mOrientation.toRotationMatrix()
@@ -148,8 +171,11 @@ void Renderer::render(const visu::GraphicState & aState)
          {snac::BlockSemantic::Viewing, &mCamera.mViewing},
     };
 
-    mCubeInstances.respecifyData(std::span{instanceBufferData});
-    mRenderer.render(mCubeMesh, mCubeInstances, uniforms, uniformBlocks);
+    for (const auto & [mesh, instances] : sortedMeshes)
+    {
+        mMeshInstances.respecifyData(std::span{instances});
+        mRenderer.render(*mesh, mMeshInstances, uniforms, uniformBlocks);
+    }
 
     //
     // Text
