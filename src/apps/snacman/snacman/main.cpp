@@ -1,6 +1,7 @@
 #include "Input.h"
 #include "Logging.h"
 #include "LoopSettings.h"
+#include "Profiling.h"
 #include "RenderThread.h"
 #include "Timing.h"
 
@@ -68,10 +69,13 @@ void runApplication()
     ("Initial delta time {}ms.",
      std::chrono::duration_cast<ms>(gSimulationDelta).count());
 
+    // TODO have this single work (currently return abherent values, even if we put a begin / end frame around the section)
+    //BEGIN_SINGLE("App_initialization", appInitSingle);
+
     // Application and window initialization
     graphics::ApplicationGlfw glfwApp{
         getVersionedName(), 800, 600 // TODO handle via settings
-                                     // TODO, applicationFlags
+                                    // TODO, applicationFlags
     };
 
     imguiui::ImguiUi imguiUi(glfwApp);
@@ -93,7 +97,7 @@ void runApplication()
 
     GraphicStateFifo<snacgame::Renderer> graphicStates;
     RenderThread renderingThread{glfwApp, graphicStates, std::move(renderer),
-                                 imguiUi, configurableSettings.mInterpolate};
+                                imguiUi, configurableSettings.mInterpolate};
 
     //
     // Initialize input devices
@@ -107,6 +111,7 @@ void runApplication()
     //
     snacgame::SnacGame simulation{*glfwApp.getAppInterface(), renderingThread, imguiUi, resourceFinder, input};
 
+    //END_SINGLE(appInitSingle);
 
     //
     // Main simulation loop
@@ -116,17 +121,24 @@ void runApplication()
 
     while (glfwApp.handleEvents())
     {
+        Guard frameProfiling = profileFrame();
+
+        BEGIN_RECURRING("Step", stepRecurringScope);
+
         // Update input
         input = hid.read(input, inhibiter);
 
         //
         // Simulate one step
         //
-        if (simulation.update(
-                (float) asSeconds(configurableSettings.mSimulationDelta),
-                input))
         {
-            break;
+            auto sectionUpdate = getProfiler().timeRecurring("Simulation_update");
+            if (simulation.update(
+                    (float) asSeconds(configurableSettings.mSimulationDelta),
+                    input))
+            {
+                break;
+            }
         }
 
         simulation.drawDebugUi(configurableSettings, inhibiter, input);
@@ -152,6 +164,9 @@ void runApplication()
         // If it was updated before scene.update(), there would be an
         // inconsistency on each new delta value. (Because an update for
         // duration D2 would be presented after a duration of D1.)
+
+        // End the step profiling explicitly here (instead of adding a nesting level)
+        END_RECURRING(stepRecurringScope);
 
         if (!gWaitByBusyLoop)
         {

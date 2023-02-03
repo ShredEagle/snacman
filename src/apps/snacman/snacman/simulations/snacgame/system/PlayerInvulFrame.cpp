@@ -1,11 +1,16 @@
 #include "PlayerInvulFrame.h"
 
+#include <snacman/Profiling.h>
+
+
 namespace ad {
 namespace snacgame {
 namespace system {
 
 void PlayerInvulFrame::update(float aDelta)
 {
+    TIME_RECURRING_FULLFUNC;
+
     mPlayer.each([aDelta](component::PlayerLifeCycle & aPlayer,
                                    component::Geometry & aPlayerGeometry) {
         if (aPlayer.mIsAlive && aPlayer.mInvulFrameCounter > 0) {

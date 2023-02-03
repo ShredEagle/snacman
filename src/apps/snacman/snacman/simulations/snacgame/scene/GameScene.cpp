@@ -1,6 +1,7 @@
 #include "GameScene.h"
 
-#include "snacman/Logging.h"
+#include <snacman/Logging.h>
+#include <snacman/Profiling.h>
 #include "snacman/simulations/snacgame/component/Controller.h"
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
 #include "snacman/simulations/snacgame/system/LevelCreator.h"
@@ -69,6 +70,8 @@ std::optional<Transition> GameScene::update(GameContext & aContext,
                                             float aDelta,
                                             RawInput & aInput)
 {
+    TIME_RECURRING("GameScene::update");
+
     ent::Phase update;
 
     bool quit = false;

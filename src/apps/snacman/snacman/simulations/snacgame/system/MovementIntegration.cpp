@@ -1,5 +1,7 @@
 #include "MovementIntegration.h"
 
+#include <snacman/Profiling.h>
+
 namespace ad {
 namespace snacgame {
 namespace system {
@@ -7,6 +9,8 @@ namespace system {
 
 void MovementIntegration::update(float aDelta)
 {
+    TIME_RECURRING_FULLFUNC;
+
     ent::Phase integrate;
     mMovables.each(
         [aDelta]

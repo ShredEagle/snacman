@@ -4,6 +4,8 @@
 
 #include "../component/LevelData.h"
 
+#include <snacman/Profiling.h>
+
 namespace ad {
 namespace snacgame {
 namespace system {
@@ -12,6 +14,8 @@ constexpr float gBasePlayerSpeed = 10.f;
 
 void IntegratePlayerMovement::update(float aDelta)
 {
+    TIME_RECURRING_FULLFUNC;
+
     ent::Phase nomutation;
 
     mLevel.each([&](component::LevelData & aLevelData,

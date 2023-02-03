@@ -12,6 +12,7 @@ set(${TARGET_NAME}_HEADERS
     Input.h
     Logging.h
     LoopSettings.h
+    Profiling.h
     RenderThread.h
     SparseSet.h
     Timing.h

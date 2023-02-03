@@ -49,6 +49,7 @@ struct ImguiDisplays
     bool mShowSimulationDelta = false;
     bool mShowImguiDemo = false;
     bool mShowLogLevel = false;
+    bool mShowProfiler = false;
 
     void display()
     {
@@ -56,6 +57,7 @@ struct ImguiDisplays
         ImGui::Checkbox("Mappings", &mShowMappings);
         ImGui::Checkbox("Simulation delta", &mShowSimulationDelta);
         ImGui::Checkbox("Log level", &mShowLogLevel);
+        ImGui::Checkbox("Profiler",  &mShowProfiler);
         ImGui::Checkbox("ImguiDemo", &mShowImguiDemo);
         ImGui::End();
     }

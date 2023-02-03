@@ -20,6 +20,7 @@
 #include "system/SceneStateMachine.h"
 
 #include <snacman/ImguiUtilities.h>
+#include <snacman/Profiling.h>
 
 #include <imguiui/ImguiUi.h>
 
@@ -88,6 +89,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                            ImguiInhibiter & aInhibiter,
                            RawInput & aInput)
 {
+    TIME_RECURRING_FUNC;
+
     ent::Phase update;
 
     mImguiUi.mFrameMutex.lock();
@@ -140,6 +143,15 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         aSettings.mInterpolate = interpolate;
         ImGui::End();
     }
+    if (mImguiDisplays.mShowProfiler)
+    {
+        ImGui::Begin("Profiler");
+        std::string str;
+        snac::getProfiler().print(str);
+        ImGui::Text(str.c_str());
+        ImGui::End();
+    }
+
     mImguiUi.render();
     mImguiUi.mFrameMutex.unlock();
 }
@@ -177,6 +189,8 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
 
 std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 {
+    TIME_RECURRING_FUNC;
+
     auto state = std::make_unique<visu::GraphicState>();
 
     ent::Phase nomutation;

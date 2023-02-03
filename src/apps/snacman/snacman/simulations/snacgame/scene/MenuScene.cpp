@@ -3,6 +3,7 @@
 #include "snacman/Input.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
+#include <snacman/Profiling.h>
 
 #include "../Entities.h"
 
@@ -37,6 +38,8 @@ std::optional<Transition> MenuScene::update(GameContext & aContext,
                                             float aDelta,
                                             RawInput & aInput)
 {
+    TIME_RECURRING_FULLFUNC;
+
     int keyboardCommand = convertKeyboardInput("menu", aInput.mKeyboard,
                                                mContext->mKeyboardMapping);
 

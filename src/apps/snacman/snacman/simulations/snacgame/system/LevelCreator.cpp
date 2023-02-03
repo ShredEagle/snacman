@@ -1,9 +1,12 @@
 #include "LevelCreator.h"
 
-#include "entity/Entity.h"
-#include "markovjunior/Interpreter.h"
-
 #include "../component/LevelData.h"
+
+#include <snacman/Profiling.h>
+
+#include <entity/Entity.h>
+
+#include <markovjunior/Interpreter.h>
 
 namespace ad {
 namespace snacgame {
@@ -11,6 +14,8 @@ namespace system {
 
 void LevelCreator::update(GameContext & aContext)
 {
+    TIME_RECURRING_FULLFUNC;
+
     ent::Phase createLevelPhase;
     mCreatable.each([&](ent::Handle<ent::Entity> aHandle,
                         component::LevelData & aLevelData) {
@@ -23,16 +28,21 @@ void LevelCreator::update(GameContext & aContext)
         int stepPerformed = 0;
 
         // TODO: make this better and maybe a function in markov
-        while (interpreter.mCurrentBranch != nullptr && stepPerformed > -1)
         {
-            interpreter.runStep();
-            stepPerformed++;
+            TIME_SINGLE("Markov_steps");
+            while (interpreter.mCurrentBranch != nullptr && stepPerformed > -1)
+            {
+                interpreter.runStep();
+                stepPerformed++;
+            }
         }
 
         if (interpreter.mCurrentBranch != nullptr)
         {
             return;
         }
+
+        TIME_SINGLE("Level_instantiation");
 
         markovjunior::Grid aGrid = interpreter.mGrid;
 

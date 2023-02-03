@@ -3,6 +3,7 @@
 #include "math/Color.h"
 #include "snacman/Input.h"
 #include "snacman/Logging.h"
+#include <snacman/Profiling.h>
 
 #include "../component/AllowedMovement.h"
 #include "../component/LevelData.h"
@@ -15,6 +16,8 @@ constexpr float gTurningZoneHalfWidth = 0.1f;
 
 void DeterminePlayerAction::update()
 {
+    TIME_RECURRING_FULLFUNC;
+
     ent::Phase nomutation;
 
     mLevel.each([&](component::LevelData & aLevelData,
