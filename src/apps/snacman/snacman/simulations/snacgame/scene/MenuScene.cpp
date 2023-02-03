@@ -1,12 +1,11 @@
 #include "MenuScene.h"
 
-#include "../SnacGame.h"
-
 #include "../../../Input.h"
 #include "../component/Controller.h"
 #include "../component/PlayerSlot.h"
 #include "../Entities.h"
 #include "../InputCommandConverter.h"
+#include "../SnacGame.h"
 
 #include <optional>
 
@@ -16,9 +15,18 @@ namespace scene {
 
 void MenuScene::setup(GameContext & aContext, const Transition & Transition, RawInput & aInput)
 {
+    auto font = aContext.mRenderThread.loadFont("fonts/Comfortaa-Regular.ttf", 120, aContext.mResource).get();
     ent::Phase init;
-    auto start = createMenuItem(aContext, init, math::Position<2, int>{0, 0});
-    auto quit = createMenuItem(aContext, init, math::Position<2, int>{2, 0});
+    auto start = createMenuItem(
+        aContext, init, "start",
+        font,
+        math::hdr::gYellow<float>,
+        math::Position<2, float>{0.f, 0.f});
+    auto quit = createMenuItem(
+        aContext, init, "quit",
+        font,
+        math::hdr::gYellow<float>,
+        math::Position<2, float>{0.f, -0.2f});
     mOwnedEntities.push_back(start);
     mOwnedEntities.push_back(quit);
 }

@@ -57,7 +57,10 @@ ent::Handle<ent::Entity> makeText(GameContext & aContext,
 
 ent::Handle<ent::Entity> createMenuItem(GameContext & aContext,
                                         ent::Phase & aInit,
-                                        const math::Position<2, int> & aPos);
+                                        const std::string & aString,
+                                        std::shared_ptr<snac::Font> aFont,
+                                        const math::hdr::Rgba_f & aColor,
+                                        const math::Position<2, float> & aPos);
 
 bool findSlotAndBind(GameContext & aContext, ent::Phase & aBindPhase,
                      ent::Query<component::PlayerSlot> & aSlots,

@@ -155,20 +155,32 @@ void fillSlotWithPlayer(GameContext & aContext,
         ;
 }
 
+bool findSlotAndBind(GameContext & aContext, ent::Phase & aBindPhase,
+                     ent::Query<component::PlayerSlot> & aSlots,
+                     ControllerType aType,
+                     int aIndex)
+{
+    std::optional<ent::Handle<ent::Entity>> freeSlot = snac::getFirstHandle(
+        aSlots,
+        [](component::PlayerSlot & aSlot) { return !aSlot.mFilled; });
+
+    if (freeSlot)
+    {
+        fillSlotWithPlayer(aContext, aBindPhase, aType, *freeSlot, aIndex);
+        return true;
+    }
+
+    return false;
+}
+
 ent::Handle<ent::Entity> createMenuItem(GameContext & aContext,
                                         ent::Phase & aInit,
-                                        const math::Position<2, int> & aPos)
+                                        const std::string & aString,
+                                        std::shared_ptr<snac::Font> aFont,
+                                        const math::hdr::Rgba_f & aColor,
+                                        const math::Position<2, float> & aPos)
 {
-    auto menuItem = aContext.mWorld.addEntity();
-    menuItem.get(aInit)->add(component::Geometry{
-            .mSubGridPosition = math::Position<2, float>::Zero(),
-            .mGridPosition = aPos,
-            .mLayer = component::GeometryLayer::Menu,
-            .mColor = math::hdr::gMagenta<float>})
-        .add(component::VisualMesh{
-            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
-        })
-        ;
+    auto menuItem = makeText(aContext, aInit, aString, aFont, aColor, aPos);
 
     return menuItem;
 }
@@ -191,24 +203,6 @@ ent::Handle<ent::Entity> makeText(GameContext & aContext,
         .add(component::PoseScreenSpace{.mPosition_u = aPosition_unitscreen});
 
     return handle;
-}
-
-bool findSlotAndBind(GameContext & aContext, ent::Phase & aBindPhase,
-                     ent::Query<component::PlayerSlot> & aSlots,
-                     ControllerType aType,
-                     int aIndex)
-{
-    std::optional<ent::Handle<ent::Entity>> freeSlot = snac::getFirstHandle(
-        aSlots,
-        [](component::PlayerSlot & aSlot) { return !aSlot.mFilled; });
-
-    if (freeSlot)
-    {
-        fillSlotWithPlayer(aContext, aBindPhase, aType, *freeSlot, aIndex);
-        return true;
-    }
-
-    return false;
 }
 
 } // namespace snacgame
