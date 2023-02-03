@@ -15,14 +15,12 @@ class LevelCreator
 {
 public:
     LevelCreator(ent::EntityManager * aWorld) :
-        mWorld{aWorld},
         mCreatable{*aWorld}
     {}
 
     void update(GameContext & aContext);
 
 private:
-    ent::EntityManager * mWorld; // TODO remove
     ent::Query<component::LevelData, component::LevelToCreate> mCreatable;
 };
 

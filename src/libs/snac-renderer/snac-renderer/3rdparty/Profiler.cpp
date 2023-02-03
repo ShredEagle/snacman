@@ -18,7 +18,7 @@
  */
 
 
-#include "profiler.hpp"
+#include "Profiler.hpp"
 
 #include <assert.h>
 #include <stdarg.h>
