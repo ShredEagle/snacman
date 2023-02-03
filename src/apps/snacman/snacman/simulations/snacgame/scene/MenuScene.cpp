@@ -1,5 +1,7 @@
 #include "MenuScene.h"
 
+#include "snacman/Logging.h"
+
 #include "../../../Input.h"
 #include "../component/Controller.h"
 #include "../component/PlayerSlot.h"
@@ -13,22 +15,32 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void MenuScene::setup(GameContext & aContext, const Transition & Transition, RawInput & aInput)
+void MenuScene::setup(GameContext & aContext,
+                      const Transition & Transition,
+                      RawInput & aInput)
 {
-    auto font = aContext.mRenderThread.loadFont("fonts/Comfortaa-Regular.ttf", 120, aContext.mResource).get();
+    auto font =
+        aContext.mRenderThread
+            .loadFont("fonts/Comfortaa-Regular.ttf", 120, aContext.mResource)
+            .get();
+
     ent::Phase init;
-    auto start = createMenuItem(
-        aContext, init, "start",
-        font,
-        math::hdr::gYellow<float>,
-        math::Position<2, float>{0.f, 0.f});
-    auto quit = createMenuItem(
-        aContext, init, "quit",
-        font,
-        math::hdr::gYellow<float>,
-        math::Position<2, float>{0.f, -0.2f});
-    mOwnedEntities.push_back(start);
-    mOwnedEntities.push_back(quit);
+    auto startHandle =
+        createMenuItem(aContext, init, "start", font, gColorItemSelected,
+                       math::Position<2, float>{0.f, 0.f},
+                       {
+                           {gGoDown, "quit"},
+                       },
+                       true);
+    auto quitHandle =
+        createMenuItem(aContext, init, "quit", font, gColorItemUnselected,
+                       math::Position<2, float>{0.f, -0.2f},
+                       {
+                           {gGoUp, "start"},
+                       });
+
+    mOwnedEntities.push_back(startHandle);
+    mOwnedEntities.push_back(quitHandle);
 }
 
 void MenuScene::teardown(RawInput & aInput)
@@ -43,12 +55,12 @@ void MenuScene::teardown(RawInput & aInput)
     mOwnedEntities.clear();
 }
 
-std::optional<Transition> MenuScene::update(GameContext & aContext,
-                                            float aDelta,
-                                            RawInput & aInput)
+std::optional<Transition>
+MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
 {
     int keyboardCommand = convertKeyboardInput("menu", aInput.mKeyboard,
                                                mContext->mKeyboardMapping);
+    int accumulatedCommand = keyboardCommand;
 
     if (keyboardCommand & gQuitCommand)
     {
@@ -62,8 +74,8 @@ std::optional<Transition> MenuScene::update(GameContext & aContext,
     if (keyboardCommand & gSelectItem)
     {
         boundPlayer =
-            findSlotAndBind(aContext, bindPlayerPhase, mSlots, ControllerType::Keyboard,
-                            gKeyboardControllerIndex);
+            findSlotAndBind(aContext, bindPlayerPhase, mSlots,
+                            ControllerType::Keyboard, gKeyboardControllerIndex);
     }
 
     for (std::size_t index = 0; index < aInput.mGamepads.size(); ++index)
@@ -71,6 +83,7 @@ std::optional<Transition> MenuScene::update(GameContext & aContext,
         GamepadState & rawGamepad = aInput.mGamepads.at(index);
         int gamepadCommand =
             convertGamepadInput("menu", rawGamepad, mContext->mGamepadMapping);
+        accumulatedCommand |= gamepadCommand;
 
         if (gamepadCommand & gQuitCommand)
         {
@@ -80,7 +93,8 @@ std::optional<Transition> MenuScene::update(GameContext & aContext,
         if (gamepadCommand & gSelectItem)
         {
             boundPlayer |= findSlotAndBind(aContext, bindPlayerPhase, mSlots,
-                                           ControllerType::Gamepad, static_cast<int>(index));
+                                           ControllerType::Gamepad,
+                                           static_cast<int>(index));
         }
     }
 
@@ -88,6 +102,29 @@ std::optional<Transition> MenuScene::update(GameContext & aContext,
     {
         return Transition{.mTransitionName = "start"};
     }
+
+    std::string newItem;
+    int filteredForMenuCommand =
+        accumulatedCommand & (gGoUp | gGoDown | gGoLeft | gGoRight);
+    mItems.each([filteredForMenuCommand, &newItem](component::MenuItem & aItem,
+                                                   component::Text & aText) {
+        if (aItem.mSelected
+            && aItem.mNeighbors.contains(filteredForMenuCommand))
+        {
+            newItem = aItem.mNeighbors.at(filteredForMenuCommand);
+            aItem.mSelected = false;
+            aText.mColor = gColorItemUnselected;
+        }
+    });
+
+    mItems.each(
+        [&newItem](component::MenuItem & aItem, component::Text & aText) {
+            if (aItem.mName == newItem)
+            {
+                aItem.mSelected = true;
+                aText.mColor = gColorItemSelected;
+            }
+        });
 
     return std::nullopt;
 }

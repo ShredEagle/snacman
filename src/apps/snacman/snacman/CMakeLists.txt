@@ -28,6 +28,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/Controller.h
     simulations/snacgame/component/Geometry.h
     simulations/snacgame/component/LevelData.h
+    simulations/snacgame/component/MenuItem.h
     simulations/snacgame/component/MovementScreenSpace.h
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerMoveState.h

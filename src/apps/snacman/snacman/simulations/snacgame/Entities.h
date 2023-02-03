@@ -3,6 +3,7 @@
 #include "component/Geometry.h"
 #include "component/PlayerSlot.h"
 #include "snacman/Input.h"
+#include "snacman/simulations/snacgame/scene/MenuScene.h"
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
@@ -60,7 +61,9 @@ ent::Handle<ent::Entity> createMenuItem(GameContext & aContext,
                                         const std::string & aString,
                                         std::shared_ptr<snac::Font> aFont,
                                         const math::hdr::Rgba_f & aColor,
-                                        const math::Position<2, float> & aPos);
+                                        const math::Position<2, float> & aPos,
+                                        std::unordered_map<int, std::string> aNeighbors,
+                                        bool aSelected = false);
 
 bool findSlotAndBind(GameContext & aContext, ent::Phase & aBindPhase,
                      ent::Query<component::PlayerSlot> & aSlots,
