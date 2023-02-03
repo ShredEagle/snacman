@@ -301,23 +301,49 @@ void Profiler::print(std::string& stats)
 
     const char* gpuname = entry.api ? entry.api : "N/A";
 
+    // TODO Optimize
+    static auto humanize = [](double aTimer) -> std::string
+    {
+        if (aTimer == 0.)
+        {
+          return "0";
+        }
+        else if(aTimer >= 1E6)
+        {
+            return format("%.2fs", aTimer/1E6);
+        }
+        else if(aTimer >= 1E4)
+        {
+            return format("%6dms", (uint32_t)aTimer/1E3);
+        }
+        else if(aTimer >= 1E3)
+        {
+            return format("%.2fms", aTimer/1E3);
+        }
+        else
+        {
+            return format("%6dµs", (uint32_t)aTimer);
+        }
+    };
+
+
     if(entry.level == LEVEL_SINGLESHOT)
     {
-      singleShotStats += format("\n%sTimer %-*s;\t %s %6d; CPU %6d; (microseconds)", " ", nameWidth, entry.name,
-                      gpuname, (uint32_t)(info.gpu.average), (uint32_t)(info.cpu.average));
+      singleShotStats += format("\n%sTimer %-*s;\t %s %6s; CPU %6s;", " ", nameWidth, entry.name,
+                      gpuname, humanize(info.gpu.average).c_str(), humanize(info.cpu.average).c_str());
 
     }
     else
     {
       if(info.accumulated)
       {
-        stats += format("%sTimer %-*s;\t %s %6d; CPU %6d; (microseconds, accumulated loop)\n", &spaces[level], nameWidth, entry.name,
-                        gpuname, (uint32_t)(info.gpu.average), (uint32_t)(info.cpu.average));
+        stats += format("%sTimer %-*s;\t %s %6s; CPU %6s; (accumulated loop)\n", &spaces[level], nameWidth, entry.name,
+                        gpuname, humanize(info.gpu.average).c_str(), humanize(info.cpu.average).c_str(), (uint32_t)(info.cpu.average));
       }
       else
       {
-        stats += format("%sTimer %-*s;\t %s %6d; CPU %6d; (microseconds, avg %d)\n", &spaces[level], nameWidth, entry.name, gpuname,
-                        (uint32_t)(info.gpu.average), (uint32_t)(info.cpu.average), (uint32_t)entry.cpuTime.numValid);
+        stats += format("%sTimer %-*s;\t %s %6s; CPU %6s; (avg %d)\n", &spaces[level], nameWidth, entry.name, 
+                        gpuname, humanize(info.gpu.average).c_str(), humanize(info.cpu.average).c_str(), (uint32_t)entry.cpuTime.numValid);
       }
     }
   }
