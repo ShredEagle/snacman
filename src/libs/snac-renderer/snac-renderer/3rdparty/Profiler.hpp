@@ -89,7 +89,7 @@ public:
   //////////////////////////////////////////////////////////////////////////
 
   // utility class for automatic calling of begin/end within a local scope
-  class Section
+  class [[nodiscard]] Section
   {
   public:
     Section(Profiler& profiler, const char* name, bool singleShot = false)
@@ -97,11 +97,23 @@ public:
     {
       m_id = profiler.beginSection(name, nullptr, nullptr, singleShot);
     }
-    ~Section() { m_profiler.endSection(m_id); }
+
+    // Not copyable
+    Section(const Section & aRhs) = delete;
+
+    Section(Section && aRhs) :
+      m_id{aRhs.m_id},
+      m_profiler{aRhs.m_profiler}
+    {
+        aRhs.m_active = false;
+    }
+
+    ~Section() { if(m_active) m_profiler.endSection(m_id); }
 
   private:
     SectionID m_id;
     Profiler& m_profiler;
+    bool m_active = true;
   };
 
   // recurring, must be within beginFrame/endFrame
