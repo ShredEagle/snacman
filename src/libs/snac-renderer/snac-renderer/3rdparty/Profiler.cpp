@@ -314,7 +314,7 @@ void Profiler::print(std::string& stats)
         }
         else if(aTimer >= 1E4)
         {
-            return format("%6dms", (uint32_t)aTimer/1E3);
+            return format("%6dms", (uint32_t)(aTimer/1E3));
         }
         else if(aTimer >= 1E3)
         {
