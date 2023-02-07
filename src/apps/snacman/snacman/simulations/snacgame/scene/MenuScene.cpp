@@ -31,13 +31,14 @@ void MenuScene::setup(GameContext & aContext,
                        {
                            {gGoDown, "quit"},
                        },
-                       true);
-    auto quitHandle =
-        createMenuItem(aContext, init, "quit", font, gColorItemUnselected,
-                       math::Position<2, float>{0.f, -0.2f},
-                       {
-                           {gGoUp, "start"},
-                       });
+                       scene::Transition{.mTransitionName = "start"}, true);
+    auto quitHandle = createMenuItem(
+        aContext, init, "quit", font, gColorItemUnselected,
+        math::Position<2, float>{0.f, -0.2f},
+        {
+            {gGoUp, "start"},
+        },
+        scene::Transition{.mTransitionName = gQuitTransitionName});
 
     mOwnedEntities.push_back(startHandle);
     mOwnedEntities.push_back(quitHandle);
@@ -58,62 +59,81 @@ void MenuScene::teardown(RawInput & aInput)
 std::optional<Transition>
 MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
 {
-    int keyboardCommand = convertKeyboardInput("menu", aInput.mKeyboard,
-                                               mContext->mKeyboardMapping);
-    int accumulatedCommand = keyboardCommand;
+    ControllerCommand keyboardCommand{
+        .mCommand = convertKeyboardInput("menu", aInput.mKeyboard,
+                                         mContext->mKeyboardMapping),
+        .mId = gKeyboardControllerIndex,
+        .mControllerType = ControllerType::Keyboard,
+    };
 
-    if (keyboardCommand & gQuitCommand)
-    {
-        return Transition{.mTransitionName = gQuitTransitionName};
-    }
+    int accumulatedCommand = keyboardCommand.mCommand;
 
     ent::Phase bindPlayerPhase;
 
-    bool boundPlayer = false;
-
-    if (keyboardCommand & gSelectItem)
-    {
-        boundPlayer =
-            findSlotAndBind(aContext, bindPlayerPhase, mSlots,
-                            ControllerType::Keyboard, gKeyboardControllerIndex);
-    }
+    std::vector<ControllerCommand> controllerCommandList;
 
     for (std::size_t index = 0; index < aInput.mGamepads.size(); ++index)
     {
         GamepadState & rawGamepad = aInput.mGamepads.at(index);
-        int gamepadCommand =
-            convertGamepadInput("menu", rawGamepad, mContext->mGamepadMapping);
-        accumulatedCommand |= gamepadCommand;
-
-        if (gamepadCommand & gQuitCommand)
-        {
-            return Transition{.mTransitionName = gQuitTransitionName};
-        }
-
-        if (gamepadCommand & gSelectItem)
-        {
-            boundPlayer |= findSlotAndBind(aContext, bindPlayerPhase, mSlots,
-                                           ControllerType::Gamepad,
-                                           static_cast<int>(index));
-        }
+        ControllerCommand gamepadCommand{
+            .mCommand = convertGamepadInput("menu", rawGamepad,
+                                            mContext->mGamepadMapping),
+            .mId = static_cast<int>(index),
+            .mControllerType = ControllerType::Gamepad,
+        };
+        accumulatedCommand |= gamepadCommand.mCommand;
     }
 
-    if (boundPlayer)
+    if (accumulatedCommand & gQuitCommand)
     {
-        return Transition{.mTransitionName = "start"};
+        return Transition{.mTransitionName = gQuitTransitionName};
     }
 
     std::string newItem;
+
     int filteredForMenuCommand =
         accumulatedCommand & (gGoUp | gGoDown | gGoLeft | gGoRight);
-    mItems.each([filteredForMenuCommand, &newItem](component::MenuItem & aItem,
-                                                   component::Text & aText) {
-        if (aItem.mSelected
-            && aItem.mNeighbors.contains(filteredForMenuCommand))
+
+    std::optional<Transition> menuTransition = std::nullopt;
+
+    mItems.each([this, &menuTransition, accumulatedCommand, &bindPlayerPhase, &aContext, keyboardCommand,
+                 &controllerCommandList, filteredForMenuCommand, &newItem](
+                    component::MenuItem & aItem, component::Text & aText) {
+        if (aItem.mSelected)
         {
-            newItem = aItem.mNeighbors.at(filteredForMenuCommand);
-            aItem.mSelected = false;
-            aText.mColor = gColorItemUnselected;
+            if (aItem.mNeighbors.contains(filteredForMenuCommand))
+            {
+                newItem = aItem.mNeighbors.at(filteredForMenuCommand);
+                aItem.mSelected = false;
+                aText.mColor = gColorItemUnselected;
+            }
+            else if (aItem.mTransition.mTransitionName == "start")
+            {
+                if (keyboardCommand.mCommand & gSelectItem)
+                {
+                    findSlotAndBind(aContext, bindPlayerPhase, mSlots,
+                                    keyboardCommand.mControllerType,
+                                    keyboardCommand.mId);
+                    menuTransition = aItem.mTransition;
+                }
+                for (auto command : controllerCommandList)
+                {
+                    if (command.mCommand & gSelectItem)
+                    {
+                        findSlotAndBind(aContext, bindPlayerPhase, mSlots,
+                                        command.mControllerType,
+                                        command.mId);
+                    }
+                    menuTransition = aItem.mTransition;
+                }
+            }
+            if (aItem.mTransition.mTransitionName == "quit")
+            {
+                if (accumulatedCommand & gSelectItem)
+                {
+                    menuTransition = aItem.mTransition;
+                }
+            }
         }
     });
 
@@ -126,7 +146,7 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
             }
         });
 
-    return std::nullopt;
+    return menuTransition;
 }
 
 } // namespace scene

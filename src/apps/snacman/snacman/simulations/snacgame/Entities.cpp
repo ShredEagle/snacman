@@ -171,18 +171,20 @@ bool findSlotAndBind(GameContext & aContext,
     return false;
 }
 
-ent::Handle<ent::Entity> createMenuItem(GameContext & aContext,
-                                        ent::Phase & aInit,
-                                        const std::string & aString,
-                                        std::shared_ptr<snac::Font> aFont,
-                                        const math::hdr::Rgba_f & aColor,
-                                        const math::Position<2, float> & aPos,
-                                        std::unordered_map<int,  std::string> aNeighbors,
-                                        bool aSelected)
+ent::Handle<ent::Entity>
+createMenuItem(GameContext & aContext,
+               ent::Phase & aInit,
+               const std::string & aString,
+               std::shared_ptr<snac::Font> aFont,
+               const math::hdr::Rgba_f & aColor,
+               const math::Position<2, float> & aPos,
+               const std::unordered_map<int, std::string> & aNeighbors,
+               const scene::Transition & aTransition,
+               bool aSelected)
 {
     auto item = makeText(aContext, aInit, aString, aFont, aColor, aPos);
     item.get(aInit)->add(component::MenuItem{
-        .mName = aString, .mSelected = aSelected, .mNeighbors = aNeighbors});
+        .mName = aString, .mSelected = aSelected, .mNeighbors = aNeighbors, .mTransition = aTransition});
 
     return item;
 }
