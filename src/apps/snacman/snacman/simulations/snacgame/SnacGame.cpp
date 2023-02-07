@@ -43,20 +43,20 @@ namespace snacgame {
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    snac::RenderThread<Renderer_t> & aRenderThread,
                    imguiui::ImguiUi & aImguiUi,
-                   const resource::ResourceFinder & aResourceFinder,
+                   resource::ResourceFinder aResourceFinder,
                    RawInput & aInput) :
     mAppInterface{&aAppInterface},
-    mMappingContext{mWorld, aResourceFinder},
+    mGameContext{
+        .mWorld = mWorld,
+        .mRenderThread = aRenderThread,
+        .mResources = snac::Resources{std::move(aResourceFinder), aRenderThread},
+    },
+    mMappingContext{mWorld, mGameContext.mResources},
     mStateMachine{mWorld, mWorld, gAssetRoot / "scenes/scene_description.json",
                   mMappingContext},
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld},
     mQueryText{mWorld, mWorld},
-    mGameContext{
-        .mWorld = mWorld,
-        .mRenderThread = aRenderThread,
-        .mResources = snac::Resources{aResourceFinder, aRenderThread},
-    },
     mImguiUi{aImguiUi}
 {
     ent::Phase init;

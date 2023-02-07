@@ -97,8 +97,7 @@ snac::InstanceStream initializeInstanceStream()
 }
 
 
-Renderer::Renderer(graphics::AppInterface & aAppInterface,
-                   const resource::ResourceFinder & aResourceFinder) :
+Renderer::Renderer(graphics::AppInterface & aAppInterface) :
     mAppInterface{aAppInterface},
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults},
     mMeshInstances{initializeInstanceStream()}

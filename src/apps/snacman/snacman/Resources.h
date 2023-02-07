@@ -18,16 +18,19 @@ namespace snac {
 class Resources
 {
 public:
-    Resources(const resource::ResourceFinder & aFinder, RenderThread<snacgame::Renderer> & aRenderThread) :
-        mFinder{aFinder},
+    Resources(resource::ResourceFinder aFinder, RenderThread<snacgame::Renderer> & aRenderThread) :
+        mFinder{std::move(aFinder)},
         mRenderThread{aRenderThread}
     {}
 
     std::shared_ptr<Mesh> getShape();
 
+    auto find(const filesystem::path & aPath) const
+    { return mFinder.find(aPath); }
+
 public:
     RenderThread<snacgame::Renderer> & mRenderThread;
-    const resource::ResourceFinder & mFinder;
+    resource::ResourceFinder mFinder;
     std::shared_ptr<Mesh> mCube = nullptr;
 };
 

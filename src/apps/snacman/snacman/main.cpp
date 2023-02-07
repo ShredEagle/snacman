@@ -80,8 +80,6 @@ void runApplication()
 
     imguiui::ImguiUi imguiUi(glfwApp);
 
-    resource::ResourceFinder resourceFinder = makeResourceFinder();
-
     ConfigurableSettings configurableSettings;
 
     //
@@ -89,7 +87,7 @@ void runApplication()
     //
 
     // Initialize the renderer
-    snacgame::Renderer renderer{*glfwApp.getAppInterface(), resourceFinder};
+    snacgame::Renderer renderer{*glfwApp.getAppInterface()};
 
     // Context must be removed from this thread before it can be made current on
     // the render thread.
@@ -109,7 +107,12 @@ void runApplication()
     //
     // Initialize scene
     //
-    snacgame::SnacGame simulation{*glfwApp.getAppInterface(), renderingThread, imguiUi, resourceFinder, input};
+    snacgame::SnacGame simulation{
+        *glfwApp.getAppInterface(),
+        renderingThread,
+        imguiUi,
+        makeResourceFinder(),
+        input};
 
     //END_SINGLE(appInitSingle);
 

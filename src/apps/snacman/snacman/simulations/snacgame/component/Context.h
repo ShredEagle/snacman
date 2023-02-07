@@ -3,9 +3,9 @@
 #include "snacman/Input.h"
 #include "../InputCommandConverter.h"
 
-#include <platform/Filesystem.h>
+#include <snacman/Resources.h>
 
-#include <resource/ResourceFinder.h>
+#include <platform/Filesystem.h>
 
 #include <GLFW/glfw3.h>
 
@@ -25,9 +25,9 @@ namespace component {
 
 struct MappingContext
 {
-    MappingContext(const resource::ResourceFinder aResourceFinder) :
-        mGamepadMapping(*aResourceFinder.find("settings/gamepad_mapping.json")),
-        mKeyboardMapping(*aResourceFinder.find("settings/keyboard_mapping.json"))
+    MappingContext(const snac::Resources & aResources) :
+        mGamepadMapping(*aResources.find("settings/gamepad_mapping.json")),
+        mKeyboardMapping(*aResources.find("settings/keyboard_mapping.json"))
     {}
 
     void drawUi(const RawInput & aInput)

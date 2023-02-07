@@ -249,7 +249,7 @@ private:
 
 #if defined(_WIN32)
         HRESULT r;
-        r = SetThreadDescription(GetCurrentThread(), L"RenderThread");
+        r = SetThreadDescription(GetCurrentThread(), L"Render Thread");
 #endif
 
         // The context must be made current on this thread before it can call GL

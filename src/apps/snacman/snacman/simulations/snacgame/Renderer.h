@@ -13,6 +13,7 @@
 #include <renderer/ShaderSource.h>
 #include <resource/ResourceFinder.h>
 
+
 namespace ad {
 namespace snacgame {
 
@@ -38,8 +39,7 @@ class Renderer
 public:
     using GraphicState_t = visu::GraphicState;
 
-    Renderer(graphics::AppInterface & aAppInterface,
-             const resource::ResourceFinder & aResourceFinder /* TODO remove when not used anymore*/);
+    Renderer(graphics::AppInterface & aAppInterface);
 
     void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
