@@ -105,7 +105,7 @@ struct MappingContext
                     {
                         for (const GamepadState & gamepad : aInput.mGamepads)
                         {
-                            for (int index = 0; index < gamepad.mButtons.size();
+                            for (std::size_t index = 0; index < gamepad.mButtons.size();
                                  ++index)
                             {
                                 const InputState & buttonState =
@@ -119,7 +119,7 @@ struct MappingContext
                                     break;
                                 }
                             }
-                            for (int index = 0; index < gamepad.mAxis.size();
+                            for (std::size_t index = 0; index < gamepad.mAxis.size();
                                  ++index)
                             {
                                 const InputState & axisState =
