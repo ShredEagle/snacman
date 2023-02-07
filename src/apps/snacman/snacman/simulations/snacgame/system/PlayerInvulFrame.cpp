@@ -9,7 +9,7 @@ namespace system {
 
 void PlayerInvulFrame::update(float aDelta)
 {
-    TIME_RECURRING_FULLFUNC;
+    TIME_RECURRING_CLASSFUNC;
 
     mPlayer.each([aDelta](component::PlayerLifeCycle & aPlayer,
                                    component::Geometry & aPlayerGeometry) {

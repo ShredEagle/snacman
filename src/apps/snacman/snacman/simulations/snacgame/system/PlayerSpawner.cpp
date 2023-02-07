@@ -11,7 +11,7 @@ namespace system {
 
 void PlayerSpawner::update(float aDelta)
 {
-    TIME_RECURRING_FULLFUNC;
+    TIME_RECURRING_CLASSFUNC;
 
     mSpawnable.each([this, aDelta](component::PlayerLifeCycle & aPlayer,
                                    component::Geometry & aPlayerGeometry) {

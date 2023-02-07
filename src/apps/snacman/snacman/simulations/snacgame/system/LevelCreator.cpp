@@ -14,7 +14,7 @@ namespace system {
 
 void LevelCreator::update(GameContext & aContext)
 {
-    TIME_RECURRING_FULLFUNC;
+    TIME_RECURRING_CLASSFUNC;
 
     ent::Phase createLevelPhase;
     mCreatable.each([&](ent::Handle<ent::Entity> aHandle,

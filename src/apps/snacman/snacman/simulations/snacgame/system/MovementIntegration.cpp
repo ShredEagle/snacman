@@ -9,7 +9,7 @@ namespace system {
 
 void MovementIntegration::update(float aDelta)
 {
-    TIME_RECURRING_FULLFUNC;
+    TIME_RECURRING_CLASSFUNC;
 
     ent::Phase integrate;
     mMovables.each(

@@ -22,6 +22,21 @@ inline Guard profileFrame()
     return Guard{[]{getProfiler().endFrame();}};
 }
 
+inline std::string keepLevels(std::string_view aStr, unsigned int aLevels = 1)
+{
+    auto pos = std::string::npos;
+    const std::string delimiter = "::";
+    for(; aLevels != 0U - 1U; --aLevels)
+    {
+        pos = aStr.rfind(delimiter, pos - 1);
+        if (pos == std::string::npos)
+        {
+            return std::string{aStr};
+        }
+    }
+    return std::string{aStr.substr(pos + delimiter.size())};
+}
+
 #define BEGIN_SINGLE(name, var) \
     auto var = std::make_optional(snac::getProfiler().timeSingle(name))
 
@@ -44,6 +59,12 @@ inline Guard profileFrame()
 
 #define TIME_RECURRING_FULLFUNC \
     TIME_RECURRING(__FUNCTION__)
+
+// The problem is that nvh profiler simply copies the pointer to the characters, not the string itself.
+// As a workaround, keep a static string atm.
+#define TIME_RECURRING_CLASSFUNC \
+    static std::string keptStringForProfiling = ::ad::snac::keepLevels(__FUNCTION__, 1); \
+    TIME_RECURRING(keptStringForProfiling.c_str())
 
 
 } // namespace snac
