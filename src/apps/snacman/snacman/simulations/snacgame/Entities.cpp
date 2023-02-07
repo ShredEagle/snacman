@@ -1,22 +1,25 @@
 #include "Entities.h"
 
-#include "../../QueryManipulation.h"
-#include "GameContext.h"
-
 #include "component/Controller.h"
 #include "component/Geometry.h"
 #include "component/LevelData.h"
+#include "component/MenuItem.h"
 #include "component/PlayerLifeCycle.h"
 #include "component/PlayerMoveState.h"
 #include "component/PoseScreenSpace.h"
 #include "component/Spawner.h"
 #include "component/Speed.h"
 #include "component/Text.h"
-#include "snacman/Input.h"
 #include "component/VisualMesh.h"
+#include "GameContext.h"
+#include "snacman/Input.h"
+#include "snacman/simulations/snacgame/scene/MenuScene.h"
+
+#include "../../QueryManipulation.h"
 
 #include <math/Color.h>
 #include <snac-renderer/text/Text.h>
+#include <unordered_map>
 
 namespace ad {
 namespace snacgame {
@@ -44,8 +47,7 @@ void createPill(GameContext & aContext,
         .add(component::VisualMesh{
             .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
         })
-        .add(component::LevelEntity{})
-        ;
+        .add(component::LevelEntity{});
     ;
 }
 
@@ -55,7 +57,8 @@ createPathEntity(GameContext & aContext,
                  const math::Position<2, int> & aGridPos)
 {
     auto handle = aContext.mWorld.addEntity();
-    handle.get(aInit)->add(component::LevelEntity{})
+    handle.get(aInit)
+        ->add(component::LevelEntity{})
         .add(component::Geometry{
             .mSubGridPosition = math::Position<2, float>::Zero(),
             .mGridPosition = aGridPos,
@@ -63,8 +66,7 @@ createPathEntity(GameContext & aContext,
             .mColor = math::hdr::gWhite<float>})
         .add(component::VisualMesh{
             .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
-        })
-        ;
+        });
     ;
     return handle;
 }
@@ -84,8 +86,7 @@ createPortalEntity(GameContext & aContext,
             .mColor = math::hdr::gRed<float>})
         .add(component::VisualMesh{
             .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
-        })
-        ;
+        });
     return handle;
 }
 
@@ -96,15 +97,15 @@ createCopPenEntity(GameContext & aContext,
 {
     auto handle = aContext.mWorld.addEntity();
     handle.get(aInit)->add(component::LevelEntity{});
-    handle.get(aInit)->add(component::Geometry{
+    handle.get(aInit)
+        ->add(component::Geometry{
             .mSubGridPosition = math::Position<2, float>::Zero(),
             .mGridPosition = aGridPos,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gYellow<float>})
         .add(component::VisualMesh{
             .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
-        })
-        ;
+        });
     return handle;
 }
 
@@ -115,15 +116,15 @@ createPlayerSpawnEntity(GameContext & aContext,
 {
     auto spawner = aContext.mWorld.addEntity();
     spawner.get(aInit)->add(component::LevelEntity{});
-    spawner.get(aInit)->add(component::Geometry{
+    spawner.get(aInit)
+        ->add(component::Geometry{
             .mSubGridPosition = math::Position<2, float>::Zero(),
             .mGridPosition = aGridPos,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gCyan<float>})
         .add(component::VisualMesh{
             .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
-        })
-        ;
+        });
     spawner.get(aInit)->add(component::Spawner{.mSpawnPosition = aGridPos});
 
     return spawner;
@@ -145,32 +146,47 @@ void fillSlotWithPlayer(GameContext & aContext,
     playerEntity->add(component::PlayerLifeCycle{.mIsAlive = false});
     playerEntity->add(component::PlayerMoveState{});
     playerEntity
-        ->add(component::Controller{
-            .mType = aControllerType,
-            .mControllerId = aControllerId
-        })
+        ->add(component::Controller{.mType = aControllerType,
+                                    .mControllerId = aControllerId})
         .add(component::VisualMesh{
             .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
-        })
-        ;
+        });
 }
 
-ent::Handle<ent::Entity> createMenuItem(GameContext & aContext,
-                                        ent::Phase & aInit,
-                                        const math::Position<2, int> & aPos)
+bool findSlotAndBind(GameContext & aContext,
+                     ent::Phase & aBindPhase,
+                     ent::Query<component::PlayerSlot> & aSlots,
+                     ControllerType aType,
+                     int aIndex)
 {
-    auto menuItem = aContext.mWorld.addEntity();
-    menuItem.get(aInit)->add(component::Geometry{
-            .mSubGridPosition = math::Position<2, float>::Zero(),
-            .mGridPosition = aPos,
-            .mLayer = component::GeometryLayer::Menu,
-            .mColor = math::hdr::gMagenta<float>})
-        .add(component::VisualMesh{
-            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
-        })
-        ;
+    std::optional<ent::Handle<ent::Entity>> freeSlot = snac::getFirstHandle(
+        aSlots, [](component::PlayerSlot & aSlot) { return !aSlot.mFilled; });
 
-    return menuItem;
+    if (freeSlot)
+    {
+        fillSlotWithPlayer(aContext, aBindPhase, aType, *freeSlot, aIndex);
+        return true;
+    }
+
+    return false;
+}
+
+ent::Handle<ent::Entity>
+createMenuItem(GameContext & aContext,
+               ent::Phase & aInit,
+               const std::string & aString,
+               std::shared_ptr<snac::Font> aFont,
+               const math::hdr::Rgba_f & aColor,
+               const math::Position<2, float> & aPos,
+               const std::unordered_map<int, std::string> & aNeighbors,
+               const scene::Transition & aTransition,
+               bool aSelected)
+{
+    auto item = makeText(aContext, aInit, aString, aFont, aColor, aPos);
+    item.get(aInit)->add(component::MenuItem{
+        .mName = aString, .mSelected = aSelected, .mNeighbors = aNeighbors, .mTransition = aTransition});
+
+    return item;
 }
 
 ent::Handle<ent::Entity> makeText(GameContext & aContext,
@@ -191,24 +207,6 @@ ent::Handle<ent::Entity> makeText(GameContext & aContext,
         .add(component::PoseScreenSpace{.mPosition_u = aPosition_unitscreen});
 
     return handle;
-}
-
-bool findSlotAndBind(GameContext & aContext, ent::Phase & aBindPhase,
-                     ent::Query<component::PlayerSlot> & aSlots,
-                     ControllerType aType,
-                     int aIndex)
-{
-    std::optional<ent::Handle<ent::Entity>> freeSlot = snac::getFirstHandle(
-        aSlots,
-        [](component::PlayerSlot & aSlot) { return !aSlot.mFilled; });
-
-    if (freeSlot)
-    {
-        fillSlotWithPlayer(aContext, aBindPhase, aType, *freeSlot, aIndex);
-        return true;
-    }
-
-    return false;
 }
 
 } // namespace snacgame

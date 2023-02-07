@@ -1,6 +1,7 @@
 #pragma once
 
 #include "snacman/Input.h"
+#include "snacman/simulations/snacgame/component/Controller.h"
 
 #include <concepts>
 #include <fstream>
@@ -241,6 +242,12 @@ public:
 using GamepadMapping = KeyMapping<GamepadAtomicInput>;
 
 using KeyboardMapping = KeyMapping<int>;
+
+struct ControllerCommand {
+    int mCommand;
+    int mId;
+    ControllerType mControllerType;
+};
 
 inline int convertKeyboardInput(const std::string & aGroup,
                                 const KeyboardState & aKeyboardState,

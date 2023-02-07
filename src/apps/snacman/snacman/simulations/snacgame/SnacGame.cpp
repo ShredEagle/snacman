@@ -44,7 +44,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    RawInput & aInput) :
     mAppInterface{&aAppInterface},
     mMappingContext{mWorld, aResourceFinder},
-    mStateMachine{mWorld, mWorld, gAssetRoot / "scenes/scene_description.json",
+    mStateMachine{mWorld, mWorld, *aResourceFinder.find("scenes/scene_description.json"),
                   mMappingContext},
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld},
@@ -66,19 +66,6 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
 
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(mGameContext, scene::Transition{}, aInput);
-
-    
-    ent::Handle<ent::Entity> title = 
-        makeText(mGameContext,
-                 init,
-                 "Snacman!",
-                 mGameContext.mRenderThread.loadFont("fonts/Comfortaa-Regular.ttf", 120, mGameContext.mResource)
-                    .get(), // synchronize the call
-                 math::hdr::gYellow<float>,
-                 math::Position<2, float>{-0.5f, 0.f});
-    // TODO Remove, this is a silly demonstration.
-    title.get(init)->add(component::MovementScreenSpace{
-        .mAngularSpeed = math::Radian<float>{math::pi<float> / 2.f}});
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
