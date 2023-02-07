@@ -6,6 +6,8 @@
 
 #include <snac-renderer/text/Text.h>
 
+#include <snacman/Profiling.h>
+
 #include <platform/Filesystem.h>
 
 
@@ -34,6 +36,8 @@ void TextRenderer::render(Renderer & aRenderer,
                           const snac::UniformRepository & aUniforms,
                           const snac::UniformBlocks & aUniformBlocks)
 {
+    TIME_RECURRING_CLASSFUNC(Render);
+
     // Note: this is pessimised code.
     // Most of these expensive operations should be taken out and the results cached.
     for (const visu::TextScreen & text : aState.mTextEntities)
@@ -140,8 +144,12 @@ std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
 
 void Renderer::render(const visu::GraphicState & aState)
 {
+    TIME_RECURRING(Render, "Render");
+
     // Stream the instance buffer data
     std::map<snac::Mesh *, std::vector<PoseColor>> sortedMeshes;
+
+    BEGIN_RECURRING(Render, "Sort_meshes", sortMeshProfile);
     for (const visu::Entity & entity : aState.mEntities)
     {
         sortedMeshes[entity.mMesh.get()].push_back(PoseColor{
@@ -152,6 +160,7 @@ void Renderer::render(const visu::GraphicState & aState)
             .albedo = to_sdr(entity.mColor),
         });
     }
+    END_RECURRING(sortMeshProfile);
 
     // Position camera
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
@@ -171,11 +180,13 @@ void Renderer::render(const visu::GraphicState & aState)
          {snac::BlockSemantic::Viewing, &mCamera.mViewing},
     };
 
+    BEGIN_RECURRING(Render, "Draw_meshes", drawMeshProfile);
     for (const auto & [mesh, instances] : sortedMeshes)
     {
         mMeshInstances.respecifyData(std::span{instances});
         mRenderer.render(*mesh, mMeshInstances, uniforms, uniformBlocks);
     }
+    END_RECURRING(drawMeshProfile);
 
     //
     // Text

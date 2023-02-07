@@ -89,7 +89,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                            ImguiInhibiter & aInhibiter,
                            RawInput & aInput)
 {
-    TIME_RECURRING_FUNC;
+    TIME_RECURRING_FUNC(Main);
 
     ent::Phase update;
 
@@ -143,12 +143,18 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         aSettings.mInterpolate = interpolate;
         ImGui::End();
     }
-    if (mImguiDisplays.mShowProfiler)
+    if (mImguiDisplays.mShowMainProfiler)
     {
-        ImGui::Begin("Profiler");
+        ImGui::Begin("Main profiler");
         std::string str;
-        snac::getProfiler().print(str);
+        snac::getProfiler(snac::Profiler::Main).print(str);
         ImGui::TextUnformatted(str.c_str());
+        ImGui::End();
+    }
+    if (mImguiDisplays.mShowRenderProfiler)
+    {
+        ImGui::Begin("Render profiler");
+        ImGui::TextUnformatted(snac::getRenderProfilerPrint().get().c_str());
         ImGui::End();
     }
 
@@ -189,7 +195,7 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
 
 std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 {
-    TIME_RECURRING_FUNC;
+    TIME_RECURRING_FUNC(Main);
 
     auto state = std::make_unique<visu::GraphicState>();
 

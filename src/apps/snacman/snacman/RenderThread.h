@@ -3,6 +3,7 @@
 
 #include "GraphicState.h"
 #include "Logging.h"
+#include "Profiling.h"
 #include "Timing.h"
 
 #include <graphics/ApplicationGlfw.h>
@@ -289,6 +290,8 @@ private:
 
         while (!mStop)
         {
+            Guard frameProfiling = profileFrame(snac::Profiler::Render);
+
             // Service all queued operations first.
             serviceOperations(aRenderer);
 
@@ -309,6 +312,8 @@ private:
             typename T_renderer::GraphicState_t state;
             if (mInterpolate)
             {
+                TIME_RECURRING(Render, "Interpolation");
+
                 const auto & previous = entries.previous();
                 const auto & latest = entries.current();
 
@@ -354,9 +359,16 @@ private:
             renderer.render(state);
             SELOG(trace)("Render thread: Frame sent to GPU.");
 
-            mImguiUi.renderBackend();
+            {
+                TIME_RECURRING(Render, "ImGui::renderBackend");
+                mImguiUi.renderBackend();
+            }
 
-            mApplication.swapBuffers();
+            {
+                TIME_RECURRING(Render, "Swap buffers");
+                mApplication.swapBuffers();
+            }
+            getRenderProfilerPrint().print();
         }
 
         SELOG(info)("Render thread stopping.");

@@ -14,7 +14,7 @@ constexpr float gBasePlayerSpeed = 10.f;
 
 void IntegratePlayerMovement::update(float aDelta)
 {
-    TIME_RECURRING_CLASSFUNC;
+    TIME_RECURRING_CLASSFUNC(Main);
 
     ent::Phase nomutation;
 

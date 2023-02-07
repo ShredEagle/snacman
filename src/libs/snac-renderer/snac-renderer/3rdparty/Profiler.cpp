@@ -310,7 +310,7 @@ void Profiler::print(std::string& stats)
         }
         else if(aTimer >= 1E6)
         {
-            return format("%.2fs", aTimer/1E6);
+            return format("%6.2fs", aTimer/1E6);
         }
         else if(aTimer >= 1E4)
         {
@@ -318,7 +318,7 @@ void Profiler::print(std::string& stats)
         }
         else if(aTimer >= 1E3)
         {
-            return format("%.2fms", aTimer/1E3);
+            return format("%6.2fms", aTimer/1E3);
         }
         else
         {

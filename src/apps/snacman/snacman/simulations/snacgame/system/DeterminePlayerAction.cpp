@@ -16,7 +16,7 @@ constexpr float gTurningZoneHalfWidth = 0.1f;
 
 void DeterminePlayerAction::update()
 {
-    TIME_RECURRING_CLASSFUNC;
+    TIME_RECURRING_CLASSFUNC(Main);
 
     ent::Phase nomutation;
 

@@ -14,7 +14,7 @@ namespace system {
 
 void LevelCreator::update(GameContext & aContext)
 {
-    TIME_RECURRING_CLASSFUNC;
+    TIME_RECURRING_CLASSFUNC(Main);
 
     ent::Phase createLevelPhase;
     mCreatable.each([&](ent::Handle<ent::Entity> aHandle,
@@ -29,7 +29,7 @@ void LevelCreator::update(GameContext & aContext)
 
         // TODO: make this better and maybe a function in markov
         {
-            TIME_SINGLE("Markov_steps");
+            TIME_SINGLE(Main, "Markov_steps");
             while (interpreter.mCurrentBranch != nullptr && stepPerformed > -1)
             {
                 interpreter.runStep();
@@ -42,7 +42,7 @@ void LevelCreator::update(GameContext & aContext)
             return;
         }
 
-        TIME_SINGLE("Level_instantiation");
+        TIME_SINGLE(Main, "Level_instantiation");
 
         markovjunior::Grid aGrid = interpreter.mGrid;
 

@@ -38,7 +38,7 @@ std::optional<Transition> MenuScene::update(GameContext & aContext,
                                             float aDelta,
                                             RawInput & aInput)
 {
-    TIME_RECURRING_CLASSFUNC;
+    TIME_RECURRING_CLASSFUNC(Main);
 
     int keyboardCommand = convertKeyboardInput("menu", aInput.mKeyboard,
                                                mContext->mKeyboardMapping);

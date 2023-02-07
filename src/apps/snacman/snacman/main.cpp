@@ -121,9 +121,9 @@ void runApplication()
 
     while (glfwApp.handleEvents())
     {
-        Guard frameProfiling = profileFrame();
+        Guard frameProfiling = profileFrame(snac::Profiler::Main);
 
-        BEGIN_RECURRING("Step", stepRecurringScope);
+        BEGIN_RECURRING(Main, "Step", stepRecurringScope);
 
         // Update input
         input = hid.read(input, inhibiter);
@@ -132,7 +132,7 @@ void runApplication()
         // Simulate one step
         //
         {
-            auto sectionUpdate = getProfiler().timeRecurring("Simulation_update");
+            TIME_RECURRING(Main, "Simulation_update");
             if (simulation.update(
                     (float) asSeconds(configurableSettings.mSimulationDelta),
                     input))

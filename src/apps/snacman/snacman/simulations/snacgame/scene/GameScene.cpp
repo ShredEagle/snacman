@@ -70,7 +70,7 @@ std::optional<Transition> GameScene::update(GameContext & aContext,
                                             float aDelta,
                                             RawInput & aInput)
 {
-    TIME_RECURRING("GameScene::update");
+    TIME_RECURRING(Main, "GameScene::update");
 
     ent::Phase update;
 
