@@ -53,9 +53,9 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mQueryRenderable{mWorld, mWorld},
     mQueryText{mWorld, mWorld},
     mGameContext{
-        .mResource = aResourceFinder,
         .mWorld = mWorld,
         .mRenderThread = aRenderThread,
+        .mResources = snac::Resources{aResourceFinder, aRenderThread},
     },
     mImguiUi{aImguiUi}
 {
@@ -75,7 +75,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         makeText(mGameContext,
                  init,
                  "Snacman!",
-                 mGameContext.mRenderThread.loadFont("fonts/Comfortaa-Regular.ttf", 120, mGameContext.mResource)
+                 mGameContext.mRenderThread.loadFont("fonts/Comfortaa-Regular.ttf", 120, mGameContext.mResources.mFinder)
                     .get(), // synchronize the call
                  math::hdr::gYellow<float>,
                  math::Position<2, float>{-0.5f, 0.f});

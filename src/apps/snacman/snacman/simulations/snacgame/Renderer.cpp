@@ -131,7 +131,7 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(const resource::ResourceFinder &
 
 std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
                                                unsigned int aPixelHeight,
-                                               resource::ResourceFinder & aResource)
+                                               const resource::ResourceFinder & aResource)
 {
     return std::make_shared<snac::Font>(
         mFreetype,

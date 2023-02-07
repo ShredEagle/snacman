@@ -40,7 +40,7 @@ void createPill(GameContext & aContext,
                           .mAngle = math::Degree<float>{60.f}},
         })
         .add(component::VisualMesh{
-            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+            .mMesh = aContext.mResources.getShape(),
         })
         .add(component::LevelEntity{})
         ;
@@ -60,7 +60,7 @@ createPathEntity(GameContext & aContext,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gWhite<float>})
         .add(component::VisualMesh{
-            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+            .mMesh = aContext.mResources.getShape(),
         })
         ;
     ;
@@ -81,7 +81,7 @@ createPortalEntity(GameContext & aContext,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gRed<float>})
         .add(component::VisualMesh{
-            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+            .mMesh = aContext.mResources.getShape(),
         })
         ;
     return handle;
@@ -100,7 +100,7 @@ createCopPenEntity(GameContext & aContext,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gYellow<float>})
         .add(component::VisualMesh{
-            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+            .mMesh = aContext.mResources.getShape(),
         })
         ;
     return handle;
@@ -119,7 +119,7 @@ createPlayerSpawnEntity(GameContext & aContext,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gCyan<float>})
         .add(component::VisualMesh{
-            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+            .mMesh = aContext.mResources.getShape(),
         })
         ;
     spawner.get(aInit)->add(component::Spawner{.mSpawnPosition = aGridPos});
@@ -148,7 +148,7 @@ void fillSlotWithPlayer(GameContext & aContext,
             .mControllerId = aControllerId
         })
         .add(component::VisualMesh{
-            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+            .mMesh = aContext.mResources.getShape(),
         })
         ;
 }
@@ -164,7 +164,7 @@ ent::Handle<ent::Entity> createMenuItem(GameContext & aContext,
             .mLayer = component::GeometryLayer::Menu,
             .mColor = math::hdr::gMagenta<float>})
         .add(component::VisualMesh{
-            .mMesh = aContext.mRenderThread.loadShape(aContext.mResource).get(),
+            .mMesh = aContext.mResources.getShape(),
         })
         ;
 

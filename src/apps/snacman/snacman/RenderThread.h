@@ -150,7 +150,7 @@ public:
         });
     }
 
-    std::future<std::shared_ptr<snac::Mesh>> loadShape(resource::ResourceFinder & aResource)
+    std::future<std::shared_ptr<snac::Mesh>> loadShape(const resource::ResourceFinder & aResource)
     {
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
@@ -167,7 +167,7 @@ public:
     std::future<std::shared_ptr<snac::Font>> loadFont(
         filesystem::path aFont,
         unsigned int aPixelHeight,
-        resource::ResourceFinder & aResource)
+        const resource::ResourceFinder & aResource)
     {
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.

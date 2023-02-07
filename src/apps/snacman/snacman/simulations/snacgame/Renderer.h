@@ -48,7 +48,7 @@ public:
 
     std::shared_ptr<snac::Font> loadFont(filesystem::path aFont,
                                          unsigned int aPixelHeight,
-                                         resource::ResourceFinder & aResource);
+                                         const resource::ResourceFinder & aResource);
 
     void render(const visu::GraphicState & aState);
 
