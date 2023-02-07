@@ -75,8 +75,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         makeText(mGameContext,
                  init,
                  "Snacman!",
-                 mGameContext.mRenderThread.loadFont("fonts/Comfortaa-Regular.ttf", 120, mGameContext.mResources.mFinder)
-                    .get(), // synchronize the call
+                 mGameContext.mResources.getFont("fonts/Comfortaa-Regular.ttf", 120),
                  math::hdr::gYellow<float>,
                  math::Position<2, float>{-0.5f, 0.f});
     // TODO Remove, this is a silly demonstration.

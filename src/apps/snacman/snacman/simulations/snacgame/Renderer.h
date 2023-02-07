@@ -11,10 +11,15 @@
 // TODO #generic-render remove once all geometry and shader programs are created outside.
 #include <snac-renderer/Cube.h>
 #include <renderer/ShaderSource.h>
-#include <resource/ResourceFinder.h>
 
 
 namespace ad {
+
+// Forward declarations
+namespace snac {
+    class Resources;
+} // namespace snac
+
 namespace snacgame {
 
 class Renderer;
@@ -48,7 +53,7 @@ public:
 
     std::shared_ptr<snac::Font> loadFont(filesystem::path aFont,
                                          unsigned int aPixelHeight,
-                                         const resource::ResourceFinder & aResource);
+                                         const snac::Resources & aResources);
 
     void render(const visu::GraphicState & aState);
 

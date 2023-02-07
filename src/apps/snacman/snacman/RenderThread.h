@@ -33,6 +33,9 @@ namespace ad {
 namespace snac {
 
 
+class Resources;
+
+
 template <class T_renderer>
 using GraphicStateFifo = StateFifo<typename T_renderer::GraphicState_t>;
 
@@ -167,16 +170,16 @@ public:
     std::future<std::shared_ptr<snac::Font>> loadFont(
         filesystem::path aFont,
         unsigned int aPixelHeight,
-        const resource::ResourceFinder & aResource)
+        Resources & aResources)
     {
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
         auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Font>>>();
         std::future<std::shared_ptr<snac::Font>> future = promise->get_future();
-        push([promise = std::move(promise), font = std::move(aFont), aPixelHeight, &aResource]
+        push([promise = std::move(promise), font = std::move(aFont), aPixelHeight, &aResources]
              (T_renderer & aRenderer) mutable
              {
-                promise->set_value(aRenderer.loadFont(font, aPixelHeight, aResource));
+                promise->set_value(aRenderer.loadFont(font, aPixelHeight, aResources));
              });
         return future;
     }

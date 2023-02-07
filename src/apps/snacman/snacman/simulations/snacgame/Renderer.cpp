@@ -7,6 +7,7 @@
 #include <snac-renderer/text/Text.h>
 
 #include <snacman/Profiling.h>
+#include <snacman/Resources.h>
 
 #include <platform/Filesystem.h>
 
@@ -130,13 +131,13 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(const resource::ResourceFinder &
 
 std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
                                                unsigned int aPixelHeight,
-                                               const resource::ResourceFinder & aResource)
+                                               const snac::Resources & aResources)
 {
     return std::make_shared<snac::Font>(
         mFreetype,
-        *aResource.find(aFont),
+        aFont,
         aPixelHeight,
-        snac::makeDefaultTextProgram(aResource)
+        snac::makeDefaultTextProgram(aResources.mFinder)
     );
 }
 
