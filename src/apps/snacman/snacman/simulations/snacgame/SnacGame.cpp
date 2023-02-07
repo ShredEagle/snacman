@@ -148,7 +148,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         ImGui::Begin("Profiler");
         std::string str;
         snac::getProfiler().print(str);
-        ImGui::Text(str.c_str());
+        ImGui::TextUnformatted(str.c_str());
         ImGui::End();
     }
 
