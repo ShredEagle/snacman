@@ -53,7 +53,7 @@ public:
 
     std::shared_ptr<snac::Font> loadFont(filesystem::path aFont,
                                          unsigned int aPixelHeight,
-                                         const snac::Resources & aResources);
+                                         snac::Resources & aResources);
 
     void render(const visu::GraphicState & aState);
 

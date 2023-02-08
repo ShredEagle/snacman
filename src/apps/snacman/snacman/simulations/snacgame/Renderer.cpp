@@ -131,13 +131,13 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(const resource::ResourceFinder &
 
 std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
                                                unsigned int aPixelHeight,
-                                               const snac::Resources & aResources)
+                                               snac::Resources & aResources)
 {
     return std::make_shared<snac::Font>(
         mFreetype,
         aFont,
         aPixelHeight,
-        snac::makeDefaultTextProgram(aResources.mFinder)
+        aResources.getShaderEffect("shaders/Text.prog")
     );
 }
 

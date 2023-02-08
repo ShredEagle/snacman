@@ -53,10 +53,7 @@ struct GlyphAtlas
 };
 
 
-graphics::Program makeDefaultTextProgram(const resource::ResourceFinder & aResourceFinder);
-
-
-Mesh makeGlyphMesh(GlyphAtlas & aGlyphAtlas, graphics::Program aProgram);
+Mesh makeGlyphMesh(GlyphAtlas & aGlyphAtlas, std::shared_ptr<Effect> aEffect);
 
 /// @brief This high level structure is intended to be the resource representing a loaded font (at a given size).
 /// Its instances are intended to be shared between entities using this font.
@@ -65,13 +62,13 @@ struct Font
     Font(const arte::Freetype & aFreetype,
          const filesystem::path & aFontFile,
          unsigned int aFontPixelHeight,
-         graphics::Program aProgram) :
+         std::shared_ptr<Effect> aEffect) :
         mGlyphAtlas{
             std::move(aFreetype.load(aFontFile)
                         .setPixelHeight(aFontPixelHeight)
                         .inverseYAxis(true))
         },
-        mGlyphMesh{makeGlyphMesh(mGlyphAtlas, std::move(aProgram))}
+        mGlyphMesh{makeGlyphMesh(mGlyphAtlas, std::move(aEffect))}
     {}
 
     GlyphAtlas mGlyphAtlas;

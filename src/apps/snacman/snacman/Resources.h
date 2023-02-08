@@ -28,13 +28,21 @@ public:
 
     std::shared_ptr<Font> getFont(filesystem::path aFont, unsigned int aPixelHeight);
 
+    /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
+    std::shared_ptr<Effect> getShaderEffect(filesystem::path aProgram);
+
     auto find(const filesystem::path & aPath) const
     { return mFinder.find(aPath); }
 
-public:
+private:
     static std::shared_ptr<Font> FontLoader(
         filesystem::path aFont, 
         unsigned int aPixelHeight,
+        RenderThread<snacgame::Renderer> & aRenderThread,
+        Resources & aResources);
+
+    static std::shared_ptr<Effect> EffectLoader(
+        filesystem::path aProgram, 
         RenderThread<snacgame::Renderer> & aRenderThread,
         Resources & aResources);
     
@@ -46,6 +54,7 @@ public:
 
     std::shared_ptr<Mesh> mCube = nullptr;
     resource::ResourceManager<std::shared_ptr<Font>, resource::ResourceFinder, &Resources::FontLoader> mFonts;
+    resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;
 };
 
 
