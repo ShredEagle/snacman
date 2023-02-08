@@ -16,7 +16,7 @@ std::shared_ptr<Mesh> Resources::getShape()
 {
     if(!mCube)
     {
-        mCube = mRenderThread.loadShape(mFinder)
+        mCube = mRenderThread.loadShape(*this)
             .get(); // synchronize call
     }
     return mCube;
