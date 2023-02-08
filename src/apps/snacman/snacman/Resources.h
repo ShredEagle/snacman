@@ -20,8 +20,8 @@ class Resources
 {
 public:
     Resources(resource::ResourceFinder aFinder, RenderThread<snacgame::Renderer> & aRenderThread) :
-        mFinder{std::move(aFinder)},
-        mRenderThread{aRenderThread}
+        mRenderThread{aRenderThread},
+        mFinder{std::move(aFinder)}
     {}
 
     std::shared_ptr<Mesh> getShape();
