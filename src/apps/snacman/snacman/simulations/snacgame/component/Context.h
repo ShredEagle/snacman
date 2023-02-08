@@ -130,7 +130,7 @@ struct MappingContext
                                     == ButtonStatus::PositiveEdge)
                                 {
                                     int stuff =
-                                        index
+                                        static_cast<int>(index)
                                         | static_cast<int>(
                                             GamepadAtomicInput::axisFlag)
                                         | static_cast<int>(
