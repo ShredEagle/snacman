@@ -111,6 +111,7 @@ namespace {
                     gltfSemantic, accessorId, accessor->count, vertexCount);
                 throw std::runtime_error{"Inconsistent accessors count."};
             }
+            vertexCount = (GLsizei)accessor->count;
 
             if(!accessor->bufferView)
             {
