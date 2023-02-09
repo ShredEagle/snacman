@@ -4,6 +4,7 @@
 #include <snac-renderer/Camera.h>
 #include <snac-renderer/Cube.h>
 #include <snac-renderer/Render.h>
+#include <snac-renderer/ResourceLoad.h>
 
 #include <graphics/AppInterface.h>
 
@@ -64,13 +65,13 @@ InstanceStream makeInstances()
 
 struct Scene
 {
-    Scene(graphics::AppInterface & aAppInterface);
+    Scene(graphics::AppInterface & aAppInterface, filesystem::path aProgram);
 
     void update();
 
     void render(Renderer & aRenderer) const;
 
-    Mesh mMesh{makeCube()};
+    Mesh mMesh;
     InstanceStream mInstances{makeInstances()};
     Camera mCamera;
     MouseOrbitalControl mCameraControl;
@@ -79,7 +80,8 @@ struct Scene
 };
 
 
-inline Scene::Scene(graphics::AppInterface & aAppInterface) :
+inline Scene::Scene(graphics::AppInterface & aAppInterface, filesystem::path aProgram) :
+    mMesh{loadCube(loadEffect(aProgram))},
     mCamera{math::getRatio<float>(aAppInterface.getFramebufferSize()), Camera::gDefaults},
     mCameraControl{aAppInterface.getWindowSize(), Camera::gDefaults.vFov}
 {
