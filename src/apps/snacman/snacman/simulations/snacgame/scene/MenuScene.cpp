@@ -1,6 +1,10 @@
 #include "MenuScene.h"
 
 #include "snacman/Logging.h"
+#include "snacman/Input.h"
+#include "snacman/simulations/snacgame/component/Controller.h"
+#include "snacman/simulations/snacgame/InputCommandConverter.h"
+#include <snacman/Profiling.h>
 
 #include "../../../Input.h"
 #include "../component/Controller.h"
@@ -20,9 +24,8 @@ void MenuScene::setup(GameContext & aContext,
                       RawInput & aInput)
 {
     auto font =
-        aContext.mRenderThread
-            .loadFont("fonts/Comfortaa-Regular.ttf", 120, aContext.mResource)
-            .get();
+        aContext.mResources
+            .getFont("fonts/Comfortaa-Regular.ttf", 120);
 
     ent::Phase init;
     auto startHandle =
@@ -59,6 +62,7 @@ void MenuScene::teardown(RawInput & aInput)
 std::optional<Transition>
 MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
 {
+    TIME_RECURRING_CLASSFUNC(Main);
     ControllerCommand keyboardCommand{
         .mCommand = convertKeyboardInput("menu", aInput.mKeyboard,
                                          mContext->mKeyboardMapping),

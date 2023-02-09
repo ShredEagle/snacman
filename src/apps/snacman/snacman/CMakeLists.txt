@@ -12,7 +12,9 @@ set(${TARGET_NAME}_HEADERS
     Logging.h
     LoopSettings.h
     QueryManipulation.h
+    Profiling.h
     RenderThread.h
+    Resources.h
     SparseSet.h
     Timing.h
 
@@ -57,6 +59,7 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     Input.cpp
+    Resources.cpp
 
     simulations/snacgame/Entities.cpp
     simulations/snacgame/Renderer.cpp

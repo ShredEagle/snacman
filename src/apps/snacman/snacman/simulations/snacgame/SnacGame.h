@@ -49,6 +49,8 @@ struct ImguiDisplays
     bool mShowSimulationDelta = false;
     bool mShowImguiDemo = false;
     bool mShowLogLevel = false;
+    bool mShowMainProfiler = false;
+    bool mShowRenderProfiler = false;
 
     void display()
     {
@@ -56,6 +58,8 @@ struct ImguiDisplays
         ImGui::Checkbox("Mappings", &mShowMappings);
         ImGui::Checkbox("Simulation delta", &mShowSimulationDelta);
         ImGui::Checkbox("Log level", &mShowLogLevel);
+        ImGui::Checkbox("Main profiler",  &mShowMainProfiler);
+        ImGui::Checkbox("Render profiler",  &mShowRenderProfiler);
         ImGui::Checkbox("ImguiDemo", &mShowImguiDemo);
         ImGui::End();
     }
@@ -96,7 +100,8 @@ public:
     SnacGame(graphics::AppInterface & aAppInterface,
              snac::RenderThread<Renderer_t> & aRenderThread,
              imguiui::ImguiUi & aImguiUi,
-             const resource::ResourceFinder & aResourceFinder, RawInput & aInput);
+             resource::ResourceFinder aResourceFinder,
+             RawInput & aInput);
 
     bool update(float aDelta, RawInput & aInput);
 
@@ -110,6 +115,8 @@ private:
     graphics::AppInterface * mAppInterface;
 
     ent::EntityManager mWorld;
+
+    GameContext mGameContext;
     
     // TODO use the ent::Wrap
     EntityWrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
@@ -118,8 +125,6 @@ private:
     EntityWrap<ent::Query<component::Geometry, component::VisualMesh>> mQueryRenderable;
 
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
-
-    GameContext mGameContext;
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};

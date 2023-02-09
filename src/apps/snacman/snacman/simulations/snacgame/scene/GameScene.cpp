@@ -1,6 +1,12 @@
 #include "GameScene.h"
 
 #include "snacman/Input.h"
+#include <snacman/Logging.h>
+#include <snacman/Profiling.h>
+#include "snacman/simulations/snacgame/component/Controller.h"
+#include "snacman/simulations/snacgame/InputCommandConverter.h"
+#include "snacman/simulations/snacgame/system/LevelCreator.h"
+#include "snacman/simulations/snacgame/system/MovementIntegration.h"
 
 #include "../component/Context.h"
 #include "../component/Controller.h"
@@ -66,6 +72,8 @@ std::optional<Transition> GameScene::update(GameContext & aContext,
                                             float aDelta,
                                             RawInput & aInput)
 {
+    TIME_RECURRING(Main, "GameScene::update");
+
     ent::Phase update;
 
     bool quit = false;

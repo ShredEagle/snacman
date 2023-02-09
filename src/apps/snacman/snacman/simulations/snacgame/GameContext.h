@@ -3,6 +3,7 @@
 
 #include "Renderer.h"
 #include "../../RenderThread.h"
+#include "../../Resources.h"
 
 #include <entity/EntityManager.h>
 #include <resource/ResourceFinder.h>
@@ -14,9 +15,9 @@ namespace snacgame {
 
 struct GameContext
 {
-    resource::ResourceFinder mResource;
     ent::EntityManager & mWorld;
     snac::RenderThread<Renderer> & mRenderThread;
+    snac::Resources mResources;
 };
 
 

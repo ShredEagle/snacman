@@ -96,27 +96,11 @@ std::vector<GlyphInstance> GlyphAtlas::populateInstances(const std::string & aSt
 }
 
 
-graphics::Program makeDefaultTextProgram(const resource::ResourceFinder & aResourceFinder)
+Mesh makeGlyphMesh(GlyphAtlas & aGlyphAtlas, std::shared_ptr<Effect> aEffect)
 {
-    return graphics::makeLinkedProgram({
-                {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Text.vert"))},
-                {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(*aResourceFinder.find("shaders/Text.frag"))},
-           });
-}
-
-
-Mesh makeGlyphMesh(GlyphAtlas & aGlyphAtlas, graphics::Program aProgram)
-{
-    auto effect = std::make_shared<Effect>(Effect{
-        .mProgram = {
-            std::move(aProgram),
-            "TextRendering"
-        }
-    });
-    
     auto material = std::make_shared<Material>(Material{
         .mTextures = {{Semantic::FontAtlas, &aGlyphAtlas.mGlyphCache.atlas}},
-        .mEffect = std::move(effect)
+        .mEffect = std::move(aEffect)
     });
 
     return Mesh{

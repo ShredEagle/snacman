@@ -11,9 +11,15 @@
 // TODO #generic-render remove once all geometry and shader programs are created outside.
 #include <snac-renderer/Cube.h>
 #include <renderer/ShaderSource.h>
-#include <resource/ResourceFinder.h>
+
 
 namespace ad {
+
+// Forward declarations
+namespace snac {
+    class Resources;
+} // namespace snac
+
 namespace snacgame {
 
 class Renderer;
@@ -38,17 +44,16 @@ class Renderer
 public:
     using GraphicState_t = visu::GraphicState;
 
-    Renderer(graphics::AppInterface & aAppInterface,
-             const resource::ResourceFinder & aResourceFinder /* TODO remove when not used anymore*/);
+    Renderer(graphics::AppInterface & aAppInterface);
 
     void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
     // TODO Extend beyond cubes.
-    static std::shared_ptr<snac::Mesh> LoadShape(const resource::ResourceFinder & aResourceFinder);
+    static std::shared_ptr<snac::Mesh> LoadShape(snac::Resources & aResources);
 
     std::shared_ptr<snac::Font> loadFont(filesystem::path aFont,
                                          unsigned int aPixelHeight,
-                                         resource::ResourceFinder & aResource);
+                                         snac::Resources & aResources);
 
     void render(const visu::GraphicState & aState);
 

@@ -3,12 +3,16 @@
 
 #include "../component/Spawner.h"
 
+#include <snacman/Profiling.h>
+
 namespace ad {
 namespace snacgame {
 namespace system {
 
 void PlayerSpawner::update(float aDelta)
 {
+    TIME_RECURRING_CLASSFUNC(Main);
+
     mSpawnable.each([this, aDelta](component::PlayerLifeCycle & aPlayer,
                                    component::Geometry & aPlayerGeometry) {
         if (!aPlayer.mIsAlive) {

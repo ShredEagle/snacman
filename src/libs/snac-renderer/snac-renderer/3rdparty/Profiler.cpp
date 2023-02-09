@@ -283,15 +283,15 @@ void Profiler::print(std::string& stats)
     entry.accumulated = false;
   }
 
-  printf("Timer null;\t N/A %6d; CPU %6d;\n", 0, (uint32_t)m_data->cpuTime.getAveraged());
+  stats += format("Timer Frame;\t N/A %6d; CPU %6d; (microseconds)\n", 0, (uint32_t)m_data->cpuTime.getAveraged());
 
-  for(uint32_t i = 0; i < m_data->numLastSections; i++)
+  std::string singleShotStats;
+
+  for(uint32_t i = 0; i < m_data->entries.size(); i++)
   {
+    static const int nameWidth = 40;
     static const char* spaces = "        ";  // 8
     Entry&             entry  = m_data->entries[i];
-
-    if(entry.level == LEVEL_SINGLESHOT)
-      continue;
 
     uint32_t level = 7 - (entry.level > 7 ? 7 : entry.level);
 
@@ -301,16 +301,56 @@ void Profiler::print(std::string& stats)
 
     const char* gpuname = entry.api ? entry.api : "N/A";
 
-    if(info.accumulated)
+    // TODO Optimize
+    static auto humanize = [](double aTimer) -> std::string
     {
-      stats += format("%sTimer %s;\t %s %6d; CPU %6d; (microseconds, accumulated loop)\n", &spaces[level], entry.name,
-                      gpuname, (uint32_t)(info.gpu.average), (uint32_t)(info.cpu.average));
+        if (aTimer == 0.)
+        {
+          return "0";
+        }
+        else if(aTimer >= 1E6)
+        {
+            return format("%6.2fs", aTimer/1E6);
+        }
+        else if(aTimer >= 1E4)
+        {
+            return format("%6dms", (uint32_t)(aTimer/1E3));
+        }
+        else if(aTimer >= 1E3)
+        {
+            return format("%6.2fms", aTimer/1E3);
+        }
+        else
+        {
+            return format("%6dµs", (uint32_t)aTimer);
+        }
+    };
+
+
+    if(entry.level == LEVEL_SINGLESHOT)
+    {
+      singleShotStats += format("\n%sTimer %-*s;\t %s %6s; CPU %6s;", " ", nameWidth, entry.name,
+                      gpuname, humanize(info.gpu.average).c_str(), humanize(info.cpu.average).c_str());
+
     }
     else
     {
-      stats += format("%sTimer %s;\t %s %6d; CPU %6d; (microseconds, avg %d)\n", &spaces[level], entry.name, gpuname,
-                      (uint32_t)(info.gpu.average), (uint32_t)(info.cpu.average), (uint32_t)entry.cpuTime.numValid);
+      if(info.accumulated)
+      {
+        stats += format("%sTimer %-*s;\t %s %6s; CPU %6s; (accumulated loop)\n", &spaces[level], nameWidth, entry.name,
+                        gpuname, humanize(info.gpu.average).c_str(), humanize(info.cpu.average).c_str(), (uint32_t)(info.cpu.average));
+      }
+      else
+      {
+        stats += format("%sTimer %-*s;\t %s %6s; CPU %6s; (avg %d)\n", &spaces[level], nameWidth, entry.name, 
+                        gpuname, humanize(info.gpu.average).c_str(), humanize(info.cpu.average).c_str(), (uint32_t)entry.cpuTime.numValid);
+      }
     }
+  }
+
+  if (!singleShotStats.empty())
+  {
+    stats += "\nSINGLE SHOTS:" + std::move(singleShotStats);
   }
 }
 

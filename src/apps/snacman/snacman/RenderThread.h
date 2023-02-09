@@ -3,6 +3,7 @@
 
 #include "GraphicState.h"
 #include "Logging.h"
+#include "Profiling.h"
 #include "Timing.h"
 
 #include <graphics/ApplicationGlfw.h>
@@ -30,6 +31,9 @@
 
 namespace ad {
 namespace snac {
+
+
+class Resources;
 
 
 template <class T_renderer>
@@ -149,16 +153,16 @@ public:
         });
     }
 
-    std::future<std::shared_ptr<snac::Mesh>> loadShape(resource::ResourceFinder & aResource)
+    std::future<std::shared_ptr<snac::Mesh>> loadShape(Resources & aResources)
     {
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
         auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Mesh>>>();
         std::future<std::shared_ptr<snac::Mesh>> future = promise->get_future();
-        push([promise = std::move(promise), &aResource]
+        push([promise = std::move(promise), &aResources]
              (T_renderer & aRenderer) 
              {
-                promise->set_value(aRenderer.LoadShape(aResource));
+                promise->set_value(aRenderer.LoadShape(aResources));
              });
         return future;
     }
@@ -166,16 +170,16 @@ public:
     std::future<std::shared_ptr<snac::Font>> loadFont(
         filesystem::path aFont,
         unsigned int aPixelHeight,
-        resource::ResourceFinder & aResource)
+        Resources & aResources)
     {
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
         auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Font>>>();
         std::future<std::shared_ptr<snac::Font>> future = promise->get_future();
-        push([promise = std::move(promise), font = std::move(aFont), aPixelHeight, &aResource]
+        push([promise = std::move(promise), font = std::move(aFont), aPixelHeight, &aResources]
              (T_renderer & aRenderer) mutable
              {
-                promise->set_value(aRenderer.loadFont(font, aPixelHeight, aResource));
+                promise->set_value(aRenderer.loadFont(font, aPixelHeight, aResources));
              });
         return future;
     }
@@ -248,7 +252,7 @@ private:
 
 #if defined(_WIN32)
         HRESULT r;
-        r = SetThreadDescription(GetCurrentThread(), L"RenderThread");
+        r = SetThreadDescription(GetCurrentThread(), L"Render Thread");
 #endif
 
         // The context must be made current on this thread before it can call GL
@@ -289,6 +293,8 @@ private:
 
         while (!mStop)
         {
+            Guard frameProfiling = profileFrame(snac::Profiler::Render);
+
             // Service all queued operations first.
             serviceOperations(aRenderer);
 
@@ -309,6 +315,8 @@ private:
             typename T_renderer::GraphicState_t state;
             if (mInterpolate)
             {
+                TIME_RECURRING(Render, "Interpolation");
+
                 const auto & previous = entries.previous();
                 const auto & latest = entries.current();
 
@@ -354,9 +362,16 @@ private:
             renderer.render(state);
             SELOG(trace)("Render thread: Frame sent to GPU.");
 
-            mImguiUi.renderBackend();
+            {
+                TIME_RECURRING(Render, "ImGui::renderBackend");
+                mImguiUi.renderBackend();
+            }
 
-            mApplication.swapBuffers();
+            {
+                TIME_RECURRING(Render, "Swap buffers");
+                mApplication.swapBuffers();
+            }
+            getRenderProfilerPrint().print();
         }
 
         SELOG(info)("Render thread stopping.");

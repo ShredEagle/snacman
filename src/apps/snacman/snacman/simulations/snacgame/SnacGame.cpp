@@ -23,8 +23,13 @@
 #include "system/PlayerSpawner.h"
 #include "system/SceneStateMachine.h"
 
-#include <chrono>
-#include <GLFW/glfw3.h>
+#include <snacman/ImguiUtilities.h>
+#include <snacman/Profiling.h>
+
+#include <imguiui/ImguiUi.h>
+
+#include <snac-renderer/text/Text.h>
+
 #include <imgui.h>
 #include <imguiui/ImguiUi.h>
 #include <markovjunior/Grid.h>
@@ -40,20 +45,20 @@ namespace snacgame {
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    snac::RenderThread<Renderer_t> & aRenderThread,
                    imguiui::ImguiUi & aImguiUi,
-                   const resource::ResourceFinder & aResourceFinder,
+                   resource::ResourceFinder aResourceFinder,
                    RawInput & aInput) :
     mAppInterface{&aAppInterface},
-    mMappingContext{mWorld, aResourceFinder},
-    mStateMachine{mWorld, mWorld, *aResourceFinder.find("scenes/scene_description.json"),
+    mGameContext{
+        .mWorld = mWorld,
+        .mRenderThread = aRenderThread,
+        .mResources = snac::Resources{std::move(aResourceFinder), aRenderThread},
+    },
+    mMappingContext{mWorld, mGameContext.mResources},
+    mStateMachine{mWorld, mWorld, *mGameContext.mResources.find("scenes/scene_description.json"),
                   mMappingContext},
     mSystemOrbitalCamera{mWorld, mWorld},
     mQueryRenderable{mWorld, mWorld},
     mQueryText{mWorld, mWorld},
-    mGameContext{
-        .mResource = aResourceFinder,
-        .mWorld = mWorld,
-        .mRenderThread = aRenderThread,
-    },
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
@@ -72,6 +77,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                            ImguiInhibiter & aInhibiter,
                            RawInput & aInput)
 {
+    TIME_RECURRING_FUNC(Main);
+
     ent::Phase update;
 
     mImguiUi.mFrameMutex.lock();
@@ -124,6 +131,21 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         aSettings.mInterpolate = interpolate;
         ImGui::End();
     }
+    if (mImguiDisplays.mShowMainProfiler)
+    {
+        ImGui::Begin("Main profiler");
+        std::string str;
+        snac::getProfiler(snac::Profiler::Main).print(str);
+        ImGui::TextUnformatted(str.c_str());
+        ImGui::End();
+    }
+    if (mImguiDisplays.mShowRenderProfiler)
+    {
+        ImGui::Begin("Render profiler");
+        ImGui::TextUnformatted(snac::getRenderProfilerPrint().get().c_str());
+        ImGui::End();
+    }
+
     mImguiUi.render();
     mImguiUi.mFrameMutex.unlock();
 }
@@ -161,6 +183,8 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
 
 std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 {
+    TIME_RECURRING_FUNC(Main);
+
     auto state = std::make_unique<visu::GraphicState>();
 
     ent::Phase nomutation;
