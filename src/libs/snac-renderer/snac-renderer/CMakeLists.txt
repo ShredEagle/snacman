@@ -9,6 +9,7 @@ set(${TARGET_NAME}_HEADERS
     Material.h
     Mesh.h
     Render.h
+    ResourceLoad.h
     Semantic.h
     SetupDrawing.h
     ShaderResource.h
@@ -30,6 +31,7 @@ set(${TARGET_NAME}_SOURCES
     Material.cpp
     Mesh.cpp
     Render.cpp
+    ResourceLoad.cpp
     Semantic.cpp
     SetupDrawing.cpp
     ShaderResource.cpp

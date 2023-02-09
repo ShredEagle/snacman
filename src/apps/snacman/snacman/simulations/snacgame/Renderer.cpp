@@ -4,6 +4,7 @@
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 
+#include <snac-renderer/ResourceLoad.h>
 #include <snac-renderer/text/Text.h>
 
 #include <snacman/Profiling.h>
@@ -104,6 +105,7 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface) :
     mMeshInstances{initializeInstanceStream()}
 {}
 
+
 void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
 {
     mCamera.resetProjection(aAspectRatio, aParameters);
@@ -112,13 +114,15 @@ void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aPar
 
 std::shared_ptr<snac::Mesh> Renderer::LoadShape(snac::Resources & aResources)
 {
-    auto mesh = std::make_shared<snac::Mesh>(snac::Mesh{.mStream = snac::makeCube()}); 
+    return std::make_shared<snac::Mesh>(
+        snac::loadCube(aResources.getShaderEffect("shaders/PhongLighting.prog")));
 
-    mesh->mMaterial = std::make_shared<snac::Material>(snac::Material{
-        .mEffect = aResources.getShaderEffect("shaders/PhongLighting.prog")
-    });
-
-    return mesh;
+    // TODO move out
+    //auto avocado = snac::loadGltf(*aResources.find("models/avocado/Avocado.gltf"));
+    //avocado.mMaterial = std::make_shared<snac::Material>(snac::Material{
+    //    .mEffect = aResources.getShaderEffect("shaders/PhongLighting.prog")
+    //});
+    //return std::make_shared<snac::Mesh>(std::move(avocado));
 }
 
 

@@ -18,6 +18,7 @@ namespace {
         // Intended for the main game messages
         spdlog::stdout_color_mt(gRenderLogger);
         spdlog::stdout_color_mt(gGltfLogger);
+        spdlog::stdout_color_mt(gResourceLogger);
     }
 
 } // namespace anonymous

@@ -12,6 +12,7 @@ namespace snac {
 
 constexpr const char * gRenderLogger = "snac-render";
 constexpr const char * gGltfLogger = "gltf-loader";
+constexpr const char * gResourceLogger = "resource-loader";
 
 
 // Add this namespace so initializeLogging() does not clash with the one from snacman.
