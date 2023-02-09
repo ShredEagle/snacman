@@ -14,6 +14,9 @@ set(${TARGET_NAME}_HEADERS
     ShaderResource.h
     UniformParameters.h
 
+    gltf/GltfLoad.h
+    gltf/LoadBuffer.h
+
     text/Text.h
 
     3rdparty/Profiler.hpp
@@ -32,6 +35,9 @@ set(${TARGET_NAME}_SOURCES
     ShaderResource.cpp
 
     text/Text.cpp
+
+    gltf/GltfLoad.cpp
+    gltf/LoadBuffer.cpp
 
     3rdparty/Profiler.cpp
 )
@@ -54,6 +60,11 @@ set_target_properties(${TARGET_NAME} PROPERTIES
 )
 
 cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsError})
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    # We use istrstream to interface an array of std::byte with an istream based API.
+    target_compile_definitions(${TARGET_NAME} PRIVATE _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING)
+endif ()
 
 cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
