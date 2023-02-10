@@ -3,6 +3,8 @@
 #include "Cube.h"
 #include "Logging.h"
 
+#include "gltf/GltfLoad.h"
+
 #include <arte/detail/Json.h>
 
 #include <renderer/ShaderSource.h>
@@ -61,12 +63,24 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aProgram)
 Mesh loadCube(std::shared_ptr<Effect> aEffect)
 {
     snac::Mesh mesh{
-        .mStream = makeCube()
+        .mStream = makeCube(),
+        .mMaterial = std::make_shared<snac::Material>(snac::Material{
+            .mEffect = std::move(aEffect)
+        })
     }; 
 
-    mesh.mMaterial = std::make_shared<snac::Material>(snac::Material{
-        .mEffect = std::move(aEffect)
-    });
+    return mesh;
+}
+
+
+Mesh loadModel(filesystem::path aGltf, std::shared_ptr<Effect> aEffect)
+{
+    snac::Mesh mesh{
+        .mStream = loadGltf(aGltf),
+        .mMaterial = std::make_shared<snac::Material>(snac::Material{
+            .mEffect = std::move(aEffect)
+        })
+    }; 
 
     return mesh;
 }

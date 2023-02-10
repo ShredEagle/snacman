@@ -22,7 +22,8 @@ namespace snac {
 
 namespace {
 
-    // TODO Reading a stream content is a recurring need, should be moved to a more general library.
+    // TODO Should be moved to a more general library. 
+    // Reading a stream content is a recurring need.
     std::vector<std::byte> loadInputStream(std::istream & aInput, std::size_t aByteLength, const std::string & aStreamId)
     {
         constexpr std::size_t gChunkSize = 128 * 1024;
@@ -45,6 +46,7 @@ namespace {
         }
         return result;
     }
+
 
     std::vector<std::byte> loadInputStream(std::istream && aInput, std::size_t aByteLength, const std::string & aStreamId)
     { return loadInputStream(aInput, aByteLength, aStreamId); }
@@ -123,7 +125,7 @@ std::vector<std::byte> loadBufferData(arte::Const_Owned<arte::gltf::Buffer> aBuf
     {
     case arte::gltf::Uri::Type::Data:
     {
-        // TODO implement
+        // TODO implement handling subranges on data Uri.
         if(aByteOffset != 0 || aByteLength != aBuffer->byteLength)
         {
             SELOG(critical)

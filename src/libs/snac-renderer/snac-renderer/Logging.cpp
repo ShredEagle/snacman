@@ -1,5 +1,7 @@
 #include "Logging.h"
 
+#include <arte/Logging.h>
+
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <mutex>
@@ -29,6 +31,7 @@ namespace renderer {
     void initializeLogging()
     {
         std::call_once(loggingInitializationOnce, &initializeLogging_impl);
+        arte::initializeLogging();
         //Note: Initialize all upstream libraries logging here too.
     };
 

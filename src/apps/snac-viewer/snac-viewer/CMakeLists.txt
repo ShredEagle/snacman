@@ -42,7 +42,10 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 file(GENERATE 
      OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
      CONTENT "{\"prefixes\": [\"${REPO_FOLDER}/src/libs/snac-renderer/snac-renderer/\",
-                              \"${REPO_FOLDER}/../snac-assets/\"]}")
+                              \"${REPO_FOLDER}/../snac-assets/\",
+                              \"${REPO_FOLDER}/../glTF-Sample-Models/2.0/\"
+              ]}"
+)
 ##
 ## Dependencies
 ##

@@ -61,7 +61,13 @@ void runApplication()
     //
     // Initialize scene
     //
-    Scene scene{*glfwApp.getAppInterface(), finder.pathFor("shaders/PhongLighting.prog")};
+
+    Scene scene{
+        *glfwApp.getAppInterface(),
+        //loadModel(finder.pathFor("Box/glTF/Box.gltf"),
+        loadModel(finder.pathFor("Avocado/glTF/Avocado.gltf"),
+                  loadEffect(finder.pathFor("shaders/PhongLighting.prog")))
+    };
     Renderer renderer;
 
     //

@@ -61,8 +61,18 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
                                        const IntrospectProgram & aProgram)
 {
     graphics::VertexArrayObject vertexArray;
-    // TODO scoped bind (also remove the unbind)
-    bind (vertexArray);
+    // I think the IBO must still be bound at the moment the VAO is unbound,
+    // so the scope guard for IBO must outlive the scope guard for VAO.
+    // YET, the VAO must already be bound when the IBO is bound in order to store this binding.
+    // see: https://stackoverflow.com/a/72760508/1027706
+    std::optional<graphics::ScopedBind> optionalScopedIbo;
+    graphics::ScopedBind scopedVao{vertexArray};
+
+    if (aMesh.mStream.mIndices)
+    {
+        // Now that the VAO is bound, it can store the index buffer binding.
+        optionalScopedIbo = graphics::ScopedBind{aMesh.mStream.mIndices->mIndexBuffer};
+    }
 
     for (const IntrospectProgram::Attribute & shaderAttribute : aProgram.mAttributes)
     {
@@ -92,7 +102,6 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
 
     SELOG_LG(gRenderLogger, info)("Added a new VAO to the repository.");
 
-    unbind(vertexArray);
     return vertexArray;
 }
 

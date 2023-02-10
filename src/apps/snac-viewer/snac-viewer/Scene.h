@@ -65,7 +65,7 @@ InstanceStream makeInstances()
 
 struct Scene
 {
-    Scene(graphics::AppInterface & aAppInterface, filesystem::path aProgram);
+    Scene(graphics::AppInterface & aAppInterface, Mesh aMesh);
 
     void update();
 
@@ -80,8 +80,8 @@ struct Scene
 };
 
 
-inline Scene::Scene(graphics::AppInterface & aAppInterface, filesystem::path aProgram) :
-    mMesh{loadCube(loadEffect(aProgram))},
+inline Scene::Scene(graphics::AppInterface & aAppInterface, Mesh aMesh) :
+    mMesh{std::move(aMesh)},
     mCamera{math::getRatio<float>(aAppInterface.getFramebufferSize()), Camera::gDefaults},
     mCameraControl{aAppInterface.getWindowSize(), Camera::gDefaults.vFov}
 {
@@ -117,8 +117,17 @@ inline void Scene::render(Renderer & aRenderer) const
          {BlockSemantic::Viewing, &mCamera.mViewing},
     };
 
+    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gBlue);
+    math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
+    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
+
+    snac::UniformRepository uniforms{
+        {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
+        {snac::Semantic::LightPosition, {lightPosition}},
+        {snac::Semantic::AmbientColor, {ambientColor}},
+    };
+
     clear();
-    snac::UniformRepository uniforms;
     aRenderer.render(mMesh,
                      mInstances,
                      uniforms,

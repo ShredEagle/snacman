@@ -23,7 +23,21 @@ void Renderer::render(const Mesh & aMesh,
     graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, program)};
 
     graphics::use(program);
-    glDrawArraysInstanced(aMesh.mStream.mPrimitive, 0, aMesh.mStream.mVertexCount, aInstances.mInstanceCount);
+    if(aMesh.mStream.mIndices)
+    {
+        glDrawElementsInstanced(aMesh.mStream.mPrimitive,
+                                aMesh.mStream.mIndices->mIndexCount,
+                                aMesh.mStream.mIndices->mAttribute.mComponentType,
+                                (void*)aMesh.mStream.mIndices->mAttribute.mOffset,
+                                aInstances.mInstanceCount);
+    }
+    else
+    {
+        glDrawArraysInstanced(aMesh.mStream.mPrimitive,
+                              0, 
+                              aMesh.mStream.mVertexCount,
+                              aInstances.mInstanceCount);
+    }
 }
 
 

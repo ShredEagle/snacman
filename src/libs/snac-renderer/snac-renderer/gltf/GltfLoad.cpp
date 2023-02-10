@@ -61,10 +61,7 @@ namespace {
         glBindBuffer(target, buffer);
         glBufferData(target,
                      aBufferView->byteLength,
-                     // TODO might be even better to only load in main memory the part of the buffer starting
-                     // at bufferView->byteOffset (and also limit the length there, actually).
-                     loadBufferData(aAccessor, aBufferView).data() 
-                         + aBufferView->byteOffset,
+                     loadBufferData(aAccessor, aBufferView).data(),
                      GL_STATIC_DRAW);
         glBindBuffer(target, 0);
 
@@ -88,11 +85,21 @@ namespace {
     }
 
 
-    Mesh makeFromPrimitive(Const_Owned<gltf::Primitive> aPrimitive)
+    graphics::ClientAttribute attributeFromAccessor(const gltf::Accessor & aAccessor)
     {
-        Mesh mesh;
+        return graphics::ClientAttribute{
+            .mDimension = getAccessorDimension(aAccessor.type),
+            .mOffset = aAccessor.byteOffset,
+            .mComponentType = aAccessor.componentType,
+        };
+    }
 
-        mesh.mStream.mPrimitive = aPrimitive->mode;
+
+    VertexStream makeFromPrimitive(Const_Owned<gltf::Primitive> aPrimitive)
+    {
+        VertexStream stream;
+
+        stream.mPrimitive = aPrimitive->mode;
 
         GLsizei vertexCount = std::numeric_limits<GLsizei>::max();
         std::map<gltf::Index<gltf::BufferView>::Value_t, std::size_t/*buffer view index*/> bufferViewMap;
@@ -115,7 +122,7 @@ namespace {
 
             if(!accessor->bufferView)
             {
-                SELOG(error)("Skipping semantic \"{}\", associated to accessor #{} which does not have a buffer view.", gltfSemantic, accessorId);
+                SELOG(warn)("Skipping semantic \"{}\", associated to accessor #{} which does not have a buffer view.", gltfSemantic, accessorId);
                 continue;
             }
 
@@ -131,22 +138,20 @@ namespace {
             }
             else
             {
-                bufferViewId = mesh.mStream.mVertexBuffers.size();
-                mesh.mStream.mVertexBuffers.push_back(prepareBufferView(accessor));
+                // TODO implement some assertions that distinct buffer views do not overlap on a buffer range.
+                // (since at the moment we create one distinct GL buffer per buffer view).
+                bufferViewId = stream.mVertexBuffers.size();
+                stream.mVertexBuffers.push_back(prepareBufferView(accessor));
                 bufferViewMap.emplace(gltfBufferViewId, bufferViewId);
             }
 
             if (auto semantic = translateGltfSemantic(gltfSemantic))
             {
-                mesh.mStream.mAttributes.emplace(
+                stream.mAttributes.emplace(
                     *semantic,
                     AttributeAccessor{
                         .mBufferViewIndex = bufferViewId,
-                        .mAttribute = {
-                            .mDimension = getAccessorDimension(accessor->type),
-                            .mOffset = accessor->byteOffset,
-                            .mComponentType = accessor->componentType,
-                        }
+                        .mAttribute = attributeFromAccessor(accessor),
                     }
                 );
             }
@@ -156,24 +161,37 @@ namespace {
             }
         }
 
-        mesh.mStream.mVertexCount = vertexCount;
-        return mesh;
+        if(aPrimitive->indices)
+        {
+            SELOG(debug)("Primitive #{} defines indexed geometry.", aPrimitive.id());
+            Const_Owned<gltf::Accessor> indicesAccessor = 
+                aPrimitive.get(&gltf::Primitive::indices);
+
+            if(bufferViewMap.find(indicesAccessor->bufferView->value)
+                != bufferViewMap.end())
+            {
+                // This would be suboptimal, meaning we load two buffers with the same data
+                SELOG(error)
+                    ("Primitive #{} indices reuses a buffer view used for vertex attributes.",
+                    aPrimitive.id());
+            }
+
+            auto gltfBufferView = checkedBufferView(indicesAccessor);
+            stream.mIndices = IndicesAccessor{
+                .mIndexBuffer = prepareBuffer<graphics::IndexBufferObject>(indicesAccessor, gltfBufferView),
+                .mIndexCount = (GLsizei)indicesAccessor->count,
+                .mAttribute = attributeFromAccessor(indicesAccessor),
+            };
+        }
+
+        assert(vertexCount != std::numeric_limits<GLsizei>::max());
+        stream.mVertexCount = vertexCount;
+        return stream;
     }
-};
+} // unnamed namespace
 
-    // Scene iteration logic
-    //auto scene = gltf.getDefaultScene();
-    //if(!scene)
-    //{
-    //    SELOG(error)("The gltf model '{}' does not define a default scene.", aModel);
-    //    throw std::runtime_error{"Gltf file without a default scene (not handled)."};
-    //}
-    //for(auto node : scene->iterate(&arte::gltf::Scene::nodes))
-    //{
-    //    
-    //}
 
-Mesh loadGltf(filesystem::path aModel)
+VertexStream loadGltf(filesystem::path aModel)
 {
     arte::Gltf gltf{aModel};
 

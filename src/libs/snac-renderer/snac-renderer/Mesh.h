@@ -35,6 +35,10 @@ struct Material
 
 struct BufferView
 {
+    // Important: At the moment, we make distinct buffers for each gltf buffer view.
+    // This is whay the BufferView hosts the VertexBufferObject.
+    // We make the bet that interleaved vertex attributes are always modeled 
+    // by distinct accessor on the same buffer view in gltf.
     graphics::VertexBufferObject mBuffer;
     GLsizei mStride{0};
 
@@ -51,15 +55,22 @@ struct AttributeAccessor
     graphics::ClientAttribute mAttribute;
 };
 
+struct IndicesAccessor
+{
+    // Not using a view for the index buffer, since it cannot be interleaved with other data.
+    graphics::IndexBufferObject mIndexBuffer;
+    GLsizei mIndexCount{0};
+    graphics::ClientAttribute mAttribute;
+};
+
 
 struct VertexStream
 {
     std::vector<BufferView> mVertexBuffers;
     std::map<Semantic, AttributeAccessor> mAttributes;
-    GLsizei mVertexCount{0};
+    std::optional<IndicesAccessor> mIndices;
+    GLsizei mVertexCount{0}; // i.e. the number of elements stored in each VBO
     GLenum mPrimitive;
-    // TODO handle indexed rendering
-    //IndexBufferObject mIndexBuffer;
 };
 
 
