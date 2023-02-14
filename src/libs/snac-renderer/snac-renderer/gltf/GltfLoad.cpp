@@ -45,8 +45,8 @@ namespace {
             if (!aBufferView->target)
             {
                 const GLenum infered = T_buffer::GLTarget_v;
-                SELOG(info)("Buffer view #{} does not have target defined. Infering {}.",
-                            aBufferView.id(), infered);
+                SELOG(trace)("Buffer view #{} does not have target defined. Infering {}.",
+                             aBufferView.id(), infered);
                 return infered;
             }
             else
@@ -91,6 +91,29 @@ namespace {
             .mDimension = getAccessorDimension(aAccessor.type),
             .mOffset = aAccessor.byteOffset,
             .mComponentType = aAccessor.componentType,
+        };
+    }
+
+
+    math::Box<GLfloat> getBoundingBox(Const_Owned<gltf::Accessor> aAccessor, Semantic aSemantic)
+    {
+        assert(aSemantic == Semantic::Position);
+
+        if (!aAccessor->bounds)
+        {
+            SELOG(critical)
+                ("Accessor \"{}\" with semantic {} does not define bounds.",
+                aAccessor.id(), to_string(aSemantic));
+            throw std::logic_error{"Accessor MUST have bounds."};
+        }
+        // By the spec, position MUST be a VEC3 of float.
+        auto & bounds = std::get<gltf::Accessor::MinMax<float>>(*aAccessor->bounds);
+
+        math::Position<3, GLfloat> min{bounds.min[0], bounds.min[1], bounds.min[2]};
+        math::Position<3, GLfloat> max{bounds.max[0], bounds.max[1], bounds.max[2]};
+        return math::Box<GLfloat>{
+            min,
+            (max - min).as<math::Size>(),
         };
     }
 
@@ -154,6 +177,14 @@ namespace {
                         .mAttribute = attributeFromAccessor(accessor),
                     }
                 );
+
+                if(semantic == Semantic::Position)
+                {
+                    stream.mBoundingBox = getBoundingBox(accessor, *semantic);
+                    SELOG(debug)
+                        ("Mesh primitive #{} has bounding box {}.",
+                         aPrimitive.id(), fmt::streamed(stream.mBoundingBox));
+                }
             }
             else
             {

@@ -41,7 +41,7 @@ struct Camera
 class Orbital
 {
 public:
-    Orbital(float aRadius, math::Radian<float> aPolar = math::Radian<float>{0.f}, math::Radian<float> aAzimuthal = math::Radian<float>{0.f}) :
+    Orbital(float aRadius, math::Radian<float> aPolar = math::Degree<float>{90.f}, math::Radian<float> aAzimuthal = math::Radian<float>{0.f}) :
         mSpherical{aRadius, aPolar, aAzimuthal}
     {}
 

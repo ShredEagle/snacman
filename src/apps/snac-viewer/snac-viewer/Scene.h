@@ -16,18 +16,30 @@ namespace ad {
 namespace snac {
 
 
-InstanceStream makeInstances()
+InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
 {
+    
     struct PoseColor
     {
         math::Matrix<4, 4, float> pose;
         math::sdr::Rgba albedo{math::sdr::gWhite / 2};
     };
 
+    GLfloat maxMagnitude = *aBoundingBox.dimension().getMaxMagnitudeElement();
+    if(maxMagnitude == 0.)
+    {
+        maxMagnitude =  1;
+        SELOG(warn)("Model bounding box is null, assuming unit size.");
+    }
+
+    auto scaling = math::trans3d::scaleUniform(3.f / maxMagnitude);
+
+    math::Vec<3, float> centerOffset = aBoundingBox.center().as<math::Vec>() * scaling;
+
     std::vector<PoseColor> transformations{
-        {math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f})},
-        {math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f})},
-        {math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f})},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f} - centerOffset)},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f} - centerOffset)},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f} - centerOffset)},
     };
 
     InstanceStream instances{
@@ -72,7 +84,7 @@ struct Scene
     void render(Renderer & aRenderer) const;
 
     Mesh mMesh;
-    InstanceStream mInstances{makeInstances()};
+    InstanceStream mInstances{makeInstances(mMesh.mStream.mBoundingBox)};
     Camera mCamera;
     MouseOrbitalControl mCameraControl;
 

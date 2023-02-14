@@ -3,6 +3,8 @@
 #include "IntrospectProgram.h"
 #include "Semantic.h"
 
+#include <math/Box.h>
+
 #include <renderer/Shading.h>
 #include <renderer/Texture.h>
 #include <renderer/VertexSpecification.h>
@@ -71,6 +73,7 @@ struct VertexStream
     std::optional<IndicesAccessor> mIndices;
     GLsizei mVertexCount{0}; // i.e. the number of elements stored in each VBO
     GLenum mPrimitive;
+    math::Box<GLfloat> mBoundingBox;
 };
 
 
