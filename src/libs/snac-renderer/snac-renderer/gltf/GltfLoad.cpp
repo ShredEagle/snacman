@@ -147,13 +147,25 @@ namespace {
         };
     }
 
+    enum ColorSpace
+    {
+        Linear,
+        sRGB,
+    };
+
     std::shared_ptr<graphics::Texture>
-    prepareTexture(arte::Const_Owned<gltf::Texture> aTexture)
+    prepareTexture(arte::Const_Owned<gltf::Texture> aTexture, ColorSpace aSourceColorSpace)
     {
         auto result = std::make_shared<graphics::Texture>(GL_TEXTURE_2D);
+        arte::Image<math::sdr::Rgba> image = loadImageData(checkImage(aTexture));
+        // Note: Alternatively to decoding the image to linear space on the CPU,
+        // we might allocate texture storage with internal format GL_SRGB8_ALPHA8.
+        // Yet "[OpenGL] implementations are allowed to perform this conversion after filtering,
+        // [which] is inferior to converting from sRGB prior to filtering.""
+        // (see: glspec4.6 core section 8.24)
         graphics::loadImageCompleteMipmaps(
             *result, 
-            loadImageData(checkImage(aTexture)));
+            aSourceColorSpace == ColorSpace::sRGB ? decodeSRGBToLinear(image): image);
 
         // Sampling parameters
         {
@@ -300,7 +312,8 @@ namespace {
             {
                 material->mTextures.emplace(
                     Semantic::BaseColorTexture,
-                    prepareTexture(gltfMaterial.get<gltf::Texture>(baseColorTexture->index)));            
+                    prepareTexture(gltfMaterial.get<gltf::Texture>(baseColorTexture->index),
+                                   ColorSpace::sRGB));            
                 mappings.push_back({
                     .mSemantic = Semantic::BaseColorUV, 
                     .mGltfTexCoord = baseColorTexture->texCoord,

@@ -33,5 +33,7 @@ void main(void)
 
     // Gamma correction
     float gamma = 2.2;
+    // Gamma compression from linear color space to "simple sRGB", as expected by the monitor.
+    // (The monitor will do the gamma expansion.)
     out_Color = vec4(pow(phongColor, vec3(1./gamma)), color.w);
 }
