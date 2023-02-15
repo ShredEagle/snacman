@@ -91,6 +91,21 @@ checkedBufferView(arte::Const_Owned<arte::gltf::Accessor> aAccessor)
 }
 
 
+arte::Const_Owned<arte::gltf::Image>
+checkImage(arte::Const_Owned<arte::gltf::Texture> aTexture)
+{
+    if (!aTexture->source)
+    {
+        // Note: By the spec, when source is not provided, an extension or other mechanism
+        // **should** provide an alternate texture source.
+        SELOG(critical)
+             ("Unsupported: Texture #{} does not have a source associated.", aTexture.id());
+        throw std::logic_error{"Texute was expected to have a source image."};
+    }
+    return aTexture.get(&arte::gltf::Texture::source);
+}
+
+
 std::vector<std::byte> loadDataUri(arte::gltf::Uri aUri)
 {
     constexpr const char * base64Prefix{"base64,"};
@@ -279,7 +294,7 @@ loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
         }
         case arte::gltf::Uri::Type::File:
         {
-            SELOG(trace)("Image #{} data is read from a file URI.", aImage.id());
+            SELOG(trace)("Image #{} data is read from file '{}'.", aImage.id(), uri->string);
             return Image{handy::decodeUrl(aImage.getFilePath(*uri).string()), arte::ImageOrientation::Unchanged};
         }
         default:
@@ -300,9 +315,8 @@ loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
         }
 
         auto bytes = loadBufferData(bufferView);
-        return loadImageFromBytes(std::span<std::byte>{bytes}.subspan(bufferView->byteOffset,
-                                                                      bufferView->byteLength),
-                                  *aImage->mimeType);
+        //return loadImageFromBytes(std::span<std::byte>{bytes}, *aImage->mimeType);
+        return loadImageFromBytes(bytes, *aImage->mimeType);
     }
 }
 

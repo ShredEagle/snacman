@@ -2,6 +2,7 @@
 
 #include "IntrospectProgram.h"
 #include "Semantic.h"
+#include "UniformParameters.h"
 
 #include <math/Box.h>
 
@@ -16,6 +17,12 @@ namespace ad {
 namespace snac {
 
 
+// TODO this approach based on specialized repositories feels cumbersome.
+using TextureRepository = std::map<Semantic, 
+                                   std::variant<std::shared_ptr<graphics::Texture>,
+                                                graphics::Texture *>>;
+
+
 struct Effect
 {
     IntrospectProgram mProgram;
@@ -24,7 +31,8 @@ struct Effect
 
 struct Material
 {
-    std::map<Semantic, const graphics::Texture *> mTextures;
+    TextureRepository mTextures;
+    UniformRepository mUniforms;
     std::shared_ptr<Effect> mEffect;
 };
 
@@ -81,7 +89,11 @@ struct Mesh
 {
     VertexStream mStream;
     std::shared_ptr<Material> mMaterial;
+    std::string mName;
 };
+
+
+std::ostream & operator<<(std::ostream & aOut, const Mesh & aMesh);
 
 
 struct InstanceStream

@@ -129,7 +129,7 @@ inline void Scene::render(Renderer & aRenderer) const
          {BlockSemantic::Viewing, &mCamera.mViewing},
     };
 
-    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gBlue);
+    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
     math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
 
@@ -142,7 +142,7 @@ inline void Scene::render(Renderer & aRenderer) const
     clear();
     aRenderer.render(mMesh,
                      mInstances,
-                     uniforms,
+                     std::move(uniforms),
                      uniformBlocks);
 }
 

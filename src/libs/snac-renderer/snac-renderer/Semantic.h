@@ -14,6 +14,7 @@ enum class Semantic
     Normal,
     Albedo,
     TextureCoords,
+    BaseColorUV,
     // Usually per instance
     LocalToWorld,
     InstancePosition,
@@ -21,6 +22,7 @@ enum class Semantic
     BoundingBox,
     Bearing,
     // Usually uniform
+    BaseColorFactor,
     AmbientColor,
     LightColor,
     LightPosition,
@@ -28,6 +30,8 @@ enum class Semantic
     Projection,
     FramebufferResolution,
     // Usually samplers
+    BaseColorTexture,
+    MetallicRoughnessTexture,
     FontAtlas, // TODO should it just be atlas, used for both sprites and fonts?
     //SpriteAtlas,
 

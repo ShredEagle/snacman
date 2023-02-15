@@ -3,8 +3,12 @@
 #include "Logging.h"
 
 
+#define SELOG(level) SELOG_LG(::ad::snac::gRenderLogger, level)
+
+
 namespace ad {
 namespace snac {
+
 
 namespace {
 
@@ -22,7 +26,7 @@ namespace {
             // Note: this might be too conservative, to be revised when a use case requires it.
             if (aClientAttribute.mDimension[1] != aShaderAttribute.dimension()[1])
             {
-                SELOG_LG(gRenderLogger, critical)(
+                SELOG(critical)(
                     "{}: '{}' program attribute '{}'({}) of dimension {} is to be attached to vertex data of dimension {}. Row counts are not allowed to differ.",
                     __func__,
                     aProgramName,
@@ -35,7 +39,7 @@ namespace {
             }
             else if (aClientAttribute.mDimension[0] != aShaderAttribute.dimension()[0])
             {
-                SELOG_LG(gRenderLogger, warn)(
+                SELOG(warn)(
                     "{}: '{}' program attribute '{}'({}) of dimension {} is to be attached to vertex data of dimension {}.",
                     __func__,
                     aProgramName,
@@ -92,7 +96,7 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
         }
         else
         {
-            SELOG_LG(gRenderLogger, warn)(
+            SELOG(warn)(
                 "{}: Could not find an a vertex array buffer for semantic '{}' in program '{}'.", 
                 __func__,
                 to_string(shaderAttribute.mSemantic),
@@ -100,7 +104,7 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
         }
     }
 
-    SELOG_LG(gRenderLogger, info)("Added a new VAO to the repository.");
+    SELOG(info)("Added a new VAO to the repository.");
 
     return vertexArray;
 }
@@ -124,7 +128,23 @@ VertexArrayRepository::get(const Mesh & aMesh, // Maybe it should just be the Ve
 }
 
 
-void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & aProgram)
+WarningRepository::WarnedUniforms &
+WarningRepository::get(const Mesh & aMesh, const IntrospectProgram & aProgram)
+{
+    Key key = std::make_pair(&aMesh, &static_cast<const graphics::Program &>(aProgram));
+    auto [iterator, didInsert] = mWarnings.try_emplace(key);
+    if (didInsert)
+    {
+        SELOG(debug)("Added a new warning set to the repository, for key ('{}', '{}').",
+                     fmt::streamed(aMesh), aProgram.name());
+    }
+    return iterator->second;
+}
+
+
+void setUniforms(const UniformRepository & aUniforms, 
+                 const IntrospectProgram & aProgram,
+                 WarningRepository::WarnedUniforms & aWarnedUniforms)
 {
     for (const IntrospectProgram::Resource & shaderUniform : aProgram.mUniforms)
     {
@@ -135,7 +155,7 @@ void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & 
             {
                 if (shaderUniform.mArraySize != 1)
                 {
-                    SELOG_LG(gRenderLogger, error)(
+                    SELOG(error)(
                         "{}: '{}' program uniform '{}'({}) is an array of size {}, setting uniform arrays is not supported.",
                         __func__,
                         aProgram.name(),
@@ -153,13 +173,16 @@ void setUniforms(const UniformRepository & aUniforms, const IntrospectProgram & 
             }
             else
             {
-                // TODO since this function is currently called before each draw
-                // this is much to verbose for a warning...
-                SELOG_LG(gRenderLogger, warn)(
-                    "{}: Could not find an a uniform value for semantic '{}' in program '{}'.", 
-                    __func__,
-                    to_string(shaderUniform.mSemantic),
-                    aProgram.name());
+                const std::string uniformString = to_string(shaderUniform.mSemantic);
+                if(auto [iterator, didInsert] = aWarnedUniforms.insert(uniformString);
+                   didInsert)
+                {
+                    SELOG(warn)(
+                        "{}: Could not find an a uniform value for semantic '{}' in program '{}'.", 
+                        __func__,
+                        uniformString,
+                        aProgram.name());
+                }
             }
         }
     }
@@ -178,7 +201,7 @@ void setTextures(const TextureRepository & aTextures, const IntrospectProgram & 
             {
                 if (shaderUniform.mArraySize != 1)
                 {
-                    SELOG_LG(gRenderLogger, error)(
+                    SELOG(error)(
                         "{}: '{}' program uniform '{}'({}) is an array of size {}, setting uniform arrays is not supported.",
                         __func__,
                         aProgram.name(),
@@ -188,10 +211,15 @@ void setTextures(const TextureRepository & aTextures, const IntrospectProgram & 
                     );
                 }
 
-                const graphics::Texture * texture = found->second;
+                const graphics::Texture & texture = std::visit(
+                    [](auto && texture) -> const graphics::Texture &
+                    {
+                        return *texture;
+                    },
+                    found->second);
                 // TODO assertions regarding texture-sampler compatibility
                 auto guardImageUnit = graphics::activateTextureUnitGuard(textureImageUnit);
-                bind(*texture); // should not be unbound when we exit the current scope.
+                bind(texture); // should not be unbound when we exit the current scope.
                 graphics::setUniform(aProgram, shaderUniform.mLocation, textureImageUnit);
                 ++textureImageUnit;
             }
@@ -199,7 +227,7 @@ void setTextures(const TextureRepository & aTextures, const IntrospectProgram & 
             {
                 // TODO since this function is currently called before each draw
                 // this is much to verbose for a warning...
-                SELOG_LG(gRenderLogger, warn)(
+                SELOG(warn)(
                     "{}: Could not find an a texture for semantic '{}' in program '{}'.", 
                     __func__,
                     to_string(shaderUniform.mSemantic),
@@ -226,7 +254,7 @@ void setBlocks(const UniformBlocks & aUniformBlocks, const IntrospectProgram & a
         {
             // TODO since this function is currently called before each draw
             // this is much to verbose for a warning...
-            SELOG_LG(gRenderLogger, warn)(
+            SELOG(warn)(
                 "{}: Could not find an a block uniform for block semantic '{}' in program '{}'.", 
                 __func__,
                 to_string(shaderBlock.mSemantic),

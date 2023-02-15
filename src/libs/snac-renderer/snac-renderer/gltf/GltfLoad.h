@@ -10,7 +10,7 @@ namespace ad {
 namespace snac {
 
 
-VertexStream loadGltf(filesystem::path aModel);
+Mesh loadGltf(filesystem::path aModel);
 
 
 

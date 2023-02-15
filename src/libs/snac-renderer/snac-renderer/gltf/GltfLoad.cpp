@@ -7,7 +7,12 @@
 
 #include <arte/gltf/Gltf.h>
 
+#include <handy/StringUtilities.h>
+
+#include <renderer/MappedGL.h>
+
 #include <map>
+#include <vector>
 
 using namespace ad::arte;
 
@@ -20,7 +25,16 @@ namespace snac {
 
 namespace {
 
-    std::optional<Semantic> translateGltfSemantic(std::string_view aGltfSemantic)
+    struct TextureMapping
+    {
+        Semantic mSemantic;
+        unsigned int mGltfTexCoord;
+    };
+
+    using GltfTextures = std::vector<TextureMapping>;
+
+    std::optional<Semantic> translateGltfSemantic(std::string_view aGltfSemantic,
+                                                  const GltfTextures & aTextureMappings)
     {
         #define MAPPING(gltfstring, semantic) \
             else if(aGltfSemantic == #gltfstring) { return Semantic::semantic; }
@@ -30,9 +44,25 @@ namespace {
         MAPPING(NORMAL, Normal)
         else
         {
+            // Handles the texture coordinate index association to a semantic
+            auto [prefix, index] = lsplit(aGltfSemantic, "_");
+            if(prefix == "TEXCOORD")
+            {
+                for(auto [semantic, texCoordIndex] : aTextureMappings)
+                {
+                    if(texCoordIndex == std::stoul(std::string{index}))
+                    {
+                        SELOG(debug)("Gltf semantic \"{}\" is mapping to {}.",
+                                     aGltfSemantic, to_string(semantic));
+                        return semantic;
+                    }
+                }
+            }
             SELOG(debug)("Gltf semantic \"{}\" is not handled.", aGltfSemantic);
             return std::nullopt;
         }
+
+        #undef MAPPING
     }
 
 
@@ -46,7 +76,7 @@ namespace {
             {
                 const GLenum infered = T_buffer::GLTarget_v;
                 SELOG(trace)("Buffer view #{} does not have target defined. Infering {}.",
-                             aBufferView.id(), infered);
+                             aBufferView.id(), graphics::to_string(infered));
                 return infered;
             }
             else
@@ -68,7 +98,7 @@ namespace {
         SELOG(debug)
             ("Loaded {} bytes in target {}, offset in source buffer is {} bytes.",
             aBufferView->byteLength,
-            target,
+            graphics::to_string(target),
             aBufferView->byteOffset);
 
         return buffer;
@@ -117,8 +147,39 @@ namespace {
         };
     }
 
+    std::shared_ptr<graphics::Texture>
+    prepareTexture(arte::Const_Owned<gltf::Texture> aTexture)
+    {
+        auto result = std::make_shared<graphics::Texture>(GL_TEXTURE_2D);
+        graphics::loadImageCompleteMipmaps(
+            *result, 
+            loadImageData(checkImage(aTexture)));
 
-    VertexStream makeFromPrimitive(Const_Owned<gltf::Primitive> aPrimitive)
+        // Sampling parameters
+        {
+            graphics::ScopedBind boundTexture{*result};
+            const gltf::texture::Sampler & sampler = aTexture->sampler ? 
+                aTexture.get(&gltf::Texture::sampler)
+                : gltf::texture::gDefaultSampler;
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrapS);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrapT);
+            if (sampler.magFilter)
+            {
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, *sampler.magFilter);
+            }
+            if (sampler.minFilter)
+            {
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, *sampler.minFilter);
+            }
+        }
+
+        return result;
+    }
+
+
+    VertexStream prepareAttributes(Const_Owned<gltf::Primitive> aPrimitive,
+                                   GltfTextures & aTextureMappings)
     {
         VertexStream stream;
 
@@ -168,7 +229,7 @@ namespace {
                 bufferViewMap.emplace(gltfBufferViewId, bufferViewId);
             }
 
-            if (auto semantic = translateGltfSemantic(gltfSemantic))
+            if (auto semantic = translateGltfSemantic(gltfSemantic, aTextureMappings))
             {
                 stream.mAttributes.emplace(
                     *semantic,
@@ -219,10 +280,51 @@ namespace {
         stream.mVertexCount = vertexCount;
         return stream;
     }
+
+
+    std::pair<std::shared_ptr<Material>,  GltfTextures>
+    prepareMaterial(Const_Owned<gltf::Primitive> aPrimitive)
+    {
+        auto material = std::make_shared<Material>();
+        std::vector<TextureMapping> mappings;
+
+        if(aPrimitive->material)
+        {
+            auto gltfMaterial = aPrimitive.get(&gltf::Primitive::material);
+            auto pbrMetallicRoughness =
+                gltfMaterial->pbrMetallicRoughness.value_or(gltf::material::gDefaultPbr);
+            
+            material->mUniforms.emplace(Semantic::BaseColorFactor,
+                                        UniformParameter{pbrMetallicRoughness.baseColorFactor});
+            if(auto baseColorTexture = pbrMetallicRoughness.baseColorTexture)
+            {
+                material->mTextures.emplace(
+                    Semantic::BaseColorTexture,
+                    prepareTexture(gltfMaterial.get<gltf::Texture>(baseColorTexture->index)));            
+                mappings.push_back({
+                    .mSemantic = Semantic::BaseColorUV, 
+                    .mGltfTexCoord = baseColorTexture->texCoord,
+                });
+            }
+        }
+
+        return {material, mappings};
+    }
+
+
+    Mesh makeFromPrimitive(Const_Owned<gltf::Primitive> aPrimitive)
+    {
+        auto [material, textureMappings] = prepareMaterial(aPrimitive);
+        return Mesh{
+            .mStream = prepareAttributes(aPrimitive, textureMappings),
+            .mMaterial = std::move(material),
+        };
+    }
+
 } // unnamed namespace
 
 
-VertexStream loadGltf(filesystem::path aModel)
+Mesh loadGltf(filesystem::path aModel)
 {
     arte::Gltf gltf{aModel};
 
@@ -240,7 +342,10 @@ VertexStream loadGltf(filesystem::path aModel)
         throw std::runtime_error{"Gltf file without a single primitive on the first mesh."};
     }
 
-    return makeFromPrimitive({gltf, gltfMesh->primitives.at(0), 0});
+    Mesh result = makeFromPrimitive({gltf, gltfMesh->primitives.at(0), 0});
+    result.mName = (gltfMesh->name.empty() ?  aModel.filename().string() : gltfMesh->name)
+        + "_Prim#0";
+    return result;
 }
 
 

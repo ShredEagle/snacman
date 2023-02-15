@@ -19,6 +19,9 @@ namespace snac {
 arte::Const_Owned<arte::gltf::BufferView>
 checkedBufferView(arte::Const_Owned<arte::gltf::Accessor> aAccessor);
 
+arte::Const_Owned<arte::gltf::Image>
+checkImage(arte::Const_Owned<arte::gltf::Texture> aTexture);
+
 graphics::AttributeDimension getAccessorDimension(arte::gltf::Accessor::ElementType aElementType);
 
 //

@@ -66,7 +66,8 @@ Mesh loadCube(std::shared_ptr<Effect> aEffect)
         .mStream = makeCube(),
         .mMaterial = std::make_shared<snac::Material>(snac::Material{
             .mEffect = std::move(aEffect)
-        })
+        }),
+        .mName = "procedural_cube",
     }; 
 
     return mesh;
@@ -75,13 +76,8 @@ Mesh loadCube(std::shared_ptr<Effect> aEffect)
 
 Mesh loadModel(filesystem::path aGltf, std::shared_ptr<Effect> aEffect)
 {
-    snac::Mesh mesh{
-        .mStream = loadGltf(aGltf),
-        .mMaterial = std::make_shared<snac::Material>(snac::Material{
-            .mEffect = std::move(aEffect)
-        })
-    }; 
-
+    snac::Mesh mesh{loadGltf(aGltf)};
+    mesh.mMaterial->mEffect = std::move(aEffect);
     return mesh;
 }
 

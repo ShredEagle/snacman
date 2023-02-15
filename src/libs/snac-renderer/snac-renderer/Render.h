@@ -8,7 +8,6 @@
 #include <renderer/GL_Loader.h>
 
 
-
 namespace ad {
 namespace snac {
 
@@ -24,11 +23,12 @@ class Renderer
 public:
     void render(const Mesh & aMesh,
                 const InstanceStream & aInstances,
-                const UniformRepository & aUniforms,
+                UniformRepository aUniforms,
                 const UniformBlocks & aUniformBlocks);
 
 private:
     VertexArrayRepository mVertexArrayRepo;
+    WarningRepository mWarningRepo;
 };
 
 

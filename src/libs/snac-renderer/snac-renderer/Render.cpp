@@ -10,13 +10,16 @@ namespace snac {
 
 void Renderer::render(const Mesh & aMesh,
                       const InstanceStream & aInstances,
-                      const UniformRepository & aUniforms,
+                      UniformRepository aUniforms,
                       const UniformBlocks & aUniformBlocks)
 {
     auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
     const IntrospectProgram & program = aMesh.mMaterial->mEffect->mProgram;
-    setUniforms(aUniforms, program);
+
+    // TODO Is there a better way to handle several source for uniform values
+    aUniforms.merge(UniformRepository{aMesh.mMaterial->mUniforms});
+    setUniforms(aUniforms, program, mWarningRepo.get(aMesh, program));
     setTextures(aMesh.mMaterial->mTextures, program);
     setBlocks(aUniformBlocks, program);
 
