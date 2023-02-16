@@ -12,6 +12,11 @@
 
 #include <platform/Filesystem.h>
 
+// TODO #generic-render remove once all geometry and shader programs are created outside.
+#include <snac-renderer/Cube.h>
+#include <snac-renderer/gltf/GltfLoad.h>
+#include <renderer/ShaderSource.h>
+
 
 namespace ad {
 namespace snacgame {
@@ -69,7 +74,9 @@ void TextRenderer::render(Renderer & aRenderer,
 
         // TODO should be consolidated, a single call for all string of the same font.
         mGlyphInstances.respecifyData(std::span{textBufferData});
+        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Draw string");
         aRenderer.mRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances, aUniforms, aUniformBlocks);
+        glPopDebugGroup();
     }
 
 }
@@ -178,11 +185,13 @@ void Renderer::render(const visu::GraphicState & aState)
     };
 
     BEGIN_RECURRING(Render, "Draw_meshes", drawMeshProfile);
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Draw meshes");
     for (const auto & [mesh, instances] : sortedMeshes)
     {
         mMeshInstances.respecifyData(std::span{instances});
         mRenderer.render(*mesh, mMeshInstances, uniforms, uniformBlocks);
     }
+    glPopDebugGroup();
     END_RECURRING(drawMeshProfile);
 
     //

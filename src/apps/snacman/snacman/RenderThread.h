@@ -358,6 +358,8 @@ private:
             // Render
             //
             mApplication.getAppInterface()->clear();
+            glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Frame");
+            BEGIN_RECURRING(Render, "Frame", frameProfilerScope);
             // renderer.render(*entries.current().state);
             renderer.render(state);
             SELOG(trace)("Render thread: Frame sent to GPU.");
@@ -366,6 +368,8 @@ private:
                 TIME_RECURRING(Render, "ImGui::renderBackend");
                 mImguiUi.renderBackend();
             }
+            END_RECURRING(frameProfilerScope);
+            glPopDebugGroup();
 
             {
                 TIME_RECURRING(Render, "Swap buffers");

@@ -8,10 +8,6 @@
 
 #include <graphics/AppInterface.h>
 
-// TODO #generic-render remove once all geometry and shader programs are created outside.
-#include <snac-renderer/Cube.h>
-#include <renderer/ShaderSource.h>
-
 
 namespace ad {
 
