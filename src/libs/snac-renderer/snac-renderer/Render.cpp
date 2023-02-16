@@ -28,6 +28,8 @@ void Renderer::render(const Mesh & aMesh,
     graphics::use(program);
     if(aMesh.mStream.mIndices)
     {
+        // Note: Range commands (providing a range of possible index values) are no longer usefull
+        // see: https://computergraphics.stackexchange.com/a/6199/11110
         glDrawElementsInstanced(aMesh.mStream.mPrimitive,
                                 aMesh.mStream.mIndices->mIndexCount,
                                 aMesh.mStream.mIndices->mAttribute.mComponentType,
