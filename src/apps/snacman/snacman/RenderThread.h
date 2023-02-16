@@ -296,7 +296,10 @@ private:
             Guard frameProfiling = profileFrame(snac::Profiler::Render);
 
             // Service all queued operations first.
-            serviceOperations(aRenderer);
+            {
+                TIME_RECURRING(Render, "Service_operations");
+                serviceOperations(aRenderer);
+            }
 
             // TODO simulate delay in the render thread:
             // * Thread iteration time (simulate what CPU compuations run on the
@@ -306,7 +309,10 @@ private:
             // std::this_thread::sleep_for(ms{8});
 
             // Get new latest state, if any
-            entries.consume(aStates);
+            {
+                TIME_RECURRING(Render, "Consume_available_states");
+                entries.consume(aStates);
+            }
 
             //
             // Interpolate (or pick the current state if interpolation is
@@ -357,10 +363,11 @@ private:
             //
             // Render
             //
-            mApplication.getAppInterface()->clear();
             glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Frame");
             BEGIN_RECURRING(Render, "Frame", frameProfilerScope);
-            // renderer.render(*entries.current().state);
+                
+            mApplication.getAppInterface()->clear();
+
             renderer.render(state);
             SELOG(trace)("Render thread: Frame sent to GPU.");
 
@@ -368,6 +375,7 @@ private:
                 TIME_RECURRING(Render, "ImGui::renderBackend");
                 mImguiUi.renderBackend();
             }
+
             END_RECURRING(frameProfilerScope);
             glPopDebugGroup();
 
@@ -375,7 +383,11 @@ private:
                 TIME_RECURRING(Render, "Swap buffers");
                 mApplication.swapBuffers();
             }
-            getRenderProfilerPrint().print();
+
+            {
+                TIME_RECURRING(Render, "RenderThread_Profiler_dump");
+                getRenderProfilerPrint().print();
+            }
         }
 
         SELOG(info)("Render thread stopping.");
