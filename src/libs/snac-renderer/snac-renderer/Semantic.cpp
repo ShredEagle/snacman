@@ -19,15 +19,18 @@ std::string to_string(Semantic aSemantic)
     {
         MAPPING(Position)
         MAPPING(Normal)
+        MAPPING(Tangent)
         MAPPING(Albedo)
-        MAPPING(TextureCoords)
-        MAPPING(BaseColorUV)
+        MAPPING(TextureCoords0)
+        MAPPING(TextureCoords1)
         MAPPING(LocalToWorld)
         MAPPING(InstancePosition)
         MAPPING(TextureOffset)
         MAPPING(BoundingBox)
         MAPPING(Bearing)
         MAPPING(BaseColorFactor) 
+        MAPPING(BaseColorUVIndex) 
+        MAPPING(NormalUVIndex) 
         MAPPING(AmbientColor) 
         MAPPING(LightColor)
         MAPPING(LightPosition)
@@ -35,6 +38,7 @@ std::string to_string(Semantic aSemantic)
         MAPPING(Projection)
         MAPPING(FramebufferResolution)
         MAPPING(BaseColorTexture)
+        MAPPING(NormalTexture)
         MAPPING(MetallicRoughnessTexture)
         MAPPING(FontAtlas)
         default:
@@ -66,15 +70,18 @@ Semantic to_semantic(std::string_view aResourceName)
     if(false){}
     MAPPING(Position)
     MAPPING(Normal)
+    MAPPING(Tangent)
     MAPPING(Albedo)
-    MAPPING(TextureCoords)
-    MAPPING(BaseColorUV)
+    MAPPING(TextureCoords0)
+    MAPPING(TextureCoords1)
     MAPPING(LocalToWorld)
     MAPPING(InstancePosition)
     MAPPING(TextureOffset)
     MAPPING(BoundingBox)
     MAPPING(Bearing)
     MAPPING(BaseColorFactor) 
+    MAPPING(BaseColorUVIndex) 
+    MAPPING(NormalUVIndex) 
     MAPPING(AmbientColor) 
     MAPPING(LightColor)
     MAPPING(LightPosition)
@@ -82,6 +89,7 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(Projection)
     MAPPING(FramebufferResolution)
     MAPPING(BaseColorTexture)
+    MAPPING(NormalTexture)
     MAPPING(MetallicRoughnessTexture)
     MAPPING(FontAtlas)
     else
@@ -103,8 +111,9 @@ bool isNormalized(Semantic aSemantic)
         }
         case Semantic::Position:
         case Semantic::Normal:
-        case Semantic::TextureCoords:
-        case Semantic::BaseColorUV:
+        case Semantic::Tangent:
+        case Semantic::TextureCoords0:
+        case Semantic::TextureCoords1:
         case Semantic::LocalToWorld:
         case Semantic::InstancePosition:
         case Semantic::TextureOffset:
@@ -114,6 +123,8 @@ bool isNormalized(Semantic aSemantic)
             return false;
         }
         case Semantic::BaseColorFactor:
+        case Semantic::BaseColorUVIndex:
+        case Semantic::NormalUVIndex:
         case Semantic::AmbientColor:
         case Semantic::LightColor:
         case Semantic::LightPosition:
@@ -121,6 +132,7 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::Projection:
         case Semantic::FramebufferResolution:
         case Semantic::BaseColorTexture:
+        case Semantic::NormalTexture:
         case Semantic::MetallicRoughnessTexture:
         case Semantic::FontAtlas:
         {

@@ -2,7 +2,7 @@
 
 in vec3 ex_Position_v;
 in vec3 ex_Normal_v;
-in vec2 ex_BaseColorUV;
+in vec2[2] ex_TextureCoords;
 in vec4 ex_ColorFactor;
 
 uniform sampler2D u_BaseColorTexture;
@@ -10,6 +10,7 @@ uniform sampler2D u_BaseColorTexture;
 uniform vec3 u_LightPosition_v;
 uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8);
 uniform vec3 u_AmbientColor = vec3(0.2, 0.0, 0.2);
+uniform uint u_BaseColorUVIndex;
 
 out vec4 out_Color;
 
@@ -23,7 +24,9 @@ void main(void)
     
     float specularExponent = 32;
 
-    vec4 color = ex_ColorFactor * texture(u_BaseColorTexture, ex_BaseColorUV);
+    vec4 color = 
+        ex_ColorFactor 
+        * texture(u_BaseColorTexture, ex_TextureCoords[u_BaseColorUVIndex]);
 
     vec3 diffuse = 
         color.xyz * (u_AmbientColor + u_LightColor * max(0.f, dot(normal, light)));

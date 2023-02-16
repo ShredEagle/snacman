@@ -2,7 +2,8 @@
 
 layout(location=0) in vec3 ve_Position_l;
 layout(location=1) in vec3 ve_Normal_l;
-layout(location=2) in vec2 ve_BaseColorUV_t;
+layout(location=2) in vec2 ve_TextureCoords0;
+layout(location=3) in vec2 ve_TextureCoords1;
 // Not enabled for for the moment (could be taken from COLOR_0 I suppose)
 // because we need a default value of [1, 1, 1, 1]
 // Could be addressed via: https://www.khronos.org/opengl/wiki/Vertex_Specification#Non-array_attribute_values
@@ -22,7 +23,7 @@ uniform vec4 u_BaseColorFactor;
 
 out vec3 ex_Position_v;
 out vec3 ex_Normal_v;
-out vec2 ex_BaseColorUV;
+out vec2[2] ex_TextureCoords;
 out vec4 ex_ColorFactor;
 
 void main(void)
@@ -35,5 +36,5 @@ void main(void)
     ex_Normal_v = mat3(localToCamera) * ve_Normal_l;
 
     ex_ColorFactor  = u_BaseColorFactor /* TODO multiply by vertex color, when enabled */;
-    ex_BaseColorUV  = ve_BaseColorUV_t;
+    ex_TextureCoords = vec2[](ve_TextureCoords0, ve_TextureCoords1);
 }

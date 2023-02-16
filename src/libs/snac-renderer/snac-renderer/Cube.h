@@ -244,7 +244,7 @@ inline VertexStream makeRectangle(math::Rectangle<GLfloat> aRectangle)
             .mOffset = offsetof(PositionUV, uv),
             .mComponentType = GL_FLOAT
         };
-        geometry.mAttributes.emplace(Semantic::TextureCoords, AttributeAccessor{index, uv});
+        geometry.mAttributes.emplace(Semantic::TextureCoords0, AttributeAccessor{index, uv});
     }
 
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());

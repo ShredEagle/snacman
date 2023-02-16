@@ -25,16 +25,7 @@ namespace snac {
 
 namespace {
 
-    struct TextureMapping
-    {
-        Semantic mSemantic;
-        unsigned int mGltfTexCoord;
-    };
-
-    using GltfTextures = std::vector<TextureMapping>;
-
-    std::optional<Semantic> translateGltfSemantic(std::string_view aGltfSemantic,
-                                                  const GltfTextures & aTextureMappings)
+    std::optional<Semantic> translateGltfSemantic(std::string_view aGltfSemantic)
     {
         #define MAPPING(gltfstring, semantic) \
             else if(aGltfSemantic == #gltfstring) { return Semantic::semantic; }
@@ -42,22 +33,11 @@ namespace {
         if(false){}
         MAPPING(POSITION, Position)
         MAPPING(NORMAL, Normal)
+        MAPPING(TANGENT, Tangent)
+        MAPPING(TEXCOORD_0, TextureCoords0)
+        MAPPING(TEXCOORD_1, TextureCoords1)
         else
         {
-            // Handles the texture coordinate index association to a semantic
-            auto [prefix, index] = lsplit(aGltfSemantic, "_");
-            if(prefix == "TEXCOORD")
-            {
-                for(auto [semantic, texCoordIndex] : aTextureMappings)
-                {
-                    if(texCoordIndex == std::stoul(std::string{index}))
-                    {
-                        SELOG(debug)("Gltf semantic \"{}\" is mapping to {}.",
-                                     aGltfSemantic, to_string(semantic));
-                        return semantic;
-                    }
-                }
-            }
             SELOG(debug)("Gltf semantic \"{}\" is not handled.", aGltfSemantic);
             return std::nullopt;
         }
@@ -190,8 +170,7 @@ namespace {
     }
 
 
-    VertexStream prepareAttributes(Const_Owned<gltf::Primitive> aPrimitive,
-                                   GltfTextures & aTextureMappings)
+    VertexStream prepareAttributes(Const_Owned<gltf::Primitive> aPrimitive)
     {
         VertexStream stream;
 
@@ -241,7 +220,7 @@ namespace {
                 bufferViewMap.emplace(gltfBufferViewId, bufferViewId);
             }
 
-            if (auto semantic = translateGltfSemantic(gltfSemantic, aTextureMappings))
+            if (auto semantic = translateGltfSemantic(gltfSemantic))
             {
                 stream.mAttributes.emplace(
                     *semantic,
@@ -294,11 +273,9 @@ namespace {
     }
 
 
-    std::pair<std::shared_ptr<Material>,  GltfTextures>
-    prepareMaterial(Const_Owned<gltf::Primitive> aPrimitive)
+    std::shared_ptr<Material> prepareMaterial(Const_Owned<gltf::Primitive> aPrimitive)
     {
         auto material = std::make_shared<Material>();
-        std::vector<TextureMapping> mappings;
 
         if(aPrimitive->material)
         {
@@ -313,24 +290,21 @@ namespace {
                 material->mTextures.emplace(
                     Semantic::BaseColorTexture,
                     prepareTexture(gltfMaterial.get<gltf::Texture>(baseColorTexture->index),
-                                   ColorSpace::sRGB));            
-                mappings.push_back({
-                    .mSemantic = Semantic::BaseColorUV, 
-                    .mGltfTexCoord = baseColorTexture->texCoord,
-                });
+                                   ColorSpace::sRGB));
+                material->mUniforms.emplace(Semantic::BaseColorUVIndex,
+                                            baseColorTexture->texCoord);
             }
         }
 
-        return {material, mappings};
+        return material;
     }
 
 
     Mesh makeFromPrimitive(Const_Owned<gltf::Primitive> aPrimitive)
     {
-        auto [material, textureMappings] = prepareMaterial(aPrimitive);
         return Mesh{
-            .mStream = prepareAttributes(aPrimitive, textureMappings),
-            .mMaterial = std::move(material),
+            .mStream = prepareAttributes(aPrimitive),
+            .mMaterial = prepareMaterial(aPrimitive),
         };
     }
 
