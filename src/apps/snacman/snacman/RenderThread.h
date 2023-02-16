@@ -127,6 +127,18 @@ public:
             }};
     }
 
+    // The destructor is stopping the thread, otherwise if an exception occurs
+    // in the main thread, and stack unwinding destroys the render thread,
+    // terminate would be called (thus missing the top-level catch in main)
+    ~RenderThread()
+    {
+        if(mThread.joinable())
+        {
+            SELOG(warn)("Destructor stopping render thread which was not finalized.");
+            stop();
+        }
+    }
+
     /// \brief Stop the thread and rethrow if it actually threw.
     ///
     /// A destructor should never throw, so we cannot implement this behaviour
@@ -162,7 +174,14 @@ public:
         push([promise = std::move(promise), &aResources]
              (T_renderer & aRenderer) 
              {
-                promise->set_value(aRenderer.LoadShape(aResources));
+                try
+                {
+                    promise->set_value(aRenderer.LoadShape(aResources));
+                }
+                catch(...)
+                {
+                    promise->set_exception(std::current_exception());
+                }
              });
         return future;
     }
@@ -179,7 +198,14 @@ public:
         push([promise = std::move(promise), font = std::move(aFont), aPixelHeight, &aResources]
              (T_renderer & aRenderer) mutable
              {
-                promise->set_value(aRenderer.loadFont(font, aPixelHeight, aResources));
+                try
+                {
+                    promise->set_value(aRenderer.loadFont(font, aPixelHeight, aResources));
+                }
+                catch(...)
+                {
+                    promise->set_exception(std::current_exception());
+                }
              });
         return future;
     }
@@ -213,6 +239,20 @@ private:
         }
         catch (...)
         {
+            try
+            {
+                std::rethrow_exception(std::current_exception());
+            }
+            catch(const std::exception & e)
+            {
+                SELOG(error)
+                    ("Render thread main loop stopping due to uncaught exception:\n{}",
+                    e.what());
+            }
+            catch(...)
+            {
+                SELOG(critical)("Render thread main loop stopping due to non-exception.");
+            }
             mThreadException = std::current_exception();
             mThrew = true;
         }
@@ -278,18 +318,22 @@ private:
 
         // If the client is waiting on a future from this thread 
         // before producing the two first states, we must service to avoid a deadlock.
-        while(aStates.size() < EntryBuffer<T_renderer>::BufferDepth)
+        std::optional<EntryBuffer<T_renderer>> entries;
+        while(!entries && !mStop)
         {
             // Note: this is busy looping at the moment.
             // This should only be for a brief period at the beginning.
             serviceOperations(aRenderer);
-        }
 
-        // Initialize the buffer with the required number of entries (2 for
-        // double buffering) This is blocking call, done last to offer more
-        // opportunities for the entries to already be in the queue
-        EntryBuffer<T_renderer> entries{aStates};
-        SELOG(info)("Render thread initialized states buffer.");
+            if(aStates.size() >= EntryBuffer<T_renderer>::BufferDepth)
+            {
+                // Initialize the buffer with the required number of entries (2 for
+                // double buffering) This is blocking call, done last to offer more
+                // opportunities for the entries to already be in the queue
+                entries = EntryBuffer<T_renderer>{aStates};
+                SELOG(info)("Render thread initialized states buffer.");
+            }
+        }
 
         while (!mStop)
         {
@@ -311,7 +355,7 @@ private:
             // Get new latest state, if any
             {
                 TIME_RECURRING(Render, "Consume_available_states");
-                entries.consume(aStates);
+                entries->consume(aStates);
             }
 
             //
@@ -323,8 +367,8 @@ private:
             {
                 TIME_RECURRING(Render, "Interpolation");
 
-                const auto & previous = entries.previous();
-                const auto & latest = entries.current();
+                const auto & previous = entries->previous();
+                const auto & latest = entries->current();
 
                 // TODO Is it better to use difference in push times, or the
                 // fixed simulation delta as denominator? Note: using the
@@ -346,7 +390,7 @@ private:
             }
             else
             {
-                const auto & latest = entries.current();
+                const auto & latest = entries->current();
                 if (latest.pushTime != renderedPushTime)
                 {
                     state = *latest.state;
