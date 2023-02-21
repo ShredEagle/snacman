@@ -167,6 +167,11 @@ public:
 
     std::future<std::shared_ptr<snac::Mesh>> loadShape(Resources & aResources)
     {
+        // Almost certainly a programming error:
+        // There is a risk the calling code will block on the future completion
+        // If the render thread is blocking, the completion will never occur.
+        assert(std::this_thread::get_id() != mThread.get_id());
+
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
         auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Mesh>>>();
@@ -191,6 +196,8 @@ public:
         unsigned int aPixelHeight,
         Resources & aResources)
     {
+        assert(std::this_thread::get_id() != mThread.get_id());
+
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
         auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Font>>>();
@@ -215,6 +222,8 @@ public:
 
     void checkRethrow()
     {
+        assert(std::this_thread::get_id() != mThread.get_id());
+
         if (mThrew)
         {
             std::rethrow_exception(mThreadException);
