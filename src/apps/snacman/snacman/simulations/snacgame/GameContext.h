@@ -16,7 +16,7 @@ namespace snacgame {
 struct GameContext
 {
     snac::Resources mResources; // contains Freetype, which must outlive the entity manager
-    ent::EntityManager & mWorld;
+    ent::EntityManager mWorld;
     snac::RenderThread<Renderer> & mRenderThread;
 };
 

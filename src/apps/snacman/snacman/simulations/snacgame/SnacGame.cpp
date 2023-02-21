@@ -48,24 +48,23 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mAppInterface{&aAppInterface},
     mGameContext{
         .mResources = snac::Resources{std::move(aResourceFinder), aRenderThread},
-        .mWorld = mWorld,
         .mRenderThread = aRenderThread,
     },
-    mMappingContext{mWorld, mGameContext.mResources},
-    mStateMachine{mWorld, mWorld, gAssetRoot / "scenes/scene_description.json",
+    mMappingContext{mGameContext.mWorld, mGameContext.mResources},
+    mStateMachine{mGameContext.mWorld, mGameContext.mWorld, gAssetRoot / "scenes/scene_description.json",
                   mMappingContext},
-    mSystemOrbitalCamera{mWorld, mWorld},
-    mQueryRenderable{mWorld, mWorld},
-    mQueryText{mWorld, mWorld},
+    mSystemOrbitalCamera{mGameContext.mWorld, mGameContext.mWorld},
+    mQueryRenderable{mGameContext.mWorld, mGameContext.mWorld},
+    mQueryText{mGameContext.mWorld, mGameContext.mWorld},
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
 
     // Creating the slot entity those will be used a player entities
-    mWorld.addEntity().get(init)->add(component::PlayerSlot{0, false});
-    mWorld.addEntity().get(init)->add(component::PlayerSlot{1, false});
-    mWorld.addEntity().get(init)->add(component::PlayerSlot{2, false});
-    mWorld.addEntity().get(init)->add(component::PlayerSlot{3, false});
+    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{0, false});
+    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{1, false});
+    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{2, false});
+    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{3, false});
 
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(mGameContext, scene::Transition{}, aInput);
