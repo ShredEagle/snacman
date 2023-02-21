@@ -38,8 +38,8 @@ std::vector<std::byte>
 loadBufferData(arte::Const_Owned<arte::gltf::Accessor> aAccessor,
                arte::Const_Owned<arte::gltf::BufferView> aBufferView);
 
-arte::Image<math::sdr::Rgba>
-loadImageData(arte::Const_Owned<arte::gltf::Image> aImage);
+template <class T_pixel>
+arte::Image<T_pixel> loadImageData(arte::Const_Owned<arte::gltf::Image> aImage);
 
 // TODO Ad 2022/03/15 Implement a way to only load exactly the bytes of an accessor
 // This could notably allow optimization when a contiguous accessor is used as-is.

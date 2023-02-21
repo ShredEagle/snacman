@@ -255,10 +255,11 @@ const std::map<arte::gltf::Image::MimeType, arte::ImageFormat> gMimeToFormat {
 
 
 
-arte::Image<math::sdr::Rgba>
+template <class T_pixel>
+arte::Image<T_pixel>
 loadImageFromBytes(std::span<std::byte> aBytes, arte::gltf::Image::MimeType aMime)
 {
-    using Image = arte::Image<math::sdr::Rgba>;
+    using Image = arte::Image<T_pixel>;
 
     // TODO Ad 2022/03/23: Replace deprecated istrstream with a proposed alternative
     // see: https://en.cppreference.com/w/cpp/io/istrstream
@@ -270,10 +271,10 @@ loadImageFromBytes(std::span<std::byte> aBytes, arte::gltf::Image::MimeType aMim
 }
 
 
-arte::Image<math::sdr::Rgba>
-loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
+template <class T_pixel>
+arte::Image<T_pixel> loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
 {
-    using Image = arte::Image<math::sdr::Rgba>;
+    using Image = arte::Image<T_pixel>;
 
     if(const arte::gltf::Uri * uri = std::get_if<arte::gltf::Uri>(&aImage->dataSource))
     {
@@ -290,7 +291,7 @@ loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
                 throw std::logic_error{"Image with data URI but no mime type."};
             }
             auto bytes = loadDataUri(*uri);
-            return loadImageFromBytes(bytes, *aImage->mimeType);
+            return loadImageFromBytes<T_pixel>(bytes, *aImage->mimeType);
         }
         case arte::gltf::Uri::Type::File:
         {
@@ -316,9 +317,18 @@ loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
 
         auto bytes = loadBufferData(bufferView);
         //return loadImageFromBytes(std::span<std::byte>{bytes}, *aImage->mimeType);
-        return loadImageFromBytes(bytes, *aImage->mimeType);
+        return loadImageFromBytes<T_pixel>(bytes, *aImage->mimeType);
     }
 }
+
+
+
+//
+// Explicit template instanciations
+//
+
+template arte::Image<math::sdr::Rgba> loadImageData(arte::Const_Owned<arte::gltf::Image> aImage);
+template arte::Image<math::sdr::Rgb>  loadImageData(arte::Const_Owned<arte::gltf::Image> aImage);
 
 
 } // namespace snac

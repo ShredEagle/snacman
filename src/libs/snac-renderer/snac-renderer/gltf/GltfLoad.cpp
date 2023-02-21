@@ -133,11 +133,12 @@ namespace {
         sRGB,
     };
 
+    template <class T_pixel>
     std::shared_ptr<graphics::Texture>
     prepareTexture(arte::Const_Owned<gltf::Texture> aTexture, ColorSpace aSourceColorSpace)
     {
         auto result = std::make_shared<graphics::Texture>(GL_TEXTURE_2D);
-        arte::Image<math::sdr::Rgba> image = loadImageData(checkImage(aTexture));
+        arte::Image<T_pixel> image = loadImageData<T_pixel>(checkImage(aTexture));
         // Note: Alternatively to decoding the image to linear space on the CPU,
         // we might allocate texture storage with internal format GL_SRGB8_ALPHA8.
         // Yet "[OpenGL] implementations are allowed to perform this conversion after filtering,
@@ -280,19 +281,37 @@ namespace {
         if(aPrimitive->material)
         {
             auto gltfMaterial = aPrimitive.get(&gltf::Primitive::material);
+
+            //
+            // PBR Metallic Roughness
+            //
             auto pbrMetallicRoughness =
                 gltfMaterial->pbrMetallicRoughness.value_or(gltf::material::gDefaultPbr);
-            
             material->mUniforms.emplace(Semantic::BaseColorFactor,
                                         UniformParameter{pbrMetallicRoughness.baseColorFactor});
             if(auto baseColorTexture = pbrMetallicRoughness.baseColorTexture)
             {
                 material->mTextures.emplace(
                     Semantic::BaseColorTexture,
-                    prepareTexture(gltfMaterial.get<gltf::Texture>(baseColorTexture->index),
-                                   ColorSpace::sRGB));
+                    prepareTexture<math::sdr::Rgba>(
+                        gltfMaterial.get<gltf::Texture>(baseColorTexture->index),
+                        ColorSpace::sRGB));
                 material->mUniforms.emplace(Semantic::BaseColorUVIndex,
                                             baseColorTexture->texCoord);
+            }
+
+            //
+            // Normal texture
+            //
+            if(auto normalTexture = gltfMaterial->normalTexture)
+            {
+                material->mTextures.emplace(
+                    Semantic::NormalTexture,
+                    prepareTexture<math::sdr::Rgb>(
+                        gltfMaterial.get<gltf::Texture>(normalTexture->index),
+                        ColorSpace::Linear));
+                material->mUniforms.emplace(Semantic::NormalUVIndex,
+                                            normalTexture->texCoord);
             }
         }
 
