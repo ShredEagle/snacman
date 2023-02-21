@@ -25,7 +25,8 @@ enum class Semantic
     // Usually uniform
     BaseColorFactor,
     BaseColorUVIndex,
-    NormalUVIndex,
+    NormalUVIndex, // Index of the normal texture coordinates in the array of UV coordinates
+    NormalMapScale,
     AmbientColor,
     LightColor,
     LightPosition,

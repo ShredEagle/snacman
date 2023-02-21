@@ -312,6 +312,8 @@ namespace {
                         ColorSpace::Linear));
                 material->mUniforms.emplace(Semantic::NormalUVIndex,
                                             normalTexture->texCoord);
+                material->mUniforms.emplace(Semantic::NormalMapScale,
+                                            normalTexture->scale);
             }
         }
 

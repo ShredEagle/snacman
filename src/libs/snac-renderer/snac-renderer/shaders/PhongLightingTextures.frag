@@ -14,6 +14,7 @@ uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8);
 uniform vec3 u_AmbientColor = vec3(0.2, 0.0, 0.2);
 uniform uint u_BaseColorUVIndex;
 uniform uint u_NormalUVIndex;
+uniform float u_NormalMapScale;
 
 out vec4 out_Color;
 
@@ -34,9 +35,10 @@ void main(void)
     // Compute the fragment normal
     //
     // The normal in tangent space
-    vec3 normal_tbn =
+    vec3 normal_tbn = normalize(
         // Mapping from [0.0, 1.0] to [-1.0, 1.0]
-        texture(u_NormalTexture, ex_TextureCoords[0]).xyz * 2.0 - vec3(1.0);
+        (texture(u_NormalTexture, ex_TextureCoords[0]).xyz * 2.0 - vec3(1.0))
+        * vec3(u_NormalMapScale, u_NormalMapScale, 1.0));
 
     // MikkT see: http://www.mikktspace.com/
     // Yet, if the tangent and normal were not normalized (as seems to be proposed in mikkt)

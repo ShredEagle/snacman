@@ -36,6 +36,8 @@ void main(void)
     gl_Position = u_Projection * position_c;
     ex_Position_c = vec3(position_c);
     ex_Normal_c = mat3(localToCamera) * ve_Normal_l;
+    // Tangents are transformed by the normal localToCamera matrix (unlike normals)
+    // see: https://www.pbr-book.org/3ed-2018/Geometry_and_Transformations/Applying_Transformations
     ex_Tangent_c = vec4(mat3(localToCamera) * ve_Tangent_l.xyz, ve_Tangent_l.w);
 
     ex_ColorFactor  = u_BaseColorFactor /* TODO multiply by vertex color, when enabled */;
