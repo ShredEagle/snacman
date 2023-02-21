@@ -81,6 +81,12 @@ inline std::string keepLevels(std::string_view aStr, unsigned int aLevels = 1)
     return std::string{aStr.substr(pos + delimiter.size())};
 }
 
+inline std::string remove_signature(std::string_view aStr)
+{
+    auto pos = aStr.rfind('(', std::string::npos - 1);
+    return std::string{aStr.substr(0, pos)};
+}
+
 #define BEGIN_SINGLE(profiler, name, var) \
     auto var = std::make_optional(snac::getProfiler(::ad::snac::Profiler::profiler).timeSingle(name))
 
@@ -99,14 +105,20 @@ inline std::string keepLevels(std::string_view aStr, unsigned int aLevels = 1)
 #define TIME_RECURRING(profiler, name) \
     auto profilerSectionScoped = snac::getProfiler(::ad::snac::Profiler::profiler).timeRecurring(name)
 
+#if defined(__GNUC__)
+#define SNAC_FUNCTION_NAME ::ad::snac::remove_signature(__PRETTY_FUNCTION__)
+#else
+#define SNAC_FUNCTION_NAME __FUNCTION__
+#endif
+
 #define TIME_RECURRING_FUNC(profiler) TIME_RECURRING(profiler, __func__)
 
-#define TIME_RECURRING_FULLFUNC(profiler) TIME_RECURRING(profiler, __FUNCTION__)
+#define TIME_RECURRING_FULLFUNC(profiler) TIME_RECURRING(profiler, SNAC_FUNCTION_NAME)
 
 // The problem is that nvh profiler simply copies the pointer to the characters, not the string itself.
 // As a workaround, keep a static string atm.
 #define TIME_RECURRING_CLASSFUNC(profiler) \
-    static std::string keptStringForProfiling = ::ad::snac::keepLevels(__FUNCTION__, 1); \
+    static std::string keptStringForProfiling = ::ad::snac::keepLevels(SNAC_FUNCTION_NAME, 1); \
     TIME_RECURRING(profiler, keptStringForProfiling.c_str())
 
 
