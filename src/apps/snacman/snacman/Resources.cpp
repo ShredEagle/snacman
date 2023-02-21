@@ -45,7 +45,7 @@ std::shared_ptr<Font> Resources::FontLoader(
     RenderThread<snacgame::Renderer> & aRenderThread,
     Resources & aResources)
 {
-    return aRenderThread.loadFont(aFont, aPixelHeight, aResources)
+    return aRenderThread.loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aResources)
         .get(); // synchronize call
 }
 

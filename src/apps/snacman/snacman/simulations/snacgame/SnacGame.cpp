@@ -47,9 +47,9 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    RawInput & aInput) :
     mAppInterface{&aAppInterface},
     mGameContext{
+        .mResources = snac::Resources{std::move(aResourceFinder), aRenderThread},
         .mWorld = mWorld,
         .mRenderThread = aRenderThread,
-        .mResources = snac::Resources{std::move(aResourceFinder), aRenderThread},
     },
     mMappingContext{mWorld, mGameContext.mResources},
     mStateMachine{mWorld, mWorld, gAssetRoot / "scenes/scene_description.json",

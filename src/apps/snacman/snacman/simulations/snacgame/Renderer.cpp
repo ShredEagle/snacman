@@ -133,13 +133,12 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(snac::Resources & aResources)
 }
 
 
-std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
+std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
                                                unsigned int aPixelHeight,
                                                snac::Resources & aResources)
 {
     return std::make_shared<snac::Font>(
-        mFreetype,
-        aFont,
+        std::move(aFontFace),
         aPixelHeight,
         aResources.getShaderEffect("shaders/Text.prog")
     );

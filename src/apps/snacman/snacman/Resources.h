@@ -34,6 +34,9 @@ public:
     auto find(const filesystem::path & aPath) const
     { return mFinder.find(aPath); }
 
+    const arte::Freetype & getFreetype()
+    { return mFreetype; }
+
 private:
     static std::shared_ptr<Font> FontLoader(
         filesystem::path aFont, 
@@ -52,6 +55,11 @@ private:
     RenderThread<snacgame::Renderer> & mRenderThread;
     resource::ResourceFinder mFinder;
 
+    // Must outlive all FontFaces: 
+    // * it must outlive the EntityManager (which might contain Freetype FontFaces)
+    // * it must outlive the resource managers holding fonts
+    arte::Freetype mFreetype;
+    
     std::shared_ptr<Mesh> mCube = nullptr;
     resource::ResourceManager<std::shared_ptr<Font>, resource::ResourceFinder, &Resources::FontLoader> mFonts;
     resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;

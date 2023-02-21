@@ -47,7 +47,7 @@ public:
     // TODO Extend beyond cubes.
     static std::shared_ptr<snac::Mesh> LoadShape(snac::Resources & aResources);
 
-    std::shared_ptr<snac::Font> loadFont(filesystem::path aFont,
+    std::shared_ptr<snac::Font> loadFont(arte::FontFace aFontFace,
                                          unsigned int aPixelHeight,
                                          snac::Resources & aResources);
 
@@ -59,10 +59,6 @@ private:
     snac::Camera mCamera;
     snac::InstanceStream mMeshInstances;
     TextRenderer mTextRenderer;
-
-    // Must outlive all FontFaces, thus it must outlive the EntityManager,
-    // which might contain Freetype FontFaces. 
-    arte::Freetype mFreetype;
 };
 
 

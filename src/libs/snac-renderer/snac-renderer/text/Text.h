@@ -59,12 +59,11 @@ Mesh makeGlyphMesh(GlyphAtlas & aGlyphAtlas, std::shared_ptr<Effect> aEffect);
 /// Its instances are intended to be shared between entities using this font.
 struct Font
 {
-    Font(const arte::Freetype & aFreetype,
-         const filesystem::path & aFontFile,
+    Font(arte::FontFace aFontFace,
          unsigned int aFontPixelHeight,
          std::shared_ptr<Effect> aEffect) :
         mGlyphAtlas{
-            std::move(aFreetype.load(aFontFile)
+            std::move(aFontFace
                         .setPixelHeight(aFontPixelHeight)
                         .inverseYAxis(true))
         },
