@@ -39,7 +39,7 @@ cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsErro
 
 cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
-file(GENERATE 
+file(GENERATE
      OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
      CONTENT "{\"prefixes\": [\"${REPO_FOLDER}/src/libs/snac-renderer/snac-renderer/\",
                               \"${REPO_FOLDER}/../snac-assets/\",
@@ -52,7 +52,7 @@ file(GENERATE
 
 find_package(Graphics CONFIG REQUIRED graphics imguiui)
 
-find_package(Handy CONFIG REQUIRED plarform resource)
+find_package(Handy CONFIG REQUIRED platform resource)
 
 find_package(spdlog CONFIG REQUIRED)
 
