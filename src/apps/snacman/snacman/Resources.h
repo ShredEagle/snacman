@@ -24,7 +24,7 @@ public:
         mFinder{std::move(aFinder)}
     {}
 
-    std::shared_ptr<Mesh> getShape();
+    std::shared_ptr<Mesh> getShape(filesystem::path aShape);
 
     std::shared_ptr<Font> getFont(filesystem::path aFont, unsigned int aPixelHeight);
 
@@ -49,8 +49,8 @@ private:
         RenderThread<snacgame::Renderer> & aRenderThread,
         Resources & aResources);
 
-    static std::shared_ptr<Effect> MeshLoader(
-        filesystem::path aProgram, 
+    static std::shared_ptr<Mesh> MeshLoader(
+        filesystem::path aMesh, 
         RenderThread<snacgame::Renderer> & aRenderThread,
         Resources & aResources);
     

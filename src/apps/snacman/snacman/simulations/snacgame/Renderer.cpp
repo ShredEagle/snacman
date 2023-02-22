@@ -119,17 +119,18 @@ void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aPar
 }
 
 
-std::shared_ptr<snac::Mesh> Renderer::LoadShape(snac::Resources & aResources)
+std::shared_ptr<snac::Mesh> Renderer::LoadShape(filesystem::path aShape, snac::Resources & aResources)
 {
-    return std::make_shared<snac::Mesh>(
-        snac::loadCube(aResources.getShaderEffect("shaders/PhongLighting.prog")));
-
-    // TODO move out
-    //auto avocado = snac::loadGltf(*aResources.find("models/avocado/Avocado.gltf"));
-    //avocado.mMaterial = std::make_shared<snac::Material>(snac::Material{
-    //    .mEffect = aResources.getShaderEffect("shaders/PhongLighting.prog")
-    //});
-    //return std::make_shared<snac::Mesh>(std::move(avocado));
+    if(aShape.string() == "CUBE")
+    {
+        return std::make_shared<snac::Mesh>(
+            snac::loadCube(aResources.getShaderEffect("shaders/PhongLighting.prog")));
+    }
+    else
+    {
+        return std::make_shared<snac::Mesh>(
+            loadModel(aShape, aResources.getShaderEffect("shaders/PhongLightingTextures.prog")));
+    }
 }
 
 
@@ -168,9 +169,9 @@ void Renderer::render(const visu::GraphicState & aState)
     // Position camera
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
-    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gBlue);
+    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
-    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
+    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
     
     snac::UniformRepository uniforms{
         {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},

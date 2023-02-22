@@ -165,7 +165,7 @@ public:
         });
     }
 
-    std::future<std::shared_ptr<snac::Mesh>> loadShape(Resources & aResources)
+    std::future<std::shared_ptr<snac::Mesh>> loadShape(filesystem::path aShape, Resources & aResources)
     {
         // Almost certainly a programming error:
         // There is a risk the calling code will block on the future completion
@@ -176,12 +176,12 @@ public:
         // all captured types must be copyable.
         auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Mesh>>>();
         std::future<std::shared_ptr<snac::Mesh>> future = promise->get_future();
-        push([promise = std::move(promise), &aResources]
+        push([promise = std::move(promise), shape = std::move(aShape), &aResources]
              (T_renderer & aRenderer) 
              {
                 try
                 {
-                    promise->set_value(aRenderer.LoadShape(aResources));
+                    promise->set_value(aRenderer.LoadShape(shape, aResources));
                 }
                 catch(...)
                 {

@@ -8,15 +8,24 @@ namespace ad {
 namespace snac {
 
 
-std::shared_ptr<Mesh> Resources::getShape()
+std::shared_ptr<Mesh> Resources::getShape(filesystem::path aShape)
 {
-    if(!mCube)
+    // This is bad design, but lazy to get the result quickly
+    if(aShape.string() == "CUBE")
     {
-        mCube = mRenderThread.loadShape(*this)
-            .get(); // synchronize call
+        if (!mCube)
+        {
+            mCube = mRenderThread.loadShape(aShape, *this)
+                .get(); // synchronize call
+        }
+        return mCube;
     }
-    return mCube;
+    else
+    {
+        return mMeshes.load(aShape, mFinder, mRenderThread, *this);
+    }
 }
+
 
 std::shared_ptr<Font> Resources::getFont(filesystem::path aFont, unsigned int aPixelHeight)
 {
@@ -47,6 +56,16 @@ std::shared_ptr<Font> Resources::FontLoader(
 {
     return aRenderThread.loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aResources)
         .get(); // synchronize call
+}
+
+
+std::shared_ptr<Mesh> Resources::MeshLoader(
+    filesystem::path aMesh, 
+    RenderThread<snacgame::Renderer> & aRenderThread,
+    Resources & aResources)
+{
+    return aRenderThread.loadShape(aMesh, aResources)
+            .get(); // synchronize call
 }
 
 
