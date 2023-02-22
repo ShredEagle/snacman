@@ -187,7 +187,7 @@ namespace {
             Const_Owned<gltf::Accessor> accessor = aPrimitive.get(accessorId);
 
             if(vertexCount != std::numeric_limits<GLsizei>::max() 
-                && vertexCount != accessor->count)
+                && vertexCount != (GLsizei)accessor->count)
             {
                 SELOG(critical)
                     ("Semantic \"{}\", accessor #{} has a count of {}, while previous accessors where {}.",
