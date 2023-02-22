@@ -1,7 +1,7 @@
 #version 420
 
 layout(location=0) in vec2 ve_Position_u; // expect a quad, from [0, -1] to [1, 0]
-layout(location=1) in vec2 ve_TextureCoords_u;
+layout(location=1) in vec2 ve_TextureCoords0_u;
 
 layout(location= 4) in mat3  in_LocalToWorld_glyphToScreenPixels;
 layout(location= 8) in vec4  in_Albedo;
@@ -26,6 +26,6 @@ void main(void)
         1.
     );
 
-    ex_AtlasCoords = in_TextureOffset_p + (ve_TextureCoords_u * in_BoundingBox_p);
+    ex_AtlasCoords = in_TextureOffset_p + (ve_TextureCoords0_u * in_BoundingBox_p);
     ex_Albedo = in_Albedo;
 }

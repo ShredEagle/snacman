@@ -33,7 +33,7 @@ void createPill(GameContext & aContext,
         ->add(component::Geometry{
             .mSubGridPosition = math::Position<2, float>::Zero(),
             .mGridPosition = aGridPos,
-            .mScaling = math::Size<3, float>{.3f, .3f, .3f},
+            .mScaling = math::Size<3, float>{30.f, 30.f, 30.f},
             .mLayer = component::GeometryLayer::Player,
             .mOrientation = math::Quaternion<float>{math::UnitVec<3, float>{
                                                         {0.f, 1.f, 0.f}},
@@ -45,7 +45,7 @@ void createPill(GameContext & aContext,
                           .mAngle = math::Degree<float>{60.f}},
         })
         .add(component::VisualMesh{
-            .mMesh = aContext.mResources.getShape(),
+            .mMesh = aContext.mResources.getShape("models/avocado/Avocado.gltf"),
         })
         .add(component::LevelEntity{});
     ;
@@ -65,7 +65,7 @@ createPathEntity(GameContext & aContext,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gWhite<float>})
         .add(component::VisualMesh{
-            .mMesh = aContext.mResources.getShape(),
+            .mMesh = aContext.mResources.getShape("CUBE"),
         })
         ;
     ;
@@ -86,7 +86,7 @@ createPortalEntity(GameContext & aContext,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gRed<float>})
         .add(component::VisualMesh{
-            .mMesh = aContext.mResources.getShape(),
+            .mMesh = aContext.mResources.getShape("CUBE"),
         })
         ;
     return handle;
@@ -106,7 +106,7 @@ createCopPenEntity(GameContext & aContext,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gYellow<float>})
         .add(component::VisualMesh{
-            .mMesh = aContext.mResources.getShape(),
+            .mMesh = aContext.mResources.getShape("CUBE"),
         })
         ;
     return handle;
@@ -126,7 +126,7 @@ createPlayerSpawnEntity(GameContext & aContext,
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gCyan<float>})
         .add(component::VisualMesh{
-            .mMesh = aContext.mResources.getShape(),
+            .mMesh = aContext.mResources.getShape("CUBE"),
         })
         ;
     spawner.get(aInit)->add(component::Spawner{.mSpawnPosition = aGridPos});
@@ -145,15 +145,21 @@ void fillSlotWithPlayer(GameContext & aContext,
     playerEntity->add(component::Geometry{
         .mSubGridPosition = math::Position<2, float>::Zero(),
         .mGridPosition = math::Position<2, int>::Zero(),
+        .mScaling = {100.f, 100.f, 100.f},
         .mLayer = component::GeometryLayer::Player,
-        .mColor = math::hdr::gMagenta<float>});
-    playerEntity->add(component::PlayerLifeCycle{.mIsAlive = false});
-    playerEntity->add(component::PlayerMoveState{});
-    playerEntity
-        ->add(component::Controller{.mType = aControllerType,
-                                    .mControllerId = aControllerId})
+        .mOrientation = math::Quaternion<float>{math::UnitVec<3, float>{
+                                                    {0.f, 1.f, 0.f}},
+                                                math::Degree<float>{-90.f}},
+        .mColor = math::hdr::gMagenta<float>
+    })
+        .add(component::PlayerLifeCycle{.mIsAlive = false})
+        .add(component::PlayerMoveState{})
+        .add(component::Controller{
+            .mType = aControllerType,
+            .mControllerId = aControllerId
+        })
         .add(component::VisualMesh{
-            .mMesh = aContext.mResources.getShape(),
+            .mMesh = aContext.mResources.getShape("models/avocado/Avocado.gltf"),
         })
         ;
 }

@@ -12,8 +12,10 @@ enum class Semantic
     // Usally per vertex
     Position,
     Normal,
+    Tangent,
     Albedo,
-    TextureCoords,
+    TextureCoords0,
+    TextureCoords1,
     // Usually per instance
     LocalToWorld,
     InstancePosition,
@@ -21,6 +23,10 @@ enum class Semantic
     BoundingBox,
     Bearing,
     // Usually uniform
+    BaseColorFactor,
+    BaseColorUVIndex,
+    NormalUVIndex, // Index of the normal texture coordinates in the array of UV coordinates
+    NormalMapScale,
     AmbientColor,
     LightColor,
     LightPosition,
@@ -28,6 +34,9 @@ enum class Semantic
     Projection,
     FramebufferResolution,
     // Usually samplers
+    BaseColorTexture,
+    NormalTexture,
+    MetallicRoughnessTexture,
     FontAtlas, // TODO should it just be atlas, used for both sprites and fonts?
     //SpriteAtlas,
 

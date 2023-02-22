@@ -4,6 +4,7 @@
 #include <snac-renderer/Camera.h>
 #include <snac-renderer/Cube.h>
 #include <snac-renderer/Render.h>
+#include <snac-renderer/ResourceLoad.h>
 
 #include <graphics/AppInterface.h>
 
@@ -15,18 +16,30 @@ namespace ad {
 namespace snac {
 
 
-InstanceStream makeInstances()
+InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
 {
+    
     struct PoseColor
     {
         math::Matrix<4, 4, float> pose;
         math::sdr::Rgba albedo{math::sdr::gWhite / 2};
     };
 
+    GLfloat maxMagnitude = *aBoundingBox.dimension().getMaxMagnitudeElement();
+    if(maxMagnitude == 0.)
+    {
+        maxMagnitude =  1;
+        SELOG(warn)("Model bounding box is null, assuming unit size.");
+    }
+
+    auto scaling = math::trans3d::scaleUniform(3.f / maxMagnitude);
+
+    math::Vec<3, float> centerOffset = aBoundingBox.center().as<math::Vec>() * scaling;
+
     std::vector<PoseColor> transformations{
-        {math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f})},
-        {math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f})},
-        {math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f})},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f} - centerOffset)},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f} - centerOffset)},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f} - centerOffset)},
     };
 
     InstanceStream instances{
@@ -64,14 +77,14 @@ InstanceStream makeInstances()
 
 struct Scene
 {
-    Scene(graphics::AppInterface & aAppInterface);
+    Scene(graphics::AppInterface & aAppInterface, Mesh aMesh);
 
     void update();
 
     void render(Renderer & aRenderer) const;
 
-    Mesh mMesh{makeCube()};
-    InstanceStream mInstances{makeInstances()};
+    Mesh mMesh;
+    InstanceStream mInstances{makeInstances(mMesh.mStream.mBoundingBox)};
     Camera mCamera;
     MouseOrbitalControl mCameraControl;
 
@@ -79,7 +92,8 @@ struct Scene
 };
 
 
-inline Scene::Scene(graphics::AppInterface & aAppInterface) :
+inline Scene::Scene(graphics::AppInterface & aAppInterface, Mesh aMesh) :
+    mMesh{std::move(aMesh)},
     mCamera{math::getRatio<float>(aAppInterface.getFramebufferSize()), Camera::gDefaults},
     mCameraControl{aAppInterface.getWindowSize(), Camera::gDefaults.vFov}
 {
@@ -115,11 +129,20 @@ inline void Scene::render(Renderer & aRenderer) const
          {BlockSemantic::Viewing, &mCamera.mViewing},
     };
 
+    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite) * 0.8f;
+    math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
+    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
+
+    snac::UniformRepository uniforms{
+        {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
+        {snac::Semantic::LightPosition, {lightPosition}},
+        {snac::Semantic::AmbientColor, {ambientColor}},
+    };
+
     clear();
-    snac::UniformRepository uniforms;
     aRenderer.render(mMesh,
                      mInstances,
-                     uniforms,
+                     std::move(uniforms),
                      uniformBlocks);
 }
 

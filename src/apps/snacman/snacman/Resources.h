@@ -24,7 +24,7 @@ public:
         mFinder{std::move(aFinder)}
     {}
 
-    std::shared_ptr<Mesh> getShape();
+    std::shared_ptr<Mesh> getShape(filesystem::path aShape);
 
     std::shared_ptr<Font> getFont(filesystem::path aFont, unsigned int aPixelHeight);
 
@@ -33,6 +33,9 @@ public:
 
     auto find(const filesystem::path & aPath) const
     { return mFinder.find(aPath); }
+
+    const arte::Freetype & getFreetype()
+    { return mFreetype; }
 
 private:
     static std::shared_ptr<Font> FontLoader(
@@ -45,6 +48,11 @@ private:
         filesystem::path aProgram, 
         RenderThread<snacgame::Renderer> & aRenderThread,
         Resources & aResources);
+
+    static std::shared_ptr<Mesh> MeshLoader(
+        filesystem::path aMesh, 
+        RenderThread<snacgame::Renderer> & aRenderThread,
+        Resources & aResources);
     
     // There is a smelly circular dependency in this design:
     // Resources knows the RenderThread to request OpenGL related resource loading
@@ -52,9 +60,15 @@ private:
     RenderThread<snacgame::Renderer> & mRenderThread;
     resource::ResourceFinder mFinder;
 
+    // Must outlive all FontFaces: 
+    // * it must outlive the EntityManager (which might contain Freetype FontFaces)
+    // * it must outlive the resource managers holding fonts
+    arte::Freetype mFreetype;
+    
     std::shared_ptr<Mesh> mCube = nullptr;
-    resource::ResourceManager<std::shared_ptr<Font>, resource::ResourceFinder, &Resources::FontLoader> mFonts;
+    resource::ResourceManager<std::shared_ptr<Font>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;
     resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;
+    resource::ResourceManager<std::shared_ptr<Mesh>,   resource::ResourceFinder, &Resources::MeshLoader>  mMeshes;
 };
 
 

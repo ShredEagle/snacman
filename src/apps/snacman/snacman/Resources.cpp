@@ -1,26 +1,31 @@
 #include "Resources.h"
 
-#include <arte/detail/Json.h>
 
-#include <renderer/ShaderSource.h>
-#include <renderer/utilities/FileLookup.h>
-
-#include <fstream>
+#include <snac-renderer/ResourceLoad.h>
 
 
 namespace ad {
 namespace snac {
 
 
-std::shared_ptr<Mesh> Resources::getShape()
+std::shared_ptr<Mesh> Resources::getShape(filesystem::path aShape)
 {
-    if(!mCube)
+    // This is bad design, but lazy to get the result quickly
+    if(aShape.string() == "CUBE")
     {
-        mCube = mRenderThread.loadShape(*this)
-            .get(); // synchronize call
+        if (!mCube)
+        {
+            mCube = mRenderThread.loadShape(aShape, *this)
+                .get(); // synchronize call
+        }
+        return mCube;
     }
-    return mCube;
+    else
+    {
+        return mMeshes.load(aShape, mFinder, mRenderThread, *this);
+    }
 }
+
 
 std::shared_ptr<Font> Resources::getFont(filesystem::path aFont, unsigned int aPixelHeight)
 {
@@ -39,43 +44,7 @@ std::shared_ptr<Effect> Resources::EffectLoader(
     RenderThread<snacgame::Renderer> & aRenderThread,
     Resources & /*aResources*/)
 {
-    // Keep the ShaderSource instance directly, not just a view to an otherwise expired temporary.
-    std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
-
-    Json program = Json::parse(std::ifstream{aProgram});
-    graphics::FileLookup lookup{aProgram};
-    for (auto [shaderStage, shaderFile] : program.items())
-    {
-        GLenum stageEnumerator;
-        if(shaderStage == "vertex")
-        {
-            stageEnumerator = GL_VERTEX_SHADER;
-        }
-        else if (shaderStage == "fragment")
-        {
-            stageEnumerator = GL_FRAGMENT_SHADER;
-        }
-        else
-        {
-            SELOG(critical)("Unable to map shader stage key '{}' to a program stage.", shaderStage);
-            throw std::invalid_argument{"Unhandled shader stage key."};
-        }
-        
-        auto [inputStream, identifier] = lookup(shaderFile);
-        shaders.emplace_back(
-            stageEnumerator,
-            graphics::ShaderSource::Preprocess(*inputStream, identifier, lookup));
-    }
-
-    SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());
-
-    return std::make_shared<Effect>(Effect{
-        .mProgram = IntrospectProgram{
-            graphics::makeLinkedProgram(shaders.begin(), shaders.end()),
-            aProgram.filename().string(),
-        }
-    });
-    
+    return loadEffect(aProgram);
 }
 
 
@@ -85,8 +54,18 @@ std::shared_ptr<Font> Resources::FontLoader(
     RenderThread<snacgame::Renderer> & aRenderThread,
     Resources & aResources)
 {
-    return aRenderThread.loadFont(aFont, aPixelHeight, aResources)
+    return aRenderThread.loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aResources)
         .get(); // synchronize call
+}
+
+
+std::shared_ptr<Mesh> Resources::MeshLoader(
+    filesystem::path aMesh, 
+    RenderThread<snacgame::Renderer> & aRenderThread,
+    Resources & aResources)
+{
+    return aRenderThread.loadShape(aMesh, aResources)
+            .get(); // synchronize call
 }
 
 

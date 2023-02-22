@@ -2,16 +2,26 @@
 
 #include "IntrospectProgram.h"
 #include "Semantic.h"
+#include "UniformParameters.h"
+
+#include <math/Box.h>
 
 #include <renderer/Shading.h>
 #include <renderer/Texture.h>
 #include <renderer/VertexSpecification.h>
 
 #include <map>
+#include <optional>
 
 
 namespace ad {
 namespace snac {
+
+
+// TODO this approach based on specialized repositories feels cumbersome.
+using TextureRepository = std::map<Semantic,
+                                   std::variant<std::shared_ptr<graphics::Texture>,
+                                                graphics::Texture *>>;
 
 
 struct Effect
@@ -22,7 +32,8 @@ struct Effect
 
 struct Material
 {
-    std::map<Semantic, const graphics::Texture *> mTextures;
+    TextureRepository mTextures;
+    UniformRepository mUniforms;
     std::shared_ptr<Effect> mEffect;
 };
 
@@ -35,6 +46,10 @@ struct Material
 
 struct BufferView
 {
+    // Important: At the moment, we make distinct buffers for each gltf buffer view.
+    // This is whay the BufferView hosts the VertexBufferObject.
+    // We make the bet that interleaved vertex attributes are always modeled
+    // by distinct accessor on the same buffer view in gltf.
     graphics::VertexBufferObject mBuffer;
     GLsizei mStride{0};
 
@@ -51,15 +66,23 @@ struct AttributeAccessor
     graphics::ClientAttribute mAttribute;
 };
 
+struct IndicesAccessor
+{
+    // Not using a view for the index buffer, since it cannot be interleaved with other data.
+    graphics::IndexBufferObject mIndexBuffer;
+    GLsizei mIndexCount{0};
+    graphics::ClientAttribute mAttribute;
+};
+
 
 struct VertexStream
 {
     std::vector<BufferView> mVertexBuffers;
     std::map<Semantic, AttributeAccessor> mAttributes;
-    GLsizei mVertexCount{0};
+    std::optional<IndicesAccessor> mIndices;
+    GLsizei mVertexCount{0}; // i.e. the number of elements stored in each VBO
     GLenum mPrimitive;
-    // TODO handle indexed rendering
-    //IndexBufferObject mIndexBuffer;
+    math::Box<GLfloat> mBoundingBox;
 };
 
 
@@ -67,7 +90,11 @@ struct Mesh
 {
     VertexStream mStream;
     std::shared_ptr<Material> mMaterial;
+    std::string mName;
 };
+
+
+std::ostream & operator<<(std::ostream & aOut, const Mesh & aMesh);
 
 
 struct InstanceStream

@@ -4,12 +4,18 @@
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 
+#include <snac-renderer/ResourceLoad.h>
 #include <snac-renderer/text/Text.h>
 
 #include <snacman/Profiling.h>
 #include <snacman/Resources.h>
 
 #include <platform/Filesystem.h>
+
+// TODO #generic-render remove once all geometry and shader programs are created outside.
+#include <snac-renderer/Cube.h>
+#include <snac-renderer/gltf/GltfLoad.h>
+#include <renderer/ShaderSource.h>
 
 
 namespace ad {
@@ -68,7 +74,9 @@ void TextRenderer::render(Renderer & aRenderer,
 
         // TODO should be consolidated, a single call for all string of the same font.
         mGlyphInstances.respecifyData(std::span{textBufferData});
+        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Draw string");
         aRenderer.mRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances, aUniforms, aUniformBlocks);
+        glPopDebugGroup();
     }
 
 }
@@ -104,31 +112,34 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface) :
     mMeshInstances{initializeInstanceStream()}
 {}
 
+
 void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
 {
     mCamera.resetProjection(aAspectRatio, aParameters);
 }
 
 
-std::shared_ptr<snac::Mesh> Renderer::LoadShape(snac::Resources & aResources)
+std::shared_ptr<snac::Mesh> Renderer::LoadShape(filesystem::path aShape, snac::Resources & aResources)
 {
-    auto mesh = std::make_shared<snac::Mesh>(snac::Mesh{.mStream = snac::makeCube()}); 
-
-    mesh->mMaterial = std::make_shared<snac::Material>(snac::Material{
-        .mEffect = aResources.getShaderEffect("shaders/PhongLighting.prog")
-    });
-
-    return mesh;
+    if(aShape.string() == "CUBE")
+    {
+        return std::make_shared<snac::Mesh>(
+            snac::loadCube(aResources.getShaderEffect("shaders/PhongLighting.prog")));
+    }
+    else
+    {
+        return std::make_shared<snac::Mesh>(
+            loadModel(aShape, aResources.getShaderEffect("shaders/PhongLightingTextures.prog")));
+    }
 }
 
 
-std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
+std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
                                                unsigned int aPixelHeight,
                                                snac::Resources & aResources)
 {
     return std::make_shared<snac::Font>(
-        mFreetype,
-        aFont,
+        std::move(aFontFace),
         aPixelHeight,
         aResources.getShaderEffect("shaders/Text.prog")
     );
@@ -158,9 +169,9 @@ void Renderer::render(const visu::GraphicState & aState)
     // Position camera
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
-    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gBlue);
+    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
-    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
+    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
     
     snac::UniformRepository uniforms{
         {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
@@ -174,11 +185,13 @@ void Renderer::render(const visu::GraphicState & aState)
     };
 
     BEGIN_RECURRING(Render, "Draw_meshes", drawMeshProfile);
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Draw meshes");
     for (const auto & [mesh, instances] : sortedMeshes)
     {
         mMeshInstances.respecifyData(std::span{instances});
         mRenderer.render(*mesh, mMeshInstances, uniforms, uniformBlocks);
     }
+    glPopDebugGroup();
     END_RECURRING(drawMeshProfile);
 
     //

@@ -19,20 +19,29 @@ std::string to_string(Semantic aSemantic)
     {
         MAPPING(Position)
         MAPPING(Normal)
+        MAPPING(Tangent)
         MAPPING(Albedo)
-        MAPPING(TextureCoords)
+        MAPPING(TextureCoords0)
+        MAPPING(TextureCoords1)
         MAPPING(LocalToWorld)
         MAPPING(InstancePosition)
         MAPPING(TextureOffset)
         MAPPING(BoundingBox)
         MAPPING(Bearing)
+        MAPPING(BaseColorFactor) 
+        MAPPING(BaseColorUVIndex) 
+        MAPPING(NormalUVIndex) 
+        MAPPING(NormalMapScale) 
         MAPPING(AmbientColor) 
         MAPPING(LightColor)
         MAPPING(LightPosition)
         MAPPING(WorldToCamera)
         MAPPING(Projection)
-        MAPPING(FontAtlas)
         MAPPING(FramebufferResolution)
+        MAPPING(BaseColorTexture)
+        MAPPING(NormalTexture)
+        MAPPING(MetallicRoughnessTexture)
+        MAPPING(FontAtlas)
         default:
         {
             auto value = static_cast<std::underlying_type_t<Semantic>>(aSemantic);
@@ -62,20 +71,29 @@ Semantic to_semantic(std::string_view aResourceName)
     if(false){}
     MAPPING(Position)
     MAPPING(Normal)
+    MAPPING(Tangent)
     MAPPING(Albedo)
-    MAPPING(TextureCoords)
+    MAPPING(TextureCoords0)
+    MAPPING(TextureCoords1)
     MAPPING(LocalToWorld)
     MAPPING(InstancePosition)
     MAPPING(TextureOffset)
     MAPPING(BoundingBox)
     MAPPING(Bearing)
+    MAPPING(BaseColorFactor) 
+    MAPPING(BaseColorUVIndex) 
+    MAPPING(NormalUVIndex) 
+    MAPPING(NormalMapScale) 
     MAPPING(AmbientColor) 
     MAPPING(LightColor)
     MAPPING(LightPosition)
     MAPPING(WorldToCamera)
     MAPPING(Projection)
-    MAPPING(FontAtlas)
     MAPPING(FramebufferResolution)
+    MAPPING(BaseColorTexture)
+    MAPPING(NormalTexture)
+    MAPPING(MetallicRoughnessTexture)
+    MAPPING(FontAtlas)
     else
     {
         throw std::logic_error{
@@ -90,26 +108,39 @@ bool isNormalized(Semantic aSemantic)
     switch(aSemantic)
     {
         case Semantic::Albedo:
-        case Semantic::AmbientColor:
-        case Semantic::LightColor:
         {
             return true;
         }
         case Semantic::Position:
         case Semantic::Normal:
-        case Semantic::TextureCoords:
+        case Semantic::Tangent:
+        case Semantic::TextureCoords0:
+        case Semantic::TextureCoords1:
         case Semantic::LocalToWorld:
         case Semantic::InstancePosition:
         case Semantic::TextureOffset:
         case Semantic::BoundingBox:
         case Semantic::Bearing:
+        {
+            return false;
+        }
+        case Semantic::BaseColorFactor:
+        case Semantic::BaseColorUVIndex:
+        case Semantic::NormalUVIndex:
+        case Semantic::NormalMapScale:
+        case Semantic::AmbientColor:
+        case Semantic::LightColor:
         case Semantic::LightPosition:
         case Semantic::WorldToCamera:
         case Semantic::Projection:
-        case Semantic::FontAtlas:
         case Semantic::FramebufferResolution:
+        case Semantic::BaseColorTexture:
+        case Semantic::NormalTexture:
+        case Semantic::MetallicRoughnessTexture:
+        case Semantic::FontAtlas:
         {
-            return false;
+            throw std::logic_error{
+                "Semantic '" + to_string(aSemantic) + "' should be a uniform, normalization is not applicable."};
         }
         default:
         {

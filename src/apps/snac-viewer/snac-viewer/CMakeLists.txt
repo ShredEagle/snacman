@@ -39,12 +39,20 @@ cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsErro
 
 cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
-
+file(GENERATE
+     OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
+     CONTENT "{\"prefixes\": [\"${REPO_FOLDER}/src/libs/snac-renderer/snac-renderer/\",
+                              \"${REPO_FOLDER}/../snac-assets/\",
+                              \"${REPO_FOLDER}/../glTF-Sample-Models/2.0/\"
+              ]}"
+)
 ##
 ## Dependencies
 ##
 
 find_package(Graphics CONFIG REQUIRED graphics imguiui)
+
+find_package(Handy CONFIG REQUIRED platform resource)
 
 find_package(spdlog CONFIG REQUIRED)
 
@@ -53,6 +61,8 @@ target_link_libraries(${TARGET_NAME}
         ad::snac-renderer
 
         ad::graphics
+        ad::platform
+        ad::resource
 
         spdlog::spdlog
 )

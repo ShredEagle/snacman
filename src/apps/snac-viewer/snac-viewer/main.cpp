@@ -3,14 +3,43 @@
 
 #include <build_info.h>
 
-#include <snac-renderer/Render.h>
+#include <arte/detail/Json.h>
 
 #include <graphics/ApplicationGlfw.h>
 
-//#include <imguiui/ImguiUi.h>
+#include <platform/Path.h>
+
+#include <resource/ResourceFinder.h>
+
+#include <snac-renderer/Render.h>
+
+#include <fstream>
+
 
 using namespace ad;
 using namespace ad::snac;
+
+
+resource::ResourceFinder makeResourceFinder()
+{
+    filesystem::path assetConfig = platform::getExecutableFileDirectory() / "assets.json";
+    if(exists(assetConfig))
+    {
+        Json config = Json::parse(std::ifstream{assetConfig});
+        
+        // Take the silly long way
+        std::vector<std::string> prefixes{
+            config.at("prefixes").begin(),
+            config.at("prefixes").end()
+        };
+        return resource::ResourceFinder(prefixes.begin(),
+                                        prefixes.end());
+    }
+    else
+    {
+        return resource::ResourceFinder{platform::getExecutableFileDirectory()};
+    }
+}
 
 
 void runApplication()
@@ -27,10 +56,18 @@ void runApplication()
     auto viewportListening = glfwApp.getAppInterface()->listenFramebufferResize(
         [](const math::Size<2, int> & size){ glViewport(0, 0, size.width(), size.height()); });
 
+    resource::ResourceFinder finder = makeResourceFinder();
+
     //
     // Initialize scene
     //
-    Scene scene{*glfwApp.getAppInterface()};
+
+    Scene scene{
+        *glfwApp.getAppInterface(),
+        //loadModel(finder.pathFor("Box/glTF/Box.gltf"),
+        loadModel(finder.pathFor("Avocado/glTF/Avocado.gltf"),
+                  loadEffect(finder.pathFor("shaders/PhongLightingTextures.prog")))
+    };
     Renderer renderer;
 
     //

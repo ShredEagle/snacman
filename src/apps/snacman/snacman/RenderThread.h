@@ -127,6 +127,18 @@ public:
             }};
     }
 
+    // The destructor is stopping the thread, otherwise if an exception occurs
+    // in the main thread, and stack unwinding destroys the render thread,
+    // terminate would be called (thus missing the top-level catch in main)
+    ~RenderThread()
+    {
+        if(mThread.joinable())
+        {
+            SELOG(warn)("Destructor stopping render thread which was not finalized.");
+            stop();
+        }
+    }
+
     /// \brief Stop the thread and rethrow if it actually threw.
     ///
     /// A destructor should never throw, so we cannot implement this behaviour
@@ -153,39 +165,65 @@ public:
         });
     }
 
-    std::future<std::shared_ptr<snac::Mesh>> loadShape(Resources & aResources)
+    std::future<std::shared_ptr<snac::Mesh>> loadShape(filesystem::path aShape, Resources & aResources)
     {
+        // Almost certainly a programming error:
+        // There is a risk the calling code will block on the future completion
+        // If the render thread is blocking, the completion will never occur.
+        assert(std::this_thread::get_id() != mThread.get_id());
+
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
         auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Mesh>>>();
         std::future<std::shared_ptr<snac::Mesh>> future = promise->get_future();
-        push([promise = std::move(promise), &aResources]
+        push([promise = std::move(promise), shape = std::move(aShape), &aResources]
              (T_renderer & aRenderer) 
              {
-                promise->set_value(aRenderer.LoadShape(aResources));
+                try
+                {
+                    promise->set_value(aRenderer.LoadShape(shape, aResources));
+                }
+                catch(...)
+                {
+                    promise->set_exception(std::current_exception());
+                }
              });
         return future;
     }
 
     std::future<std::shared_ptr<snac::Font>> loadFont(
-        filesystem::path aFont,
+        arte::FontFace aFontFace,
         unsigned int aPixelHeight,
         Resources & aResources)
     {
+        assert(std::this_thread::get_id() != mThread.get_id());
+
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
         auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Font>>>();
         std::future<std::shared_ptr<snac::Font>> future = promise->get_future();
-        push([promise = std::move(promise), font = std::move(aFont), aPixelHeight, &aResources]
+        // TODO the Text system has to be deeply refactored. It is tightly coupled to the texture creation
+        // making it hard to properly load asynchronously, and leading to horrors such as this move into shared_ptr
+        auto sharedFontFace = std::make_shared<arte::FontFace>(std::move(aFontFace));
+        push([promise = std::move(promise), fontFace = std::move(sharedFontFace), aPixelHeight, &aResources]
              (T_renderer & aRenderer) mutable
              {
-                promise->set_value(aRenderer.loadFont(font, aPixelHeight, aResources));
+                try
+                {
+                    promise->set_value(aRenderer.loadFont(std::move(*fontFace), aPixelHeight, aResources));
+                }
+                catch(...)
+                {
+                    promise->set_exception(std::current_exception());
+                }
              });
         return future;
     }
 
     void checkRethrow()
     {
+        assert(std::this_thread::get_id() != mThread.get_id());
+
         if (mThrew)
         {
             std::rethrow_exception(mThreadException);
@@ -213,6 +251,20 @@ private:
         }
         catch (...)
         {
+            try
+            {
+                std::rethrow_exception(std::current_exception());
+            }
+            catch(const std::exception & e)
+            {
+                SELOG(error)
+                    ("Render thread main loop stopping due to uncaught exception:\n{}",
+                    e.what());
+            }
+            catch(...)
+            {
+                SELOG(critical)("Render thread main loop stopping due to non-exception.");
+            }
             mThreadException = std::current_exception();
             mThrew = true;
         }
@@ -278,25 +330,32 @@ private:
 
         // If the client is waiting on a future from this thread 
         // before producing the two first states, we must service to avoid a deadlock.
-        while(aStates.size() < EntryBuffer<T_renderer>::BufferDepth)
+        std::optional<EntryBuffer<T_renderer>> entries;
+        while(!entries && !mStop)
         {
             // Note: this is busy looping at the moment.
             // This should only be for a brief period at the beginning.
             serviceOperations(aRenderer);
-        }
 
-        // Initialize the buffer with the required number of entries (2 for
-        // double buffering) This is blocking call, done last to offer more
-        // opportunities for the entries to already be in the queue
-        EntryBuffer<T_renderer> entries{aStates};
-        SELOG(info)("Render thread initialized states buffer.");
+            if(aStates.size() >= EntryBuffer<T_renderer>::BufferDepth)
+            {
+                // Initialize the buffer with the required number of entries (2 for
+                // double buffering) This is blocking call, done last to offer more
+                // opportunities for the entries to already be in the queue
+                entries = EntryBuffer<T_renderer>{aStates};
+                SELOG(info)("Render thread initialized states buffer.");
+            }
+        }
 
         while (!mStop)
         {
             Guard frameProfiling = profileFrame(snac::Profiler::Render);
 
             // Service all queued operations first.
-            serviceOperations(aRenderer);
+            {
+                TIME_RECURRING(Render, "Service_operations");
+                serviceOperations(aRenderer);
+            }
 
             // TODO simulate delay in the render thread:
             // * Thread iteration time (simulate what CPU compuations run on the
@@ -306,7 +365,10 @@ private:
             // std::this_thread::sleep_for(ms{8});
 
             // Get new latest state, if any
-            entries.consume(aStates);
+            {
+                TIME_RECURRING(Render, "Consume_available_states");
+                entries->consume(aStates);
+            }
 
             //
             // Interpolate (or pick the current state if interpolation is
@@ -317,8 +379,8 @@ private:
             {
                 TIME_RECURRING(Render, "Interpolation");
 
-                const auto & previous = entries.previous();
-                const auto & latest = entries.current();
+                const auto & previous = entries->previous();
+                const auto & latest = entries->current();
 
                 // TODO Is it better to use difference in push times, or the
                 // fixed simulation delta as denominator? Note: using the
@@ -340,7 +402,7 @@ private:
             }
             else
             {
-                const auto & latest = entries.current();
+                const auto & latest = entries->current();
                 if (latest.pushTime != renderedPushTime)
                 {
                     state = *latest.state;
@@ -357,8 +419,11 @@ private:
             //
             // Render
             //
+            glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Frame");
+            BEGIN_RECURRING(Render, "Frame", frameProfilerScope);
+                
             mApplication.getAppInterface()->clear();
-            // renderer.render(*entries.current().state);
+
             renderer.render(state);
             SELOG(trace)("Render thread: Frame sent to GPU.");
 
@@ -367,11 +432,18 @@ private:
                 mImguiUi.renderBackend();
             }
 
+            END_RECURRING(frameProfilerScope);
+            glPopDebugGroup();
+
             {
                 TIME_RECURRING(Render, "Swap buffers");
                 mApplication.swapBuffers();
             }
-            getRenderProfilerPrint().print();
+
+            {
+                TIME_RECURRING(Render, "RenderThread_Profiler_dump");
+                getRenderProfilerPrint().print();
+            }
         }
 
         SELOG(info)("Render thread stopping.");

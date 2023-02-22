@@ -8,10 +8,6 @@
 
 #include <graphics/AppInterface.h>
 
-// TODO #generic-render remove once all geometry and shader programs are created outside.
-#include <snac-renderer/Cube.h>
-#include <renderer/ShaderSource.h>
-
 
 namespace ad {
 
@@ -49,9 +45,9 @@ public:
     void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
     // TODO Extend beyond cubes.
-    static std::shared_ptr<snac::Mesh> LoadShape(snac::Resources & aResources);
+    static std::shared_ptr<snac::Mesh> LoadShape(filesystem::path aShape, snac::Resources & aResources);
 
-    std::shared_ptr<snac::Font> loadFont(filesystem::path aFont,
+    std::shared_ptr<snac::Font> loadFont(arte::FontFace aFontFace,
                                          unsigned int aPixelHeight,
                                          snac::Resources & aResources);
 
@@ -63,10 +59,6 @@ private:
     snac::Camera mCamera;
     snac::InstanceStream mMeshInstances;
     TextRenderer mTextRenderer;
-
-    // Must outlive all FontFaces, thus it must outlive the EntityManager,
-    // which might contain Freetype FontFaces. 
-    arte::Freetype mFreetype;
 };
 
 
