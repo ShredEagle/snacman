@@ -66,6 +66,8 @@ cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsErro
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # We use istrstream to interface an array of std::byte with an istream based API.
     target_compile_definitions(${TARGET_NAME} PRIVATE _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING)
+else()
+    target_compile_options(${TARGET_NAME} PRIVATE "-Wno-deprecated")
 endif ()
 
 cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})

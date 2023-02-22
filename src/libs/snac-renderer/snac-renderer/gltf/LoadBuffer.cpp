@@ -6,6 +6,7 @@
 #include <handy/Url.h>
 
 #include <span>
+
 #include <strstream>
 
 #include <renderer/AttributeDimension.h>
@@ -22,7 +23,7 @@ namespace snac {
 
 namespace {
 
-    // TODO Should be moved to a more general library. 
+    // TODO Should be moved to a more general library.
     // Reading a stream content is a recurring need.
     std::vector<std::byte> loadInputStream(std::istream & aInput, std::size_t aByteLength, const std::string & aStreamId)
     {
@@ -48,19 +49,16 @@ namespace {
     }
 
 
-    std::vector<std::byte> loadInputStream(std::istream && aInput, std::size_t aByteLength, const std::string & aStreamId)
-    { return loadInputStream(aInput, aByteLength, aStreamId); }
-
     using ElementType = arte::gltf::Accessor::ElementType;
 
     const std::map<ElementType, graphics::AttributeDimension> gElementTypeToLayout{
-        {ElementType::Scalar, {1}},    
-        {ElementType::Vec2,   {2}},    
-        {ElementType::Vec3,   {3}},    
-        {ElementType::Vec4,   {4}},    
-        {ElementType::Mat2,   {2, 2}},    
-        {ElementType::Mat3,   {3, 3}},    
-        {ElementType::Mat4,   {4, 4}},    
+        {ElementType::Scalar, {1}},
+        {ElementType::Vec2,   {2}},
+        {ElementType::Vec3,   {3}},
+        {ElementType::Vec4,   {4}},
+        {ElementType::Mat2,   {2, 2}},
+        {ElementType::Mat3,   {3, 3}},
+        {ElementType::Mat4,   {4, 4}},
     };
 
 
