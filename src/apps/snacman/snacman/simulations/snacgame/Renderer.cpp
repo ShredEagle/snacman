@@ -129,7 +129,7 @@ std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
     return std::make_shared<snac::Font>(
         mFreetype,
         aFont,
-        aPixelHeight,
+        64,
         aResources.getShaderEffect("shaders/Text.prog")
     );
 }
