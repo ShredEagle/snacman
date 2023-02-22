@@ -11,6 +11,7 @@
 #include <renderer/VertexSpecification.h>
 
 #include <map>
+#include <optional>
 
 
 namespace ad {
@@ -18,7 +19,7 @@ namespace snac {
 
 
 // TODO this approach based on specialized repositories feels cumbersome.
-using TextureRepository = std::map<Semantic, 
+using TextureRepository = std::map<Semantic,
                                    std::variant<std::shared_ptr<graphics::Texture>,
                                                 graphics::Texture *>>;
 
@@ -47,7 +48,7 @@ struct BufferView
 {
     // Important: At the moment, we make distinct buffers for each gltf buffer view.
     // This is whay the BufferView hosts the VertexBufferObject.
-    // We make the bet that interleaved vertex attributes are always modeled 
+    // We make the bet that interleaved vertex attributes are always modeled
     // by distinct accessor on the same buffer view in gltf.
     graphics::VertexBufferObject mBuffer;
     GLsizei mStride{0};
