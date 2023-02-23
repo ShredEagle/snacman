@@ -20,7 +20,7 @@ set(${TARGET_NAME}_HEADERS
 
     text/Text.h
 
-    3rdparty/Profiler.hpp
+    3rdparty/nvpro/Profiler.hpp
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -41,7 +41,7 @@ set(${TARGET_NAME}_SOURCES
     gltf/GltfLoad.cpp
     gltf/LoadBuffer.cpp
 
-    3rdparty/Profiler.cpp
+    3rdparty/nvpro/Profiler.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -79,6 +79,9 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
 cmc_find_dependencies()
 
+# Add NVTX Imported CMake targets
+include("3rdparty/nvtx/nvtxImportedTargets.cmake")
+
 target_link_libraries(${TARGET_NAME}
     PUBLIC
         ad::math
@@ -89,8 +92,11 @@ target_link_libraries(${TARGET_NAME}
         ad::resource
 
         spdlog::spdlog
+        nvtx3-cpp
 )
 
+# With this definition, the nvpro Profiler will generate nvtx events/ranges.
+target_compile_definitions(${TARGET_NAME} PUBLIC NVP_SUPPORTS_NVTOOLSEXT)
 
 ##
 ## Install
