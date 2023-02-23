@@ -21,8 +21,9 @@
 #ifndef NV_PROFILERGL_INCLUDED
 #define NV_PROFILERGL_INCLUDED
 
-#include "../nvh/profiler.hpp"
-#include "extensions_gl.hpp"
+#include "Profiler.hpp"
+
+#include <renderer/GL_Loader.h>
 
 namespace nvgl {
 
@@ -42,7 +43,7 @@ class ProfilerGL : public nvh::Profiler
 {
 public:
   // utility class to call begin/end within local scope
-  class Section
+  class [[nodiscard]] Section
   {
   public:
     Section(ProfilerGL& profiler, const char* name, bool singleShot = false)
@@ -50,11 +51,23 @@ public:
     {
       m_id = profiler.beginSection(name, singleShot);
     }
-    ~Section() { m_profiler.endSection(m_id); }
+
+    // Not copyable
+    Section(const Section & aRhs) = delete;
+
+    Section(Section && aRhs) :
+      m_id{aRhs.m_id},
+      m_profiler{aRhs.m_profiler}
+    {
+        aRhs.m_active = false;
+    }
+
+    ~Section() { if(m_active) m_profiler.endSection(m_id); }
 
   private:
     SectionID   m_id;
     ProfilerGL& m_profiler;
+    bool m_active = true;
   };
 
   // recurring, must be within beginFrame/endFrame

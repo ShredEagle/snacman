@@ -18,7 +18,7 @@
  */
 
 
-#include "profiler_gl.hpp"
+#include "Profiler_gl.hpp"
 #include <assert.h>
 
 
