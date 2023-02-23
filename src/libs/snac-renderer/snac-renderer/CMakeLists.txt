@@ -21,6 +21,7 @@ set(${TARGET_NAME}_HEADERS
     text/Text.h
 
     3rdparty/nvpro/Profiler.hpp
+    3rdparty/nvpro/Profiler_gl.hpp
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -42,6 +43,7 @@ set(${TARGET_NAME}_SOURCES
     gltf/LoadBuffer.cpp
 
     3rdparty/nvpro/Profiler.cpp
+    3rdparty/nvpro/Profiler_gl.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
