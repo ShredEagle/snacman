@@ -1,5 +1,7 @@
 #include "Renderer.h"
 
+#include "renderer/ScopeGuards.h"
+
 #include <math/Angle.h>
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
@@ -64,6 +66,7 @@ void TextRenderer::render(Renderer & aRenderer,
         // TODO should be consolidated, a single call for all string of the same
         // font.
         mGlyphInstances.respecifyData(std::span{textBufferData});
+        auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
         aRenderer.mRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances,
                                    aUniforms, aUniformBlocks);
     }
@@ -116,7 +119,6 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(snac::Resources & aResources)
 
     return mesh;
 }
-
 
 std::shared_ptr<snac::Font> Renderer::loadFont(filesystem::path aFont,
                                                unsigned int aPixelHeight,

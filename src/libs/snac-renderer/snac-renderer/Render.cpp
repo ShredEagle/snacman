@@ -13,8 +13,6 @@ void Renderer::render(const Mesh & aMesh,
                       const UniformRepository & aUniforms,
                       const UniformBlocks & aUniformBlocks)
 {
-    auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
-
     const IntrospectProgram & program = aMesh.mMaterial->mEffect->mProgram;
     setUniforms(aUniforms, program);
     setTextures(aMesh.mMaterial->mTextures, program);
