@@ -141,14 +141,22 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
         }
     });
 
-    mItems.each(
-        [&newItem](component::MenuItem & aItem, component::Text & aText) {
-            if (aItem.mName == newItem)
-            {
-                aItem.mSelected = true;
-                aText.mColor = gColorItemSelected;
-            }
-        });
+    bool newItemFound = false;
+    mItems.each([&newItem, &newItemFound](component::MenuItem & aItem,
+                                          component::Text & aText) {
+        if (aItem.mName == newItem)
+        {
+            newItemFound = true;
+            aItem.mSelected = true;
+            aText.mColor = gColorItemSelected;
+        }
+    });
+
+    if (!newItemFound && newItem != "")
+    {
+        SELOG(error)
+        ("Could not find item {} in menu (Check the case)", newItem);
+    }
 
     return menuTransition;
 }
