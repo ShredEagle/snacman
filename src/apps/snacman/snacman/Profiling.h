@@ -1,9 +1,10 @@
 #pragma once
 
-#include <snac-renderer/3rdparty/Profiler.hpp>
+#include <snac-renderer/3rdparty/nvpro/Profiler.hpp>
 
 #include <handy/Guard.h>
 
+#include <array>
 #include <mutex>
 
 

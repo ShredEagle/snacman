@@ -13,6 +13,7 @@ set(${TARGET_NAME}_HEADERS
     LoopSettings.h
     QueryManipulation.h
     Profiling.h
+    ProfilingGPU.h
     RenderThread.h
     Resources.h
     SparseSet.h

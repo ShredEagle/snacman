@@ -4,6 +4,7 @@
 #include "GraphicState.h"
 #include "Logging.h"
 #include "Profiling.h"
+#include "ProfilingGPU.h"
 #include "Timing.h"
 
 #include <graphics/ApplicationGlfw.h>
@@ -22,10 +23,8 @@
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN 
-#define NOMINMAX 
 #include <windows.h>
 #include <processthreadsapi.h>
-#undef NOMINMAX 
 #undef WIN32_LEAN_AND_MEAN 
 #endif
 
@@ -419,8 +418,7 @@ private:
             //
             // Render
             //
-            glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Frame");
-            BEGIN_RECURRING(Render, "Frame", frameProfilerScope);
+            BEGIN_RECURRING_GL("Frame", frameProfilerScope);
                 
             mApplication.getAppInterface()->clear();
 
@@ -432,8 +430,7 @@ private:
                 mImguiUi.renderBackend();
             }
 
-            END_RECURRING(frameProfilerScope);
-            glPopDebugGroup();
+            END_RECURRING_GL(frameProfilerScope);
 
             {
                 TIME_RECURRING(Render, "Swap buffers");

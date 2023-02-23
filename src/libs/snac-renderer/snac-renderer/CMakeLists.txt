@@ -20,7 +20,8 @@ set(${TARGET_NAME}_HEADERS
 
     text/Text.h
 
-    3rdparty/Profiler.hpp
+    3rdparty/nvpro/Profiler.hpp
+    3rdparty/nvpro/Profiler_gl.hpp
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -41,7 +42,8 @@ set(${TARGET_NAME}_SOURCES
     gltf/GltfLoad.cpp
     gltf/LoadBuffer.cpp
 
-    3rdparty/Profiler.cpp
+    3rdparty/nvpro/Profiler.cpp
+    3rdparty/nvpro/Profiler_gl.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -64,6 +66,9 @@ set_target_properties(${TARGET_NAME} PROPERTIES
 cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsError})
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    # This library includes nvpro and nvtx code which includes Windows.h in turn
+    # We ensures this cannot lead to problems with min and max symbols.
+    target_compile_definitions(${TARGET_NAME} PUBLIC NOMINMAX)
     # We use istrstream to interface an array of std::byte with an istream based API.
     target_compile_definitions(${TARGET_NAME} PRIVATE _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING)
 else()
@@ -79,9 +84,13 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
 cmc_find_dependencies()
 
+# Add NVTX Imported CMake targets
+include("3rdparty/nvtx/nvtxImportedTargets.cmake")
+
 target_link_libraries(${TARGET_NAME}
     PUBLIC
         ad::math
+        nvtx3-cpp
     PRIVATE
         ad::arte
         ad::graphics
@@ -91,6 +100,8 @@ target_link_libraries(${TARGET_NAME}
         spdlog::spdlog
 )
 
+# With this definition, the nvpro Profiler will generate nvtx events/ranges.
+target_compile_definitions(${TARGET_NAME} PUBLIC NVP_SUPPORTS_NVTOOLSEXT)
 
 ##
 ## Install
