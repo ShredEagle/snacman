@@ -100,9 +100,10 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
 
     std::optional<Transition> menuTransition = std::nullopt;
 
-    mItems.each([this, &menuTransition, accumulatedCommand, &bindPlayerPhase, &aContext, keyboardCommand,
-                 &controllerCommandList, filteredForMenuCommand, &newItem](
-                    component::MenuItem & aItem, component::Text & aText) {
+    mItems.each([this, &menuTransition, accumulatedCommand, &bindPlayerPhase,
+                 &aContext, keyboardCommand, &controllerCommandList,
+                 filteredForMenuCommand, &newItem](component::MenuItem & aItem,
+                                                   component::Text & aText) {
         if (aItem.mSelected)
         {
             if (aItem.mNeighbors.contains(filteredForMenuCommand))
@@ -125,8 +126,7 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
                     if (command.mCommand & gSelectItem)
                     {
                         findSlotAndBind(aContext, bindPlayerPhase, mSlots,
-                                        command.mControllerType,
-                                        command.mId);
+                                        command.mControllerType, command.mId);
                     }
                     menuTransition = aItem.mTransition;
                 }
