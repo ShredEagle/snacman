@@ -11,6 +11,7 @@ layout(location=11) in vec2  in_Bearing_p;
 
 uniform ivec2 in_FramebufferResolution_p;
 
+out float ex_Scale;
 out vec2 ex_AtlasCoords;
 out vec4 ex_Albedo;
 
@@ -18,14 +19,16 @@ void main(void)
 {
     // We consider the glyph coordinate system to go from [0, 0] to [+width, -height]
     // This way, the bearing provided by FreeType can be applied directly.
-    vec2 vertexPositionInGlyph_p = (ve_Position_u * in_BoundingBox_p);
+    vec2 vertexPositionInGlyph_p = (ve_Position_u * in_BoundingBox_p) + in_Bearing_p;
 
     gl_Position = vec4(
-        (in_LocalToWorld_glyphToScreenPixels * vec3(in_Bearing_p + vertexPositionInGlyph_p, 1.)).xy / in_FramebufferResolution_p,
+        (in_LocalToWorld_glyphToScreenPixels * vec3(vertexPositionInGlyph_p, 1.)).xy / in_FramebufferResolution_p,
         0.,
         1.
     );
 
+    ex_Scale = sqrt(in_LocalToWorld_glyphToScreenPixels[0][0] * in_LocalToWorld_glyphToScreenPixels[0][0]
+    + in_LocalToWorld_glyphToScreenPixels[0][1] * in_LocalToWorld_glyphToScreenPixels[0][1]);
     ex_AtlasCoords = in_TextureOffset_p + (ve_TextureCoords_u * in_BoundingBox_p);
     ex_Albedo = in_Albedo;
 }

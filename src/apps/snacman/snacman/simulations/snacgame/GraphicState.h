@@ -48,6 +48,7 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
 struct TextScreen
 {
     math::Position<2, float> mPosition_unitscreen;
+    math::Size<2, float> mScale;
     math::Radian<float> mOrientation;
     std::string mString;
     std::shared_ptr<snac::Font> mFont;
@@ -61,6 +62,7 @@ inline TextScreen interpolate(const TextScreen & aLeftEntity, const TextScreen &
         .mPosition_unitscreen = math::lerp(aLeftEntity.mPosition_unitscreen,
                                            aRightEntity.mPosition_unitscreen,
                                            aInterpolant),
+        .mScale = math::lerp(aLeftEntity.mScale, aRightEntity.mScale, aInterpolant),
         .mOrientation = math::lerp(aLeftEntity.mOrientation, aRightEntity.mOrientation, aInterpolant),
         .mString = aLeftEntity.mString,
         .mFont = aLeftEntity.mFont,

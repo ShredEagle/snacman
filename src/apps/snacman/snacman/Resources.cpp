@@ -11,7 +11,6 @@
 namespace ad {
 namespace snac {
 
-
 std::shared_ptr<Mesh> Resources::getShape()
 {
     if(!mCube)

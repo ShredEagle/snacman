@@ -235,6 +235,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                 aHandle.id(), visu::TextScreen{
                                   // TODO
                                   .mPosition_unitscreen = aPose.mPosition_u,
+                                  .mScale = aPose.mScale,
                                   .mOrientation = aPose.mRotationCCW,
                                   .mString = aText.mString,
                                   .mFont = aText.mFont,

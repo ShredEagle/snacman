@@ -52,19 +52,20 @@ makeText(GameContext & aContext,
          ent::Phase & aPhase,
          std::string aString,
          std::shared_ptr<snac::Font> aFont,
-         math::hdr::Rgba_f aColor,
-         math::Position<2, float> aPosition_unitscreen);
+         const math::hdr::Rgba_f & aColor,
+         const math::Position<2, float> & aPosition_unitscreen,
+         const math::Size<2, float> & aScale = {1.f, 1.f});
 
 ent::Handle<ent::Entity>
 createMenuItem(GameContext & aContext,
                ent::Phase & aInit,
-               const std::string & aString,
+               std::string aString,
                std::shared_ptr<snac::Font> aFont,
-               const math::hdr::Rgba_f & aColor,
                const math::Position<2, float> & aPos,
                const std::unordered_map<int, std::string> & aNeighbors,
                const scene::Transition & aTransition,
-               bool aSelected = false);
+               bool aSelected = false,
+               const math::Size<2, float> & aScale = {1.f, 1.f});
 
 bool findSlotAndBind(GameContext & aContext,
                      ent::Phase & aBindPhase,

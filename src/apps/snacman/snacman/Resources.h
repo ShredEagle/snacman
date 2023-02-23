@@ -15,6 +15,7 @@
 namespace ad {
 namespace snac {
 
+constexpr unsigned int gDefaultPixelHeight = 64;
 
 class Resources
 {
@@ -26,7 +27,7 @@ public:
 
     std::shared_ptr<Mesh> getShape();
 
-    std::shared_ptr<Font> getFont(filesystem::path aFont, unsigned int aPixelHeight);
+    std::shared_ptr<Font> getFont(filesystem::path aFont, unsigned int aPixelHeight = gDefaultPixelHeight);
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
     std::shared_ptr<Effect> getShaderEffect(filesystem::path aProgram);

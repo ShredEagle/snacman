@@ -67,7 +67,7 @@ GlyphAtlas::GlyphAtlas(arte::FontFace aFontFace) :
 
 std::vector<GlyphInstance> GlyphAtlas::populateInstances(const std::string & aString,
                                                          math::sdr::Rgba aColor,
-                                                         math::AffineMatrix<3, float> aLocalToScreen_p) const
+                                                         math::AffineMatrix<3, float> aLocalToScreen_p, math::AffineMatrix<3, float> aScale) const
 {
 
     std::vector<GlyphInstance> glyphInstances;

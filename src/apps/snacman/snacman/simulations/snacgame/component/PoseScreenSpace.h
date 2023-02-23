@@ -14,6 +14,7 @@ struct PoseScreenSpace
 {
     // Pose
     math::Position<2, float> mPosition_u;
+    math::Size<2, float> mScale{1.f, 1.f};
     math::Radian<float> mRotationCCW{0.f};
     // It is difficult to work with a single transformation matrix, because we want to express position in screen unit square
     // (and atm, the transformation in the shader should result in pixel coordinates)
