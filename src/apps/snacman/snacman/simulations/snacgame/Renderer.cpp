@@ -8,6 +8,7 @@
 #include <snac-renderer/text/Text.h>
 
 #include <snacman/Profiling.h>
+#include <snacman/ProfilingGPU.h>
 #include <snacman/Resources.h>
 
 #include <platform/Filesystem.h>
@@ -74,9 +75,9 @@ void TextRenderer::render(Renderer & aRenderer,
 
         // TODO should be consolidated, a single call for all string of the same font.
         mGlyphInstances.respecifyData(std::span{textBufferData});
-        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Draw string");
+        BEGIN_RECURRING_GL("Draw string", drawStringProfile);
         aRenderer.mRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances, aUniforms, aUniformBlocks);
-        glPopDebugGroup();
+        END_RECURRING_GL(drawStringProfile);
     }
 
 }
@@ -184,15 +185,13 @@ void Renderer::render(const visu::GraphicState & aState)
          {snac::BlockSemantic::Viewing, &mCamera.mViewing},
     };
 
-    BEGIN_RECURRING(Render, "Draw_meshes", drawMeshProfile);
-    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Draw meshes");
+    BEGIN_RECURRING_GL("Draw_meshes", drawMeshProfile);
     for (const auto & [mesh, instances] : sortedMeshes)
     {
         mMeshInstances.respecifyData(std::span{instances});
         mRenderer.render(*mesh, mMeshInstances, uniforms, uniformBlocks);
     }
-    glPopDebugGroup();
-    END_RECURRING(drawMeshProfile);
+    END_RECURRING_GL(drawMeshProfile);
 
     //
     // Text
