@@ -192,6 +192,7 @@ void runApplication()
         }
         else
         {
+            TIME_RECURRING(Main, "busy_wait");
             SleepResult slept =
                 sleepBusy(configurableSettings.mSimulationDelta, beginStepTime);
             SELOG(trace)

@@ -4,6 +4,7 @@
 
 #include <handy/Guard.h>
 
+#include <array>
 #include <mutex>
 
 
