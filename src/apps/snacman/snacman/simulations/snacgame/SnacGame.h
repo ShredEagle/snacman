@@ -103,6 +103,7 @@ public:
              snac::RenderThread<Renderer_t> & aRenderThread,
              imguiui::ImguiUi & aImguiUi,
              resource::ResourceFinder aResourceFinder,
+             arte::Freetype & aFreetype,
              RawInput & aInput);
 
     bool update(float aDelta, RawInput & aInput);

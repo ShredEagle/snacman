@@ -8,6 +8,12 @@ namespace ad {
 namespace snac {
 
 
+Resources::~Resources()
+{
+    SELOG(debug)("Destructing snacman::Resources instance.");
+}
+
+
 std::shared_ptr<Mesh> Resources::getShape(filesystem::path aShape)
 {
     // This is bad design, but lazy to get the result quickly

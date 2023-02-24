@@ -46,10 +46,11 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    snac::RenderThread<Renderer_t> & aRenderThread,
                    imguiui::ImguiUi & aImguiUi,
                    resource::ResourceFinder aResourceFinder,
+                   arte::Freetype & aFreetype,
                    RawInput & aInput) :
     mAppInterface{&aAppInterface},
     mGameContext{
-        .mResources = snac::Resources{std::move(aResourceFinder), aRenderThread},
+        .mResources = snac::Resources{std::move(aResourceFinder), aFreetype, aRenderThread},
         .mRenderThread = aRenderThread,
     },
     mMappingContext{mGameContext.mWorld, mGameContext.mResources},
