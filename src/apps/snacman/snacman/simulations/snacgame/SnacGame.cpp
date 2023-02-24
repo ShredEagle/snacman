@@ -26,6 +26,8 @@
 #include <snacman/ImguiUtilities.h>
 #include <snacman/Profiling.h>
 
+#include <handy/Guard.h>
+
 #include <imguiui/ImguiUi.h>
 
 #include <snac-renderer/text/Text.h>
@@ -85,9 +87,15 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
     std::lock_guard lock{mImguiUi.mFrameMutex};
     mImguiUi.newFrame();
+    // We must make sure to match each newFrame() to a render(),
+    // otherwise we might get access violation in the RenderThread, when calling ImguiUi::renderBackend()
+    Guard renderGuard{[this]()
+    {
+        this->mImguiUi.render();
+    }};
+
     // NewFrame() updates the io catpure flag: consume them ASAP
     // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
-    // mImguiUi.newFrame();
     aInhibiter.resetCapture(static_cast<ImguiInhibiter::WantCapture>(
         (mImguiUi.isCapturingMouse() ? ImguiInhibiter::Mouse
                                      : ImguiInhibiter::Null)
@@ -149,15 +157,16 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     }
     if (mImguiDisplays.mShowRenderControls)
     {
+        // TODO This should be an easier raii object
         ImGui::Begin("Render controls");
+        Guard endGuard{[](){
+            ImGui::End();
+        }};
         if(ImGui::Button("Recompile shaders"))
         {
             mGameContext.mRenderThread.recompileShaders(mGameContext.mResources);
         }
-        ImGui::End();
     }
-
-    mImguiUi.render();
 }
 
 
