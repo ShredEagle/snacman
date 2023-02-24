@@ -83,7 +83,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
     ent::Phase update;
 
-    mImguiUi.mFrameMutex.lock();
+    std::lock_guard lock{mImguiUi.mFrameMutex};
     mImguiUi.newFrame();
     // NewFrame() updates the io catpure flag: consume them ASAP
     // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
@@ -158,7 +158,6 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     }
 
     mImguiUi.render();
-    mImguiUi.mFrameMutex.unlock();
 }
 
 
