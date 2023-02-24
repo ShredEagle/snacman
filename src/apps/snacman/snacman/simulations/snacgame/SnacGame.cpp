@@ -164,7 +164,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         }};
         if(ImGui::Button("Recompile shaders"))
         {
-            mGameContext.mRenderThread.recompileShaders(mGameContext.mResources);
+            mGameContext.mRenderThread.recompileShaders(mGameContext.mResources)
+                .get(); // so any exception is rethrown in this context
         }
     }
 }
