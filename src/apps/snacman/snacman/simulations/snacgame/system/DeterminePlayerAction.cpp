@@ -3,6 +3,7 @@
 #include "math/Color.h"
 #include "snacman/Input.h"
 #include "snacman/Logging.h"
+#include <cmath>
 #include <snacman/Profiling.h>
 
 #include "../component/AllowedMovement.h"
@@ -24,7 +25,7 @@ void DeterminePlayerAction::update()
                     component::LevelCreated &) {
         auto tiles = aLevelData.mTiles;
         int colCount = aLevelData.mSize.height();
-        mPlayer.each([colCount, &tiles](
+        mPlayer.each([&](
                          component::Controller & aController,
                          component::Geometry & aPlayerGeometry,
                          component::PlayerMoveState & aPlayerMoveState) {
@@ -32,66 +33,71 @@ void DeterminePlayerAction::update()
             int oldMoveState = aPlayerMoveState.mMoveState;
             int inputMoveFlag = gPlayerMoveFlagNone;
 
-            auto pathUnderPlayerAllowedMove =
-                tiles.at(aPlayerGeometry.mGridPosition.x()
-                         + aPlayerGeometry.mGridPosition.y() * colCount);
+            int intPosX = static_cast<int>(aPlayerGeometry.mPosition.x() + 0.5f);
+            int intPosY = static_cast<int>(aPlayerGeometry.mPosition.y() + 0.5f);
+            float fracPosX = aPlayerGeometry.mPosition.x() - intPosX;
+            float fracPosY = aPlayerGeometry.mPosition.y() - intPosY;
 
-            if (aPlayerGeometry.mSubGridPosition.y() > 0.f
+            auto pathUnderPlayerAllowedMove =
+                tiles.at(intPosX
+                         + intPosY * colCount);
+
+            if (fracPosY > 0.f
                 || (pathUnderPlayerAllowedMove.mAllowedMove
                         & component::gAllowedMovementUp
-                    && aPlayerGeometry.mSubGridPosition.x()
+                    && fracPosX
                            > -gTurningZoneHalfWidth
-                    && aPlayerGeometry.mSubGridPosition.x()
+                    && fracPosX
                            < gTurningZoneHalfWidth))
             {
                 allowedMovementFlag |= component::gAllowedMovementUp;
             }
-            if (aPlayerGeometry.mSubGridPosition.y() < 0.f
+            if (fracPosY < 0.f
                 || (pathUnderPlayerAllowedMove.mAllowedMove
                         & component::gAllowedMovementDown
-                    && aPlayerGeometry.mSubGridPosition.x()
+                    && fracPosX
                            > -gTurningZoneHalfWidth
-                    && aPlayerGeometry.mSubGridPosition.x()
+                    && fracPosX
                            < gTurningZoneHalfWidth))
             {
                 allowedMovementFlag |= component::gAllowedMovementDown;
             }
-            if (aPlayerGeometry.mSubGridPosition.x() < 0.f
+            if (fracPosX < 0.f
                 || (pathUnderPlayerAllowedMove.mAllowedMove
                         & component::gAllowedMovementLeft
-                    && aPlayerGeometry.mSubGridPosition.y()
+                    && fracPosY
                            > -gTurningZoneHalfWidth
-                    && aPlayerGeometry.mSubGridPosition.y()
+                    && fracPosY
                            < gTurningZoneHalfWidth))
             {
                 allowedMovementFlag |= component::gAllowedMovementLeft;
             }
-            if (aPlayerGeometry.mSubGridPosition.x() > 0.f
+            if (fracPosX > 0.f
                 || (pathUnderPlayerAllowedMove.mAllowedMove
                         & component::gAllowedMovementRight
-                    && aPlayerGeometry.mSubGridPosition.y()
+                    && fracPosY
                            > -gTurningZoneHalfWidth
-                    && aPlayerGeometry.mSubGridPosition.y()
+                    && fracPosY
                            < gTurningZoneHalfWidth))
             {
                 allowedMovementFlag |= component::gAllowedMovementRight;
             }
 
-            if ((aPlayerGeometry.mSubGridPosition.y() < 0.f
+            if ((fracPosY < 0.f
                  && !(allowedMovementFlag & component::gAllowedMovementUp))
-                || (aPlayerGeometry.mSubGridPosition.y() > 0.f
+                || (fracPosY > 0.f
                     && !(allowedMovementFlag
                          & component::gAllowedMovementDown)))
             {
-                aPlayerGeometry.mSubGridPosition.y() = 0.f;
+                aPlayerGeometry.mPosition.y() = static_cast<int>(aPlayerGeometry.mPosition.y());
             }
-            if ((aPlayerGeometry.mSubGridPosition.x() > 0.f
+            if ((fracPosX > 0.f
                  && !(allowedMovementFlag & component::gAllowedMovementLeft))
-                || (aPlayerGeometry.mSubGridPosition.x() < 0.f
+                || (fracPosX < 0.f
                     && !(allowedMovementFlag
                          & component::gAllowedMovementRight)))
             {
-                aPlayerGeometry.mSubGridPosition.x() = 0.f;
+                aPlayerGeometry.mPosition.x() = static_cast<int>(aPlayerGeometry.mPosition.x());
             }
 
             inputMoveFlag = aController.mCommandQuery;
@@ -104,6 +110,17 @@ void DeterminePlayerAction::update()
             }
 
             aPlayerMoveState.mMoveState = inputMoveFlag;
+
+            mPaths.each([&](component::Geometry & aGeomatry) {
+                    if (static_cast<int>(aGeomatry.mPosition.x()) == intPosX &&
+                            static_cast<int>(aGeomatry.mPosition.y()) == intPosY)
+                    {
+                        aGeomatry.mColor = math::hdr::gGreen<float>;
+                    }
+                    else {
+                        aGeomatry.mColor = math::hdr::gWhite<float>;
+                    }
+                    });
         });
     });
 }

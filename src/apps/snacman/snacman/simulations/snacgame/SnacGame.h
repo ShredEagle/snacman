@@ -41,7 +41,7 @@ namespace snacgame {
 
 // TODO: before commit change this
 constexpr int gGridSize = 29;
-constexpr float gCellSize = 2.f;
+constexpr float gCellSize = 1.f;
 
 struct ImguiDisplays
 {
@@ -126,6 +126,7 @@ private:
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};
+    float mSpeedFactor{1.f};
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;

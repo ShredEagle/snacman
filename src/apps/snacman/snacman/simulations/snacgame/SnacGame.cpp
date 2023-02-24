@@ -42,6 +42,13 @@
 namespace ad {
 namespace snacgame {
 
+std::array<math::hdr::Rgba_f, 4> gSlotColors{
+    math::hdr::Rgba_f{0.725f, 1.f, 0.718f, 1.f},
+    math::hdr::Rgba_f{0.949f, 0.251f, 0.506f, 1.f},
+    math::hdr::Rgba_f{0.961f, 0.718f, 0.f, 1.f},
+    math::hdr::Rgba_f{0.f, 0.631f, 0.894f, 1.f},
+};
+
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    snac::RenderThread<Renderer_t> & aRenderThread,
                    imguiui::ImguiUi & aImguiUi,
@@ -65,10 +72,10 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     ent::Phase init;
 
     // Creating the slot entity those will be used a player entities
-    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{0, false});
-    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{1, false});
-    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{2, false});
-    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{3, false});
+    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{0, false, gSlotColors.at(0)});
+    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{1, false, gSlotColors.at(1)});
+    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{2, false, gSlotColors.at(2)});
+    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{3, false, gSlotColors.at(3)});
 
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(mGameContext, scene::Transition{}, aInput);
@@ -127,6 +134,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         }
         aSettings.mUpdateDuration = std::chrono::milliseconds{updateDuration};
 
+        ImGui::InputFloat("SpeedFactor", &mSpeedFactor);
+
         bool interpolate = aSettings.mInterpolate;
         ImGui::Checkbox("State interpolation", &interpolate);
         aSettings.mInterpolate = interpolate;
@@ -154,7 +163,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
 bool SnacGame::update(float aDelta, RawInput & aInput)
 {
-    mSimulationTime += aDelta;
+    mSimulationTime += aDelta * mSpeedFactor;
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
     mSystemOrbitalCamera->update(aInput,
@@ -162,7 +171,7 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
                                  mAppInterface->getWindowSize().height());
 
     std::optional<scene::Transition> transition =
-        mStateMachine->getCurrentScene()->update(mGameContext, aDelta, aInput);
+        mStateMachine->getCurrentScene()->update(mGameContext, aDelta * mSpeedFactor, aInput);
 
     if (transition)
     {
@@ -204,12 +213,10 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                     : cellSize;
             auto worldPosition = math::Position<3, float>{
                 -(float) mRowCount
-                    + (float) aGeometry.mGridPosition.y() * cellSize
-                    + aGeometry.mSubGridPosition.y(),
+                    + (float) aGeometry.mPosition.y(),
                 yCoord,
                 -(float) mColCount
-                    + (float) aGeometry.mGridPosition.x() * cellSize
-                    + aGeometry.mSubGridPosition.x(),
+                    + (float) aGeometry.mPosition.x(),
             };
             state->mEntities.insert(aHandle.id(),
                                     visu::Entity{
@@ -219,10 +226,6 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                                         .mColor = aGeometry.mColor,
                                         .mMesh = aVisualMesh.mMesh,
                                     });
-            std::function<void()> func = [worldPosition]() {
-                float stuff = worldPosition.x();
-                ImGui::InputFloat("Stuff:", &stuff);
-            };
         });
 
     //

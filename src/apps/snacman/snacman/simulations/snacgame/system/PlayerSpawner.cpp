@@ -26,8 +26,7 @@ void PlayerSpawner::update(float aDelta)
                         aPlayer.mIsAlive = true;
                         aPlayer.mTimeToRespawn = component::gBaseTimeToRespawn;
                         aPlayer.mInvulFrameCounter = component::gBaseInvulFrameDuration;
-                        aPlayerGeometry.mGridPosition = aSpawner.mSpawnPosition;
-                        aPlayerGeometry.mSubGridPosition = math::Position<2, float>::Zero();
+                        aPlayerGeometry.mPosition = aSpawner.mSpawnPosition;
                     }
                 });
             }

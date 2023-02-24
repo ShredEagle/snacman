@@ -58,6 +58,8 @@ void LevelCreator::update(GameContext & aContext)
             {
                 for (int x = 0; x < aGrid.mSize.width(); x++)
                 {
+                    float xFloat = static_cast<float>(x);
+                    float yFloat = static_cast<float>(y);
                     unsigned char value = aGrid.mCharacters.at(
                         aGrid.mState.at(aGrid.getFlatGridIndex({x, y, z})));
                     switch (value)
@@ -66,25 +68,25 @@ void LevelCreator::update(GameContext & aContext)
                         tiles.push_back(component::Tile{.mType = component::TileType::Path});
                         createPathEntity(aContext, 
                                          createLevelPhase,
-                                         math::Position<2, int>{x, y});
+                                         math::Position<2, float>{xFloat, yFloat});
                         createPill(aContext,
                                    createLevelPhase,
-                                   math::Position<2, int>{x, y});
+                                   math::Position<2, float>{xFloat, yFloat});
                         break;
                     case 'K':
                         tiles.push_back(component::Tile{.mType = component::TileType::Portal});
                         createPortalEntity(aContext, createLevelPhase,
-                                           math::Position<2, int>{x, y});
+                                           math::Position<2, float>{xFloat, yFloat});
                         break;
                     case 'O':
                         tiles.push_back(component::Tile{.mType = component::TileType::Pen});
                         createCopPenEntity(aContext, createLevelPhase,
-                                           math::Position<2, int>{x, y});
+                                           math::Position<2, float>{xFloat, yFloat});
                         break;
                     case 'U':
                         tiles.push_back(component::Tile{.mType = component::TileType::Spawn});
                         createPlayerSpawnEntity(aContext, createLevelPhase,
-                                                math::Position<2, int>{x, y});
+                                                math::Position<2, float>{xFloat, yFloat});
                         break;
                     default:
                         tiles.push_back(component::Tile{

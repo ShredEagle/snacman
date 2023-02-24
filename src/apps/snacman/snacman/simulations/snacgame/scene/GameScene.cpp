@@ -5,6 +5,8 @@
 #include <snacman/Profiling.h>
 #include "snacman/simulations/snacgame/component/Controller.h"
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
+#include "snacman/simulations/snacgame/component/PoseScreenSpace.h"
+#include "snacman/simulations/snacgame/component/VisualMesh.h"
 #include "snacman/simulations/snacgame/system/LevelCreator.h"
 #include "snacman/simulations/snacgame/system/MovementIntegration.h"
 
@@ -65,6 +67,9 @@ void GameScene::teardown(RawInput & aInput)
         aHandle.get(destroy)->remove<component::Geometry>();
         aHandle.get(destroy)->remove<component::PlayerLifeCycle>();
         aHandle.get(destroy)->remove<component::PlayerMoveState>();
+        aHandle.get(destroy)->remove<component::Text>();
+        aHandle.get(destroy)->remove<component::VisualMesh>();
+        aHandle.get(destroy)->remove<component::PoseScreenSpace>();
     });
 }
 

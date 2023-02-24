@@ -13,6 +13,9 @@ namespace ad {
 namespace snacgame {
 namespace component {
 
+struct Pill
+{};
+
 struct LevelEntity
 {};
 
@@ -65,7 +68,7 @@ struct LevelData
     int mSeed;
 
     std::vector<Tile> mTiles;
-    float mCellSize = 2.f;
+    float mCellSize = 1.f;
 };
 
 } // namespace component
