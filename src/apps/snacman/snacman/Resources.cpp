@@ -77,9 +77,27 @@ std::shared_ptr<Mesh> Resources::MeshLoader(
 
 void Resources::recompilePrograms()
 {
+    bool allSuccess = true;
     for(auto & [_stringId, effect] : mEffects) 
     {
-        *effect = std::move(*loadEffect(effect->mEffectFile));
+        try 
+        {
+            *effect = std::move(*loadEffect(effect->mEffectFile));
+            SELOG(debug)("Successfully recompiled program from file '{}'",
+                effect->mEffectFile.string());
+        }
+        catch(graphics::ShaderCompilationError & aError)
+        {
+            allSuccess = false;
+            SELOG(error)
+                ("Cannot recompile program from file '{}' due to shader compilation error:\n{}",
+                effect->mEffectFile.string(), aError.what());
+        }
+    }
+
+    if(allSuccess)
+    {
+        SELOG(info)("All programs were recompiled successfully.");
     }
 }
 
