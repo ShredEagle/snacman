@@ -55,7 +55,8 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aProgram)
         .mProgram = IntrospectProgram{
             graphics::makeLinkedProgram(shaders.begin(), shaders.end()),
             aProgram.filename().string(),
-        }
+        },
+        .mEffectFile = aProgram,
     });
 }
 

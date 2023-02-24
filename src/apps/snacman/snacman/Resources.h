@@ -36,6 +36,8 @@ public:
 
     const arte::Freetype & getFreetype()
     { return mFreetype; }
+    
+    void recompilePrograms();
 
 private:
     static std::shared_ptr<Font> FontLoader(

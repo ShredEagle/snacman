@@ -94,8 +94,13 @@ void runApplication()
     glfwApp.removeCurrentContext();
 
     GraphicStateFifo<snacgame::Renderer> graphicStates;
-    RenderThread renderingThread{glfwApp, graphicStates, std::move(renderer),
-                                imguiUi, configurableSettings.mInterpolate};
+    RenderThread renderingThread{
+        glfwApp,
+        graphicStates,
+        std::move(renderer),
+        imguiUi,
+        configurableSettings
+    };
 
     //
     // Initialize input devices

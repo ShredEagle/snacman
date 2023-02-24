@@ -146,6 +146,15 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         ImGui::TextUnformatted(snac::getRenderProfilerPrint().get().c_str());
         ImGui::End();
     }
+    if (mImguiDisplays.mShowRenderControls)
+    {
+        ImGui::Begin("Render controls");
+        if(ImGui::Button("Recompile shaders"))
+        {
+            mGameContext.mRenderThread.recompileShaders(mGameContext.mResources);
+        }
+        ImGui::End();
+    }
 
     mImguiUi.render();
     mImguiUi.mFrameMutex.unlock();

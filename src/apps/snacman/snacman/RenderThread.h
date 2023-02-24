@@ -3,6 +3,7 @@
 
 #include "GraphicState.h"
 #include "Logging.h"
+#include "LoopSettings.h"
 #include "Profiling.h"
 #include "ProfilingGPU.h"
 #include "Timing.h"
@@ -33,6 +34,11 @@ namespace snac {
 
 
 class Resources;
+
+
+// Compilation firewall: required because Resources include RenderThread.h,
+// so we cannot access Resources defintion from the header.
+void recompilePrograms(Resources & aResources);
 
 
 template <class T_renderer>
@@ -97,25 +103,31 @@ private:
     std::size_t mFront = 1;
 };
 
-
 template <class T_renderer>
 class RenderThread
 {
     using GraphicStateFifo_t = GraphicStateFifo<T_renderer>;
     using Operation = std::function<void(T_renderer &)>;
 
+    struct Controls
+    {
+        std::atomic<bool> & mInterpolate;
+    };
+
 public:
     RenderThread(graphics::ApplicationGlfw & aGlfwApp,
                  GraphicStateFifo_t & aStates,
                  T_renderer && aRenderer,
                  imguiui::ImguiUi & aImguiUi,
-                 std::atomic<bool> & aInterpolate) :
+                 ConfigurableSettings & aSettingsIncludingControls) :
         mApplication{aGlfwApp},
         mViewportListening{
             aGlfwApp.getAppInterface()->listenFramebufferResize(std::bind(
                 &RenderThread::resizeViewport, this, std::placeholders::_1))},
         mImguiUi{aImguiUi},
-        mInterpolate{aInterpolate}
+        mControls{
+            .mInterpolate = aSettingsIncludingControls.mInterpolate,
+        }
     {
         mThread = std::thread{
             [this, &aStates, renderer = std::move(aRenderer)]() mutable {
@@ -218,6 +230,32 @@ public:
              });
         return future;
     }
+
+
+    std::future<void> recompileShaders(Resources & aResources)
+    {
+        assert(std::this_thread::get_id() != mThread.get_id());
+
+        // std::function require the type-erased functor to be copy constructible.
+        // all captured types must be copyable.
+        auto promise = std::make_shared<std::promise<void>>();
+        std::future<void> future = promise->get_future();
+        push([promise = std::move(promise), &aResources]
+             (T_renderer & aRenderer) mutable
+             {
+                try
+                {
+                    recompilePrograms(aResources);
+                    promise->set_value();
+                }
+                catch(...)
+                {
+                    promise->set_exception(std::current_exception());
+                }
+             });
+        return future;
+    }
+
 
     void checkRethrow()
     {
@@ -374,7 +412,7 @@ private:
             // disabled)
             //
             typename T_renderer::GraphicState_t state;
-            if (mInterpolate)
+            if (mControls.mInterpolate)
             {
                 TIME_RECURRING(Render, "Interpolation");
 
@@ -454,7 +492,7 @@ private:
     std::mutex mOperationsMutex;
     imguiui::ImguiUi & mImguiUi;
 
-    std::atomic<bool> & mInterpolate;
+    Controls mControls;
 
     std::atomic<bool> mThrew{false};
     std::exception_ptr mThreadException;

@@ -69,5 +69,14 @@ std::shared_ptr<Mesh> Resources::MeshLoader(
 }
 
 
+void Resources::recompilePrograms()
+{
+    for(auto & [_stringId, effect] : mEffects) 
+    {
+        *effect = std::move(*loadEffect(effect->mEffectFile));
+    }
+}
+
+
 } // namespace snac
 } // namespace ad

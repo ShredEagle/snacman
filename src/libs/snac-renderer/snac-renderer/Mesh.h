@@ -27,6 +27,7 @@ using TextureRepository = std::map<Semantic,
 struct Effect
 {
     IntrospectProgram mProgram;
+    filesystem::path mEffectFile; // TODO I am unsure if the effect should be hosting this path
 };
 
 
