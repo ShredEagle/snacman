@@ -12,6 +12,8 @@ namespace ad {
 namespace snac {
 
 
+bool attemptRecompile(Technique & aTechnique);
+
 IntrospectProgram loadProgram(filesystem::path aProgram);
 
 std::shared_ptr<Effect> loadEffect(filesystem::path aProgram);

@@ -20,6 +20,23 @@ namespace ad {
 namespace snac {
 
 
+bool attemptRecompile(Technique & aTechnique)
+{
+    try 
+    {
+        aTechnique.mProgram = loadProgram(aTechnique.mProgramFile);
+        return true;
+    }
+    catch(graphics::ShaderCompilationError & aError)
+    {
+        SELOG(error)
+            ("Cannot recompile program from file '{}' due to shader compilation error:\n{}",
+            aTechnique.mProgramFile.string(), aError.what());
+    }
+    return false;
+}
+
+
 IntrospectProgram loadProgram(filesystem::path aProgram)
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;

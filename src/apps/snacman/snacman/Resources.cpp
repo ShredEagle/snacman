@@ -80,18 +80,12 @@ void Resources::recompilePrograms()
     bool allSuccess = true;
     for(auto & [_stringId, effect] : mEffects) 
     {
-        try 
+        for (auto & technique : effect->mTechniques)
         {
-            *effect = std::move(*loadEffect(effect->mEffectFile));
-            SELOG(debug)("Successfully recompiled program from file '{}'",
-                effect->mEffectFile.string());
-        }
-        catch(graphics::ShaderCompilationError & aError)
-        {
-            allSuccess = false;
-            SELOG(error)
-                ("Cannot recompile program from file '{}' due to shader compilation error:\n{}",
-                effect->mEffectFile.string(), aError.what());
+            if (!attemptRecompile(technique))
+            {
+                allSuccess = false;
+            }
         }
     }
 
