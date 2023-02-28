@@ -61,6 +61,7 @@ target_link_libraries(${TARGET_NAME}
         ad::snac-renderer
 
         ad::graphics
+        ad::imguiui
         ad::platform
         ad::resource
 

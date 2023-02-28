@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Gui.h"
 
 #include <snac-renderer/Camera.h>
 #include <snac-renderer/Cube.h>
@@ -77,11 +78,11 @@ InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
 
 struct Scene
 {
-    Scene(graphics::AppInterface & aAppInterface, Mesh aMesh);
+    Scene(graphics::ApplicationGlfw & aGlfwApp, Mesh aMesh);
 
     void update();
 
-    void render(Renderer & aRenderer) const;
+    void render(Renderer & aRenderer);
 
     Mesh mMesh;
     InstanceStream mInstances{makeInstances(mMesh.mStream.mBoundingBox)};
@@ -89,26 +90,47 @@ struct Scene
     MouseOrbitalControl mCameraControl;
 
     std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListener;
+    Gui mGui;
 };
 
 
-inline Scene::Scene(graphics::AppInterface & aAppInterface, Mesh aMesh) :
+inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp, Mesh aMesh) :
     mMesh{std::move(aMesh)},
-    mCamera{math::getRatio<float>(aAppInterface.getFramebufferSize()), Camera::gDefaults},
-    mCameraControl{aAppInterface.getWindowSize(), Camera::gDefaults.vFov}
+    mCamera{math::getRatio<float>(aGlfwApp.getAppInterface()->getFramebufferSize()), Camera::gDefaults},
+    mCameraControl{aGlfwApp.getAppInterface()->getWindowSize(), Camera::gDefaults.vFov},
+    mGui{aGlfwApp}
 {
     using namespace std::placeholders;
+    graphics::AppInterface & appInterface = *aGlfwApp.getAppInterface();
 
-    aAppInterface.registerCursorPositionCallback(
-        std::bind(&MouseOrbitalControl::callbackCursorPosition, &mCameraControl, _1, _2));
+    appInterface.registerCursorPositionCallback(
+        [this](double xpos, double ypos)
+        {
+            if(!mGui.mImguiUi.isCapturingMouse())
+            {
+                mCameraControl.callbackCursorPosition(xpos, ypos);
+            }
+        });
 
-    aAppInterface.registerMouseButtonCallback(
-        std::bind(&MouseOrbitalControl::callbackMouseButton, &mCameraControl, _1, _2, _3, _4, _5));
+    appInterface.registerMouseButtonCallback(
+        [this](int button, int action, int mods, double xpos, double ypos)
+        {
+            if(!mGui.mImguiUi.isCapturingMouse())
+            {
+                mCameraControl.callbackMouseButton(button, action, mods, xpos, ypos);
+            }
+        });
 
-    aAppInterface.registerScrollCallback(
-        std::bind(&MouseOrbitalControl::callbackScroll, &mCameraControl, _1, _2));
+    appInterface.registerScrollCallback(
+        [this](double xoffset, double yoffset)
+        {
+            if(!mGui.mImguiUi.isCapturingMouse())
+            {
+                mCameraControl.callbackScroll(xoffset, yoffset);
+            }
+        });
 
-    mSizeListener = aAppInterface.listenWindowResize(
+    mSizeListener = appInterface.listenWindowResize(
         [this](const math::Size<2, int> & size)
         {
             mCamera.resetProjection(math::getRatio<float>(size), Camera::gDefaults); 
@@ -123,7 +145,7 @@ inline void Scene::update()
 }
 
 
-inline void Scene::render(Renderer & aRenderer) const
+inline void Scene::render(Renderer & aRenderer)
 {
     UniformBlocks uniformBlocks{
          {BlockSemantic::Viewing, &mCamera.mViewing},
@@ -144,6 +166,8 @@ inline void Scene::render(Renderer & aRenderer) const
                      mInstances,
                      std::move(uniforms),
                      uniformBlocks);
+
+    mGui.draw();
 }
 
 
