@@ -26,6 +26,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SnacGame.h
+    simulations/snacgame/SimulationControl.h
 
     simulations/snacgame/component/Collision.h
     simulations/snacgame/component/Context.h
@@ -67,6 +68,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/Entities.cpp
     simulations/snacgame/Renderer.cpp
     simulations/snacgame/SnacGame.cpp
+    simulations/snacgame/SimulationControl.cpp
 
     simulations/snacgame/scene/GameScene.cpp
     simulations/snacgame/scene/MenuScene.cpp

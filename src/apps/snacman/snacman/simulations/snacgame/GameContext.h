@@ -2,6 +2,7 @@
 
 
 #include "Renderer.h"
+#include "SimulationControl.h"
 #include "../../RenderThread.h"
 #include "../../Resources.h"
 
@@ -12,12 +13,12 @@
 namespace ad {
 namespace snacgame {
 
-
 struct GameContext
 {
     snac::Resources mResources; // contains Freetype, which must outlive the entity manager
     ent::EntityManager mWorld;
     snac::RenderThread<Renderer> & mRenderThread;
+    SimulationControl mSimulationControl;
 };
 
 

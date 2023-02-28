@@ -159,6 +159,7 @@ void Renderer::render(const visu::GraphicState & aState)
     {
         sortedMeshes[entity.mMesh.get()].push_back(PoseColor{
             .pose = 
+                // Change so that far is positive Y and right is positive X
                 math::trans3d::scale(entity.mScaling)
                 * entity.mOrientation.toRotationMatrix()
                 * math::trans3d::translate(entity.mPosition_world.as<math::Vec>()),

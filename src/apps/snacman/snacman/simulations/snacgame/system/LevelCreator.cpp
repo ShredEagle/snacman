@@ -106,22 +106,22 @@ void LevelCreator::update(GameContext & aContext)
                 if (tiles.at(i + (j + 1) * colCount).mType
                     != component::TileType::Void)
                 {
-                    tile.mAllowedMove |= component::gAllowedMovementDown;
+                    tile.mAllowedMove |= component::gAllowedMovementUp;
                 }
                 if (tiles.at(i + (j - 1) * colCount).mType
                     != component::TileType::Void)
                 {
-                    tile.mAllowedMove |= component::gAllowedMovementUp;
+                    tile.mAllowedMove |= component::gAllowedMovementDown;
                 }
                 if (tiles.at((i + 1) + j * colCount).mType
                     != component::TileType::Void)
                 {
-                    tile.mAllowedMove |= component::gAllowedMovementLeft;
+                    tile.mAllowedMove |= component::gAllowedMovementRight;
                 }
                 if (tiles.at((i - 1) + j * colCount).mType
                     != component::TileType::Void)
                 {
-                    tile.mAllowedMove |= component::gAllowedMovementRight;
+                    tile.mAllowedMove |= component::gAllowedMovementLeft;
                 }
             }
         }

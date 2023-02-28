@@ -42,7 +42,7 @@ void DeterminePlayerAction::update()
                 tiles.at(intPosX
                          + intPosY * colCount);
 
-            if (fracPosY > 0.f
+            if (fracPosY < 0.f
                 || (pathUnderPlayerAllowedMove.mAllowedMove
                         & component::gAllowedMovementUp
                     && fracPosX
@@ -52,7 +52,7 @@ void DeterminePlayerAction::update()
             {
                 allowedMovementFlag |= component::gAllowedMovementUp;
             }
-            if (fracPosY < 0.f
+            if (fracPosY > 0.f
                 || (pathUnderPlayerAllowedMove.mAllowedMove
                         & component::gAllowedMovementDown
                     && fracPosX
@@ -62,7 +62,7 @@ void DeterminePlayerAction::update()
             {
                 allowedMovementFlag |= component::gAllowedMovementDown;
             }
-            if (fracPosX < 0.f
+            if (fracPosX > 0.f
                 || (pathUnderPlayerAllowedMove.mAllowedMove
                         & component::gAllowedMovementLeft
                     && fracPosY
@@ -72,7 +72,7 @@ void DeterminePlayerAction::update()
             {
                 allowedMovementFlag |= component::gAllowedMovementLeft;
             }
-            if (fracPosX > 0.f
+            if (fracPosX < 0.f
                 || (pathUnderPlayerAllowedMove.mAllowedMove
                         & component::gAllowedMovementRight
                     && fracPosY
@@ -82,23 +82,7 @@ void DeterminePlayerAction::update()
             {
                 allowedMovementFlag |= component::gAllowedMovementRight;
             }
-
-            if ((fracPosY < 0.f
-                 && !(allowedMovementFlag & component::gAllowedMovementUp))
-                || (fracPosY > 0.f
-                    && !(allowedMovementFlag
-                         & component::gAllowedMovementDown)))
-            {
-                aPlayerGeometry.mPosition.y() = static_cast<int>(aPlayerGeometry.mPosition.y());
-            }
-            if ((fracPosX > 0.f
-                 && !(allowedMovementFlag & component::gAllowedMovementLeft))
-                || (fracPosX < 0.f
-                    && !(allowedMovementFlag
-                         & component::gAllowedMovementRight)))
-            {
-                aPlayerGeometry.mPosition.x() = static_cast<int>(aPlayerGeometry.mPosition.x());
-            }
+            aPlayerMoveState.mAllowedMove = allowedMovementFlag;
 
             inputMoveFlag = aController.mCommandQuery;
 
