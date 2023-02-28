@@ -4,6 +4,8 @@
 #include "Semantic.h"
 #include "UniformParameters.h"
 
+#include <handy/StringId.h>
+
 #include <math/Box.h>
 
 #include <renderer/Shading.h>
@@ -24,10 +26,24 @@ using TextureRepository = std::map<Semantic,
                                                 graphics::Texture *>>;
 
 
+// TODO extend with passes
+struct Technique
+{
+    struct Annotation
+    {
+        handy::StringId mCategory;
+        handy::StringId mValue;
+    };
+
+    std::map<handy::StringId, handy::StringId> mAnnotations;
+    IntrospectProgram mProgram;
+    filesystem::path mProgramFile; // TODO I am unsure if the technique (or even effect) should be hosting this path
+};
+
+
 struct Effect
 {
-    IntrospectProgram mProgram;
-    filesystem::path mEffectFile; // TODO I am unsure if the effect should be hosting this path
+    std::vector<Technique> mTechniques;
 };
 
 

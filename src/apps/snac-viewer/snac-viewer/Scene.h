@@ -2,20 +2,25 @@
 
 #include "Gui.h"
 
+#include <graphics/AppInterface.h>
+
+#include <handy/StringId.h>
+
+#include <math/Transformations.h>
+#include <math/VectorUtilities.h>
+
 #include <snac-renderer/Camera.h>
 #include <snac-renderer/Cube.h>
 #include <snac-renderer/Render.h>
 #include <snac-renderer/ResourceLoad.h>
 
-#include <graphics/AppInterface.h>
-
-#include <math/Transformations.h>
-#include <math/VectorUtilities.h>
-
 
 namespace ad {
 namespace snac {
 
+handy::StringId gViewSid{"view"};
+handy::StringId gLeftSid{"left"};
+handy::StringId gRightSid{"right"};
 
 InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
 {
@@ -82,7 +87,13 @@ struct Scene
 
     void update();
 
+    void drawUI();
+
+    void recompileRightView();
+
     void render(Renderer & aRenderer);
+
+    const graphics::AppInterface & mAppInterface;
 
     Mesh mMesh;
     InstanceStream mInstances{makeInstances(mMesh.mStream.mBoundingBox)};
@@ -95,12 +106,12 @@ struct Scene
 
 
 inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp, Mesh aMesh) :
+    mAppInterface{*aGlfwApp.getAppInterface()},
     mMesh{std::move(aMesh)},
     mCamera{math::getRatio<float>(aGlfwApp.getAppInterface()->getFramebufferSize()), Camera::gDefaults},
     mCameraControl{aGlfwApp.getAppInterface()->getWindowSize(), Camera::gDefaults.vFov},
     mGui{aGlfwApp}
 {
-    using namespace std::placeholders;
     graphics::AppInterface & appInterface = *aGlfwApp.getAppInterface();
 
     appInterface.registerCursorPositionCallback(
@@ -136,12 +147,48 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp, Mesh aMesh) :
             mCamera.resetProjection(math::getRatio<float>(size), Camera::gDefaults); 
             mCameraControl.setWindowSize(size);
         });
+
+    // Annotate the existing techniques as view: left
+    // Add a copy of each technique, annotated view: right
+    for (auto & technique : mMesh.mMaterial->mEffect->mTechniques)
+    {
+        technique.mAnnotations.emplace(gViewSid, gLeftSid);
+        mMesh.mMaterial->mEffect->mTechniques.push_back(Technique{
+            .mAnnotations = {{gViewSid, gRightSid}},
+            .mProgram = loadProgram(technique.mProgramFile),
+            .mProgramFile = technique.mProgramFile,
+        });
+    }
 }
 
 
 inline void Scene::update()
 {
     mCamera.setWorldToCamera(mCameraControl.getParentToLocal());
+}
+
+
+inline void Scene::drawUI()
+{
+    auto scopedUI = mGui.startUI();
+    ImGui::Begin("Render Controls");
+    if(ImGui::Button("Recompile Right"))
+    {
+        recompileRightView();
+    }
+    ImGui::End();
+}
+
+
+inline void Scene::recompileRightView()
+{
+    for (auto & technique : mMesh.mMaterial->mEffect->mTechniques)
+    {
+        if(technique.mAnnotations.at(gViewSid) == gRightSid)
+        {
+            technique.mProgram = loadProgram(technique.mProgramFile);
+        }
+    }
 }
 
 
@@ -162,12 +209,39 @@ inline void Scene::render(Renderer & aRenderer)
     };
 
     clear();
-    aRenderer.render(mMesh,
-                     mInstances,
-                     std::move(uniforms),
-                     uniformBlocks);
 
-    mGui.draw();
+    // TODO There is something fishy here:
+    // If this call is moved after the scene rendering, there are GL errors.
+    drawUI();
+
+    {
+        auto scissorScope = graphics::scopeFeature(GL_SCISSOR_TEST, true);
+
+        // Left view
+        glScissor(0,
+                  0,
+                  mAppInterface.getFramebufferSize().width()/2,
+                  mAppInterface.getFramebufferSize().height());
+
+        aRenderer.render(mMesh,
+                         mInstances,
+                         uniforms,
+                         uniformBlocks,
+                         { {gViewSid, gLeftSid}, });
+        // Right view
+        glScissor(mAppInterface.getFramebufferSize().width()/2,
+                  0, 
+                  mAppInterface.getFramebufferSize().width(),
+                  mAppInterface.getFramebufferSize().height());
+
+        aRenderer.render(mMesh,
+                         mInstances,
+                         uniforms,
+                         uniformBlocks,
+                         { {gViewSid, gRightSid}, });
+    }
+
+    mGui.render();
 }
 
 

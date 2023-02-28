@@ -20,7 +20,7 @@ namespace ad {
 namespace snac {
 
 
-std::shared_ptr<Effect> loadEffect(filesystem::path aProgram)
+IntrospectProgram loadProgram(filesystem::path aProgram)
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 
@@ -51,15 +51,26 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aProgram)
 
     SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());
 
-    return std::make_shared<Effect>(Effect{
-        .mProgram = IntrospectProgram{
+    return IntrospectProgram{
             graphics::makeLinkedProgram(shaders.begin(), shaders.end()),
-            aProgram.filename().string(),
-        },
-        .mEffectFile = aProgram,
-    });
+            aProgram.filename().string()
+    };
 }
 
+std::shared_ptr<Effect> loadEffect(filesystem::path aProgram)
+{
+
+    auto result = std::make_shared<Effect>(Effect{
+        .mTechniques{},
+    });
+
+    result->mTechniques.push_back(Technique{
+        .mProgram = loadProgram(aProgram),
+        .mProgramFile = aProgram,
+    });
+
+    return result;
+}
 
 Mesh loadCube(std::shared_ptr<Effect> aEffect)
 {

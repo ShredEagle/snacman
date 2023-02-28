@@ -24,7 +24,8 @@ public:
     void render(const Mesh & aMesh,
                 const InstanceStream & aInstances,
                 UniformRepository aUniforms,
-                const UniformBlocks & aUniformBlocks);
+                const UniformBlocks & aUniformBlocks,
+                const std::vector<Technique::Annotation> & aTechniqueFilter = {});
 
 private:
     VertexArrayRepository mVertexArrayRepo;

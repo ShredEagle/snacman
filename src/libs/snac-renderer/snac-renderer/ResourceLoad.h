@@ -12,8 +12,9 @@ namespace ad {
 namespace snac {
 
 
-std::shared_ptr<Effect> loadEffect(filesystem::path aProgram);
+IntrospectProgram loadProgram(filesystem::path aProgram);
 
+std::shared_ptr<Effect> loadEffect(filesystem::path aProgram);
 
 Mesh loadCube(std::shared_ptr<Effect> aEffect);
 

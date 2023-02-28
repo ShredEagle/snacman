@@ -15,29 +15,32 @@ public:
         mImguiUi{aApplication}
     {}
 
-    void draw();
+    Guard startUI();
+    void render();
 
     imguiui::ImguiUi mImguiUi;
-    bool f = false;
 };
 
 
-inline void Gui::draw()
+inline Guard Gui::startUI()
 {
+    mImguiUi.newFrame();
+    // We must make sure to match each newFrame() to a render(),
+    Guard renderGuard{[this]()
     {
-        mImguiUi.newFrame();
-        // We must make sure to match each newFrame() to a render(),
-        Guard renderGuard{[this]()
-        {
-            this->mImguiUi.render();
-        }};
+        this->mImguiUi.render();
+    }};
 
 
-        ImGui::Begin("Render Controls");
-        ImGui::Checkbox("Dummy", &f);
-        ImGui::End();
-    }
+    //ImGui::Begin("Generic Controls");
+    //ImGui::End();
 
+    return renderGuard;
+}
+
+
+inline void Gui::render()
+{
     mImguiUi.renderBackend();
 }
 

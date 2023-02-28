@@ -1,47 +1,81 @@
 #include "Render.h"
 
+#include "Logging.h"
+
 #include <renderer/ScopeGuards.h>
 #include <renderer/Uniforms.h>
+
+
+#define SELOG(level) SELOG_LG(gRenderLogger, level)
 
 
 namespace ad {
 namespace snac {
 
 
+const IntrospectProgram * filterTechniques(
+    const Mesh & aMesh,
+    const std::vector<Technique::Annotation> & aTechniqueFilter)
+{
+    for(const auto & technique : aMesh.mMaterial->mEffect->mTechniques)
+    {
+        if(std::all_of(
+            aTechniqueFilter.begin(), aTechniqueFilter.end(),
+            [&](const Technique::Annotation & required)
+            {
+                auto found = technique.mAnnotations.find(required.mCategory);
+                return found != technique.mAnnotations.end() 
+                    && found->second == required.mValue;
+            }))
+        {
+            return &technique.mProgram;
+        }
+    }
+    return static_cast<const IntrospectProgram *>(nullptr);
+}
+
+
 void Renderer::render(const Mesh & aMesh,
                       const InstanceStream & aInstances,
                       UniformRepository aUniforms,
-                      const UniformBlocks & aUniformBlocks)
+                      const UniformBlocks & aUniformBlocks,
+                      const std::vector<Technique::Annotation> & aTechniqueFilter)
 {
     auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
-    const IntrospectProgram & program = aMesh.mMaterial->mEffect->mProgram;
-
-    // TODO Is there a better way to handle several source for uniform values
-    aUniforms.merge(UniformRepository{aMesh.mMaterial->mUniforms});
-    setUniforms(aUniforms, program, mWarningRepo.get(aMesh, program));
-    setTextures(aMesh.mMaterial->mTextures, program);
-    setBlocks(aUniformBlocks, program);
-
-    graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, program)};
-
-    graphics::use(program);
-    if(aMesh.mStream.mIndices)
+    if (const IntrospectProgram * program = filterTechniques(aMesh, aTechniqueFilter);
+        program != nullptr)
     {
-        // Note: Range commands (providing a range of possible index values) are no longer usefull
-        // see: https://computergraphics.stackexchange.com/a/6199/11110
-        glDrawElementsInstanced(aMesh.mStream.mPrimitive,
-                                aMesh.mStream.mIndices->mIndexCount,
-                                aMesh.mStream.mIndices->mAttribute.mComponentType,
-                                (void*)aMesh.mStream.mIndices->mAttribute.mOffset,
+        // TODO Is there a better way to handle several source for uniform values
+        aUniforms.merge(UniformRepository{aMesh.mMaterial->mUniforms});
+        setUniforms(aUniforms, *program, mWarningRepo.get(aMesh, *program));
+        setTextures(aMesh.mMaterial->mTextures, *program);
+        setBlocks(aUniformBlocks, *program);
+
+        graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, *program)};
+
+        graphics::use(*program);
+        if(aMesh.mStream.mIndices)
+        {
+            // Note: Range commands (providing a range of possible index values) are no longer usefull
+            // see: https://computergraphics.stackexchange.com/a/6199/11110
+            glDrawElementsInstanced(aMesh.mStream.mPrimitive,
+                                    aMesh.mStream.mIndices->mIndexCount,
+                                    aMesh.mStream.mIndices->mAttribute.mComponentType,
+                                    (void*)aMesh.mStream.mIndices->mAttribute.mOffset,
+                                    aInstances.mInstanceCount);
+        }
+        else
+        {
+            glDrawArraysInstanced(aMesh.mStream.mPrimitive,
+                                0, 
+                                aMesh.mStream.mVertexCount,
                                 aInstances.mInstanceCount);
+        }
     }
     else
     {
-        glDrawArraysInstanced(aMesh.mStream.mPrimitive,
-                              0, 
-                              aMesh.mStream.mVertexCount,
-                              aInstances.mInstanceCount);
+        SELOG(error)("No technique matching the filters, skip drawing.");
     }
 }
 
