@@ -186,7 +186,16 @@ inline void Scene::recompileRightView()
     {
         if(technique.mAnnotations.at(gViewSid) == gRightSid)
         {
-            technique.mProgram = loadProgram(technique.mProgramFile);
+            try 
+            {
+                technique.mProgram = loadProgram(technique.mProgramFile);
+            }
+            catch(graphics::ShaderCompilationError & aError)
+            {
+                SELOG(error)
+                    ("Cannot recompile program from file '{}' due to shader compilation error:\n{}",
+                    technique.mProgramFile.string(), aError.what());
+            }
         }
     }
 }
