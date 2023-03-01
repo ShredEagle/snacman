@@ -1,12 +1,13 @@
 #include "Renderer.h"
 
+#include "renderer/ScopeGuards.h"
+
 #include <math/Angle.h>
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 
 #include <snac-renderer/ResourceLoad.h>
 #include <snac-renderer/text/Text.h>
-
 #include <snacman/Profiling.h>
 #include <snacman/ProfilingGPU.h>
 #include <snacman/Resources.h>
@@ -22,22 +23,19 @@
 namespace ad {
 namespace snacgame {
 
-
 namespace {
 
-    struct PoseColor
-    {
-        math::Matrix<4, 4, float> pose;
-        math::sdr::Rgba albedo;
-    };
-    
-} // anonymous namespace
+struct PoseColor
+{
+    math::Matrix<4, 4, float> pose;
+    math::sdr::Rgba albedo;
+};
 
+} // anonymous namespace
 
 TextRenderer::TextRenderer() :
     mGlyphInstances{snac::initializeGlyphInstanceStream()}
 {}
-
 
 void TextRenderer::render(Renderer & aRenderer,
                           const visu::GraphicState & aState,
@@ -47,41 +45,44 @@ void TextRenderer::render(Renderer & aRenderer,
     TIME_RECURRING_CLASSFUNC(Render);
 
     // Note: this is pessimised code.
-    // Most of these expensive operations should be taken out and the results cached.
+    // Most of these expensive operations should be taken out and the results
+    // cached.
     for (const visu::TextScreen & text : aState.mTextEntities)
     {
         // TODO should be cached once in the string
-        math::Size<2, GLfloat> stringDimension_p = graphics::detail::getStringDimension(
-            text.mString,
-            text.mFont->mGlyphAtlas.mGlyphCache,
-            text.mFont->mGlyphAtlas.mFontFace);
+        math::Size<2, GLfloat> stringDimension_p =
+            graphics::detail::getStringDimension(
+                text.mString, text.mFont->mGlyphAtlas.mGlyphCache,
+                text.mFont->mGlyphAtlas.mFontFace);
 
-        // TODO should be done outside of here (so static strings are not recomputed each frame, for example)
-        auto stringPos = 
-            text.mPosition_unitscreen
-                .cwMul(static_cast<math::Position<2, GLfloat>>(aRenderer.mAppInterface.getFramebufferSize()));
+        // TODO should be done outside of here (so static strings are not
+        // recomputed each frame, for example)
+        auto stringPos = text.mPosition_unitscreen.cwMul(
+            static_cast<math::Position<2, GLfloat>>(
+                aRenderer.mAppInterface.getFramebufferSize()));
 
-        auto localToScreen_pixel = 
-            math::trans2d::translate(- stringDimension_p.as<math::Vec>() / 2.f)
+        auto scale = math::trans2d::scale(text.mScale);
+        auto localToScreen_pixel =
+            scale
+            * math::trans2d::translate(-stringDimension_p.as<math::Vec>() / 2.f)
             * math::trans2d::rotate(text.mOrientation)
             * math::trans2d::translate(stringDimension_p.as<math::Vec>() / 2.f)
-            * math::trans2d::translate(stringPos.as<math::Vec>())
-            ;
+            * math::trans2d::translate(stringPos.as<math::Vec>());
 
         // TODO should be cached once in the string and forwarded here
-        std::vector<snac::GlyphInstance> textBufferData = 
-            text.mFont->mGlyphAtlas.populateInstances(text.mString, to_sdr(text.mColor), localToScreen_pixel);
+        std::vector<snac::GlyphInstance> textBufferData =
+            text.mFont->mGlyphAtlas.populateInstances(
+                text.mString, to_sdr(text.mColor), localToScreen_pixel, scale);
 
-
-        // TODO should be consolidated, a single call for all string of the same font.
+        // TODO should be consolidated, a single call for all string of the same
+        // font.
         mGlyphInstances.respecifyData(std::span{textBufferData});
         BEGIN_RECURRING_GL("Draw string", drawStringProfile);
+        auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
         aRenderer.mRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances, aUniforms, aUniformBlocks);
         END_RECURRING_GL(drawStringProfile);
     }
-
 }
-
 
 snac::InstanceStream initializeInstanceStream()
 {
@@ -92,7 +93,8 @@ snac::InstanceStream initializeInstanceStream()
             .mOffset = offsetof(PoseColor, pose),
             .mComponentType = GL_FLOAT,
         };
-        instances.mAttributes.emplace(snac::Semantic::LocalToWorld, transformation);
+        instances.mAttributes.emplace(snac::Semantic::LocalToWorld,
+                                      transformation);
     }
     {
         graphics::ClientAttribute albedo{
@@ -106,15 +108,15 @@ snac::InstanceStream initializeInstanceStream()
     return instances;
 }
 
-
 Renderer::Renderer(graphics::AppInterface & aAppInterface) :
     mAppInterface{aAppInterface},
-    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults},
+    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
+            snac::Camera::gDefaults},
     mMeshInstances{initializeInstanceStream()}
 {}
 
-
-void Renderer::resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters)
+void Renderer::resetProjection(float aAspectRatio,
+                               snac::Camera::Parameters aParameters)
 {
     mCamera.resetProjection(aAspectRatio, aParameters);
 }
@@ -146,7 +148,6 @@ std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
     );
 }
 
-
 void Renderer::render(const visu::GraphicState & aState)
 {
     TIME_RECURRING(Render, "Render");
@@ -158,10 +159,10 @@ void Renderer::render(const visu::GraphicState & aState)
     for (const visu::Entity & entity : aState.mEntities)
     {
         sortedMeshes[entity.mMesh.get()].push_back(PoseColor{
-            .pose = 
-                math::trans3d::scale(entity.mScaling)
-                * entity.mOrientation.toRotationMatrix()
-                * math::trans3d::translate(entity.mPosition_world.as<math::Vec>()),
+            .pose = math::trans3d::scale(entity.mScaling)
+                    * entity.mOrientation.toRotationMatrix()
+                    * math::trans3d::translate(
+                        entity.mPosition_world.as<math::Vec>()),
             .albedo = to_sdr(entity.mColor),
         });
     }
@@ -178,17 +179,19 @@ void Renderer::render(const visu::GraphicState & aState)
         {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
         {snac::Semantic::LightPosition, {lightPosition}},
         {snac::Semantic::AmbientColor, {ambientColor}},
-        {snac::Semantic::FramebufferResolution, mAppInterface.getFramebufferSize()},
+        {snac::Semantic::FramebufferResolution,
+         mAppInterface.getFramebufferSize()},
     };
 
     snac::UniformBlocks uniformBlocks{
-         {snac::BlockSemantic::Viewing, &mCamera.mViewing},
+        {snac::BlockSemantic::Viewing, &mCamera.mViewing},
     };
 
     BEGIN_RECURRING_GL("Draw_meshes", drawMeshProfile);
     for (const auto & [mesh, instances] : sortedMeshes)
     {
         mMeshInstances.respecifyData(std::span{instances});
+        auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
         mRenderer.render(*mesh, mMeshInstances, uniforms, uniformBlocks);
     }
     END_RECURRING_GL(drawMeshProfile);
@@ -198,11 +201,10 @@ void Renderer::render(const visu::GraphicState & aState)
     //
 
     // TODO Why it does not start at 20, but at 32 ????!
-    //graphics::detail::RenderedGlyph glyph = mGlyphAtlas.mGlyphMap.at(90);
+    // graphics::detail::RenderedGlyph glyph = mGlyphAtlas.mGlyphMap.at(90);
 
     mTextRenderer.render(*this, aState, uniforms, uniformBlocks);
 }
 
-
-} // namespace cubes
+} // namespace snacgame
 } // namespace ad

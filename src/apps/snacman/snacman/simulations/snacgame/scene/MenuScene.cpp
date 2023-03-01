@@ -1,10 +1,9 @@
 #include "MenuScene.h"
 
-#include "snacman/Logging.h"
 #include "snacman/Input.h"
+#include "snacman/Logging.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
-#include <snacman/Profiling.h>
 
 #include "../../../Input.h"
 #include "../component/Controller.h"
@@ -14,6 +13,7 @@
 #include "../SnacGame.h"
 
 #include <optional>
+#include <snacman/Profiling.h>
 
 namespace ad {
 namespace snacgame {
@@ -23,25 +23,22 @@ void MenuScene::setup(GameContext & aContext,
                       const Transition & Transition,
                       RawInput & aInput)
 {
-    auto font =
-        aContext.mResources
-            .getFont("fonts/Comfortaa-Regular.ttf", 120);
+    auto font = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf");
 
     ent::Phase init;
-    auto startHandle =
-        createMenuItem(aContext, init, "start", font, gColorItemSelected,
-                       math::Position<2, float>{0.f, 0.f},
-                       {
-                           {gGoDown, "quit"},
-                       },
-                       scene::Transition{.mTransitionName = "start"}, true);
-    auto quitHandle = createMenuItem(
-        aContext, init, "quit", font, gColorItemUnselected,
-        math::Position<2, float>{0.f, -0.2f},
+    auto startHandle = createMenuItem(
+        aContext, init, "Start", font, math::Position<2, float>{-0.55f, 0.0f},
         {
-            {gGoUp, "start"},
+            {gGoDown, "quit"},
         },
-        scene::Transition{.mTransitionName = gQuitTransitionName});
+        scene::Transition{.mTransitionName = "start"}, true, {3.f, 3.f});
+    auto quitHandle = createMenuItem(
+        aContext, init, "quit", font, math::Position<2, float>{-0.55f, -0.3f},
+        {
+            {gGoUp, "Start"},
+        },
+        scene::Transition{.mTransitionName = gQuitTransitionName}, false,
+        {3.f, 3.f});
 
     mOwnedEntities.push_back(startHandle);
     mOwnedEntities.push_back(quitHandle);
@@ -100,9 +97,10 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
 
     std::optional<Transition> menuTransition = std::nullopt;
 
-    mItems.each([this, &menuTransition, accumulatedCommand, &bindPlayerPhase, &aContext, keyboardCommand,
-                 &controllerCommandList, filteredForMenuCommand, &newItem](
-                    component::MenuItem & aItem, component::Text & aText) {
+    mItems.each([this, &menuTransition, accumulatedCommand, &bindPlayerPhase,
+                 &aContext, keyboardCommand, &controllerCommandList,
+                 filteredForMenuCommand, &newItem](component::MenuItem & aItem,
+                                                   component::Text & aText) {
         if (aItem.mSelected)
         {
             if (aItem.mNeighbors.contains(filteredForMenuCommand))
@@ -125,8 +123,7 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
                     if (command.mCommand & gSelectItem)
                     {
                         findSlotAndBind(aContext, bindPlayerPhase, mSlots,
-                                        command.mControllerType,
-                                        command.mId);
+                                        command.mControllerType, command.mId);
                     }
                     menuTransition = aItem.mTransition;
                 }
@@ -141,14 +138,22 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
         }
     });
 
-    mItems.each(
-        [&newItem](component::MenuItem & aItem, component::Text & aText) {
-            if (aItem.mName == newItem)
-            {
-                aItem.mSelected = true;
-                aText.mColor = gColorItemSelected;
-            }
-        });
+    bool newItemFound = false;
+    mItems.each([&newItem, &newItemFound](component::MenuItem & aItem,
+                                          component::Text & aText) {
+        if (aItem.mName == newItem)
+        {
+            newItemFound = true;
+            aItem.mSelected = true;
+            aText.mColor = gColorItemSelected;
+        }
+    });
+
+    if (!newItemFound && newItem != "")
+    {
+        SELOG(error)
+        ("Could not find item {} in menu (Check the case)", newItem);
+    }
 
     return menuTransition;
 }

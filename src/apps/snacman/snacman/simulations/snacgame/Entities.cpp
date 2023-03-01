@@ -185,27 +185,34 @@ bool findSlotAndBind(GameContext & aContext,
 ent::Handle<ent::Entity>
 createMenuItem(GameContext & aContext,
                ent::Phase & aInit,
-               const std::string & aString,
+               std::string aString,
                std::shared_ptr<snac::Font> aFont,
-               const math::hdr::Rgba_f & aColor,
                const math::Position<2, float> & aPos,
                const std::unordered_map<int, std::string> & aNeighbors,
                const scene::Transition & aTransition,
-               bool aSelected)
+               bool aSelected,
+               const math::Size<2, float> & aScale)
 {
-    auto item = makeText(aContext, aInit, aString, aFont, aColor, aPos);
-    item.get(aInit)->add(component::MenuItem{
-        .mName = aString, .mSelected = aSelected, .mNeighbors = aNeighbors, .mTransition = aTransition});
+    auto item = makeText(
+        aContext, aInit, aString, aFont,
+        aSelected ? scene::gColorItemSelected : scene::gColorItemUnselected,
+        aPos, aScale);
+    item.get(aInit)->add(component::MenuItem{.mName = aString,
+                                             .mSelected = aSelected,
+                                             .mNeighbors = aNeighbors,
+                                             .mTransition = aTransition});
 
     return item;
 }
 
-ent::Handle<ent::Entity> makeText(GameContext & aContext,
-                                  ent::Phase & aPhase,
-                                  std::string aString,
-                                  std::shared_ptr<snac::Font> aFont,
-                                  math::hdr::Rgba_f aColor,
-                                  math::Position<2, float> aPosition_unitscreen)
+ent::Handle<ent::Entity>
+makeText(GameContext & aContext,
+         ent::Phase & aPhase,
+         std::string aString,
+         std::shared_ptr<snac::Font> aFont,
+         const math::hdr::Rgba_f & aColor,
+         const math::Position<2, float> & aPosition_unitscreen,
+         const math::Size<2, float> & aScale)
 {
     auto handle = aContext.mWorld.addEntity();
 
@@ -215,7 +222,8 @@ ent::Handle<ent::Entity> makeText(GameContext & aContext,
             .mFont = std::move(aFont),
             .mColor = aColor,
         })
-        .add(component::PoseScreenSpace{.mPosition_u = aPosition_unitscreen});
+        .add(component::PoseScreenSpace{.mPosition_u = aPosition_unitscreen,
+                                        .mScale = aScale});
 
     return handle;
 }

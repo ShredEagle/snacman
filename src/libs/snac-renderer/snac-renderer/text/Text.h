@@ -46,7 +46,7 @@ struct GlyphAtlas
     // * string color
     std::vector<GlyphInstance> populateInstances(const std::string & aString,
                                                  math::sdr::Rgba aColor,
-                                                 math::AffineMatrix<3, float> aLocalToScreen_p) const;
+                                                 math::AffineMatrix<3, float> aLocalToScreen_p, math::AffineMatrix<3, float> aScale) const;
 
     arte::FontFace mFontFace;
     graphics::detail::StaticGlyphCache mGlyphCache;

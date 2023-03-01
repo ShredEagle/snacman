@@ -13,8 +13,6 @@ void Renderer::render(const Mesh & aMesh,
                       UniformRepository aUniforms,
                       const UniformBlocks & aUniformBlocks)
 {
-    auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
-
     const IntrospectProgram & program = aMesh.mMaterial->mEffect->mProgram;
 
     // TODO Is there a better way to handle several source for uniform values
