@@ -17,8 +17,8 @@ struct Camera
     struct Parameters
     {
         math::Radian<float> vFov;
-        float zNear = -0.1f;
-        float zFar = -500.f;
+        float zNear;
+        float zFar;
     };
 
     Camera(float aAspectRatio, Parameters aParameters);
@@ -35,6 +35,12 @@ struct Camera
         .zNear = -0.1f,
         .zFar = -500.f,
     };
+
+    const Parameters getCurrentParameters() const
+    { return mCurrentParameters; }
+
+private:
+    Parameters mCurrentParameters;
 };
 
 

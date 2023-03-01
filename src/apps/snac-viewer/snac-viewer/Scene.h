@@ -202,10 +202,12 @@ inline void Scene::render(Renderer & aRenderer)
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
     math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
 
-    snac::UniformRepository uniforms{
+    const snac::UniformRepository uniforms{
         {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
         {snac::Semantic::LightPosition, {lightPosition}},
         {snac::Semantic::AmbientColor, {ambientColor}},
+        {snac::Semantic::NearDistance, -mCamera.getCurrentParameters().zNear},
+        {snac::Semantic::FarDistance,  -mCamera.getCurrentParameters().zFar},
     };
 
     clear();

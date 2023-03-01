@@ -33,7 +33,8 @@ math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVertica
            ;
 }
            
-Camera::Camera(float aAspectRatio, Parameters aParameters)
+Camera::Camera(float aAspectRatio, Parameters aParameters) :
+    mCurrentParameters{aParameters}
 {
     const std::array<math::Matrix<4, 4, float>, 2> identities{
         math::Matrix<4, 4, float>::Identity(),
@@ -51,6 +52,7 @@ void Camera::resetProjection(float aAspectRatio, Parameters aParameters)
         makePerspectiveProjection(aParameters.vFov, aAspectRatio, aParameters.zNear, aParameters.zFar);
     glBufferSubData(GL_UNIFORM_BUFFER, sizeof(math::Matrix<4, 4, float>), sizeof(perspectiveProjection),
                     perspectiveProjection.data());
+    mCurrentParameters = aParameters;
 }
 
 
