@@ -51,8 +51,9 @@ void TextRenderer::render(Renderer & aRenderer,
             static_cast<math::Position<2, GLfloat>>(
                 aRenderer.mAppInterface.getFramebufferSize()));
 
+        auto scale = math::trans2d::scale(text.mScale);
         auto localToScreen_pixel =
-            math::trans2d::scale(text.mScale)
+            scale
             * math::trans2d::translate(-stringDimension_p.as<math::Vec>() / 2.f)
             * math::trans2d::rotate(text.mOrientation)
             * math::trans2d::translate(stringDimension_p.as<math::Vec>() / 2.f)
