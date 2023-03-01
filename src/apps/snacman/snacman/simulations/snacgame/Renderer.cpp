@@ -125,12 +125,12 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(filesystem::path aShape, snac::R
     if(aShape.string() == "CUBE")
     {
         return std::make_shared<snac::Mesh>(
-            snac::loadCube(aResources.getShaderEffect("shaders/PhongLighting.prog")));
+            snac::loadCube(aResources.getTrivialShaderEffect("shaders/PhongLighting.prog")));
     }
     else
     {
         return std::make_shared<snac::Mesh>(
-            loadModel(aShape, aResources.getShaderEffect("shaders/PhongLightingTextures.prog")));
+            loadModel(aShape, aResources.getTrivialShaderEffect("shaders/PhongLightingTextures.prog")));
     }
 }
 
@@ -142,7 +142,7 @@ std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
     return std::make_shared<snac::Font>(
         std::move(aFontFace),
         aPixelHeight,
-        aResources.getShaderEffect("shaders/Text.prog")
+        aResources.getTrivialShaderEffect("shaders/Text.prog")
     );
 }
 

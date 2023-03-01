@@ -35,7 +35,7 @@ public:
     std::shared_ptr<Font> getFont(filesystem::path aFont, unsigned int aPixelHeight);
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
-    std::shared_ptr<Effect> getShaderEffect(filesystem::path aProgram);
+    std::shared_ptr<Effect> getTrivialShaderEffect(filesystem::path aProgram);
 
     auto find(const filesystem::path & aPath) const
     { return mFinder.find(aPath); }

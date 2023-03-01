@@ -37,7 +37,7 @@ bool attemptRecompile(Technique & aTechnique)
 }
 
 
-IntrospectProgram loadProgram(filesystem::path aProgram)
+IntrospectProgram loadProgram(const filesystem::path & aProgram)
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 
@@ -74,18 +74,23 @@ IntrospectProgram loadProgram(filesystem::path aProgram)
     };
 }
 
-std::shared_ptr<Effect> loadEffect(filesystem::path aProgram)
+
+Technique loadTechnique(filesystem::path aProgram)
+{
+    return Technique{
+        .mProgram = loadProgram(aProgram),
+        .mProgramFile = std::move(aProgram),
+    };
+}
+
+
+std::shared_ptr<Effect> loadTrivialEffect(filesystem::path aProgram)
 {
 
-    auto result = std::make_shared<Effect>(Effect{
-        .mTechniques{},
-    });
-
-    result->mTechniques.push_back(Technique{
-        .mProgram = loadProgram(aProgram),
-        .mProgramFile = aProgram,
-    });
-
+    // It is not possible to list initialize a vector of move-only types.
+    // see: https://stackoverflow.com/a/8468817/1027706
+    auto result = std::make_shared<Effect>();
+    result->mTechniques.push_back(loadTechnique(std::move(aProgram)));
     return result;
 }
 

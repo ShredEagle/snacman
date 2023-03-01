@@ -39,7 +39,7 @@ std::shared_ptr<Font> Resources::getFont(filesystem::path aFont, unsigned int aP
 }
 
 
-std::shared_ptr<Effect> Resources::getShaderEffect(filesystem::path aProgram)
+std::shared_ptr<Effect> Resources::getTrivialShaderEffect(filesystem::path aProgram)
 {
     return mEffects.load(aProgram, mFinder, mRenderThread, *this);
 }
@@ -50,7 +50,7 @@ std::shared_ptr<Effect> Resources::EffectLoader(
     RenderThread<snacgame::Renderer> & aRenderThread,
     Resources & /*aResources*/)
 {
-    return loadEffect(aProgram);
+    return loadTrivialEffect(aProgram);
 }
 
 

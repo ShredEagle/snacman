@@ -66,7 +66,8 @@ void runApplication()
         glfwApp,
         //loadModel(finder.pathFor("Box/glTF/Box.gltf"),
         loadModel(finder.pathFor("Avocado/glTF/Avocado.gltf"),
-                  loadEffect(finder.pathFor("shaders/PhongLightingTextures.prog")))
+                  loadTrivialEffect(finder.pathFor("shaders/PhongLightingTextures.prog"))),
+        finder,
     };
     Renderer renderer;
 
