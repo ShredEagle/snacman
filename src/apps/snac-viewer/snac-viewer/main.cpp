@@ -52,9 +52,7 @@ void runApplication()
                                       //TODO, applicationFlags
     };
 
-    // Match the viewport to the framebuffer size.
-    auto viewportListening = glfwApp.getAppInterface()->listenFramebufferResize(
-        [](const math::Size<2, int> & size){ glViewport(0, 0, size.width(), size.height()); });
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
     resource::ResourceFinder finder = makeResourceFinder();
 
