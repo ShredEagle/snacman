@@ -37,7 +37,10 @@ std::string to_string(Semantic aSemantic)
         MAPPING(LightPosition)
         MAPPING(WorldToCamera)
         MAPPING(Projection)
+        MAPPING(ViewingMatrix)
         MAPPING(FramebufferResolution)
+        MAPPING(NearDistance)
+        MAPPING(FarDistance)
         MAPPING(BaseColorTexture)
         MAPPING(NormalTexture)
         MAPPING(MetallicRoughnessTexture)
@@ -89,7 +92,10 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(LightPosition)
     MAPPING(WorldToCamera)
     MAPPING(Projection)
+    MAPPING(ViewingMatrix)
     MAPPING(FramebufferResolution)
+    MAPPING(NearDistance)
+    MAPPING(FarDistance)
     MAPPING(BaseColorTexture)
     MAPPING(NormalTexture)
     MAPPING(MetallicRoughnessTexture)
@@ -133,7 +139,10 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::LightPosition:
         case Semantic::WorldToCamera:
         case Semantic::Projection:
+        case Semantic::ViewingMatrix:
         case Semantic::FramebufferResolution:
+        case Semantic::NearDistance:
+        case Semantic::FarDistance:
         case Semantic::BaseColorTexture:
         case Semantic::NormalTexture:
         case Semantic::MetallicRoughnessTexture:

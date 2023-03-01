@@ -125,6 +125,13 @@ struct InstanceStream
     GLsizei mInstanceCount{0};
 };
 
+const InstanceStream gNotInstanced{
+    .mInstanceBuffer = BufferView{
+        .mBuffer{graphics::VertexBufferObject::NullTag{}},
+    },
+    .mInstanceCount{1},
+};
+
 
 template <class T_value, std::size_t N_spanExtent>
 void InstanceStream::respecifyData(std::span<T_value, N_spanExtent> aData)

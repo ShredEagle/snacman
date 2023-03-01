@@ -68,9 +68,9 @@ void Renderer::render(const Mesh & aMesh,
         else
         {
             glDrawArraysInstanced(aMesh.mStream.mPrimitive,
-                                0, 
-                                aMesh.mStream.mVertexCount,
-                                aInstances.mInstanceCount);
+                                  0, 
+                                  aMesh.mStream.mVertexCount,
+                                  aInstances.mInstanceCount);
         }
     }
     else

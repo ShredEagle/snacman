@@ -6,6 +6,8 @@
 
 #include <handy/StringId.h>
 
+#include <resource/ResourceFinder.h>
+
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 
@@ -14,13 +16,18 @@
 #include <snac-renderer/Render.h>
 #include <snac-renderer/ResourceLoad.h>
 
+#include <renderer/FrameBuffer.h>
+#include <renderer/ScopeGuards.h>
+
 
 namespace ad {
 namespace snac {
 
+
 handy::StringId gViewSid{"view"};
 handy::StringId gLeftSid{"left"};
 handy::StringId gRightSid{"right"};
+
 
 InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
 {
@@ -83,7 +90,9 @@ InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
 
 struct Scene
 {
-    Scene(graphics::ApplicationGlfw & aGlfwApp, Mesh aMesh);
+    Scene(graphics::ApplicationGlfw & aGlfwApp,
+          Mesh aMesh,
+          const resource::ResourceFinder & aFinder);
 
     void update();
 
@@ -93,23 +102,35 @@ struct Scene
 
     void render(Renderer & aRenderer);
 
+    void drawSideBySide(Renderer & aRenderer,
+                        const snac::UniformRepository & aUniforms,
+                        const snac::UniformBlocks & aUniformBlocks);
+
+    void drawShadows(Renderer & aRenderer,
+                     const snac::UniformRepository & aUniforms,
+                     const snac::UniformBlocks & aUniformBlocks);
+
     const graphics::AppInterface & mAppInterface;
 
     Mesh mMesh;
     InstanceStream mInstances{makeInstances(mMesh.mStream.mBoundingBox)};
     Camera mCamera;
     MouseOrbitalControl mCameraControl;
+    const resource::ResourceFinder & mFinder;
 
-    std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListener;
+    std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListening;
     Gui mGui;
 };
 
 
-inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp, Mesh aMesh) :
+inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
+                    Mesh aMesh,
+                    const resource::ResourceFinder & aFinder) :
     mAppInterface{*aGlfwApp.getAppInterface()},
     mMesh{std::move(aMesh)},
     mCamera{math::getRatio<float>(aGlfwApp.getAppInterface()->getFramebufferSize()), Camera::gDefaults},
     mCameraControl{aGlfwApp.getAppInterface()->getWindowSize(), Camera::gDefaults.vFov},
+    mFinder{aFinder},
     mGui{aGlfwApp}
 {
     graphics::AppInterface & appInterface = *aGlfwApp.getAppInterface();
@@ -141,15 +162,15 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp, Mesh aMesh) :
             }
         });
 
-    mSizeListener = appInterface.listenWindowResize(
+    mSizeListening = appInterface.listenWindowResize(
         [this](const math::Size<2, int> & size)
         {
             mCamera.resetProjection(math::getRatio<float>(size), Camera::gDefaults); 
             mCameraControl.setWindowSize(size);
         });
 
-    // Annotate the existing techniques as view: left
-    // Add a copy of each technique, annotated view: right
+    // Annotate the existing techniques as "view: left"
+    // Add a copy of each technique, annotated "view: right"
     for (auto & technique : mMesh.mMaterial->mEffect->mTechniques)
     {
         technique.mAnnotations.emplace(gViewSid, gLeftSid);
@@ -159,6 +180,8 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp, Mesh aMesh) :
             .mProgramFile = technique.mProgramFile,
         });
     }
+
+
 }
 
 
@@ -210,38 +233,105 @@ inline void Scene::render(Renderer & aRenderer)
         {snac::Semantic::FarDistance,  -mCamera.getCurrentParameters().zFar},
     };
 
-    clear();
+    //drawSideBySide(aRenderer, uniforms, uniformBlocks);
+    drawShadows(aRenderer, uniforms, uniformBlocks);
 
     drawUI();
 
+    mGui.render();
+}
+
+
+void Scene::drawSideBySide(Renderer & aRenderer,
+                           const snac::UniformRepository & aUniforms,
+                           const snac::UniformBlocks & aUniformBlocks)
+{
+    clear();
+
+    auto scissorScope = graphics::scopeFeature(GL_SCISSOR_TEST, true);
+
+    glViewport(0,
+               0, 
+               mAppInterface.getFramebufferSize().width(), 
+               mAppInterface.getFramebufferSize().height());
+
+    // Left view
+    glScissor(0,
+                0,
+                mAppInterface.getFramebufferSize().width()/2,
+                mAppInterface.getFramebufferSize().height());
+
+    aRenderer.render(mMesh,
+                     mInstances,
+                     aUniforms,
+                     aUniformBlocks,
+                     { {gViewSid, gLeftSid}, });
+    // Right view
+    glScissor(mAppInterface.getFramebufferSize().width()/2,
+                0, 
+                mAppInterface.getFramebufferSize().width(),
+                mAppInterface.getFramebufferSize().height());
+
+    aRenderer.render(mMesh,
+                     mInstances,
+                     aUniforms,
+                     aUniformBlocks,
+                     { {gViewSid, gRightSid}, });
+}
+
+
+inline void Scene::drawShadows(
+    Renderer & aRenderer,
+    const UniformRepository & aUniforms,
+    const snac::UniformBlocks & aUniformBlocks)
+{
+    constexpr math::Size<2, int> shadowMapSize{1024, 1024};
+    graphics::Texture depthMap{GL_TEXTURE_2D};
+    graphics::allocateStorage(depthMap, GL_DEPTH_COMPONENT24, shadowMapSize);
+    graphics::setFiltering(depthMap, GL_NEAREST);
     {
-        auto scissorScope = graphics::scopeFeature(GL_SCISSOR_TEST, true);
-
-        // Left view
-        glScissor(0,
-                  0,
-                  mAppInterface.getFramebufferSize().width()/2,
-                  mAppInterface.getFramebufferSize().height());
-
-        aRenderer.render(mMesh,
-                         mInstances,
-                         uniforms,
-                         uniformBlocks,
-                         { {gViewSid, gLeftSid}, });
-        // Right view
-        glScissor(mAppInterface.getFramebufferSize().width()/2,
-                  0, 
-                  mAppInterface.getFramebufferSize().width(),
-                  mAppInterface.getFramebufferSize().height());
-
-        aRenderer.render(mMesh,
-                         mInstances,
-                         uniforms,
-                         uniformBlocks,
-                         { {gViewSid, gRightSid}, });
+        graphics::ScopedBind scopedDepthMap{depthMap};
+        glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE , GL_NONE);
     }
 
-    mGui.render();
+    graphics::FrameBuffer depthFBO;
+    graphics::attachImage(depthFBO, depthMap, GL_DEPTH_ATTACHMENT);
+
+    {
+        graphics::ScopedBind fboScope{depthFBO};
+
+        glViewport(0, 0, shadowMapSize.width(), shadowMapSize.height());
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        // TODO use the depth pass
+        aRenderer.render(mMesh,
+                         mInstances,
+                         aUniforms,
+                         aUniformBlocks);
+    }
+
+    Mesh screenQuad{
+        .mStream = makeQuad(),
+        .mMaterial = std::make_shared<Material>(Material{
+            .mEffect = std::make_shared<Effect>(),
+        }),
+        .mName = "screen_quad",
+    };
+    screenQuad.mMaterial->mTextures.emplace(Semantic::BaseColorTexture, &depthMap);
+    screenQuad.mMaterial->mEffect->mTechniques.push_back(
+        loadTechnique(mFinder.pathFor("shaders/ShowDepth.prog")));
+
+    glViewport(0,
+               0, 
+               mAppInterface.getFramebufferSize().width(), 
+               mAppInterface.getFramebufferSize().height());
+
+    clear();
+
+    aRenderer.render(screenQuad,
+                     gNotInstanced,
+                     aUniforms,
+                     aUniformBlocks);
 }
 
 

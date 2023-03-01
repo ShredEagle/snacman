@@ -32,7 +32,10 @@ enum class Semantic
     LightPosition,
     WorldToCamera,
     Projection,
+    ViewingMatrix, // Composed WorldToCamera and Projection matrices.
     FramebufferResolution,
+    NearDistance,
+    FarDistance,
     // Usually samplers
     BaseColorTexture,
     NormalTexture,
