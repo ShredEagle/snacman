@@ -28,7 +28,7 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void GameScene::setup(GameContext &, const Transition & aTransition, RawInput & aInput)
+void GameScene::setup(GameContext & aContext, const Transition & aTransition, RawInput & aInput)
 {
     ent::Phase init;
     mSystems.get(init)->add(system::PlayerSpawner{mWorld});
@@ -38,8 +38,9 @@ void GameScene::setup(GameContext &, const Transition & aTransition, RawInput & 
     mSystems.get(init)->add(system::LevelCreator{&mWorld});
     mSystems.get(init)->add(system::MovementIntegration{mWorld});
 
+    auto markovRoot = aContext.mResources.find(gMarkovRoot);
     mLevel.get(init)->add(component::LevelData(
-        mWorld, gAssetRoot, "markov/snaclvl.xml", {29, 29, 1}, 123123));
+        mWorld, markovRoot.value(), "snaclvl.xml", {29, 29, 1}, 123123));
     mLevel.get(init)->add(component::LevelToCreate{});
 }
 
