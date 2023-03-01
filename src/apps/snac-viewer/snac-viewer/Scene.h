@@ -210,8 +210,6 @@ inline void Scene::render(Renderer & aRenderer)
 
     clear();
 
-    // TODO There is something fishy here:
-    // If this call is moved after the scene rendering, there are GL errors.
     drawUI();
 
     {

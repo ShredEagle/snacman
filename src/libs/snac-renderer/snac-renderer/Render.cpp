@@ -54,7 +54,7 @@ void Renderer::render(const Mesh & aMesh,
 
         graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, *program)};
 
-        graphics::use(*program);
+        graphics::ScopedBind usedProgram(*program);
         if(aMesh.mStream.mIndices)
         {
             // Note: Range commands (providing a range of possible index values) are no longer usefull
