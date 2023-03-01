@@ -1,8 +1,12 @@
 #pragma once
 
-#include "entity/EntityManager.h"
+#include <entity/EntityManager.h>
 
 #include <chrono>
+#include <cstddef>
+#include <optional>
+#include <array>
+
 namespace ad {
 namespace snacgame {
 
@@ -15,9 +19,6 @@ struct SaveState
     std::chrono::microseconds mUpdateDelta;
 };
 
-struct GameContext;
-class SnacGame;
-
 struct SimulationControl
 {
     bool mPlaying = true;
@@ -25,7 +26,7 @@ struct SimulationControl
     bool mSaveGameState = true;
     float mSpeedFactor{1.f};
     std::size_t mSaveStateIndex = 0;
-    std::size_t mSelectedSaveState = -1;
+    int mSelectedSaveState = -1;
     std::array<std::optional<SaveState>, gNumberOfSavedStates>
         mPreviousGameState;
 
@@ -35,7 +36,7 @@ struct SimulationControl
                    )
     {
         mSaveStateIndex = (mSaveStateIndex + 1) % gNumberOfSavedStates;
-        if (mSaveStateIndex == mSelectedSaveState)
+        if (mSaveStateIndex == static_cast<std::size_t>(mSelectedSaveState))
         {
             mSelectedSaveState = -1;
         }

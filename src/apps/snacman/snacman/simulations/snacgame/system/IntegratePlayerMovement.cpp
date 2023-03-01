@@ -1,6 +1,7 @@
 #include "IntegratePlayerMovement.h"
 
 #include "snac-renderer/Cube.h"
+#include "snacman/simulations/snacgame/SnacGame.h"
 
 #include "../component/LevelData.h"
 
@@ -23,29 +24,31 @@ void IntegratePlayerMovement::update(float aDelta)
         mPlayer.each([aDelta](
                          component::Geometry & aGeometry,
                          const component::PlayerMoveState & aMoveState) {
+            int intPosX = static_cast<int>(aGeometry.mPosition.x() + gCellSize / 2);
+            int intPosY = static_cast<int>(aGeometry.mPosition.y() + gCellSize / 2);
             if (aMoveState.mMoveState & gPlayerMoveFlagUp)
             {
                 aGeometry.mPosition.y() +=
                     1.f * gBasePlayerSpeed * aDelta;
-                aGeometry.mPosition.x() = static_cast<int>(aGeometry.mPosition.x() + 0.5f);
+                aGeometry.mPosition.x() = static_cast<float>(intPosX);
             }
             else if (aMoveState.mMoveState & gPlayerMoveFlagDown)
             {
                 aGeometry.mPosition.y() +=
                     -1.f * gBasePlayerSpeed * aDelta;
-                aGeometry.mPosition.x() = static_cast<int>(aGeometry.mPosition.x() + 0.5f);
+                aGeometry.mPosition.x() = static_cast<float>(intPosX);
             }
             else if (aMoveState.mMoveState & gPlayerMoveFlagLeft)
             {
                 aGeometry.mPosition.x() +=
                     -1.f * gBasePlayerSpeed * aDelta;
-                aGeometry.mPosition.y() = static_cast<int>(aGeometry.mPosition.y() + 0.5f);
+                aGeometry.mPosition.y() = static_cast<float>(intPosY);
             }
             else if (aMoveState.mMoveState & gPlayerMoveFlagRight)
             {
                 aGeometry.mPosition.x() +=
                     1.f * gBasePlayerSpeed * aDelta;
-                aGeometry.mPosition.y() = static_cast<int>(aGeometry.mPosition.y() + 0.5f);
+                aGeometry.mPosition.y() = static_cast<float>(intPosY);
             }
         });
     });
