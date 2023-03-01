@@ -5,20 +5,18 @@
 #include <math/Angle.h>
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
-
+#include <platform/Filesystem.h>
 #include <snac-renderer/ResourceLoad.h>
 #include <snac-renderer/text/Text.h>
 #include <snacman/Profiling.h>
 #include <snacman/ProfilingGPU.h>
 #include <snacman/Resources.h>
 
-#include <platform/Filesystem.h>
-
-// TODO #generic-render remove once all geometry and shader programs are created outside.
+// TODO #generic-render remove once all geometry and shader programs are created
+// outside.
+#include <renderer/ShaderSource.h>
 #include <snac-renderer/Cube.h>
 #include <snac-renderer/gltf/GltfLoad.h>
-#include <renderer/ShaderSource.h>
-
 
 namespace ad {
 namespace snacgame {
@@ -79,7 +77,8 @@ void TextRenderer::render(Renderer & aRenderer,
         mGlyphInstances.respecifyData(std::span{textBufferData});
         BEGIN_RECURRING_GL("Draw string", drawStringProfile);
         auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
-        aRenderer.mRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances, aUniforms, aUniformBlocks);
+        aRenderer.mRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances,
+                                   aUniforms, aUniformBlocks);
         END_RECURRING_GL(drawStringProfile);
     }
 }
@@ -121,31 +120,29 @@ void Renderer::resetProjection(float aAspectRatio,
     mCamera.resetProjection(aAspectRatio, aParameters);
 }
 
-
-std::shared_ptr<snac::Mesh> Renderer::LoadShape(filesystem::path aShape, snac::Resources & aResources)
+std::shared_ptr<snac::Mesh> Renderer::LoadShape(filesystem::path aShape,
+                                                snac::Resources & aResources)
 {
-    if(aShape.string() == "CUBE")
+    if (aShape.string() == "CUBE")
     {
-        return std::make_shared<snac::Mesh>(
-            snac::loadCube(aResources.getShaderEffect("shaders/PhongLighting.prog")));
+        return std::make_shared<snac::Mesh>(snac::loadCube(
+            aResources.getShaderEffect("shaders/PhongLighting.prog")));
     }
     else
     {
-        return std::make_shared<snac::Mesh>(
-            loadModel(aShape, aResources.getShaderEffect("shaders/PhongLightingTextures.prog")));
+        return std::make_shared<snac::Mesh>(loadModel(
+            aShape,
+            aResources.getShaderEffect("shaders/PhongLightingTextures.prog")));
     }
 }
-
 
 std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
                                                unsigned int aPixelHeight,
                                                snac::Resources & aResources)
 {
     return std::make_shared<snac::Font>(
-        std::move(aFontFace),
-        aPixelHeight,
-        aResources.getShaderEffect("shaders/Text.prog")
-    );
+        std::move(aFontFace), aPixelHeight,
+        aResources.getShaderEffect("shaders/Text.prog"));
 }
 
 void Renderer::render(const visu::GraphicState & aState)
@@ -171,10 +168,10 @@ void Renderer::render(const visu::GraphicState & aState)
     // Position camera
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
-    math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite) * 0.8f;
+    math::hdr::Rgb_f lightColor = to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
-    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
-    
+    math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
+
     snac::UniformRepository uniforms{
         {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
         {snac::Semantic::LightPosition, {lightPosition}},

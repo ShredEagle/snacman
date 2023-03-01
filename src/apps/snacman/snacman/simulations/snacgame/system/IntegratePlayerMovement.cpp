@@ -10,7 +10,7 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
-constexpr float gBasePlayerSpeed = 10.f;
+constexpr float gBasePlayerSpeed = 5.f;
 
 void IntegratePlayerMovement::update(float aDelta)
 {
@@ -20,54 +20,32 @@ void IntegratePlayerMovement::update(float aDelta)
 
     mLevel.each([&](component::LevelData & aLevelData,
                     component::LevelCreated &) {
-        float cellSize = aLevelData.mCellSize;
-        mPlayer.each([cellSize, aDelta](
+        mPlayer.each([aDelta](
                          component::Geometry & aGeometry,
                          const component::PlayerMoveState & aMoveState) {
             if (aMoveState.mMoveState & gPlayerMoveFlagUp)
             {
-                aGeometry.mSubGridPosition +=
-                    math::Vec<2, float>{0.f, -1.f} * gBasePlayerSpeed * aDelta;
+                aGeometry.mPosition.y() +=
+                    1.f * gBasePlayerSpeed * aDelta;
+                aGeometry.mPosition.x() = static_cast<int>(aGeometry.mPosition.x() + 0.5f);
             }
             else if (aMoveState.mMoveState & gPlayerMoveFlagDown)
             {
-                aGeometry.mSubGridPosition +=
-                    math::Vec<2, float>{0.f, 1.f} * gBasePlayerSpeed * aDelta;
+                aGeometry.mPosition.y() +=
+                    -1.f * gBasePlayerSpeed * aDelta;
+                aGeometry.mPosition.x() = static_cast<int>(aGeometry.mPosition.x() + 0.5f);
             }
             else if (aMoveState.mMoveState & gPlayerMoveFlagLeft)
             {
-                aGeometry.mSubGridPosition +=
-                    math::Vec<2, float>{1.f, 0.f} * gBasePlayerSpeed * aDelta;
+                aGeometry.mPosition.x() +=
+                    -1.f * gBasePlayerSpeed * aDelta;
+                aGeometry.mPosition.y() = static_cast<int>(aGeometry.mPosition.y() + 0.5f);
             }
             else if (aMoveState.mMoveState & gPlayerMoveFlagRight)
             {
-                aGeometry.mSubGridPosition +=
-                    math::Vec<2, float>{-1.f, 0.f} * gBasePlayerSpeed * aDelta;
-            }
-
-            if (aGeometry.mSubGridPosition.y() > cellSize / 2)
-            {
-                aGeometry.mGridPosition.y()++;
-                aGeometry.mSubGridPosition.y() -= snac::gCubeSize;
-                aGeometry.mSubGridPosition.x() = 0.f;
-            }
-            else if (aGeometry.mSubGridPosition.y() < -cellSize / 2)
-            {
-                aGeometry.mGridPosition.y()--;
-                aGeometry.mSubGridPosition.y() += snac::gCubeSize;
-                aGeometry.mSubGridPosition.x() = 0.f;
-            }
-            else if (aGeometry.mSubGridPosition.x() > cellSize / 2)
-            {
-                aGeometry.mGridPosition.x()++;
-                aGeometry.mSubGridPosition.x() -= snac::gCubeSize;
-                aGeometry.mSubGridPosition.y() = 0.f;
-            }
-            else if (aGeometry.mSubGridPosition.x() < -cellSize / 2)
-            {
-                aGeometry.mGridPosition.x()--;
-                aGeometry.mSubGridPosition.x() += snac::gCubeSize;
-                aGeometry.mSubGridPosition.y() = 0.f;
+                aGeometry.mPosition.x() +=
+                    1.f * gBasePlayerSpeed * aDelta;
+                aGeometry.mPosition.y() = static_cast<int>(aGeometry.mPosition.y() + 0.5f);
             }
         });
     });

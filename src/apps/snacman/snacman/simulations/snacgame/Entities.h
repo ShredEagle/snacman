@@ -24,22 +24,22 @@ struct GameContext;
 
 void createPill(GameContext & aContext,
                 ent::Phase & aInit,
-                const math::Position<2, int> & Pos);
+                const math::Position<2, float> & Pos);
 ent::Handle<ent::Entity> createPathEntity(GameContext & aContext,
                                           ent::Phase & aInit,
-                                          const math::Position<2, int> & aPos);
+                                          const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>
 createPortalEntity(GameContext & aContext,
                    ent::Phase & aInit,
-                   const math::Position<2, int> & aPos);
+                   const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
                    ent::Phase & aInit,
-                   const math::Position<2, int> & aPos);
+                   const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>
 createPlayerSpawnEntity(GameContext & aContext,
                         ent::Phase & aInit,
-                        const math::Position<2, int> & aPos);
+                        const math::Position<2, float> & aPos);
 
 void fillSlotWithPlayer(GameContext & aContext,
                         ent::Phase & aInit,

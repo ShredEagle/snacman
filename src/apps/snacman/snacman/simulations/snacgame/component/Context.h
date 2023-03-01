@@ -16,8 +16,7 @@
 namespace ad {
 namespace snacgame {
 
-//const inline filesystem::path gAssetRoot{"/home/franz/NONOSIR,DOITRIGHTTHISTIME/snac-assets"};
-const inline filesystem::path gAssetRoot{"d:/projects/gamedev/2/snac-assets"};
+const inline filesystem::path gMarkovRoot{"markov/"};
 
 namespace component {
 

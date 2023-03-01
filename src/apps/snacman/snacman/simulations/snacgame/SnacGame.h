@@ -41,7 +41,7 @@ namespace snacgame {
 
 // TODO: before commit change this
 constexpr int gGridSize = 29;
-constexpr float gCellSize = 2.f;
+constexpr float gCellSize = 1.f;
 
 struct ImguiDisplays
 {
@@ -51,10 +51,12 @@ struct ImguiDisplays
     bool mShowLogLevel = false;
     bool mShowMainProfiler = false;
     bool mShowRenderProfiler = false;
+    bool mSpeedControl = false;
 
     void display()
     {
         ImGui::Begin("Debug windows");
+        ImGui::Checkbox("Speed control", &mSpeedControl);
         ImGui::Checkbox("Mappings", &mShowMappings);
         ImGui::Checkbox("Simulation delta", &mShowSimulationDelta);
         ImGui::Checkbox("Log level", &mShowLogLevel);
@@ -64,7 +66,6 @@ struct ImguiDisplays
         ImGui::End();
     }
 };
-
 /// \brief Implement HidManager's Inhibiter protocol, for Imgui.
 /// Allowing the app to discard input events that are handled by DearImgui.
 class ImguiInhibiter : public snac::HidManager::Inhibiter

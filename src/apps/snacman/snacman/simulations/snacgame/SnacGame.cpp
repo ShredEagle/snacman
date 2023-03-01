@@ -1,20 +1,18 @@
 #include "SnacGame.h"
 
-#include "Entities.h"
-#include "GameContext.h"
-#include "InputCommandConverter.h"
-
-#include "component/MovementScreenSpace.h"
-
 #include "component/Context.h"
 #include "component/Controller.h"
 #include "component/LevelData.h"
 #include "component/MovementScreenSpace.h"
 #include "component/PlayerSlot.h"
 #include "Entities.h"
+#include "GameContext.h"
 #include "InputCommandConverter.h"
 #include "scene/Scene.h"
+#include "SimulationControl.h"
 #include "snacman/ImguiUtilities.h"
+#include "snacman/simulations/snacgame/component/Geometry.h"
+#include "snacman/simulations/snacgame/component/PlayerMoveState.h"
 #include "snacman/simulations/snacgame/component/PlayerSlot.h"
 #include "system/DeterminePlayerAction.h"
 #include "system/IntegratePlayerMovement.h"
@@ -23,13 +21,8 @@
 #include "system/PlayerSpawner.h"
 #include "system/SceneStateMachine.h"
 
-#include <snacman/ImguiUtilities.h>
-#include <snacman/Profiling.h>
-
-#include <imguiui/ImguiUi.h>
-
-#include <snac-renderer/text/Text.h>
-
+#include <algorithm>
+#include <cstdio>
 #include <imgui.h>
 #include <imguiui/ImguiUi.h>
 #include <markovjunior/Grid.h>
@@ -37,10 +30,19 @@
 #include <math/VectorUtilities.h>
 #include <optional>
 #include <snac-renderer/text/Text.h>
+#include <snacman/ImguiUtilities.h>
+#include <snacman/Profiling.h>
 #include <string>
 
 namespace ad {
 namespace snacgame {
+
+std::array<math::hdr::Rgba_f, 4> gSlotColors{
+    math::hdr::Rgba_f{0.725f, 1.f, 0.718f, 1.f},
+    math::hdr::Rgba_f{0.949f, 0.251f, 0.506f, 1.f},
+    math::hdr::Rgba_f{0.961f, 0.718f, 0.f, 1.f},
+    math::hdr::Rgba_f{0.f, 0.631f, 0.894f, 1.f},
+};
 
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    snac::RenderThread<Renderer_t> & aRenderThread,
@@ -49,14 +51,15 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    RawInput & aInput) :
     mAppInterface{&aAppInterface},
     mGameContext{
-        .mResources = snac::Resources{std::move(aResourceFinder), aRenderThread},
+        .mResources =
+            snac::Resources{std::move(aResourceFinder), aRenderThread},
         .mRenderThread = aRenderThread,
     },
     mMappingContext{mGameContext.mWorld, mGameContext.mResources},
-    mStateMachine{mGameContext.mWorld,
-                  mGameContext.mWorld,
-                  *mGameContext.mResources.find("scenes/scene_description.json"),
-                  mMappingContext},
+    mStateMachine{
+        mGameContext.mWorld, mGameContext.mWorld,
+        *mGameContext.mResources.find("scenes/scene_description.json"),
+        mMappingContext},
     mSystemOrbitalCamera{mGameContext.mWorld, mGameContext.mWorld},
     mQueryRenderable{mGameContext.mWorld, mGameContext.mWorld},
     mQueryText{mGameContext.mWorld, mGameContext.mWorld},
@@ -65,10 +68,14 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     ent::Phase init;
 
     // Creating the slot entity those will be used a player entities
-    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{0, false});
-    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{1, false});
-    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{2, false});
-    mGameContext.mWorld.addEntity().get(init)->add(component::PlayerSlot{3, false});
+    mGameContext.mWorld.addEntity().get(init)->add(
+        component::PlayerSlot{0, false, gSlotColors.at(0)});
+    mGameContext.mWorld.addEntity().get(init)->add(
+        component::PlayerSlot{1, false, gSlotColors.at(1)});
+    mGameContext.mWorld.addEntity().get(init)->add(
+        component::PlayerSlot{2, false, gSlotColors.at(2)});
+    mGameContext.mWorld.addEntity().get(init)->add(
+        component::PlayerSlot{3, false, gSlotColors.at(3)});
 
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(mGameContext, scene::Transition{}, aInput);
@@ -79,8 +86,6 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                            RawInput & aInput)
 {
     TIME_RECURRING_FUNC(Main);
-
-    ent::Phase update;
 
     mImguiUi.mFrameMutex.lock();
     {
@@ -96,6 +101,50 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         | (mImguiUi.isCapturingKeyboard() ? ImguiInhibiter::Keyboard
                                           : ImguiInhibiter::Null)));
 
+    {
+        ent::Phase update;
+        ent::Query<component::PlayerSlot, component::Geometry, component::PlayerMoveState> playerQuery{
+            mGameContext.mWorld};
+        int playerIndex = 0;
+        ImGui::Begin("Player Pos");
+        playerQuery.each([&](const component::Geometry & aPlayerGeometry, component::PlayerMoveState & aMoveState) {
+            int intPosX =
+                static_cast<int>(aPlayerGeometry.mPosition.x() + 0.5f);
+            int intPosY =
+                static_cast<int>(aPlayerGeometry.mPosition.y() + 0.5f);
+            float fracPosX = aPlayerGeometry.mPosition.x() - intPosX;
+            float fracPosY = aPlayerGeometry.mPosition.y() - intPosY;
+
+            ImGui::Text("Player %d", playerIndex);
+            ImGui::Text("Player pos: %f, %f", aPlayerGeometry.mPosition.x(),
+                        aPlayerGeometry.mPosition.y());
+            ImGui::Text("Player integral part: %d, %d", intPosX, intPosY);
+            ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
+            ImGui::Text("Player MoveState:");
+            if (aMoveState.mAllowedMove & gPlayerMoveFlagDown)
+            {
+                ImGui::SameLine();
+                ImGui::Text("Down");
+            }
+            if (aMoveState.mAllowedMove & gPlayerMoveFlagUp)
+            {
+                ImGui::SameLine();
+                ImGui::Text("Up");
+            }
+            if (aMoveState.mAllowedMove & gPlayerMoveFlagRight)
+            {
+                ImGui::SameLine();
+                ImGui::Text("Right");
+            }
+            if (aMoveState.mAllowedMove & gPlayerMoveFlagLeft)
+            {
+                ImGui::SameLine();
+                ImGui::Text("Left");
+            }
+        });
+        ImGui::End();
+    }
+
     mImguiDisplays.display();
     if (mImguiDisplays.mShowLogLevel)
     {
@@ -108,6 +157,10 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     if (mImguiDisplays.mShowImguiDemo)
     {
         ImGui::ShowDemoWindow();
+    }
+    if (mImguiDisplays.mSpeedControl)
+    {
+        mGameContext.mSimulationControl.drawSimulationUi(mGameContext.mWorld);
     }
     if (mImguiDisplays.mShowSimulationDelta)
     {
@@ -154,18 +207,25 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     mImguiUi.mFrameMutex.unlock();
 }
 
-
 bool SnacGame::update(float aDelta, RawInput & aInput)
 {
+    mSystemOrbitalCamera->update(
+        aInput,
+        snac::Camera::gDefaults.vFov, // TODO Should be dynamic
+        mAppInterface->getWindowSize().height());
+
+    if (!mGameContext.mSimulationControl.mPlaying && !mGameContext.mSimulationControl.mStep)
+    {
+        return false;
+    }
+
+    float updateDelta = aDelta / mGameContext.mSimulationControl.mSpeedFactor;
     mSimulationTime += aDelta;
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
-    mSystemOrbitalCamera->update(aInput,
-                                 snac::Camera::gDefaults.vFov, // TODO Should be dynamic
-                                 mAppInterface->getWindowSize().height());
-
     std::optional<scene::Transition> transition =
-        mStateMachine->getCurrentScene()->update(mGameContext, aDelta, aInput);
+        mStateMachine->getCurrentScene()->update(mGameContext, updateDelta,
+                                                 aInput);
 
     if (transition)
     {
@@ -177,13 +237,23 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
         }
         else
         {
-            mStateMachine->changeState(mGameContext, transition.value(), aInput);
+            mStateMachine->changeState(mGameContext, transition.value(),
+                                       aInput);
         }
+    }
+
+    if (mGameContext.mSimulationControl.mSaveGameState)
+    {
+        TIME_RECURRING(Main, "Save state");
+        mGameContext.mSimulationControl.saveState(
+            mGameContext.mWorld.saveState(),
+            std::chrono::microseconds{static_cast<long>(aDelta * 1'000'000)},
+            std::chrono::microseconds{
+                static_cast<long>(updateDelta * 1'000'000)});
     }
 
     return false;
 }
-
 
 std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 {
@@ -197,22 +267,16 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     const int mColCount = gGridSize;
 
     mQueryRenderable.get(nomutation)
-        .each([cellSize, &state](
-                  ent::Handle<ent::Entity> aHandle,
-                  const component::Geometry & aGeometry,
-                  const component::VisualMesh & aVisualMesh) {
-            float yCoord =
-                aGeometry.mLayer == component::GeometryLayer::Level
-                    ? 0.f
-                    : cellSize;
+        .each([cellSize, &state](ent::Handle<ent::Entity> aHandle,
+                                 const component::Geometry & aGeometry,
+                                 const component::VisualMesh & aVisualMesh) {
+            float yCoord = aGeometry.mLayer == component::GeometryLayer::Level
+                               ? 0.f
+                               : cellSize;
             auto worldPosition = math::Position<3, float>{
-                -(float) mRowCount
-                    + (float) aGeometry.mGridPosition.y() * cellSize
-                    + aGeometry.mSubGridPosition.y(),
+                (float) mRowCount / 2 - (float) aGeometry.mPosition.y(),
                 yCoord,
-                -(float) mColCount
-                    + (float) aGeometry.mGridPosition.x() * cellSize
-                    + aGeometry.mSubGridPosition.x(),
+                (float) mColCount / 2 - (float) aGeometry.mPosition.x(),
             };
             state->mEntities.insert(aHandle.id(),
                                     visu::Entity{
@@ -222,10 +286,6 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                                         .mColor = aGeometry.mColor,
                                         .mMesh = aVisualMesh.mMesh,
                                     });
-            std::function<void()> func = [worldPosition]() {
-                float stuff = worldPosition.x();
-                ImGui::InputFloat("Stuff:", &stuff);
-            };
         });
 
     //

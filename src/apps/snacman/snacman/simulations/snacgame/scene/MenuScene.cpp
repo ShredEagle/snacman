@@ -83,6 +83,7 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
             .mControllerType = ControllerType::Gamepad,
         };
         accumulatedCommand |= gamepadCommand.mCommand;
+        controllerCommandList.push_back(gamepadCommand);
     }
 
     if (accumulatedCommand & gQuitCommand)
@@ -124,8 +125,8 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
                     {
                         findSlotAndBind(aContext, bindPlayerPhase, mSlots,
                                         command.mControllerType, command.mId);
+                        menuTransition = aItem.mTransition;
                     }
-                    menuTransition = aItem.mTransition;
                 }
             }
             if (aItem.mTransition.mTransitionName == "quit")

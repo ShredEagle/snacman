@@ -21,8 +21,7 @@ enum class GeometryLayer
 struct Geometry
 {
     // Pose
-    math::Position<2, float> mSubGridPosition;
-    math::Position<2, int> mGridPosition;
+    math::Position<2, float> mPosition;
     math::Size<3, float> mScaling = math::Size<3, float>{1.f, 1.f, 1.f};
     GeometryLayer mLayer = GeometryLayer::Level;
     math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();

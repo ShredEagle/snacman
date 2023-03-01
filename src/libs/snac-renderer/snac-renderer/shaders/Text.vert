@@ -29,6 +29,6 @@ void main(void)
 
     ex_Scale = sqrt(in_LocalToWorld_glyphToScreenPixels[0][0] * in_LocalToWorld_glyphToScreenPixels[0][0]
     + in_LocalToWorld_glyphToScreenPixels[0][1] * in_LocalToWorld_glyphToScreenPixels[0][1]);
-    ex_AtlasCoords = in_TextureOffset_p + (ve_TextureCoords_u * in_BoundingBox_p);
+    ex_AtlasCoords = in_TextureOffset_p + (ve_TextureCoords0_u * in_BoundingBox_p);
     ex_Albedo = in_Albedo;
 }
