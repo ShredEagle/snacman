@@ -1,0 +1,14 @@
+{
+    "techniques": [
+        {
+            "programfile": "shaders/PhongLightingTextures.prog"
+        },
+        {
+            "annotations": {
+                "pass": "depth"
+            },
+            "programfile": "shaders/DepthMap.prog",
+            "name": "shadow_mapping"
+        }
+    ]
+}

@@ -5,6 +5,8 @@
 
 #include <platform/Filesystem.h>
 
+#include <resource/ResourceFinder.h>
+
 #include <memory>
 
 
@@ -20,7 +22,9 @@ Technique loadTechnique(filesystem::path aProgram);
 /// \deprecated An effect should not be made from a single program file.
 std::shared_ptr<Effect> loadTrivialEffect(filesystem::path aProgram);
 
-//std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile);
+/// \deprecated Should not take a finder directly, but a resource manager
+std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
+                                   const resource::ResourceFinder & aFinder);
 
 Mesh loadCube(std::shared_ptr<Effect> aEffect);
 

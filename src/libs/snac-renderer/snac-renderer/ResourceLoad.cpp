@@ -94,6 +94,33 @@ std::shared_ptr<Effect> loadTrivialEffect(filesystem::path aProgram)
     return result;
 }
 
+
+std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
+                                   const resource::ResourceFinder & aFinder)
+{
+    auto result = std::make_shared<Effect>();
+
+    Json effect = Json::parse(std::ifstream{aEffectFile});
+    for (const auto & technique : effect.at("techniques"))
+    {
+        result->mTechniques.push_back(
+            loadTechnique(aFinder.pathFor(technique.at("programfile")))
+        );
+        if(technique.contains("annotations"))
+        {
+            Technique & inserted = result->mTechniques.back();
+            
+            for(auto [category, value] : technique.at("annotations").items())
+            {
+                inserted.mAnnotations.emplace(handy::StringId{category}, handy::StringId{value});
+            }
+        }
+    }
+
+    return result;
+}
+
+
 Mesh loadCube(std::shared_ptr<Effect> aEffect)
 {
     snac::Mesh mesh{

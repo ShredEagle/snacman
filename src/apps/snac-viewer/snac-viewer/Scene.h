@@ -28,6 +28,9 @@ handy::StringId gViewSid{"view"};
 handy::StringId gLeftSid{"left"};
 handy::StringId gRightSid{"right"};
 
+handy::StringId gPassSid{"pass"};
+handy::StringId gDepthSid{"depth"};
+
 
 InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
 {
@@ -171,6 +174,9 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
 
     // Annotate the existing techniques as "view: left"
     // Add a copy of each technique, annotated "view: right"
+    std::vector<Technique> & techniques = mMesh.mMaterial->mEffect->mTechniques;
+    // Reallocation would crash the loop.
+    techniques.reserve(techniques.size() * 2);
     for (auto & technique : mMesh.mMaterial->mEffect->mTechniques)
     {
         technique.mAnnotations.emplace(gViewSid, gLeftSid);
@@ -303,11 +309,11 @@ inline void Scene::drawShadows(
         glViewport(0, 0, shadowMapSize.width(), shadowMapSize.height());
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        // TODO use the depth pass
         aRenderer.render(mMesh,
                          mInstances,
                          aUniforms,
-                         aUniformBlocks);
+                         aUniformBlocks,
+                         { {gPassSid, gDepthSid}, });
     }
 
     Mesh screenQuad{
