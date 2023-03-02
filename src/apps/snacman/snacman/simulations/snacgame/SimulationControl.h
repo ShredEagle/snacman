@@ -24,7 +24,7 @@ struct SimulationControl
     bool mPlaying = true;
     bool mStep = false;
     bool mSaveGameState = true;
-    float mSpeedFactor{1.f};
+    float mSpeedRatio{1.f};
     std::size_t mSaveStateIndex = 0;
     int mSelectedSaveState = -1;
     std::array<std::optional<SaveState>, gNumberOfSavedStates>
@@ -44,7 +44,7 @@ struct SimulationControl
             SaveState{std::move(aState), aFrameDuration, aUpdateDelta};
     }
 
-    void drawSimulationUi(ent::EntityManager & aWorld);
+    void drawSimulationUi(ent::EntityManager & aWorld, bool * open = nullptr);
 };
 
 enum class VhsButtonType

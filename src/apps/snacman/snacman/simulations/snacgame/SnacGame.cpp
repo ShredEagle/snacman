@@ -101,12 +101,13 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         | (mImguiUi.isCapturingKeyboard() ? ImguiInhibiter::Keyboard
                                           : ImguiInhibiter::Null)));
 
+    if (mImguiDisplays.mShowPlayerInfo)
     {
         ent::Phase update;
         ent::Query<component::PlayerSlot, component::Geometry, component::PlayerMoveState> playerQuery{
             mGameContext.mWorld};
         int playerIndex = 0;
-        ImGui::Begin("Player Pos");
+        ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
         playerQuery.each([&](const component::Geometry & aPlayerGeometry, component::PlayerMoveState & aMoveState) {
             int intPosX =
                 static_cast<int>(aPlayerGeometry.mPosition.x() + 0.5f);
@@ -115,31 +116,35 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             float fracPosX = aPlayerGeometry.mPosition.x() - intPosX;
             float fracPosY = aPlayerGeometry.mPosition.y() - intPosY;
 
-            ImGui::Text("Player %d", playerIndex);
-            ImGui::Text("Player pos: %f, %f", aPlayerGeometry.mPosition.x(),
-                        aPlayerGeometry.mPosition.y());
-            ImGui::Text("Player integral part: %d, %d", intPosX, intPosY);
-            ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
-            ImGui::Text("Player MoveState:");
-            if (aMoveState.mAllowedMove & gPlayerMoveFlagDown)
+            char playerHeader[64];
+            std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", playerIndex);
+            if(ImGui::CollapsingHeader(playerHeader))
             {
-                ImGui::SameLine();
-                ImGui::Text("Down");
-            }
-            if (aMoveState.mAllowedMove & gPlayerMoveFlagUp)
-            {
-                ImGui::SameLine();
-                ImGui::Text("Up");
-            }
-            if (aMoveState.mAllowedMove & gPlayerMoveFlagRight)
-            {
-                ImGui::SameLine();
-                ImGui::Text("Right");
-            }
-            if (aMoveState.mAllowedMove & gPlayerMoveFlagLeft)
-            {
-                ImGui::SameLine();
-                ImGui::Text("Left");
+                ImGui::Text("Player pos: %f, %f", aPlayerGeometry.mPosition.x(),
+                            aPlayerGeometry.mPosition.y());
+                ImGui::Text("Player integral part: %d, %d", intPosX, intPosY);
+                ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
+                ImGui::Text("Player MoveState:");
+                if (aMoveState.mAllowedMove & gPlayerMoveFlagDown)
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("Down");
+                }
+                if (aMoveState.mAllowedMove & gPlayerMoveFlagUp)
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("Up");
+                }
+                if (aMoveState.mAllowedMove & gPlayerMoveFlagRight)
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("Right");
+                }
+                if (aMoveState.mAllowedMove & gPlayerMoveFlagLeft)
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("Left");
+                }
             }
         });
         ImGui::End();
@@ -148,23 +153,23 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     mImguiDisplays.display();
     if (mImguiDisplays.mShowLogLevel)
     {
-        snac::imguiLogLevelSelection();
+        snac::imguiLogLevelSelection(&mImguiDisplays.mShowLogLevel);
     }
     if (mImguiDisplays.mShowMappings)
     {
-        mMappingContext->drawUi(aInput);
+        mMappingContext->drawUi(aInput, &mImguiDisplays.mShowMappings);
     }
     if (mImguiDisplays.mShowImguiDemo)
     {
-        ImGui::ShowDemoWindow();
+        ImGui::ShowDemoWindow(&mImguiDisplays.mShowImguiDemo);
     }
     if (mImguiDisplays.mSpeedControl)
     {
-        mGameContext.mSimulationControl.drawSimulationUi(mGameContext.mWorld);
+        mGameContext.mSimulationControl.drawSimulationUi(mGameContext.mWorld, &mImguiDisplays.mSpeedControl);
     }
     if (mImguiDisplays.mShowSimulationDelta)
     {
-        ImGui::Begin("Gameloop");
+        ImGui::Begin("Gameloop", &mImguiDisplays.mShowSimulationDelta);
         int simulationDelta = (int) duration_cast<std::chrono::milliseconds>(
                                   aSettings.mSimulationDelta)
                                   .count();
@@ -190,7 +195,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     }
     if (mImguiDisplays.mShowMainProfiler)
     {
-        ImGui::Begin("Main profiler");
+        ImGui::Begin("Main profiler", &mImguiDisplays.mShowMainProfiler);
         std::string str;
         snac::getProfiler(snac::Profiler::Main).print(str);
         ImGui::TextUnformatted(str.c_str());
@@ -198,7 +203,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     }
     if (mImguiDisplays.mShowRenderProfiler)
     {
-        ImGui::Begin("Render profiler");
+        ImGui::Begin("Render profiler", &mImguiDisplays.mShowRenderProfiler);
         ImGui::TextUnformatted(snac::getRenderProfilerPrint().get().c_str());
         ImGui::End();
     }
@@ -219,7 +224,7 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
         return false;
     }
 
-    float updateDelta = aDelta / mGameContext.mSimulationControl.mSpeedFactor;
+    float updateDelta = aDelta / mGameContext.mSimulationControl.mSpeedRatio;
     mSimulationTime += aDelta;
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
@@ -270,9 +275,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         .each([cellSize, &state](ent::Handle<ent::Entity> aHandle,
                                  const component::Geometry & aGeometry,
                                  const component::VisualMesh & aVisualMesh) {
-            float yCoord = aGeometry.mLayer == component::GeometryLayer::Level
-                               ? 0.f
-                               : cellSize;
+            float yCoord = static_cast<float>((int)aGeometry.mLayer) * cellSize * 0.1f;
             auto worldPosition = math::Position<3, float>{
                 (float) mRowCount / 2 - (float) aGeometry.mPosition.y(),
                 yCoord,

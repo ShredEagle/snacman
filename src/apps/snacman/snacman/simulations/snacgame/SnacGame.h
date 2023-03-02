@@ -52,6 +52,7 @@ struct ImguiDisplays
     bool mShowMainProfiler = false;
     bool mShowRenderProfiler = false;
     bool mSpeedControl = false;
+    bool mShowPlayerInfo = false;
 
     void display()
     {
@@ -62,6 +63,7 @@ struct ImguiDisplays
         ImGui::Checkbox("Log level", &mShowLogLevel);
         ImGui::Checkbox("Main profiler",  &mShowMainProfiler);
         ImGui::Checkbox("Render profiler",  &mShowRenderProfiler);
+        ImGui::Checkbox("Player info",  &mShowPlayerInfo);
         ImGui::Checkbox("ImguiDemo", &mShowImguiDemo);
         ImGui::End();
     }

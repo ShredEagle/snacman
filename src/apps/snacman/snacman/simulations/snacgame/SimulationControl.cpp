@@ -1,4 +1,5 @@
 #include "SimulationControl.h"
+
 #include "GameContext.h"
 #include "SnacGame.h"
 
@@ -10,23 +11,31 @@ namespace snacgame {
 
 constexpr float gMinRectWidth = 10.f;
 
-void SimulationControl::drawSimulationUi(ent::EntityManager & aWorld)
+constexpr ImU32 colorNoState = IM_COL32(50, 0, 200, 255);
+constexpr ImU32 unselectedBorderColor = IM_COL32(233, 233, 233, 255);
+constexpr ImU32 selectedBorderColor = IM_COL32(0, 233, 0, 255);
+constexpr float rectHeight = 40.f;
+constexpr float maxSpeedRatio = 64.f;
+constexpr float minSpeedRatio = 1.f;
+constexpr float speedRatioStep = 2.f;
+
+
+void SimulationControl::drawSimulationUi(ent::EntityManager & aWorld, bool * open)
 {
-    ImGui::SetNextWindowSizeConstraints(ImVec2{gMinRectWidth * gNumberOfSavedStates, -1}, ImVec2{-1,-1});
-    ImGui::Begin("Game state");
+    ImGui::SetNextWindowSizeConstraints(
+        ImVec2{gMinRectWidth * gNumberOfSavedStates, -1}, ImVec2{-1, -1});
+    ImGui::Begin("Game state", open);
     if (drawVhsButton(VhsButtonType::FastRewind, "###fast rewind")
-        && mSpeedFactor < 64.f)
+        && mSpeedRatio < maxSpeedRatio)
     {
-        mSpeedFactor *= 2.f;
+        mSpeedRatio *= speedRatioStep;
     }
     ImGui::SameLine();
-    if (mPlaying
-        && drawVhsButton(VhsButtonType::Pause, "###pause"))
+    if (mPlaying && drawVhsButton(VhsButtonType::Pause, "###pause"))
     {
         mPlaying = false;
     }
-    if (!mPlaying
-        && drawVhsButton(VhsButtonType::Play, "###play"))
+    if (!mPlaying && drawVhsButton(VhsButtonType::Play, "###play"))
     {
         mPlaying = true;
         mSelectedSaveState = -1;
@@ -39,12 +48,12 @@ void SimulationControl::drawSimulationUi(ent::EntityManager & aWorld)
     }
     ImGui::SameLine();
     if (drawVhsButton(VhsButtonType::FastForward, "###fast forward")
-        && mSpeedFactor >= 2.f)
+        && mSpeedRatio > minSpeedRatio)
     {
-        mSpeedFactor /= 2.f;
+        mSpeedRatio /= speedRatioStep;
     }
     ImGui::SameLine();
-    ImGui::Text("1/%.0fx", mSpeedFactor);
+    ImGui::Text("1/%.0fx", mSpeedRatio);
     if (ImGui::Button("Start saving states"))
     {
         mSaveGameState = true;
@@ -54,74 +63,69 @@ void SimulationControl::drawSimulationUi(ent::EntityManager & aWorld)
     {
         mSaveGameState = false;
     }
-    std::array<ImU32, gNumberOfSavedStates> colors;
+    std::array<ImU32, gNumberOfSavedStates> colors{};
     for (std::size_t i = 0; i < gNumberOfSavedStates; ++i)
     {
-        float tone = 200.f * (float)i / (float)gNumberOfSavedStates;
+        float tone = 200.f * (float) i / (float) gNumberOfSavedStates;
         colors.at(i) = IM_COL32(tone, tone, 0, 255);
     }
     ImGuiStyle & style = ImGui::GetStyle();
     style.AntiAliasedLines = false;
 
-    ImU32 colorNoState = IM_COL32(50, 0, 200, 255);
-    ImU32 borderColor = IM_COL32(233, 233, 233, 255);
-    ImU32 selectedBorderColor = IM_COL32(0, 233, 0, 255);
     ImDrawList * drawList = ImGui::GetWindowDrawList();
-    float windowWidth = ImGui::GetWindowWidth();
     ImVec2 p = ImGui::GetCursorScreenPos();
     float rectWidth = std::max(
-        (windowWidth - ImGui::GetCursorPosX() * 2) / gNumberOfSavedStates,
+        style.WindowPadding.x / gNumberOfSavedStates,
         gMinRectWidth);
     float x = p.x;
     float y = p.y;
-    std::size_t currentId = 0;
-    std::size_t activeId = mSaveStateIndex;
-    float rectHeight = 40.f;
+    std::size_t currentIndex = 0;
 
     for (auto & saveState : mPreviousGameState)
     {
-        if (currentId > 0)
+        if (currentIndex > 0)
         {
             ImGui::SameLine(0.f, 0.f);
         }
 
         char idBuf[128];
-        std::snprintf(idBuf, 128, "%lu", static_cast<unsigned long>(currentId));
+        std::snprintf(idBuf, 128, "%lu",
+                      static_cast<unsigned long>(currentIndex));
         ImGui::PushID(idBuf);
         // We push an id because dummy don't have id and we need to
         // differentiate between them for the tooltip to work
-        int forwardId = static_cast<int>(activeId) - static_cast<int>(currentId);
+        int forwardId = static_cast<int>(mSaveStateIndex - currentIndex);
+        forwardId = forwardId >= 0 ? (int) gNumberOfSavedStates - forwardId - 1
+                                   : -forwardId;
+        ImU32 rectColor = saveState ? colors.at(forwardId) : colorNoState;
+        ImVec2 rectPos(x, y);
+        ImVec2 rectPosMax(x + rectWidth, y + rectHeight);
+        ImU32 borderColor = currentIndex == (std::size_t) mSelectedSaveState
+                                ? selectedBorderColor
+                                : unselectedBorderColor;
 
-        drawList->AddRectFilled(
-            ImVec2(x, y), ImVec2(x + rectWidth, y + rectHeight),
-            saveState ? colors.at(forwardId >= 0
-                                      ? gNumberOfSavedStates - 1
-                                            - forwardId
-                                      : - forwardId)
-                      : colorNoState);
-        drawList->AddRect(
-            ImVec2(x, y), ImVec2(x + rectWidth, y + rectHeight),
-            currentId == static_cast<std::size_t>(mSelectedSaveState) ? selectedBorderColor : borderColor, 0, ImDrawFlags_None, 1);
+        drawList->AddRectFilled(rectPos, rectPosMax, rectColor);
+        drawList->AddRect(rectPos, rectPosMax, borderColor, 0, 0, 1);
         ImGui::Dummy(ImVec2(rectWidth, rectHeight));
         if (ImGui::IsItemHovered() && saveState)
         {
             if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
             {
                 aWorld.restoreState(saveState->mState);
-                mSelectedSaveState = static_cast<int>(currentId);
+                mSelectedSaveState = static_cast<int>(currentIndex);
             }
             ImGui::BeginTooltip();
             ImGui::Text("Frame duration: %.3f",
                         static_cast<float>(saveState->mFrameDuration.count())
-                                           / 1'000.f);
-            ImGui::Text("Update delta: %.3f",
-                        static_cast<float>(saveState->mUpdateDelta.count())
-                                           / 1'000.f);
+                            / 1'000.f);
+            ImGui::Text(
+                "Update delta: %.3f",
+                static_cast<float>(saveState->mUpdateDelta.count()) / 1'000.f);
             ImGui::EndTooltip();
         }
         ImGui::PopID();
         x += rectWidth;
-        currentId++;
+        currentIndex++;
     }
     style.AntiAliasedLines = true;
     ImGui::End();
@@ -198,5 +202,5 @@ bool drawVhsButton(VhsButtonType aButtonType, const char * id)
 
     return pressed;
 }
-}
-}
+} // namespace snacgame
+} // namespace ad

@@ -10,9 +10,9 @@ namespace ad {
 namespace snac {
 
 // TODO Those utilities should be more generic, and leave in some shared repo.
-void imguiLogLevelSelection()
+void imguiLogLevelSelection(bool * open = nullptr)
 {
-    ImGui::Begin("Logging");
+    ImGui::Begin("Logging", open);
     {
         static const char* items[] = {
             "trace",
