@@ -20,7 +20,7 @@ class DeterminePlayerAction
 public:
     DeterminePlayerAction(ent::EntityManager & aWorld,
                           ent::Handle<ent::Entity> aLevel) :
-        mPlayer{aWorld}, mLevel{aWorld}, mPaths{aWorld}
+        mPlayer{aWorld}, mLevel{aWorld}
     {}
 
     void update();
@@ -32,8 +32,6 @@ private:
         mPlayer;
 
     ent::Query<component::LevelData, component::LevelCreated> mLevel;
-    //Debug
-    ent::Query<component::LevelEntity, component::Geometry> mPaths;
 };
 
 } // namespace system

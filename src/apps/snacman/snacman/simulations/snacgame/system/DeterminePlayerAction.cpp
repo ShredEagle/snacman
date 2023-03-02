@@ -94,17 +94,6 @@ void DeterminePlayerAction::update()
             }
 
             aPlayerMoveState.mMoveState = inputMoveFlag;
-
-            mPaths.each([&](component::Geometry & aGeomatry) {
-                    if (static_cast<int>(aGeomatry.mPosition.x()) == intPosX &&
-                            static_cast<int>(aGeomatry.mPosition.y()) == intPosY)
-                    {
-                        aGeomatry.mColor = math::hdr::gGreen<float>;
-                    }
-                    else {
-                        aGeomatry.mColor = math::hdr::gWhite<float>;
-                    }
-                    });
         });
     });
 }
