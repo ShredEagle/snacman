@@ -99,8 +99,6 @@ struct Scene
 
     void update();
 
-    void drawUI();
-
     void recompileRightView();
 
     void render(Renderer & aRenderer);
@@ -197,18 +195,6 @@ inline void Scene::update()
 }
 
 
-inline void Scene::drawUI()
-{
-    auto scopedUI = mGui.startUI();
-    ImGui::Begin("Render Controls");
-    if(ImGui::Button("Recompile Right"))
-    {
-        recompileRightView();
-    }
-    ImGui::End();
-}
-
-
 inline void Scene::recompileRightView()
 {
     for (auto & technique : mMesh.mMaterial->mEffect->mTechniques)
@@ -239,10 +225,30 @@ inline void Scene::render(Renderer & aRenderer)
         {snac::Semantic::FarDistance,  -mCamera.getCurrentParameters().zFar},
     };
 
-    //drawSideBySide(aRenderer, uniforms, uniformBlocks);
-    drawShadows(aRenderer, uniforms, uniformBlocks);
+    {
+        auto scopedUI = mGui.startUI();
+        ImGui::Begin("Render Controls");
 
-    drawUI();
+        static const char* modes[] = {"Side-by-side", "Shadows"};
+        static int currentMode = 0;
+        ImGui::ListBox("Mode", &currentMode, modes, IM_ARRAYSIZE(modes), 4);
+        switch(currentMode)
+        {
+            case 0:
+                drawSideBySide(aRenderer, uniforms, uniformBlocks);
+                break;
+            case 1:
+                drawShadows(aRenderer, uniforms, uniformBlocks);
+                break;
+        }
+
+        if(ImGui::Button("Recompile Right"))
+        {
+            recompileRightView();
+        }
+
+        ImGui::End();
+    }
 
     mGui.render();
 }
