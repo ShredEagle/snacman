@@ -189,7 +189,9 @@ void setUniforms(const UniformRepository & aUniforms,
 }
 
 
-void setTextures(const TextureRepository & aTextures, const IntrospectProgram & aProgram)
+void setTextures(const TextureRepository & aTextures,
+                 const IntrospectProgram & aProgram,
+                 WarningRepository::WarnedUniforms & aWarnedUniforms)
 {
     GLint textureImageUnit = 0;
     for (const IntrospectProgram::Resource & shaderUniform : aProgram.mUniforms)
@@ -197,7 +199,7 @@ void setTextures(const TextureRepository & aTextures, const IntrospectProgram & 
         if (isResourceSamplerType(shaderUniform.mType))
         {
             if(auto found = aTextures.find(shaderUniform.mSemantic);
-              found != aTextures.end())
+               found != aTextures.end())
             {
                 if (shaderUniform.mArraySize != 1)
                 {
@@ -227,11 +229,16 @@ void setTextures(const TextureRepository & aTextures, const IntrospectProgram & 
             {
                 // TODO since this function is currently called before each draw
                 // this is much to verbose for a warning...
+                const std::string textureString = to_string(shaderUniform.mSemantic);
+                if(auto [iterator, didInsert] = aWarnedUniforms.insert(textureString);
+                   didInsert)
+                {
                 SELOG(warn)(
                     "{}: Could not find an a texture for semantic '{}' in program '{}'.", 
                     __func__,
-                    to_string(shaderUniform.mSemantic),
+                    textureString,
                     aProgram.name());
+                }
             }
         }
     }

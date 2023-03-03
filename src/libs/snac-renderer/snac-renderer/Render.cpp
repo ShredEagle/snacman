@@ -46,10 +46,11 @@ void Renderer::render(const Mesh & aMesh,
     if (const IntrospectProgram * program = filterTechniques(aMesh, aTechniqueFilter);
         program != nullptr)
     {
+        WarningRepository::WarnedUniforms & warned = mWarningRepo.get(aMesh, *program);
         // TODO Is there a better way to handle several source for uniform values
         aUniforms.merge(UniformRepository{aMesh.mMaterial->mUniforms});
-        setUniforms(aUniforms, *program, mWarningRepo.get(aMesh, *program));
-        setTextures(aMesh.mMaterial->mTextures, *program);
+        setUniforms(aUniforms, *program, warned);
+        setTextures(aMesh.mMaterial->mTextures, *program, warned);
         setBlocks(aUniformBlocks, *program);
 
         graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, *program)};

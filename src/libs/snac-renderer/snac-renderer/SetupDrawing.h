@@ -36,6 +36,7 @@ struct VertexArrayRepository
 /// might need reworking.
 struct WarningRepository
 {
+    // Note: also used for textures
     using WarnedUniforms = std::set<std::string>;
 
     WarningRepository::WarnedUniforms & get(const Mesh & aMesh,
@@ -50,7 +51,9 @@ void setUniforms(const UniformRepository & aUniforms,
                  const IntrospectProgram & aProgram,
                  WarningRepository::WarnedUniforms & aWarnedUniforms);
 
-void setTextures(const TextureRepository & aTextures, const IntrospectProgram & aProgram);
+void setTextures(const TextureRepository & aTextures,
+                 const IntrospectProgram & aProgram,
+                 WarningRepository::WarnedUniforms & aWarnedUniforms);
 
 void setBlocks(const UniformBlocks & aUniformBlocks, const IntrospectProgram & aProgram);
 
