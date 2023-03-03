@@ -35,6 +35,7 @@ std::string to_string(Semantic aSemantic)
         MAPPING(AmbientColor) 
         MAPPING(LightColor)
         MAPPING(LightPosition)
+        MAPPING(LightViewingMatrix)
         MAPPING(WorldToCamera)
         MAPPING(Projection)
         MAPPING(ViewingMatrix)
@@ -44,6 +45,7 @@ std::string to_string(Semantic aSemantic)
         MAPPING(BaseColorTexture)
         MAPPING(NormalTexture)
         MAPPING(MetallicRoughnessTexture)
+        MAPPING(ShadowMap)
         MAPPING(FontAtlas)
         default:
         {
@@ -90,6 +92,7 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(AmbientColor) 
     MAPPING(LightColor)
     MAPPING(LightPosition)
+    MAPPING(LightViewingMatrix)
     MAPPING(WorldToCamera)
     MAPPING(Projection)
     MAPPING(ViewingMatrix)
@@ -99,6 +102,7 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(BaseColorTexture)
     MAPPING(NormalTexture)
     MAPPING(MetallicRoughnessTexture)
+    MAPPING(ShadowMap)
     MAPPING(FontAtlas)
     else
     {
@@ -137,6 +141,7 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::AmbientColor:
         case Semantic::LightColor:
         case Semantic::LightPosition:
+        case Semantic::LightViewingMatrix:
         case Semantic::WorldToCamera:
         case Semantic::Projection:
         case Semantic::ViewingMatrix:
@@ -146,6 +151,7 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::BaseColorTexture:
         case Semantic::NormalTexture:
         case Semantic::MetallicRoughnessTexture:
+        case Semantic::ShadowMap:
         case Semantic::FontAtlas:
         {
             throw std::logic_error{

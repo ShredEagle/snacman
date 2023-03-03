@@ -5,6 +5,12 @@
         },
         {
             "annotations": {
+                "pass": "forward_shadow"
+            },
+            "programfile": "shaders/PhongLightingShadow.prog"
+        },
+        {
+            "annotations": {
                 "pass": "depth"
             },
             "programfile": "shaders/DepthMap.prog",

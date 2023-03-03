@@ -99,7 +99,7 @@ int main(int argc, char * argv[])
     try
     {
         snac::detail::initializeLogging();
-        spdlog::set_level(spdlog::level::trace);
+        spdlog::set_level(spdlog::level::debug);
     }
     catch (std::exception & aException)
     {

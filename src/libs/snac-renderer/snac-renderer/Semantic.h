@@ -30,6 +30,7 @@ enum class Semantic
     AmbientColor,
     LightColor,
     LightPosition,
+    LightViewingMatrix,
     WorldToCamera,
     Projection,
     ViewingMatrix, // Composed WorldToCamera and Projection matrices.
@@ -40,6 +41,7 @@ enum class Semantic
     BaseColorTexture,
     NormalTexture,
     MetallicRoughnessTexture,
+    ShadowMap,
     FontAtlas, // TODO should it just be atlas, used for both sprites and fonts?
     //SpriteAtlas,
 

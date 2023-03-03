@@ -31,6 +31,7 @@ handy::StringId gRightSid{"right"};
 
 handy::StringId gPassSid{"pass"};
 handy::StringId gDepthSid{"depth"};
+handy::StringId gForwardShadowSid{"forward_shadow"};
 
 
 struct PoseColor
@@ -405,6 +406,12 @@ inline void Scene::drawShadows(
     graphics::FrameBuffer depthFBO;
     graphics::attachImage(depthFBO, depthMap, GL_DEPTH_ATTACHMENT);
 
+    Camera lightViewPoint{math::getRatio<GLfloat>(shadowMapSize), Camera::gDefaults};
+    lightViewPoint.setPose(
+        math::trans3d::rotateX(math::Degree{55.f})
+        * math::trans3d::translate<GLfloat>({0.f, -1.f, -15.f}));
+
+    // Render shadow map
     {
         graphics::ScopedBind fboScope{depthFBO};
 
@@ -412,11 +419,6 @@ inline void Scene::drawShadows(
         glClear(GL_DEPTH_BUFFER_BIT);
 
         UniformRepository uniforms{aUniforms};
-
-        Camera lightViewPoint{math::getRatio<GLfloat>(shadowMapSize), Camera::gDefaults};
-        lightViewPoint.setPose(
-            math::trans3d::rotateX(math::Degree{55.f})
-            * math::trans3d::translate<GLfloat>({0.f, -1.f, -15.f}));
         uniforms.emplace(Semantic::ViewingMatrix, lightViewPoint.assembleViewMatrix());
 
         renderEntities(aRenderer,
@@ -425,22 +427,7 @@ inline void Scene::drawShadows(
                        { {gPassSid, gDepthSid}, });
     }
 
-    Mesh screenQuad{
-        .mStream = makeQuad(),
-        .mMaterial = std::make_shared<Material>(Material{
-            .mEffect = std::make_shared<Effect>(),
-        }),
-        .mName = "screen_quad",
-    };
-    screenQuad.mMaterial->mTextures.emplace(Semantic::BaseColorTexture, &depthMap);
-    screenQuad.mMaterial->mEffect->mTechniques.push_back(
-        loadTechnique(mFinder.pathFor("shaders/ShowDepth.prog")));
-
-    glViewport(0,
-               0, 
-               mAppInterface.getFramebufferSize().width(), 
-               mAppInterface.getFramebufferSize().height());
-
+    // Default framebuffer rendering
     clear();
 
     // From the spec core 4.6, p326
@@ -451,10 +438,54 @@ inline void Scene::drawShadows(
     glTextureBarrier();
     #endif
 
-    aRenderer.render(screenQuad,
-                     gNotInstanced,
-                     aUniforms,
-                     aUniformBlocks);
+    // Render scene with shadows
+    {
+        glViewport(0,
+                0, 
+                mAppInterface.getFramebufferSize().width(), 
+                mAppInterface.getFramebufferSize().height());
+
+        mEntities.at(1).mMesh.mMaterial->mTextures.emplace(
+            Semantic::ShadowMap,
+            &depthMap);
+
+        UniformRepository uniforms{aUniforms};
+        uniforms.emplace(Semantic::LightViewingMatrix, lightViewPoint.assembleViewMatrix());
+
+        renderEntities(aRenderer,
+                       uniforms, 
+                       aUniformBlocks,
+                       { {gPassSid, gForwardShadowSid}, });
+        //TEXTURE_COMPARE_MODE: COMPARE_REF_TO_TEXTURE
+        //TEXTURE_COMPARE_FUNC: LEQUAL
+        //multiply light by LEQUAL
+    }
+
+    // Show shadow map in a viewport
+    {
+        Mesh screenQuad{
+            .mStream = makeQuad(),
+            .mMaterial = std::make_shared<Material>(Material{
+                .mEffect = std::make_shared<Effect>(),
+            }),
+            .mName = "screen_quad",
+        };
+
+        screenQuad.mMaterial->mTextures.emplace(Semantic::BaseColorTexture, &depthMap);
+        screenQuad.mMaterial->mEffect->mTechniques.push_back(
+            loadTechnique(mFinder.pathFor("shaders/ShowDepth.prog")));
+
+        GLsizei viewportHeight = mAppInterface.getFramebufferSize().height() / 4;
+        glViewport(0,
+                0, 
+                (GLsizei)(viewportHeight * getRatio<GLfloat>(shadowMapSize)), 
+                viewportHeight);
+
+        aRenderer.render(screenQuad,
+                        gNotInstanced,
+                        aUniforms,
+                        aUniformBlocks);
+    }
 }
 
 
