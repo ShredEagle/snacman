@@ -1,7 +1,7 @@
 {
     "techniques": [
         {
-            "programfile": "shaders/PhongLighting.prog"
+            "programfile": "shaders/PhongLightingTextures.prog"
         },
         {
             "annotations": {

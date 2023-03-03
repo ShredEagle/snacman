@@ -3,6 +3,7 @@
 #include "Gui.h"
 
 #include <graphics/AppInterface.h>
+#include <graphics/CameraUtilities.h>
 
 #include <handy/StringId.h>
 
@@ -32,44 +33,19 @@ handy::StringId gPassSid{"pass"};
 handy::StringId gDepthSid{"depth"};
 
 
-InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
+struct PoseColor
 {
-    
-    struct PoseColor
-    {
-        math::Matrix<4, 4, float> pose;
-        math::sdr::Rgba albedo{math::sdr::gWhite / 2};
-    };
+    math::Matrix<4, 4, float> pose;
+    math::sdr::Rgba albedo{math::sdr::gWhite / 2};
+};
 
-    GLfloat maxMagnitude = *aBoundingBox.dimension().getMaxMagnitudeElement();
-    if(maxMagnitude == 0.)
-    {
-        maxMagnitude =  1;
-        SELOG(warn)("Model bounding box is null, assuming unit size.");
-    }
 
-    auto scaling = math::trans3d::scaleUniform(3.f / maxMagnitude);
-
-    math::Vec<3, float> centerOffset = aBoundingBox.center().as<math::Vec>() * scaling;
-
-    std::vector<PoseColor> transformations{
-        {scaling * math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f} - centerOffset)},
-        {scaling * math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f} - centerOffset)},
-        {scaling * math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f} - centerOffset)},
-    };
-
-    InstanceStream instances{
-        .mInstanceCount = (GLsizei)std::size(transformations),
-    };
-    std::size_t instanceSize = sizeof(decltype(transformations)::value_type);
+// Make that dynamic too...
+InstanceStream prepareInstances()
+{
+    InstanceStream instances;
+    std::size_t instanceSize = sizeof(PoseColor);
     instances.mInstanceBuffer.mStride = (GLsizei)instanceSize;
-
-    bind(instances.mInstanceBuffer.mBuffer);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        instanceSize * std::size(transformations),
-        transformations.data(),
-        GL_DYNAMIC_DRAW);
 
     {
         graphics::ClientAttribute transformation{
@@ -87,12 +63,93 @@ InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
         };
         instances.mAttributes.emplace(Semantic::Albedo, albedo);
     }
+
     return instances;
+}
+
+
+InstanceStream populateTripleInstances(math::Box<GLfloat> aBoundingBox)
+{
+    GLfloat maxMagnitude = *aBoundingBox.dimension().getMaxMagnitudeElement();
+    if(maxMagnitude == 0.)
+    {
+        maxMagnitude =  1;
+        SELOG(warn)("Model bounding box is null, assuming unit size.");
+    }
+
+    auto scaling = math::trans3d::scaleUniform(3.f / maxMagnitude);
+
+    math::Vec<3, float> centerOffset = aBoundingBox.center().as<math::Vec>() * scaling;
+
+    std::vector<PoseColor> transformations{
+        {scaling * math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f} - centerOffset)},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f} - centerOffset)},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f} - centerOffset)},
+    };
+
+    InstanceStream instances = prepareInstances();
+    instances.mInstanceCount = (GLsizei)std::size(transformations),
+
+    bind(instances.mInstanceBuffer.mBuffer);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        sizeof(PoseColor) * std::size(transformations),
+        transformations.data(),
+        GL_DYNAMIC_DRAW);
+
+    return instances;
+}
+
+InstanceStream populateInstances(std::vector<PoseColor> aInstances)
+{
+    InstanceStream instances = prepareInstances();
+    instances.mInstanceCount = (GLsizei)std::size(aInstances),
+
+    bind(instances.mInstanceBuffer.mBuffer);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        sizeof(PoseColor) * std::size(aInstances),
+        aInstances.data(),
+        GL_DYNAMIC_DRAW);
+
+    return instances;
+}
+
+void duplicateTechniques(Effect & aEffect)
+{
+    std::vector<Technique> & techniques = aEffect.mTechniques;
+    // Reallocation would crash the loop.
+    techniques.reserve(techniques.size() * 2);
+    for (auto & technique : techniques)
+    {
+        technique.mAnnotations.emplace(gViewSid, gLeftSid);
+        techniques.push_back(Technique{
+            .mAnnotations = {{gViewSid, gRightSid}},
+            .mProgram = loadProgram(technique.mProgramFile),
+            .mProgramFile = technique.mProgramFile,
+        });
+    }
+}
+
+
+template <class T_value, std::size_t N>
+std::vector<T_value> moveInitVector(std::array<T_value, N> aValues)
+{
+    return std::vector<T_value>{
+        std::make_move_iterator(aValues.begin()),
+        std::make_move_iterator(aValues.end())
+    };
 }
 
 
 struct Scene
 {
+    struct Visual
+    {
+        InstanceStream mInstances;
+        Mesh mMesh;
+    };
+
     Scene(graphics::ApplicationGlfw & aGlfwApp,
           Mesh aMesh,
           const resource::ResourceFinder & aFinder);
@@ -102,6 +159,11 @@ struct Scene
     void recompileRightView();
 
     void render(Renderer & aRenderer);
+
+    void renderEntities(Renderer & aRenderer,
+                        const snac::UniformRepository & aUniforms,
+                        const snac::UniformBlocks & aUniformBlocks,
+                        const std::vector<Technique::Annotation> & aTechniqueFilter = {});
 
     void drawSideBySide(Renderer & aRenderer,
                         const snac::UniformRepository & aUniforms,
@@ -113,8 +175,7 @@ struct Scene
 
     const graphics::AppInterface & mAppInterface;
 
-    Mesh mMesh;
-    InstanceStream mInstances{makeInstances(mMesh.mStream.mBoundingBox)};
+    std::vector<Visual> mEntities;
     Camera mCamera;
     MouseOrbitalControl mCameraControl;
     const resource::ResourceFinder & mFinder;
@@ -128,7 +189,14 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
                     Mesh aMesh,
                     const resource::ResourceFinder & aFinder) :
     mAppInterface{*aGlfwApp.getAppInterface()},
-    mMesh{std::move(aMesh)},
+    mEntities{ 
+        moveInitVector<Visual, 1>({Visual{
+            // Is it safe? Do we have a guarantee regarding member order?
+            // (see the std::move)
+            .mInstances = populateTripleInstances(aMesh.mStream.mBoundingBox),
+            .mMesh = std::move(aMesh),
+        }})
+    },
     mCamera{math::getRatio<float>(aGlfwApp.getAppInterface()->getFramebufferSize()), Camera::gDefaults},
     mCameraControl{aGlfwApp.getAppInterface()->getWindowSize(), Camera::gDefaults.vFov},
     mFinder{aFinder},
@@ -170,22 +238,34 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
             mCameraControl.setWindowSize(size);
         });
 
-    // Annotate the existing techniques as "view: left"
-    // Add a copy of each technique, annotated "view: right"
-    std::vector<Technique> & techniques = mMesh.mMaterial->mEffect->mTechniques;
-    // Reallocation would crash the loop.
-    techniques.reserve(techniques.size() * 2);
-    for (auto & technique : mMesh.mMaterial->mEffect->mTechniques)
+    // Add floor
     {
-        technique.mAnnotations.emplace(gViewSid, gLeftSid);
-        mMesh.mMaterial->mEffect->mTechniques.push_back(Technique{
-            .mAnnotations = {{gViewSid, gRightSid}},
-            .mProgram = loadProgram(technique.mProgramFile),
-            .mProgramFile = technique.mProgramFile,
+        Mesh floor{
+            .mStream = makeRectangle(math::Rectangle<GLfloat>{{-5.f, -5.f}, {10.f, 10.f}}),
+            .mMaterial = std::make_shared<Material>(Material{
+                .mEffect = loadEffect(mFinder.pathFor("effects/Mesh.sefx"), mFinder),
+            }),
+            .mName = "floor",
+        };
+        mEntities.push_back(Visual{
+            .mInstances = populateInstances({{
+                PoseColor{
+                    .pose = math::trans3d::rotateX(math::Degree(90.f))
+                        * math::trans3d::translate(math::Vec<3, float>{ 0.f, -2.f, 0.f}),
+                }
+            }}),
+            .mMesh = std::move(floor),
         });
     }
 
 
+    // Annotate the existing techniques as "view: left"
+    // Add a copy of each technique, annotated "view: right"
+    for(auto & [_instances, mesh] : mEntities)
+    {
+        // TODO we have to check if the effect was already present on another mesh
+        duplicateTechniques(*mesh.mMaterial->mEffect);
+    }
 }
 
 
@@ -197,11 +277,14 @@ inline void Scene::update()
 
 inline void Scene::recompileRightView()
 {
-    for (auto & technique : mMesh.mMaterial->mEffect->mTechniques)
+    for(auto & [_instances, mesh] : mEntities)
     {
-        if(technique.mAnnotations.at(gViewSid) == gRightSid)
+        for (auto & technique : mesh.mMaterial->mEffect->mTechniques)
         {
-            attemptRecompile(technique);
+            if(technique.mAnnotations.at(gViewSid) == gRightSid)
+            {
+                attemptRecompile(technique);
+            }
         }
     }
 }
@@ -215,7 +298,7 @@ inline void Scene::render(Renderer & aRenderer)
 
     math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
-    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
+    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
 
     const snac::UniformRepository uniforms{
         {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
@@ -253,6 +336,21 @@ inline void Scene::render(Renderer & aRenderer)
     mGui.render();
 }
 
+void Scene::renderEntities(Renderer & aRenderer,
+                           const snac::UniformRepository & aUniforms,
+                           const snac::UniformBlocks & aUniformBlocks,
+                           const std::vector<Technique::Annotation> & aTechniqueFilter)
+{
+    for(auto & [instances, mesh] : mEntities)
+    {
+        aRenderer.render(mesh,
+                         instances,
+                         aUniforms,
+                         aUniformBlocks,
+                         std::move(aTechniqueFilter));
+    }
+}
+
 
 void Scene::drawSideBySide(Renderer & aRenderer,
                            const snac::UniformRepository & aUniforms,
@@ -269,26 +367,24 @@ void Scene::drawSideBySide(Renderer & aRenderer,
 
     // Left view
     glScissor(0,
-                0,
-                mAppInterface.getFramebufferSize().width()/2,
-                mAppInterface.getFramebufferSize().height());
+              0,
+              mAppInterface.getFramebufferSize().width()/2,
+              mAppInterface.getFramebufferSize().height());
 
-    aRenderer.render(mMesh,
-                     mInstances,
-                     aUniforms,
-                     aUniformBlocks,
-                     { {gViewSid, gLeftSid}, });
+    renderEntities(aRenderer, 
+                   aUniforms,
+                   aUniformBlocks,
+                   { {gViewSid, gLeftSid}, });
     // Right view
     glScissor(mAppInterface.getFramebufferSize().width()/2,
-                0, 
-                mAppInterface.getFramebufferSize().width(),
-                mAppInterface.getFramebufferSize().height());
+              0, 
+              mAppInterface.getFramebufferSize().width(),
+              mAppInterface.getFramebufferSize().height());
 
-    aRenderer.render(mMesh,
-                     mInstances,
-                     aUniforms,
-                     aUniformBlocks,
-                     { {gViewSid, gRightSid}, });
+    renderEntities(aRenderer, 
+                   aUniforms,
+                   aUniformBlocks,
+                   { {gViewSid, gRightSid}, });
 }
 
 
@@ -315,11 +411,10 @@ inline void Scene::drawShadows(
         glViewport(0, 0, shadowMapSize.width(), shadowMapSize.height());
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        aRenderer.render(mMesh,
-                         mInstances,
-                         aUniforms,
-                         aUniformBlocks,
-                         { {gPassSid, gDepthSid}, });
+        renderEntities(aRenderer,
+                       aUniforms, 
+                       aUniformBlocks,
+                       { {gPassSid, gDepthSid}, });
     }
 
     Mesh screenQuad{
@@ -340,11 +435,20 @@ inline void Scene::drawShadows(
 
     clear();
 
+    // From the spec core 4.6, p326
+    // "If a texel has been written, then in order to safely read the result a texel fetch
+    // must be in a subsequent draw call separated by the command "
+    // If find this odd, as shadow maps implementations online do not seem to use it.
+    #if defined(GL_VERSION_4_5)
+    glTextureBarrier();
+    #endif
+
     aRenderer.render(screenQuad,
                      gNotInstanced,
                      aUniforms,
                      aUniformBlocks);
 }
+
 
 
 } // namespace snac
