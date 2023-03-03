@@ -176,7 +176,7 @@ struct Scene
     const graphics::AppInterface & mAppInterface;
 
     std::vector<Visual> mEntities;
-    Camera mCamera;
+    CameraBuffer mCamera;
     MouseOrbitalControl mCameraControl;
     const resource::ResourceFinder & mFinder;
 
@@ -411,8 +411,16 @@ inline void Scene::drawShadows(
         glViewport(0, 0, shadowMapSize.width(), shadowMapSize.height());
         glClear(GL_DEPTH_BUFFER_BIT);
 
+        UniformRepository uniforms{aUniforms};
+
+        Camera lightViewPoint{math::getRatio<GLfloat>(shadowMapSize), Camera::gDefaults};
+        lightViewPoint.setPose(
+            math::trans3d::rotateX(math::Degree{55.f})
+            * math::trans3d::translate<GLfloat>({0.f, -1.f, -15.f}));
+        uniforms.emplace(Semantic::ViewingMatrix, lightViewPoint.assembleViewMatrix());
+
         renderEntities(aRenderer,
-                       aUniforms, 
+                       uniforms, 
                        aUniformBlocks,
                        { {gPassSid, gDepthSid}, });
     }

@@ -16,8 +16,10 @@ namespace ad {
 namespace snac {
 
 
-math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVerticalFov, float aAspectRatio,
-                                                    float aZNear, float aZFar)
+math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVerticalFov,
+                                                    float aAspectRatio,
+                                                    float aZNear,
+                                                    float aZFar)
 {
     const float nearHeight = 2 * -aZNear * tan(aVerticalFov / 2);
     math::Size<2, float> nearPlaneSize = math::makeSizeFromHeight(nearHeight, aAspectRatio);
@@ -32,8 +34,25 @@ math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVertica
            math::trans3d::scale(1.f, 1.f, -1.f)) // OpenGL clipping space is left handed.
            ;
 }
-           
-Camera::Camera(float aAspectRatio, Parameters aParameters) :
+
+
+Camera::Camera(float aAspectRatio, Camera::Parameters aParameters)
+{
+    setPerspectiveProjection(aAspectRatio, aParameters);
+}
+
+
+void Camera::setPerspectiveProjection(float aAspectRatio, Parameters aParameters)
+{
+    mProjection = 
+        makePerspectiveProjection(aParameters.vFov,
+                                  aAspectRatio,
+                                  aParameters.zNear,
+                                  aParameters.zFar);
+}
+
+
+CameraBuffer::CameraBuffer(float aAspectRatio, Camera::Parameters aParameters) :
     mCurrentParameters{aParameters}
 {
     const std::array<math::Matrix<4, 4, float>, 2> identities{
@@ -45,18 +64,18 @@ Camera::Camera(float aAspectRatio, Parameters aParameters) :
 }
 
 
-void Camera::resetProjection(float aAspectRatio, Parameters aParameters)
+void CameraBuffer::resetProjection(float aAspectRatio, Camera::Parameters aParameters)
 {
-    graphics::ScopedBind bound{mViewing};
     auto perspectiveProjection = 
         makePerspectiveProjection(aParameters.vFov, aAspectRatio, aParameters.zNear, aParameters.zFar);
+    graphics::ScopedBind bound{mViewing};
     glBufferSubData(GL_UNIFORM_BUFFER, sizeof(math::Matrix<4, 4, float>), sizeof(perspectiveProjection),
                     perspectiveProjection.data());
     mCurrentParameters = aParameters;
 }
 
 
-void Camera::setWorldToCamera(const math::AffineMatrix<4, GLfloat> & aTransformation)
+void CameraBuffer::setWorldToCamera(const math::AffineMatrix<4, GLfloat> & aTransformation)
 {
     graphics::ScopedBind bound{mViewing};
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(aTransformation),
