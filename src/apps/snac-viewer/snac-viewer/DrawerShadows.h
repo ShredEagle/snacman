@@ -23,11 +23,8 @@ namespace snac {
 class DrawerShadows
 {
 public:
-    inline DrawerShadows(graphics::ApplicationGlfw & aGlfwApp,
-                         const resource::ResourceFinder & aFinder) :
-        mAppInterface{*aGlfwApp.getAppInterface()},
-        mFinder{aFinder}
-    {}
+    DrawerShadows(graphics::ApplicationGlfw & aGlfwApp,
+                  const resource::ResourceFinder & aFinder);
 
     void draw(
         const VisualEntities & aEntities,
@@ -43,7 +40,10 @@ private:
     const graphics::AppInterface & mAppInterface;
     const resource::ResourceFinder & mFinder;
 
-    // TODO rename
+    graphics::Texture depthMap{GL_TEXTURE_2D};
+    graphics::FrameBuffer depthFBO;
+    Mesh screenQuad;
+
     GLfloat mShadowBias = 0.00001f;
     GLenum mDetphMapFilter = GL_NEAREST;
 };

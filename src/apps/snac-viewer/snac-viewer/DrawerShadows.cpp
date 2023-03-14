@@ -15,6 +15,27 @@ handy::StringId gDepthSid{"depth"};
 handy::StringId gForwardShadowSid{"forward_shadow"};
 
 
+DrawerShadows::DrawerShadows(graphics::ApplicationGlfw & aGlfwApp,
+                             const resource::ResourceFinder & aFinder) :
+    mAppInterface{*aGlfwApp.getAppInterface()},
+    mFinder{aFinder},
+    screenQuad{
+        .mStream = makeQuad(),
+        .mMaterial = std::make_shared<Material>(Material{
+            .mEffect = std::make_shared<Effect>(),
+        }),
+        .mName = "screen_quad",
+    }
+{
+    graphics::allocateStorage(depthMap, GL_DEPTH_COMPONENT24, gShadowMapSize);
+
+    graphics::attachImage(depthFBO, depthMap, GL_DEPTH_ATTACHMENT);
+
+    screenQuad.mMaterial->mEffect->mTechniques.push_back(
+        loadTechnique(mFinder.pathFor("shaders/ShowDepth.prog")));
+}
+
+
 void DrawerShadows::drawGui()
 {
     ImGui::Begin("Shadow Controls");
@@ -57,17 +78,8 @@ void DrawerShadows::draw(
 {
     drawGui();
 
-    graphics::Texture depthMap{GL_TEXTURE_2D};
-    graphics::allocateStorage(depthMap, GL_DEPTH_COMPONENT24, gShadowMapSize);
     // GL_LINEAR seems required to get hardware PCF with sampler2DShadow.
     graphics::setFiltering(depthMap, mDetphMapFilter);
-    {
-        graphics::ScopedBind scopedDepthMap{depthMap};
-        glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE , GL_NONE);
-    }
-
-    graphics::FrameBuffer depthFBO;
-    graphics::attachImage(depthFBO, depthMap, GL_DEPTH_ATTACHMENT);
 
     Camera lightViewPoint{math::getRatio<GLfloat>(gShadowMapSize), Camera::gDefaults};
     lightViewPoint.setPose(
@@ -139,28 +151,21 @@ void DrawerShadows::draw(
             glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         }
 
-        Mesh screenQuad{
-            .mStream = makeQuad(),
-            .mMaterial = std::make_shared<Material>(Material{
-                .mEffect = std::make_shared<Effect>(),
-            }),
-            .mName = "screen_quad",
-        };
-
-        screenQuad.mMaterial->mTextures.emplace(Semantic::BaseColorTexture, &depthMap);
-        screenQuad.mMaterial->mEffect->mTechniques.push_back(
-            loadTechnique(mFinder.pathFor("shaders/ShowDepth.prog")));
-
         GLsizei viewportHeight = mAppInterface.getFramebufferSize().height() / 4;
         glViewport(0,
                 0, 
                 (GLsizei)(viewportHeight * getRatio<GLfloat>(gShadowMapSize)), 
                 viewportHeight);
 
+        TextureRepository textures{ 
+            {Semantic::BaseColorTexture, &depthMap},
+        };
+
         aRenderer.render(screenQuad,
                          gNotInstanced,
                          aUniforms,
-                         aUniformBlocks);
+                         aUniformBlocks,
+                         textures);
     }
 }
 
