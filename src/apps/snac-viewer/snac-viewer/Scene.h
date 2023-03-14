@@ -395,16 +395,44 @@ inline void Scene::drawShadows(
     const snac::UniformBlocks & aUniformBlocks)
 {
     static GLfloat shadowBias = 0.00001f;
+    static GLenum detphMapFilter = GL_NEAREST;
     {
         ImGui::Begin("Shadow Controls");
+
         ImGui::DragFloat("Bias", &shadowBias, 0.000001f, 0.0f, 0.01f, "%.6f");
+        
+        static const std::array<GLenum, 2> filtering{GL_NEAREST, GL_LINEAR};
+        static int item_current_idx = 0; // Here we store our selection data as an index.
+        static ImGuiComboFlags flags = 0;
+        const std::string combo_preview_value = graphics::to_string(filtering[item_current_idx]);  // Pass in the preview value visible before opening the combo (it could be anything)
+        if (ImGui::BeginCombo("Depth filtering", combo_preview_value.c_str(), flags))
+        {
+            for (int n = 0; n < std::size(filtering); n++)
+            {
+                const bool is_selected = (item_current_idx == n);
+                if (ImGui::Selectable(graphics::to_string(filtering[n]).c_str(), is_selected))
+                {
+                    item_current_idx = n;
+                    detphMapFilter = filtering[n];
+                }
+
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if (is_selected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
         ImGui::End();
     }
 
     constexpr math::Size<2, int> shadowMapSize{1024, 1024};
     graphics::Texture depthMap{GL_TEXTURE_2D};
     graphics::allocateStorage(depthMap, GL_DEPTH_COMPONENT24, shadowMapSize);
-    graphics::setFiltering(depthMap, GL_NEAREST);
+    // GL_LINEAR seems required to get hardware PCF with sampler2DShadow.
+    graphics::setFiltering(depthMap, detphMapFilter);
     {
         graphics::ScopedBind scopedDepthMap{depthMap};
         glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE , GL_NONE);
@@ -470,9 +498,6 @@ inline void Scene::drawShadows(
                        uniforms, 
                        aUniformBlocks,
                        { {gPassSid, gForwardShadowSid}, });
-        //TEXTURE_COMPARE_MODE: COMPARE_REF_TO_TEXTURE
-        //TEXTURE_COMPARE_FUNC: LEQUAL
-        //multiply light by LEQUAL
     }
 
     // Show shadow map in a viewport
