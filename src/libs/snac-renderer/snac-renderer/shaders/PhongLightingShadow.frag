@@ -12,17 +12,17 @@ uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8);
 uniform vec3 u_AmbientColor = vec3(0.2, 0.0, 0.2);
 
 // TODO use yet another dedicated semantic?
-uniform sampler2D u_ShadowMap;
+uniform sampler2DShadow u_ShadowMap;
 
 out vec4 out_Color;
 
 float getShadowAttenuation(vec4 fragPosition_lightClip)
 {
+    // From light clip-space to light texture coordinates [0, 1]
     vec3 fragPosition_shadowTexture = 
         (fragPosition_lightClip.xyz/fragPosition_lightClip.w + 1) / 2;
 
-    float shadowSample = texture(u_ShadowMap, fragPosition_shadowTexture.xy).r;
-    return (shadowSample < fragPosition_shadowTexture.z) ? 0 : 1;
+    return texture(u_ShadowMap, fragPosition_shadowTexture).r;
 }
 
 void main(void)

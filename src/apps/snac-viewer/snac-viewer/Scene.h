@@ -440,10 +440,16 @@ inline void Scene::drawShadows(
 
     // Render scene with shadows
     {
+        {
+            graphics::ScopedBind scopedDepthMap{depthMap};
+            glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+            glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+        }
+
         glViewport(0,
-                0, 
-                mAppInterface.getFramebufferSize().width(), 
-                mAppInterface.getFramebufferSize().height());
+                   0, 
+                   mAppInterface.getFramebufferSize().width(), 
+                   mAppInterface.getFramebufferSize().height());
 
         mEntities.at(1).mMesh.mMaterial->mTextures.emplace(
             Semantic::ShadowMap,
@@ -463,6 +469,11 @@ inline void Scene::drawShadows(
 
     // Show shadow map in a viewport
     {
+        {
+            graphics::ScopedBind scopedDepthMap{depthMap};
+            glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        }
+
         Mesh screenQuad{
             .mStream = makeQuad(),
             .mMaterial = std::make_shared<Material>(Material{
