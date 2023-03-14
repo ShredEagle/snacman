@@ -1,15 +1,13 @@
 #pragma once
 
+#include "../../../Input.h"
 #include "../component/Geometry.h"
 #include "../EntityWrap.h"
 #include "../GraphicState.h"
 
-#include "../../../Input.h"
-
 #include <entity/Query.h>
-#include <snac-renderer/Camera.h>
-
 #include <math/Constants.h>
+#include <snac-renderer/Camera.h>
 
 namespace ad {
 namespace snacgame {
@@ -17,12 +15,12 @@ namespace system {
 
 class OrbitalCamera
 {
-  public:
+public:
     OrbitalCamera(ent::EntityManager & aWorld) :
-        mCamera{aWorld, gInitialCameraSpherical.radius(), gInitialCameraSpherical.polar(),
+        mCamera{aWorld, gInitialCameraSpherical.radius(),
+                gInitialCameraSpherical.polar(),
                 gInitialCameraSpherical.azimuthal()}
-    {
-    }
+    {}
 
     void update(const RawInput & aInput,
                 math::Radian<float> aVerticalFov,
@@ -30,10 +28,12 @@ class OrbitalCamera
 
     visu::Camera getCamera() const;
 
-  private:
+private:
     static constexpr math::Spherical<float> gInitialCameraSpherical{
-        40.f, math::Radian<float>{0.15f * math::pi<float>}, math::Radian<float>{0.5f * math::pi<float>}};
-    static constexpr math::Vec<2, GLfloat> gMouseControlFactor{1 / 500.f, 1 / 500.f};
+        40.f, math::Radian<float>{0.15f * math::pi<float>},
+        math::Radian<float>{0.5f * math::pi<float>}};
+    static constexpr math::Vec<2, GLfloat> gMouseControlFactor{1 / 500.f,
+                                                               1 / 500.f};
     static constexpr float gScrollFactor = 0.05f;
 
     EntityWrap<snac::Orbital> mCamera;

@@ -13,7 +13,7 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
-constexpr float gTurningZoneHalfWidth = 0.1f;
+constexpr float gTurningZoneHalfWidth = 0.2f;
 
 void DeterminePlayerAction::update()
 {

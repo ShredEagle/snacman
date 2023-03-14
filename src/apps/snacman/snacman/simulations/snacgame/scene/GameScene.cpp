@@ -7,8 +7,10 @@
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
 #include "snacman/simulations/snacgame/component/PoseScreenSpace.h"
 #include "snacman/simulations/snacgame/component/VisualMesh.h"
+#include "snacman/simulations/snacgame/system/EatPill.h"
 #include "snacman/simulations/snacgame/system/LevelCreator.h"
 #include "snacman/simulations/snacgame/system/MovementIntegration.h"
+#include "snacman/simulations/snacgame/system/RoundMonitor.h"
 
 #include "../component/Context.h"
 #include "../component/Controller.h"
@@ -32,15 +34,17 @@ void GameScene::setup(GameContext & aContext, const Transition & aTransition, Ra
 {
     ent::Phase init;
     mSystems.get(init)->add(system::PlayerSpawner{mWorld});
+    mSystems.get(init)->add(system::RoundMonitor{mWorld});
     mSystems.get(init)->add(system::PlayerInvulFrame{mWorld});
     mSystems.get(init)->add(system::DeterminePlayerAction{mWorld, mLevel});
     mSystems.get(init)->add(system::IntegratePlayerMovement{mWorld, mLevel});
     mSystems.get(init)->add(system::LevelCreator{&mWorld});
     mSystems.get(init)->add(system::MovementIntegration{mWorld});
+    mSystems.get(init)->add(system::EatPill{mWorld});
 
     auto markovRoot = aContext.mResources.find(gMarkovRoot);
     mLevel.get(init)->add(component::LevelData(
-        mWorld, markovRoot.value(), "snaclvl.xml", {29, 29, 1}, 123123));
+        mWorld, markovRoot.value(), "snaclvl.xml", {17, 17, 1}, 123123));
     mLevel.get(init)->add(component::LevelToCreate{});
 }
 
@@ -149,10 +153,12 @@ std::optional<Transition> GameScene::update(GameContext & aContext,
 
     mSystems.get(update)->get<system::LevelCreator>().update(aContext);
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
+    mSystems.get(update)->get<system::RoundMonitor>().update();
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
     mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
+    mSystems.get(update)->get<system::EatPill>().update();
 
     return std::nullopt;
 }

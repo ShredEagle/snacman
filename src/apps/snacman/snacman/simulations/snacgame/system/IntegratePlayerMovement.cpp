@@ -31,24 +31,36 @@ void IntegratePlayerMovement::update(float aDelta)
                 aGeometry.mPosition.y() +=
                     1.f * gBasePlayerSpeed * aDelta;
                 aGeometry.mPosition.x() = static_cast<float>(intPosX);
+                aGeometry.mOrientation = math::Quaternion<float>{math::UnitVec<3, float>{
+                            {0.f, 1.f, 0.f}},
+                            math::Turn<float>{0.25f}};
             }
             else if (aMoveState.mMoveState & gPlayerMoveFlagDown)
             {
                 aGeometry.mPosition.y() +=
                     -1.f * gBasePlayerSpeed * aDelta;
                 aGeometry.mPosition.x() = static_cast<float>(intPosX);
+                aGeometry.mOrientation = math::Quaternion<float>{math::UnitVec<3, float>{
+                            {0.f, 1.f, 0.f}},
+                            math::Turn<float>{0.75f}};
             }
             else if (aMoveState.mMoveState & gPlayerMoveFlagLeft)
             {
                 aGeometry.mPosition.x() +=
                     -1.f * gBasePlayerSpeed * aDelta;
                 aGeometry.mPosition.y() = static_cast<float>(intPosY);
+                aGeometry.mOrientation = math::Quaternion<float>{math::UnitVec<3, float>{
+                            {0.f, 1.f, 0.f}},
+                            math::Turn<float>{0.5f}};
             }
             else if (aMoveState.mMoveState & gPlayerMoveFlagRight)
             {
                 aGeometry.mPosition.x() +=
                     1.f * gBasePlayerSpeed * aDelta;
                 aGeometry.mPosition.y() = static_cast<float>(intPosY);
+                aGeometry.mOrientation = math::Quaternion<float>{math::UnitVec<3, float>{
+                            {0.f, 1.f, 0.f}},
+                            math::Turn<float>{0.f}};
             }
         });
     });

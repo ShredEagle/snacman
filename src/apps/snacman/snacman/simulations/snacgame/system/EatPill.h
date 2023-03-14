@@ -1,10 +1,11 @@
 #pragma once
 
-#include "../component/PlayerSlot.h"
 #include "../component/Collision.h"
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
+#include "../component/PlayerLifeCycle.h"
 #include "../component/PlayerMoveState.h"
+#include "../component/PlayerSlot.h"
 
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
@@ -16,16 +17,21 @@ namespace system {
 class EatPill
 {
 public:
-    EatPill(ent::EntityManager & aWorld,
-                            ent::Handle<ent::Entity> aLevel) :
+    EatPill(ent::EntityManager & aWorld) :
         mPlayers{aWorld}, mPills{aWorld}
     {}
 
     void update();
 
 private:
-    ent::Query<component::Geometry, component::PlayerSlot, component::Collision> mPlayers;
-    ent::Query<component::Geometry, component::Collision, component::Pill> mPills;
+    ent::Query<component::Geometry,
+               component::PlayerSlot,
+               component::Collision,
+               component::PlayerLifeCycle,
+               component::Text>
+        mPlayers;
+    ent::Query<component::Geometry, component::Collision, component::Pill>
+        mPills;
 };
 
 } // namespace system

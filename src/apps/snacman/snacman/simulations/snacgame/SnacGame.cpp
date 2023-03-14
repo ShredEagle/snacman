@@ -268,8 +268,6 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
     ent::Phase nomutation;
     const float cellSize = gCellSize;
-    const int mRowCount = gGridSize;
-    const int mColCount = gGridSize;
 
     mQueryRenderable.get(nomutation)
         .each([cellSize, &state](ent::Handle<ent::Entity> aHandle,
@@ -277,9 +275,9 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                                  const component::VisualMesh & aVisualMesh) {
             float yCoord = static_cast<float>((int)aGeometry.mLayer) * cellSize * 0.1f;
             auto worldPosition = math::Position<3, float>{
-                (float) mRowCount / 2 - (float) aGeometry.mPosition.y(),
+                -(float) aGeometry.mPosition.y(),
                 yCoord,
-                (float) mColCount / 2 - (float) aGeometry.mPosition.x(),
+                -(float) aGeometry.mPosition.x(),
             };
             state->mEntities.insert(aHandle.id(),
                                     visu::Entity{

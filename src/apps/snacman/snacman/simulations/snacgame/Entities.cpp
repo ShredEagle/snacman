@@ -150,7 +150,7 @@ void fillSlotWithPlayer(GameContext & aContext,
     const component::PlayerSlot & playerSlot = playerEntity->get<component::PlayerSlot>();
 
     std::ostringstream playerText;
-    playerText << "P" << playerSlot.mIndex + 1;
+    playerText << "P" << playerSlot.mIndex + 1 << " 0";
 
     playerEntity->add(component::Geometry{
         .mPosition = math::Position<2, float>::Zero(),
