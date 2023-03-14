@@ -39,6 +39,7 @@ void Renderer::render(const Mesh & aMesh,
                       const InstanceStream & aInstances,
                       UniformRepository aUniforms,
                       const UniformBlocks & aUniformBlocks,
+                      TextureRepository aTextures,
                       const std::vector<Technique::Annotation> & aTechniqueFilter)
 {
     auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
@@ -50,7 +51,8 @@ void Renderer::render(const Mesh & aMesh,
         // TODO Is there a better way to handle several source for uniform values
         aUniforms.merge(UniformRepository{aMesh.mMaterial->mUniforms});
         setUniforms(aUniforms, *program, warned);
-        setTextures(aMesh.mMaterial->mTextures, *program, warned);
+        aTextures.merge(TextureRepository{aMesh.mMaterial->mTextures});
+        setTextures(aTextures, *program, warned);
         setBlocks(aUniformBlocks, *program);
 
         graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, *program)};

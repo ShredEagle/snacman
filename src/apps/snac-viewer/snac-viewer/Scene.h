@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DrawerShadows.h"
 #include "Gui.h"
 
 #include <graphics/AppInterface.h>
@@ -10,15 +11,9 @@
 #include <resource/ResourceFinder.h>
 
 #include <math/Transformations.h>
-#include <math/VectorUtilities.h>
 
 #include <snac-renderer/Camera.h>
-#include <snac-renderer/Cube.h>
-#include <snac-renderer/Render.h>
 #include <snac-renderer/ResourceLoad.h>
-
-#include <renderer/FrameBuffer.h>
-#include <renderer/ScopeGuards.h>
 
 
 namespace ad {
@@ -28,11 +23,6 @@ namespace snac {
 handy::StringId gViewSid{"view"};
 handy::StringId gLeftSid{"left"};
 handy::StringId gRightSid{"right"};
-
-handy::StringId gPassSid{"pass"};
-handy::StringId gDepthSid{"depth"};
-handy::StringId gForwardShadowSid{"forward_shadow"};
-
 
 struct PoseColor
 {
@@ -145,12 +135,6 @@ std::vector<T_value> moveInitVector(std::array<T_value, N> aValues)
 
 struct Scene
 {
-    struct Visual
-    {
-        InstanceStream mInstances;
-        Mesh mMesh;
-    };
-
     Scene(graphics::ApplicationGlfw & aGlfwApp,
           Mesh aMesh,
           const resource::ResourceFinder & aFinder);
@@ -160,11 +144,6 @@ struct Scene
     void recompileRightView();
 
     void render(Renderer & aRenderer);
-
-    void renderEntities(Renderer & aRenderer,
-                        const snac::UniformRepository & aUniforms,
-                        const snac::UniformBlocks & aUniformBlocks,
-                        const std::vector<Technique::Annotation> & aTechniqueFilter = {});
 
     void drawSideBySide(Renderer & aRenderer,
                         const snac::UniformRepository & aUniforms,
@@ -176,10 +155,13 @@ struct Scene
 
     const graphics::AppInterface & mAppInterface;
 
-    std::vector<Visual> mEntities;
+    VisualEntities mEntities;
+
     CameraBuffer mCamera;
     MouseOrbitalControl mCameraControl;
     const resource::ResourceFinder & mFinder;
+
+    DrawerShadows mDrawerShadows;
 
     std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListening;
     Gui mGui;
@@ -201,6 +183,7 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
     mCamera{math::getRatio<float>(aGlfwApp.getAppInterface()->getFramebufferSize()), Camera::gDefaults},
     mCameraControl{aGlfwApp.getAppInterface()->getWindowSize(), Camera::gDefaults.vFov},
     mFinder{aFinder},
+    mDrawerShadows{aGlfwApp, aFinder},
     mGui{aGlfwApp}
 {
     graphics::AppInterface & appInterface = *aGlfwApp.getAppInterface();
@@ -322,7 +305,7 @@ inline void Scene::render(Renderer & aRenderer)
                 drawSideBySide(aRenderer, uniforms, uniformBlocks);
                 break;
             case 1:
-                drawShadows(aRenderer, uniforms, uniformBlocks);
+                mDrawerShadows.draw(mEntities, aRenderer, uniforms, uniformBlocks);
                 break;
         }
 
@@ -335,21 +318,6 @@ inline void Scene::render(Renderer & aRenderer)
     }
 
     mGui.render();
-}
-
-void Scene::renderEntities(Renderer & aRenderer,
-                           const snac::UniformRepository & aUniforms,
-                           const snac::UniformBlocks & aUniformBlocks,
-                           const std::vector<Technique::Annotation> & aTechniqueFilter)
-{
-    for(auto & [instances, mesh] : mEntities)
-    {
-        aRenderer.render(mesh,
-                         instances,
-                         aUniforms,
-                         aUniformBlocks,
-                         std::move(aTechniqueFilter));
-    }
 }
 
 
@@ -372,9 +340,11 @@ void Scene::drawSideBySide(Renderer & aRenderer,
               mAppInterface.getFramebufferSize().width()/2,
               mAppInterface.getFramebufferSize().height());
 
-    renderEntities(aRenderer, 
+    renderEntities(mEntities,
+                   aRenderer, 
                    aUniforms,
                    aUniformBlocks,
+                   {},
                    { {gViewSid, gLeftSid}, });
     // Right view
     glScissor(mAppInterface.getFramebufferSize().width()/2,
@@ -382,156 +352,13 @@ void Scene::drawSideBySide(Renderer & aRenderer,
               mAppInterface.getFramebufferSize().width(),
               mAppInterface.getFramebufferSize().height());
 
-    renderEntities(aRenderer, 
+    renderEntities(mEntities,
+                   aRenderer, 
                    aUniforms,
                    aUniformBlocks,
+                   {},
                    { {gViewSid, gRightSid}, });
 }
-
-
-inline void Scene::drawShadows(
-    Renderer & aRenderer,
-    const UniformRepository & aUniforms,
-    const snac::UniformBlocks & aUniformBlocks)
-{
-    static GLfloat shadowBias = 0.00001f;
-    static GLenum detphMapFilter = GL_NEAREST;
-    {
-        ImGui::Begin("Shadow Controls");
-
-        ImGui::DragFloat("Bias", &shadowBias, 0.000001f, 0.0f, 0.01f, "%.6f");
-        
-        static const std::array<GLenum, 2> filtering{GL_NEAREST, GL_LINEAR};
-        static int item_current_idx = 0; // Here we store our selection data as an index.
-        static ImGuiComboFlags flags = 0;
-        const std::string combo_preview_value = graphics::to_string(filtering[item_current_idx]);  // Pass in the preview value visible before opening the combo (it could be anything)
-        if (ImGui::BeginCombo("Depth filtering", combo_preview_value.c_str(), flags))
-        {
-            for (int n = 0; n < std::size(filtering); n++)
-            {
-                const bool is_selected = (item_current_idx == n);
-                if (ImGui::Selectable(graphics::to_string(filtering[n]).c_str(), is_selected))
-                {
-                    item_current_idx = n;
-                    detphMapFilter = filtering[n];
-                }
-
-                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-                if (is_selected)
-                {
-                    ImGui::SetItemDefaultFocus();
-                }
-            }
-            ImGui::EndCombo();
-        }
-
-        ImGui::End();
-    }
-
-    constexpr math::Size<2, int> shadowMapSize{1024, 1024};
-    graphics::Texture depthMap{GL_TEXTURE_2D};
-    graphics::allocateStorage(depthMap, GL_DEPTH_COMPONENT24, shadowMapSize);
-    // GL_LINEAR seems required to get hardware PCF with sampler2DShadow.
-    graphics::setFiltering(depthMap, detphMapFilter);
-    {
-        graphics::ScopedBind scopedDepthMap{depthMap};
-        glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE , GL_NONE);
-    }
-
-    graphics::FrameBuffer depthFBO;
-    graphics::attachImage(depthFBO, depthMap, GL_DEPTH_ATTACHMENT);
-
-    Camera lightViewPoint{math::getRatio<GLfloat>(shadowMapSize), Camera::gDefaults};
-    lightViewPoint.setPose(
-        math::trans3d::rotateX(math::Degree{55.f})
-        * math::trans3d::translate<GLfloat>({0.f, -1.f, -15.f}));
-
-    // Render shadow map
-    {
-        graphics::ScopedBind fboScope{depthFBO};
-
-        glViewport(0, 0, shadowMapSize.width(), shadowMapSize.height());
-        glClear(GL_DEPTH_BUFFER_BIT);
-
-        UniformRepository uniforms{aUniforms};
-        uniforms.emplace(Semantic::ViewingMatrix, lightViewPoint.assembleViewMatrix());
-
-        renderEntities(aRenderer,
-                       uniforms, 
-                       aUniformBlocks,
-                       { {gPassSid, gDepthSid}, });
-    }
-
-    // Default framebuffer rendering
-    clear();
-
-    // From the spec core 4.6, p326
-    // "If a texel has been written, then in order to safely read the result a texel fetch
-    // must be in a subsequent draw call separated by the command "
-    // If find this odd, as shadow maps implementations online do not seem to use it.
-    #if defined(GL_VERSION_4_5)
-    glTextureBarrier();
-    #endif
-
-    // Render scene with shadows
-    {
-        {
-            graphics::ScopedBind scopedDepthMap{depthMap};
-            glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-            glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-        }
-
-        glViewport(0,
-                   0, 
-                   mAppInterface.getFramebufferSize().width(), 
-                   mAppInterface.getFramebufferSize().height());
-
-        mEntities.at(1).mMesh.mMaterial->mTextures.emplace(
-            Semantic::ShadowMap,
-            &depthMap);
-
-        UniformRepository uniforms{aUniforms};
-        uniforms.emplace(Semantic::LightViewingMatrix, lightViewPoint.assembleViewMatrix());
-        uniforms.emplace(Semantic::ShadowBias, shadowBias);
-
-        renderEntities(aRenderer,
-                       uniforms, 
-                       aUniformBlocks,
-                       { {gPassSid, gForwardShadowSid}, });
-    }
-
-    // Show shadow map in a viewport
-    {
-        {
-            graphics::ScopedBind scopedDepthMap{depthMap};
-            glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-        }
-
-        Mesh screenQuad{
-            .mStream = makeQuad(),
-            .mMaterial = std::make_shared<Material>(Material{
-                .mEffect = std::make_shared<Effect>(),
-            }),
-            .mName = "screen_quad",
-        };
-
-        screenQuad.mMaterial->mTextures.emplace(Semantic::BaseColorTexture, &depthMap);
-        screenQuad.mMaterial->mEffect->mTechniques.push_back(
-            loadTechnique(mFinder.pathFor("shaders/ShowDepth.prog")));
-
-        GLsizei viewportHeight = mAppInterface.getFramebufferSize().height() / 4;
-        glViewport(0,
-                0, 
-                (GLsizei)(viewportHeight * getRatio<GLfloat>(shadowMapSize)), 
-                viewportHeight);
-
-        aRenderer.render(screenQuad,
-                        gNotInstanced,
-                        aUniforms,
-                        aUniformBlocks);
-    }
-}
-
 
 
 } // namespace snac

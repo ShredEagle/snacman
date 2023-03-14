@@ -6,14 +6,17 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     detail/Logger.h
+    DrawerShadows.h
     Logging.h
     Scene.h
+    Visuals.h
 )
 
 set(${TARGET_NAME}_SOURCES
     main.cpp
 
     detail/Logger.cpp
+    DrawerShadows.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

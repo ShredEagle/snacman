@@ -25,7 +25,15 @@ public:
                 const InstanceStream & aInstances,
                 UniformRepository aUniforms,
                 const UniformBlocks & aUniformBlocks,
+                TextureRepository aTextures,
                 const std::vector<Technique::Annotation> & aTechniqueFilter = {});
+
+    void render(const Mesh & aMesh,
+                const InstanceStream & aInstances,
+                UniformRepository aUniforms,
+                const UniformBlocks & aUniformBlocks,
+                const std::vector<Technique::Annotation> & aTechniqueFilter = {})
+    { render(aMesh, aInstances, std::move(aUniforms), aUniformBlocks, {}, aTechniqueFilter); }
 
 private:
     VertexArrayRepository mVertexArrayRepo;
