@@ -12,9 +12,9 @@ namespace component {
 
 enum class GeometryLayer
 {
-    Level,
-    Player,
-    Menu,
+    Level = 0,
+    Player = 2,
+    Pill = 6,
 };
 
 

@@ -7,7 +7,7 @@ editables:
         path: ../../../graphics/conan
     handy/401faf9024@adnn/develop:
         path: ../../../handy/conan
-    math/a486ceadb8@adnn/develop:
+    math/18338feb20@adnn/develop:
         path: ../../../math/conan
     snacman/local:
         path: ../../conan

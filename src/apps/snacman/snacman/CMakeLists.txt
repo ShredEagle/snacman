@@ -53,6 +53,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/LevelCreator.h
     simulations/snacgame/system/PlayerSpawner.h
     simulations/snacgame/system/PlayerInvulFrame.h
+    simulations/snacgame/system/RoundMonitor.h
     simulations/snacgame/system/SystemOrbitalCamera.h
     simulations/snacgame/system/SceneStateMachine.h
 
@@ -75,13 +76,14 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/scene/SettingsScene.cpp
 
     simulations/snacgame/system/DeterminePlayerAction.cpp
-    simulations/snacgame/system/EatPill.h
+    simulations/snacgame/system/EatPill.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
     simulations/snacgame/system/MovementIntegration.cpp
     simulations/snacgame/system/LevelCreator.cpp
     simulations/snacgame/system/SystemOrbitalCamera.cpp
     simulations/snacgame/system/PlayerSpawner.cpp
     simulations/snacgame/system/PlayerInvulFrame.cpp
+    simulations/snacgame/system/RoundMonitor.cpp
     simulations/snacgame/system/SceneStateMachine.cpp
 
     detail/Logger.cpp

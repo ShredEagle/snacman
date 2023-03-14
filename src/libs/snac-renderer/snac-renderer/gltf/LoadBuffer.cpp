@@ -141,12 +141,15 @@ std::vector<std::byte> loadBufferData(arte::Const_Owned<arte::gltf::Buffer> aBuf
         // TODO implement handling subranges on data Uri.
         if(aByteOffset != 0 || aByteLength != aBuffer->byteLength)
         {
+
             SELOG(critical)
                  ("Loading a subset of Uri data buffer #{} is not implemented yet.", aBuffer.id());
-            throw std::invalid_argument{"Loading a subset of Uri data buffer."};
+        /*     throw std::invalid_argument{"Loading a subset of Uri data buffer."}; */
         }
         SELOG(trace)("Buffer #{} data is read from a data URI.", aBuffer.id());
-        return loadDataUri(uri);
+        std::vector<std::byte> data = loadDataUri(uri);
+        
+        return std::vector<std::byte>(data.begin() + aByteOffset, data.begin() + aByteOffset + aByteLength);
     }
     case arte::gltf::Uri::Type::File:
     {

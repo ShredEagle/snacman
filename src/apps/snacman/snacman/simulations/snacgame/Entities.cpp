@@ -35,8 +35,8 @@ void createPill(GameContext & aContext,
     handle.get(aInit)
         ->add(component::Geometry{
             .mPosition = {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y())},
-            .mScaling = math::Size<3, float>{15.f, 15.f, 15.f},
-            .mLayer = component::GeometryLayer::Player,
+            .mScaling = math::Size<3, float>{1.f, 1.f, 1.f},
+            .mLayer = component::GeometryLayer::Pill,
             .mOrientation = math::Quaternion<float>{math::UnitVec<3, float>{
                                                         {0.f, 1.f, 0.f}},
                                                     math::Degree<float>{15.f}},
@@ -48,7 +48,7 @@ void createPill(GameContext & aContext,
         })
         .add(component::VisualMesh{
             .mMesh =
-                aContext.mResources.getShape("models/avocado/Avocado.gltf"),
+                aContext.mResources.getShape("models/burger/burger-embedded.gltf"),
         })
         .add(component::Pill{})
         .add(component::Collision{component::gPillHitbox})
@@ -66,7 +66,7 @@ createPathEntity(GameContext & aContext,
         ->add(component::LevelEntity{})
         .add(component::Geometry{
             .mPosition = {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y())},
-            .mScaling = math::Size<3, float>{0.5f, 0.5f, 0.5f},
+            .mScaling = math::Size<3, float>{0.5f, 0.1f, 0.5f},
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gWhite<float>})
         .add(component::VisualMesh{
@@ -86,7 +86,7 @@ createPortalEntity(GameContext & aContext,
     handle.get(aInit)
         ->add(component::Geometry{
             .mPosition = {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y())},
-            .mScaling = math::Size<3, float>{0.5f, 0.5f, 0.5f},
+            .mScaling = math::Size<3, float>{0.5f, 0.1f, 0.5f},
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gRed<float>})
         .add(component::VisualMesh{
@@ -105,7 +105,7 @@ createCopPenEntity(GameContext & aContext,
     handle.get(aInit)
         ->add(component::Geometry{
             .mPosition = {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y())},
-            .mScaling = math::Size<3, float>{0.5f, 0.5f, 0.5f},
+            .mScaling = math::Size<3, float>{0.5f, 0.1f, 0.5f},
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gYellow<float>})
         .add(component::VisualMesh{
@@ -125,7 +125,7 @@ createPlayerSpawnEntity(GameContext & aContext,
     spawner.get(aInit)
         ->add(component::Geometry{
             .mPosition = gridFloatPos,
-            .mScaling = math::Size<3, float>{0.5f, 0.5f, 0.5f},
+            .mScaling = math::Size<3, float>{0.5f, 0.1f, 0.5f},
             .mLayer = component::GeometryLayer::Level,
             .mColor = math::hdr::gCyan<float>})
         .add(component::VisualMesh{
@@ -150,7 +150,7 @@ void fillSlotWithPlayer(GameContext & aContext,
     const component::PlayerSlot & playerSlot = playerEntity->get<component::PlayerSlot>();
 
     std::ostringstream playerText;
-    playerText << "P" << playerSlot.mIndex + 1;
+    playerText << "P" << playerSlot.mIndex + 1 << " 0";
 
     playerEntity->add(component::Geometry{
         .mPosition = math::Position<2, float>::Zero(),

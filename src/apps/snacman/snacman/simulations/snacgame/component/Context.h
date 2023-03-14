@@ -27,9 +27,9 @@ struct MappingContext
         mKeyboardMapping(*aResources.find("settings/keyboard_mapping.json"))
     {}
 
-    void drawUi(const RawInput & aInput)
+    void drawUi(const RawInput & aInput, bool * open = nullptr)
     {
-        ImGui::Begin("Keyboard mappings");
+        ImGui::Begin("Keyboard mappings", open);
         static int keyboardSelected = -1;
         for (auto & [groupName, mappings] : mKeyboardMapping.mKeymaps)
         {
