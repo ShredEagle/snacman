@@ -7,6 +7,8 @@ in vec3 ex_DiffuseColor;
 in vec3  ex_SpecularColor;
 in float ex_Opacity;
 
+uniform float u_ShadowBias = 0.;
+
 uniform vec3 u_LightPosition_v;
 uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8);
 uniform vec3 u_AmbientColor = vec3(0.2, 0.0, 0.2);
@@ -21,6 +23,7 @@ float getShadowAttenuation(vec4 fragPosition_lightClip)
     // From light clip-space to light texture coordinates [0, 1]
     vec3 fragPosition_shadowTexture = 
         (fragPosition_lightClip.xyz/fragPosition_lightClip.w + 1) / 2;
+    fragPosition_shadowTexture.z -= u_ShadowBias;
 
     return texture(u_ShadowMap, fragPosition_shadowTexture).r;
 }

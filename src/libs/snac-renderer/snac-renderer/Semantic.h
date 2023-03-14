@@ -37,6 +37,7 @@ enum class Semantic
     FramebufferResolution,
     NearDistance,
     FarDistance,
+    ShadowBias,
     // Usually samplers
     BaseColorTexture,
     NormalTexture,

@@ -394,6 +394,13 @@ inline void Scene::drawShadows(
     const UniformRepository & aUniforms,
     const snac::UniformBlocks & aUniformBlocks)
 {
+    static GLfloat shadowBias = 0.00001f;
+    {
+        ImGui::Begin("Shadow Controls");
+        ImGui::DragFloat("Bias", &shadowBias, 0.000001f, 0.0f, 0.01f, "%.6f");
+        ImGui::End();
+    }
+
     constexpr math::Size<2, int> shadowMapSize{1024, 1024};
     graphics::Texture depthMap{GL_TEXTURE_2D};
     graphics::allocateStorage(depthMap, GL_DEPTH_COMPONENT24, shadowMapSize);
@@ -457,6 +464,7 @@ inline void Scene::drawShadows(
 
         UniformRepository uniforms{aUniforms};
         uniforms.emplace(Semantic::LightViewingMatrix, lightViewPoint.assembleViewMatrix());
+        uniforms.emplace(Semantic::ShadowBias, shadowBias);
 
         renderEntities(aRenderer,
                        uniforms, 
