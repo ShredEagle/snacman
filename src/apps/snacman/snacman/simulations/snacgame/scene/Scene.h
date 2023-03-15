@@ -63,6 +63,7 @@ struct SceneId
 class Scene
 {
 public:
+    //TODO :(franz) make a cpp file please
     Scene(const std::string & aName,
           ent::EntityManager & aWorld,
           EntityWrap<component::MappingContext> & aContext) :

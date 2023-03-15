@@ -7,9 +7,12 @@
 
 #include <arte/gltf/Gltf.h>
 
+#include <fmt/ostream.h>
 #include <handy/StringUtilities.h>
 
 #include <renderer/MappedGL.h>
+
+#include <spdlog/spdlog.h>
 
 #include <map>
 #include <vector>

@@ -18,14 +18,11 @@
 
 #include <imguiui/ImguiUi.h>
 
-#include <math/VectorUtilities.h>
-
 #include <platform/Path.h>
 
 #include <resource/ResourceFinder.h>
 
 #include <fstream>
-
 
 using namespace ad;
 using namespace ad::snac;

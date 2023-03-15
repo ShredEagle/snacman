@@ -5,15 +5,20 @@
 
 #include <snac-renderer/Mesh.h>
 #include <snac-renderer/Render.h>
+#include <snac-renderer/Camera.h>
+#include <snac-renderer/UniformParameters.h>
 
-#include <graphics/AppInterface.h>
-
-
+#include <filesystem>                         // for path
+#include <memory>                             // for shared_ptr
+                                              //
 namespace ad {
+namespace arte { class FontFace; }
+namespace graphics { class AppInterface; }
 
 // Forward declarations
 namespace snac {
     class Resources;
+    struct Font;
 } // namespace snac
 
 namespace snacgame {

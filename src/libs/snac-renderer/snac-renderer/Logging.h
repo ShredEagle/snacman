@@ -1,11 +1,5 @@
 #pragma once
 
-
-#include <spdlog/spdlog.h>
-#include <spdlog/fmt/ostr.h> // allow use of operator<<
-
-
-
 namespace ad {
 namespace snac {
 

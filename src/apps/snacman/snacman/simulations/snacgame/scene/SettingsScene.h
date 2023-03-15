@@ -2,10 +2,14 @@
 
 #include "Scene.h"
 
-#include <string>
-
 namespace ad {
+
+struct RawInput;
+
 namespace snacgame {
+
+struct GameContext;
+
 namespace scene {
 
 class SettingsScene : public Scene

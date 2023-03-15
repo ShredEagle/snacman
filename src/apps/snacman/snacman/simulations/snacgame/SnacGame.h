@@ -3,36 +3,42 @@
 #include "EntityWrap.h"
 #include "GameContext.h"
 #include "Renderer.h"
-#include "GameParameters.h"
-
-#include "component/Geometry.h"
-#include "component/PoseScreenSpace.h"
-#include "component/Text.h"
-#include "component/VisualMesh.h"
-
-#include "scene/Scene.h"
-
-#include "snacman/LoopSettings.h"
-#include "component/Context.h"
-#include "system/SceneStateMachine.h"
-#include "system/SystemOrbitalCamera.h"
 
 #include "../../Input.h"
-#include "../../LoopSettings.h"
-#include "../../Timing.h"
 
-#include <arte/Freetype.h>
-#include <entity/EntityManager.h>
-#include <graphics/AppInterface.h>
-#include <imguiui/ImguiUi.h>
-#include <markovjunior/Interpreter.h>
+#include <entity/Query.h>
+
 #include <resource/ResourceFinder.h>
 #include <platform/Filesystem.h>
 
+#include <imgui.h>
+
+#include <cstdint>
 #include <memory>
 
 namespace ad {
+
+namespace graphics { class AppInterface; }
+namespace imguiui { class ImguiUi; }
+namespace snac {
+struct ConfigurableSettings; 
+template <class T_renderer> class RenderThread;
+}
+
 namespace snacgame {
+
+namespace component {
+struct Geometry;
+struct MappingContext;
+struct PoseScreenSpace;
+struct Text;
+struct VisualMesh;
+}
+namespace system {
+class OrbitalCamera; 
+class SceneStateMachine;
+}
+namespace visu { struct GraphicState; }
 
 struct ImguiDisplays
 {

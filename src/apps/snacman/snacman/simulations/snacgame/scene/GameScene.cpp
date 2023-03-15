@@ -1,11 +1,17 @@
 #include "GameScene.h"
 
 #include <snacman/Input.h>
-#include <snacman/Logging.h>
 #include <snacman/Profiling.h>
+#include <snacman/Resources.h>
 
 #include "../Entities.h"
 #include "../InputCommandConverter.h"
+#include "../EntityWrap.h"            // for Entit...
+#include "../GameContext.h"           // for GameC...
+#include "../InputConstants.h"        // for gJoin
+#include "../component/LevelTags.h"   // for Level...
+#include "../component/PlayerSlot.h"  // for Playe...
+#include "../scene/Scene.h"           // for Trans...
 #include "../component/Context.h"
 #include "../component/Controller.h"
 #include "../component/LevelData.h"
@@ -21,18 +27,31 @@
 #include "../system/RoundMonitor.h"
 #include "../system/DeterminePlayerAction.h"
 #include "../system/IntegratePlayerMovement.h"
-#include "../system/LevelCreator.h"
-#include "../system/MovementIntegration.h"
 #include "../system/PlayerInvulFrame.h"
 #include "../system/PlayerSpawner.h"
 
 #include <algorithm>
+#include <array>                                                // for array
+#include <cstddef>                                              // for size_t
+#include <map>                                                  // for opera...
+#include <tuple>                                                // for get
+#include <vector>                                               // for vector
 
 namespace ad {
 namespace snacgame {
 namespace scene {
 
 const char * gMarkovRoot{"markov/"};
+
+GameScene::GameScene(const std::string & aName,
+          ent::EntityManager & aWorld,
+          EntityWrap<component::MappingContext> & aContext) :
+    Scene(aName, aWorld, aContext), mLevel{mWorld.addEntity()},
+    mTiles{mWorld},
+    mSlots{mWorld},
+    mPlayers{mWorld}
+{}
+
 
 void GameScene::setup(GameContext & aContext, const Transition & aTransition, RawInput & aInput)
 {

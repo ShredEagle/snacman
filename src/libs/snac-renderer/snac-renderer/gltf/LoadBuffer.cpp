@@ -8,10 +8,14 @@
 #include <span>
 
 #include <strstream>
+#include <fstream>
 
 #include <renderer/AttributeDimension.h>
 //#include <renderer/GL_Loader.h>
 #include <renderer/MappedGL.h>
+
+#include <spdlog/spdlog.h>
+
 
 
 #define SELOG(level) SELOG_LG(::ad::snac::gGltfLogger, level)

@@ -1,6 +1,7 @@
 #include "Camera.h"
 
-#include <graphics/CameraUtilities.h>
+#include "math/Transformations.h"
+#include "math/VectorUtilities.h"
 
 #include <renderer/BufferLoad.h>
 

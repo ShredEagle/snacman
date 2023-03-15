@@ -1,17 +1,18 @@
 #pragma once
 
-#include "component/Geometry.h"
-#include "component/PlayerSlot.h"
-#include "snacman/Input.h"
-#include "snacman/simulations/snacgame/scene/MenuScene.h"
-#include "snacman/simulations/snacgame/scene/Scene.h"
-
 #include <entity/Entity.h>
-#include <entity/EntityManager.h>
 #include <entity/Query.h>
-#include <markovjunior/Grid.h>
+
+#include <math/Color.h>
+#include <math/Vector.h>
+
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 namespace ad {
+
+enum class ControllerType;
 
 // Forward
 namespace snac {
@@ -19,6 +20,9 @@ struct Font;
 }
 
 namespace snacgame {
+
+namespace component { struct PlayerSlot; }
+namespace scene { struct Transition; }
 
 struct GameContext;
 

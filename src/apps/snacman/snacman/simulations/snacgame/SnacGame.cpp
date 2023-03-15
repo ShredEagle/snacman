@@ -1,39 +1,46 @@
 #include "SnacGame.h"
 
 #include "component/Context.h"
-#include "component/Controller.h"
-#include "component/LevelData.h"
-#include "component/MovementScreenSpace.h"
-#include "component/PlayerSlot.h"
-#include "Entities.h"
 #include "GameContext.h"
-#include "InputCommandConverter.h"
+#include "GameParameters.h"
+#include "InputConstants.h"
 #include "scene/Scene.h"
 #include "SimulationControl.h"
 #include "snacman/ImguiUtilities.h"
+#include "snacman/LoopSettings.h"
 #include "snacman/simulations/snacgame/component/Geometry.h"
 #include "snacman/simulations/snacgame/component/PlayerMoveState.h"
 #include "snacman/simulations/snacgame/component/PlayerSlot.h"
-#include "system/DeterminePlayerAction.h"
-#include "system/MovementIntegration.h"
-#include "system/PlayerInvulFrame.h"
-#include "system/PlayerSpawner.h"
 #include "system/SceneStateMachine.h"
+#include "system/SystemOrbitalCamera.h"
+#include "component/VisualMesh.h"
+#include "component/Text.h"
+#include "component/PoseScreenSpace.h"
 
+#include <snacman/Profiling.h>
+
+#include <imguiui/ImguiUi.h>
+#include <math/Color.h>
+
+#include <imgui.h>
+
+#include <string>
+#include <optional>
 #include <algorithm>
 #include <cstdio>
-#include <imgui.h>
-#include <imguiui/ImguiUi.h>
-#include <markovjunior/Grid.h>
-#include <math/Color.h>
-#include <math/VectorUtilities.h>
-#include <optional>
-#include <snac-renderer/text/Text.h>
-#include <snacman/ImguiUtilities.h>
-#include <snacman/Profiling.h>
-#include <string>
+#include <array>
+#include <atomic>
+#include <filesystem>
+#include <map>
+#include <mutex>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 namespace ad {
+struct RawInput;
+
+namespace snac { template <class T_renderer> class RenderThread; }
 namespace snacgame {
 
 std::array<math::hdr::Rgba_f, 4> gSlotColors{

@@ -1,10 +1,8 @@
 #include "SimulationControl.h"
 
-#include "GameContext.h"
-#include "SnacGame.h"
-
 #include <imgui.h>
-#include <imguiui/ImguiUi.h>
+#include <cstdio>
+#include <algorithm>
 
 namespace ad {
 namespace snacgame {

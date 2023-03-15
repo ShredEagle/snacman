@@ -10,6 +10,8 @@
 #include <renderer/ShaderSource.h>
 #include <renderer/utilities/FileLookup.h>
 
+#include <spdlog/spdlog.h>
+
 #include <fstream>
 
 

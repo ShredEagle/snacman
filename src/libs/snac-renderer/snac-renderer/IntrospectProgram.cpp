@@ -1,10 +1,12 @@
 #include "IntrospectProgram.h"
+#include "Semantic.h"
 
 #include <array>
 #include <iterator>
 #include <memory>
 #include <string>
 
+#include <ostream>
 #include <cassert>
 
 

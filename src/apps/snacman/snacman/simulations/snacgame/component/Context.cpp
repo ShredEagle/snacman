@@ -1,6 +1,8 @@
 #include "Context.h"
 
 #include "snacman/Resources.h"
+#include "snacman/Input.h"
+#include <imgui.h>
 
 namespace ad {
 namespace snacgame {

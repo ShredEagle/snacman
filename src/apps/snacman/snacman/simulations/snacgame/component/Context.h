@@ -2,11 +2,6 @@
 
 #include "../InputCommandConverter.h"
 
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <limits>
-#include <string>
-
 namespace ad {
 
 struct RawInput;

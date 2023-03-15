@@ -2,16 +2,26 @@
 
 #include "Scene.h"
 
-#include "../component/Controller.h"
-#include "../component/LevelData.h"
-#include "../component/PlayerSlot.h"
-
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
 #include <string>
 
 namespace ad {
+
+struct RawInput;
+
 namespace snacgame {
+
+struct GameContext;
+template <class T_wrapped> struct EntityWrap;
+
+namespace component {
+struct Controller;
+struct LevelEntity;
+struct MappingContext;
+struct PlayerSlot;
+}
+
 namespace scene {
 
 class GameScene : public Scene
@@ -19,12 +29,7 @@ class GameScene : public Scene
 public:
     GameScene(const std::string & aName,
               ent::EntityManager & aWorld,
-              EntityWrap<component::MappingContext> & aContext) :
-        Scene(aName, aWorld, aContext), mLevel{mWorld.addEntity()},
-        mTiles{mWorld},
-        mSlots{mWorld},
-        mPlayers{mWorld}
-    {}
+              EntityWrap<component::MappingContext> & aContext);
 
     std::optional<Transition> update(GameContext & aContext,
                                      float aDelta,

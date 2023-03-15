@@ -3,11 +3,17 @@
 #include "InputConstants.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
 
+#include <platform/Filesystem.h>
+
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#undef GLFW_INCLUDE_NONE
+
+#include <nlohmann/json.hpp>
+
 #include <concepts>
 #include <fstream>
-#include <GLFW/glfw3.h>
 #include <initializer_list>
-#include <nlohmann/json.hpp>
 #include <unordered_map>
 
 using json = nlohmann::json;

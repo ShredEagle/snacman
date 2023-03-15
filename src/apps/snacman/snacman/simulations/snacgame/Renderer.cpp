@@ -2,21 +2,21 @@
 
 #include "renderer/ScopeGuards.h"
 
-#include <math/Angle.h>
+#include <graphics/AppInterface.h>
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 #include <platform/Filesystem.h>
 #include <snac-renderer/ResourceLoad.h>
 #include <snac-renderer/text/Text.h>
+#include <snac-renderer/Semantic.h>
+#include <snac-renderer/Render.h>
+#include <snac-renderer/Mesh.h>
 #include <snacman/Profiling.h>
 #include <snacman/ProfilingGPU.h>
 #include <snacman/Resources.h>
 
 // TODO #generic-render remove once all geometry and shader programs are created
 // outside.
-#include <renderer/ShaderSource.h>
-#include <snac-renderer/Cube.h>
-#include <snac-renderer/gltf/GltfLoad.h>
 
 namespace ad {
 namespace snacgame {
