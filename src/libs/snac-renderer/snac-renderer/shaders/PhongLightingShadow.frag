@@ -38,11 +38,12 @@ void main(void)
     
     float specularExponent = 32;
 
+    vec3 ambient = ex_DiffuseColor * u_AmbientColor;
     vec3 diffuse = 
-        ex_DiffuseColor * (u_AmbientColor + u_LightColor * max(0.f, dot(normal, light)));
+        u_LightColor * ex_DiffuseColor * max(0.f, dot(normal, light));
     vec3 specular = 
         u_LightColor * ex_SpecularColor * pow(max(0.f, dot(normal, h)), specularExponent);
-    vec3 color = (diffuse + specular) * getShadowAttenuation(ex_Position_lightClip);
+    vec3 color = ambient + (diffuse + specular) * getShadowAttenuation(ex_Position_lightClip);
 
     // Gamma correction
     float gamma = 2.2;
