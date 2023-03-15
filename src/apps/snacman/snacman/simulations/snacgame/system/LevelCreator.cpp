@@ -1,5 +1,6 @@
 #include "LevelCreator.h"
 
+#include "../Entities.h"
 #include "../component/LevelData.h"
 
 #include <snacman/Profiling.h>

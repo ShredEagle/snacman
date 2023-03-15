@@ -1,9 +1,9 @@
 #include "EatPill.h"
+#include "../GameParameters.h"
 
 #include "entity/Entity.h"
 #include "math/Homogeneous.h"
 #include "snacman/Profiling.h"
-#include "snacman/simulations/snacgame/SnacGame.h"
 
 #include <math/Transformations.h>
 

@@ -14,16 +14,14 @@ namespace system {
 class IntegratePlayerMovement
 {
 public:
-    IntegratePlayerMovement(ent::EntityManager & aWorld,
-                            ent::Handle<ent::Entity> aLevel) :
-        mPlayer{aWorld}, mLevel{aWorld}
+    IntegratePlayerMovement(ent::EntityManager & aWorld) :
+        mPlayer{aWorld}
     {}
 
     void update(float aDelta);
 
 private:
     ent::Query<component::Geometry, component::PlayerMoveState> mPlayer;
-    ent::Query<component::LevelData, component::LevelCreated> mLevel;
 };
 
 } // namespace system

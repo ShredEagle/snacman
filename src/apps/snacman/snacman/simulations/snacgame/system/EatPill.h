@@ -2,9 +2,9 @@
 
 #include "../component/Collision.h"
 #include "../component/Geometry.h"
-#include "../component/LevelData.h"
+#include "../component/Text.h"
+#include "../component/LevelTags.h"
 #include "../component/PlayerLifeCycle.h"
-#include "../component/PlayerMoveState.h"
 #include "../component/PlayerSlot.h"
 
 #include <entity/EntityManager.h>

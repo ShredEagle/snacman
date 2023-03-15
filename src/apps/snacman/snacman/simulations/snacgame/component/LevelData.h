@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../InputCommandConverter.h"
-#include "../Entities.h"
+#include "LevelTags.h"
+#include "../InputConstants.h"
 
+#include <platform/Filesystem.h>
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
@@ -12,18 +13,6 @@
 namespace ad {
 namespace snacgame {
 namespace component {
-
-struct Pill
-{};
-
-struct LevelEntity
-{};
-
-struct LevelToCreate
-{};
-
-struct LevelCreated
-{};
 
 constexpr int gAllowedMovementNone = gPlayerMoveFlagNone;
 constexpr int gAllowedMovementUp = gPlayerMoveFlagUp;

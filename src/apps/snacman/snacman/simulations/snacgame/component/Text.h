@@ -1,5 +1,6 @@
 #pragma once
 
+#include <snac-renderer/text/Text.h>
 
 #include <math/Color.h>
 

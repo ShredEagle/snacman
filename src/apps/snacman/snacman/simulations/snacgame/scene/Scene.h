@@ -1,9 +1,5 @@
 #pragma once
 
-#include "snacman/Input.h"
-
-#include "../GameContext.h"
-#include "../component/Context.h"
 #include "../EntityWrap.h"
 
 #include <entity/Entity.h>
@@ -14,7 +10,11 @@
 #include <string>
 
 namespace ad {
+
+struct RawInput;
+
 namespace snacgame {
+    namespace component { struct MappingContext; }
 namespace scene {
 
 const inline std::string gQuitTransitionName = "quit";

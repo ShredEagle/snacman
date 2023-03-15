@@ -1,22 +1,24 @@
 #include "GameScene.h"
 
-#include "snacman/Input.h"
+#include <snacman/Input.h>
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
-#include "snacman/simulations/snacgame/component/Controller.h"
-#include "snacman/simulations/snacgame/InputCommandConverter.h"
-#include "snacman/simulations/snacgame/component/PoseScreenSpace.h"
-#include "snacman/simulations/snacgame/component/VisualMesh.h"
-#include "snacman/simulations/snacgame/system/EatPill.h"
-#include "snacman/simulations/snacgame/system/LevelCreator.h"
-#include "snacman/simulations/snacgame/system/MovementIntegration.h"
-#include "snacman/simulations/snacgame/system/RoundMonitor.h"
 
+#include "../Entities.h"
+#include "../InputCommandConverter.h"
 #include "../component/Context.h"
 #include "../component/Controller.h"
 #include "../component/LevelData.h"
-#include "../Entities.h"
-#include "../InputCommandConverter.h"
+#include "../component/Geometry.h"
+#include "../component/PlayerLifeCycle.h"
+#include "../component/PlayerMoveState.h"
+#include "../component/Text.h"
+#include "../component/VisualMesh.h"
+#include "../component/PoseScreenSpace.h"
+#include "../system/EatPill.h"
+#include "../system/LevelCreator.h"
+#include "../system/MovementIntegration.h"
+#include "../system/RoundMonitor.h"
 #include "../system/DeterminePlayerAction.h"
 #include "../system/IntegratePlayerMovement.h"
 #include "../system/LevelCreator.h"
@@ -30,6 +32,8 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
+const char * gMarkovRoot{"markov/"};
+
 void GameScene::setup(GameContext & aContext, const Transition & aTransition, RawInput & aInput)
 {
     ent::Phase init;
@@ -37,7 +41,7 @@ void GameScene::setup(GameContext & aContext, const Transition & aTransition, Ra
     mSystems.get(init)->add(system::RoundMonitor{mWorld});
     mSystems.get(init)->add(system::PlayerInvulFrame{mWorld});
     mSystems.get(init)->add(system::DeterminePlayerAction{mWorld, mLevel});
-    mSystems.get(init)->add(system::IntegratePlayerMovement{mWorld, mLevel});
+    mSystems.get(init)->add(system::IntegratePlayerMovement{mWorld});
     mSystems.get(init)->add(system::LevelCreator{&mWorld});
     mSystems.get(init)->add(system::MovementIntegration{mWorld});
     mSystems.get(init)->add(system::EatPill{mWorld});

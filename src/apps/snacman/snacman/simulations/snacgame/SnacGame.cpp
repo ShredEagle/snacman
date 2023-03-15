@@ -15,7 +15,6 @@
 #include "snacman/simulations/snacgame/component/PlayerMoveState.h"
 #include "snacman/simulations/snacgame/component/PlayerSlot.h"
 #include "system/DeterminePlayerAction.h"
-#include "system/IntegratePlayerMovement.h"
 #include "system/MovementIntegration.h"
 #include "system/PlayerInvulFrame.h"
 #include "system/PlayerSpawner.h"

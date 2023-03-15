@@ -3,6 +3,7 @@
 #include "EntityWrap.h"
 #include "GameContext.h"
 #include "Renderer.h"
+#include "GameParameters.h"
 
 #include "component/Geometry.h"
 #include "component/PoseScreenSpace.h"
@@ -21,27 +22,17 @@
 #include "../../Timing.h"
 
 #include <arte/Freetype.h>
-
 #include <entity/EntityManager.h>
-
 #include <graphics/AppInterface.h>
-
 #include <imguiui/ImguiUi.h>
-
 #include <markovjunior/Interpreter.h>
-
 #include <resource/ResourceFinder.h>
+#include <platform/Filesystem.h>
 
 #include <memory>
 
-#include <platform/Filesystem.h>
-
 namespace ad {
 namespace snacgame {
-
-// TODO: before commit change this
-constexpr int gGridSize = 29;
-constexpr float gCellSize = 1.f;
 
 struct ImguiDisplays
 {

@@ -3,7 +3,7 @@
 #include "component/Collision.h"
 #include "component/Controller.h"
 #include "component/Geometry.h"
-#include "component/LevelData.h"
+#include "component/LevelTags.h"
 #include "component/MenuItem.h"
 #include "component/PlayerLifeCycle.h"
 #include "component/PlayerMoveState.h"
