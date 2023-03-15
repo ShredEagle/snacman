@@ -7,7 +7,7 @@
             "annotations": {
                 "pass": "forward_shadow"
             },
-            "programfile": "shaders/PhongLightingTextures.prog"
+            "programfile": "shaders/PhongLightingTexturesShadow.prog"
         },
         {
             "annotations": {

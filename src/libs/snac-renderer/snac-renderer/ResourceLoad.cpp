@@ -43,10 +43,26 @@ IntrospectProgram loadProgram(const filesystem::path & aProgram)
 
     Json program = Json::parse(std::ifstream{aProgram});
     graphics::FileLookup lookup{aProgram};
+
+    std::vector<std::string> defines;
+    if (auto found = program.find("defines");
+        found != program.end())
+    {
+        for (std::string macro : *found)
+        {
+            defines.push_back(std::move(macro));
+        }
+    }
+
     for (auto [shaderStage, shaderFile] : program.items())
     {
         GLenum stageEnumerator;
-        if(shaderStage == "vertex")
+        if(shaderStage == "defines")
+        {
+            // Special case, not a shader stage
+            continue;
+        }
+        else if(shaderStage == "vertex")
         {
             stageEnumerator = GL_VERTEX_SHADER;
         }
@@ -61,9 +77,11 @@ IntrospectProgram loadProgram(const filesystem::path & aProgram)
         }
         
         auto [inputStream, identifier] = lookup(shaderFile);
+        auto s = graphics::ShaderSource::Preprocess(*inputStream, defines, identifier, lookup);
+        std::cout << "Preprocessed: " << std::string_view{graphics::ShaderSourceView{s}};
         shaders.emplace_back(
             stageEnumerator,
-            graphics::ShaderSource::Preprocess(*inputStream, identifier, lookup));
+            s);
     }
 
     SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());

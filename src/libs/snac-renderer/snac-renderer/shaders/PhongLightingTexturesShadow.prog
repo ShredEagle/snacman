@@ -1,5 +1,5 @@
 {
-    "defines": ["TEXTURES"],
+    "defines": ["TEXTURES", "SHADOW"],
     "vertex": "PhongLighting.vert",
     "fragment": "PhongLighting.frag"
 }

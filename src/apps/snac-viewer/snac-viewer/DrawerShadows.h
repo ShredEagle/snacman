@@ -44,7 +44,7 @@ private:
     graphics::FrameBuffer depthFBO;
     Mesh screenQuad;
 
-    GLfloat mShadowBias = 0.00001f;
+    GLfloat mShadowBias = 0.00005f;
     GLenum mDetphMapFilter = GL_NEAREST;
 };
 

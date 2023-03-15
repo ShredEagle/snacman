@@ -1,4 +1,0 @@
-{
-    "vertex": "PhongLightingShadow.vert",
-    "fragment": "PhongLightingShadow.frag"
-}
