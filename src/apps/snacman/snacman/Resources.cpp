@@ -1,12 +1,22 @@
 #include "Resources.h"
 
-
+#include "RenderThread.h"                   // for RenderThread
+#include "simulations/snacgame/Renderer.h"  // for Renderer
 #include <snac-renderer/ResourceLoad.h>
+
+#include <resource/ResourceManager.h>               // for ResourceManager
+                                                    //
+#include <algorithm>                                // for copy, max
+#include <future>                                   // for future
+#include <string>                                   // for operator==, string
 
 
 namespace ad {
 namespace snac {
 
+struct Effect;
+struct Font;
+struct Mesh;
 
 std::shared_ptr<Mesh> Resources::getShape(filesystem::path aShape)
 {

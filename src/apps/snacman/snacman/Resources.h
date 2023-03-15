@@ -1,19 +1,27 @@
 #pragma once
 
 
-#include "RenderThread.h"
 // Note: this is coupling the Resource class to the specifics of snacgame. 
 // But I do not want to template Resource on the renderer...
-#include "simulations/snacgame/Renderer.h"
-
-#include <snac-renderer/Mesh.h>
-#include <snac-renderer/text/Text.h>
-
 #include <resource/ResourceManager.h>
+#include <resource/ResourceFinder.h>   // for ResourceFinder
+#include <arte/Freetype.h>             // for Freetype
+
+#include <filesystem>                  // for path
+#include <memory>                      // for shared_ptr
+#include <utility>                     // for move
 
 
 namespace ad {
+
+namespace snacgame { class Renderer; }
+
 namespace snac {
+
+struct Effect;
+struct Font;
+struct Mesh;
+template <class T_renderer> class RenderThread;
 
 constexpr unsigned int gDefaultPixelHeight = 64;
 

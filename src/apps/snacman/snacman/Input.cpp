@@ -1,8 +1,9 @@
 #include "Input.h"
+#include <graphics/AppInterface.h>
+#include <graphics/ApplicationGlfw.h>
 
-#include <GLFW/glfw3.h>
 #include <functional>
-#include <ios>
+#include <cmath>
 
 namespace ad {
 

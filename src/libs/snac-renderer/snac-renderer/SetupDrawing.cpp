@@ -2,6 +2,9 @@
 
 #include "Logging.h"
 
+#include <fmt/ostream.h>
+#include <spdlog/spdlog.h>
+
 
 #define SELOG(level) SELOG_LG(::ad::snac::gRenderLogger, level)
 

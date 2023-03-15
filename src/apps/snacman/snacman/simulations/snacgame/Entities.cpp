@@ -1,9 +1,13 @@
 #include "Entities.h"
+#include "GameContext.h"
+
+#include "../../QueryManipulation.h"
+#include "../../Resources.h"
 
 #include "component/Collision.h"
 #include "component/Controller.h"
 #include "component/Geometry.h"
-#include "component/LevelData.h"
+#include "component/LevelTags.h"
 #include "component/MenuItem.h"
 #include "component/PlayerLifeCycle.h"
 #include "component/PlayerMoveState.h"
@@ -12,17 +16,28 @@
 #include "component/Speed.h"
 #include "component/Text.h"
 #include "component/VisualMesh.h"
-#include "GameContext.h"
-#include "snacman/Input.h"
-#include "snacman/simulations/snacgame/component/PlayerSlot.h"
-#include "snacman/simulations/snacgame/scene/MenuScene.h"
+#include "component/PlayerSlot.h"
+#include "scene/MenuScene.h"
 
-#include "../../QueryManipulation.h"
+#include <entity/Archetype.h>
+#include <entity/Entity.h>
+#include <entity/EntityManager.h>
+#include <entity/Query.h>
+#include <entity/QueryStore.h>
+#include <entity/detail/HandledStore.h>
+#include <math/Angle.h>
+#include <math/Quaternion.h>
 
-#include <cstdlib>
 #include <math/Color.h>
-#include <snac-renderer/text/Text.h>
+#include <math/Vector.h>
 #include <unordered_map>
+#include <algorithm>                                            // for max
+#include <map>                                                  // for opera...
+#include <optional>                                             // for optional
+#include <ostream>                                              // for opera...
+#include <tuple>                                                // for get
+#include <utility>                                              // for move
+#include <vector>                                               // for vector
 
 namespace ad {
 namespace snacgame {

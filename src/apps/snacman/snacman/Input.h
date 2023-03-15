@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cmath>
-#include <graphics/AppInterface.h>
-#include <graphics/ApplicationGlfw.h>
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#undef GLFW_INCLUDE_NONE
 
 #include <math/Vector.h>
 

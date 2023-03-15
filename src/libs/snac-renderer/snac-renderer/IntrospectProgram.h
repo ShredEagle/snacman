@@ -1,13 +1,13 @@
 #pragma once
 
 
-#include "Semantic.h"
 #include "ShaderResource.h"
 
 #include <renderer/Shading.h>
 #include <renderer/VertexSpecification.h>
 #include <renderer/BufferIndexedBinding.h>
 
+#include <iosfwd>
 #include <string>
 #include <vector>
 
@@ -15,6 +15,8 @@
 namespace ad {
 namespace snac {
 
+enum class BlockSemantic;
+enum class Semantic;
 
 struct IntrospectProgram
 {

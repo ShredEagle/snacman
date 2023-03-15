@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../InputCommandConverter.h"
+#include "../InputConstants.h"
 
 namespace ad {
 namespace snacgame {
