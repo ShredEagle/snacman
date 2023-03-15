@@ -77,11 +77,14 @@ IntrospectProgram loadProgram(const filesystem::path & aProgram)
         }
         
         auto [inputStream, identifier] = lookup(shaderFile);
-        auto s = graphics::ShaderSource::Preprocess(*inputStream, defines, identifier, lookup);
-        std::cout << "Preprocessed: " << std::string_view{graphics::ShaderSourceView{s}};
+        graphics::ShaderSource preprocessed = graphics::ShaderSource::Preprocess(*inputStream, defines, identifier, lookup);
+        //SELOG(error)("Preprocessed source for program '{}' stage '{}':\n{}",
+        //             aProgram.string(),
+        //             shaderStage,
+        //             std::string_view{graphics::ShaderSourceView{preprocessed}});
         shaders.emplace_back(
             stageEnumerator,
-            s);
+            std::move(preprocessed));
     }
 
     SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());
