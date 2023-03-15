@@ -2,8 +2,13 @@
 
 #include "Scene.h"
 
+#include "../component/Controller.h"
+#include "../component/LevelTags.h"
+#include "../component/PlayerSlot.h"
+
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
+
 #include <string>
 
 namespace ad {
@@ -16,10 +21,7 @@ struct GameContext;
 template <class T_wrapped> struct EntityWrap;
 
 namespace component {
-struct Controller;
-struct LevelEntity;
 struct MappingContext;
-struct PlayerSlot;
 }
 
 namespace scene {
