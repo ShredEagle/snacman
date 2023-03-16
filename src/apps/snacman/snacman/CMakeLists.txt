@@ -34,6 +34,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/Context.h
     simulations/snacgame/component/Controller.h
     simulations/snacgame/component/Geometry.h
+    simulations/snacgame/component/GlobalPosition.h
     simulations/snacgame/component/LevelData.h
     simulations/snacgame/component/LevelTags.h
     simulations/snacgame/component/MenuItem.h
@@ -42,6 +43,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/PlayerMoveState.h
     simulations/snacgame/component/PlayerSlot.h
     simulations/snacgame/component/SceneNode.h
+    simulations/snacgame/component/SceneRoot.h
     simulations/snacgame/component/Spawner.h
     simulations/snacgame/component/Text.h
 
@@ -59,6 +61,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/PlayerInvulFrame.h
     simulations/snacgame/system/RoundMonitor.h
     simulations/snacgame/system/SystemOrbitalCamera.h
+    simulations/snacgame/system/SceneGraphResolver.h
     simulations/snacgame/system/SceneStateMachine.h
 
     detail/Logger.h
@@ -90,6 +93,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/PlayerSpawner.cpp
     simulations/snacgame/system/PlayerInvulFrame.cpp
     simulations/snacgame/system/RoundMonitor.cpp
+    simulations/snacgame/system/SceneGraphResolver.cpp
     simulations/snacgame/system/SceneStateMachine.cpp
 
     detail/Logger.cpp
