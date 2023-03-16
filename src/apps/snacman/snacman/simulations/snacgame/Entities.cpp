@@ -94,12 +94,12 @@ createPathEntity(GameContext & aContext,
 ent::Handle<ent::Entity>
 createPortalEntity(GameContext & aContext,
                    ent::Phase & aInit,
-                   const math::Position<2, float> & aGridPos)
+                   const math::Position<2, float> & aGridPos, int aPortalIndex)
 {
     auto handle = aContext.mWorld.addEntity();
-    handle.get(aInit)->add(component::LevelEntity{});
-    handle.get(aInit)
-        ->add(component::Geometry{
+    handle.get(aInit)->add(component::LevelEntity{})
+        .add(component::Portal{aPortalIndex})
+        .add(component::Geometry{
             .mPosition = {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y())},
             .mScaling = math::Size<3, float>{0.5f, 0.1f, 0.5f},
             .mLayer = component::GeometryLayer::Level,

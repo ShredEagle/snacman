@@ -96,7 +96,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     mImguiUi.mFrameMutex.lock();
     {
         TIME_RECURRING(Main, "new frame");
-    mImguiUi.newFrame();
+        mImguiUi.newFrame();
     }
     // NewFrame() updates the io catpure flag: consume them ASAP
     // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
@@ -130,6 +130,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                             aPlayerGeometry.mPosition.y());
                 ImGui::Text("Player integral part: %d, %d", intPosX, intPosY);
                 ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
+                ImGui::Text("Current portal %d", aMoveState.mCurrentPortal);
+                ImGui::Text("Dest portal %d", aMoveState.mDestinationPortal);
                 ImGui::Text("Player MoveState:");
                 if (aMoveState.mAllowedMove & gPlayerMoveFlagDown)
                 {

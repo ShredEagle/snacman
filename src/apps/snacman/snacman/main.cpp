@@ -125,6 +125,8 @@ void runApplication()
 
         BEGIN_RECURRING(Main, "Step", stepRecurringScope);
 
+        simulation.drawDebugUi(configurableSettings, inhibiter, input);
+
         // Update input
         input = hid.read(input, inhibiter);
 
@@ -141,7 +143,6 @@ void runApplication()
             }
         }
 
-        simulation.drawDebugUi(configurableSettings, inhibiter, input);
         // Pretend update took longer if requested by user.
         sleepBusy(configurableSettings.mUpdateDuration, beginStepTime);
 

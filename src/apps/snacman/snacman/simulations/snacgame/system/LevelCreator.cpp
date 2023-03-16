@@ -50,6 +50,7 @@ void LevelCreator::update(GameContext & aContext)
         aLevelData.mTiles.reserve(aLevelData.mSize.width()
                                   * aLevelData.mSize.height());
         std::vector<component::Tile> & tiles = aLevelData.mTiles;
+        std::vector<int> & portals = aLevelData.mPortalIndex;
         int rowCount = aLevelData.mSize.width();
         int colCount = aLevelData.mSize.height();
 
@@ -75,9 +76,13 @@ void LevelCreator::update(GameContext & aContext)
                                    math::Position<2, float>{xFloat, yFloat});
                         break;
                     case 'K':
-                        tiles.push_back(component::Tile{.mType = component::TileType::Portal});
-                        createPortalEntity(aContext, createLevelPhase,
-                                           math::Position<2, float>{xFloat, yFloat});
+                        {
+                            tiles.push_back(component::Tile{.mType = component::TileType::Portal});
+                            int portalIndex = tiles.size() - 1;
+                            portals.push_back(portalIndex);
+                            createPortalEntity(aContext, createLevelPhase,
+                                               math::Position<2, float>{xFloat, yFloat}, portalIndex);
+                        }
                         break;
                     case 'O':
                         tiles.push_back(component::Tile{.mType = component::TileType::Pen});
@@ -108,21 +113,37 @@ void LevelCreator::update(GameContext & aContext)
                     != component::TileType::Void)
                 {
                     tile.mAllowedMove |= component::gAllowedMovementUp;
+                    if (tile.mType == component::TileType::Portal)
+                    {
+                        tile.mAllowedMove |= component::gAllowedMovementDown;
+                    }
                 }
                 if (tiles.at(i + (j - 1) * colCount).mType
                     != component::TileType::Void)
                 {
                     tile.mAllowedMove |= component::gAllowedMovementDown;
+                    if (tile.mType == component::TileType::Portal)
+                    {
+                        tile.mAllowedMove |= component::gAllowedMovementUp;
+                    }
                 }
                 if (tiles.at((i + 1) + j * colCount).mType
                     != component::TileType::Void)
                 {
                     tile.mAllowedMove |= component::gAllowedMovementRight;
+                    if (tile.mType == component::TileType::Portal)
+                    {
+                        tile.mAllowedMove |= component::gAllowedMovementLeft;
+                    }
                 }
                 if (tiles.at((i - 1) + j * colCount).mType
                     != component::TileType::Void)
                 {
                     tile.mAllowedMove |= component::gAllowedMovementLeft;
+                    if (tile.mType == component::TileType::Portal)
+                    {
+                        tile.mAllowedMove |= component::gAllowedMovementRight;
+                    }
                 }
             }
         }
