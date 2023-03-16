@@ -57,6 +57,7 @@ struct LevelData
     int mSeed;
 
     std::vector<Tile> mTiles;
+    std::vector<int> mPortalIndex;
     float mCellSize = 1.f;
 };
 

@@ -29,6 +29,7 @@
 #include "../system/IntegratePlayerMovement.h"
 #include "../system/PlayerInvulFrame.h"
 #include "../system/PlayerSpawner.h"
+#include "../system/PortalManagement.h"
 
 #include <algorithm>
 #include <array>                                                // for array
@@ -64,6 +65,7 @@ void GameScene::setup(GameContext & aContext, const Transition & aTransition, Ra
     mSystems.get(init)->add(system::LevelCreator{&mWorld});
     mSystems.get(init)->add(system::MovementIntegration{mWorld});
     mSystems.get(init)->add(system::EatPill{mWorld});
+    mSystems.get(init)->add(system::PortalManagement{mWorld, mLevel});
 
     auto markovRoot = aContext.mResources.find(gMarkovRoot);
     mLevel.get(init)->add(component::LevelData(
@@ -178,6 +180,7 @@ std::optional<Transition> GameScene::update(GameContext & aContext,
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
     mSystems.get(update)->get<system::RoundMonitor>().update();
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
+    mSystems.get(update)->get<system::PortalManagement>().update();
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
     mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);

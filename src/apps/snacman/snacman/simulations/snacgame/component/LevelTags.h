@@ -14,6 +14,11 @@ struct LevelToCreate
 
 struct LevelCreated
 {};
+
+struct Portal
+{
+    int portalIndex;
+};
 }
 }
 }

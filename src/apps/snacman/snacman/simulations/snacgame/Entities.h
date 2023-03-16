@@ -35,7 +35,8 @@ ent::Handle<ent::Entity> createPathEntity(GameContext & aContext,
 ent::Handle<ent::Entity>
 createPortalEntity(GameContext & aContext,
                    ent::Phase & aInit,
-                   const math::Position<2, float> & aPos);
+                   const math::Position<2, float> & aPos,
+                   int aPortalIndex);
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
                    ent::Phase & aInit,
