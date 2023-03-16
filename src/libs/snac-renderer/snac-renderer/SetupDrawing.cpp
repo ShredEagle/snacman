@@ -60,7 +60,7 @@ namespace {
 }; // anonymous
 
 
-graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
+graphics::VertexArrayObject prepareVAO(const VertexStream & aVertices,
                                        const InstanceStream & aInstances,
                                        const IntrospectProgram & aProgram)
 {
@@ -72,20 +72,20 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
     std::optional<graphics::ScopedBind> optionalScopedIbo;
     graphics::ScopedBind scopedVao{vertexArray};
 
-    if (aMesh.mStream.mIndices)
+    if (aVertices.mIndices)
     {
         // Now that the VAO is bound, it can store the index buffer binding.
-        optionalScopedIbo = graphics::ScopedBind{aMesh.mStream.mIndices->mIndexBuffer};
+        optionalScopedIbo = graphics::ScopedBind{aVertices.mIndices->mIndexBuffer};
     }
 
     for (const IntrospectProgram::Attribute & shaderAttribute : aProgram.mAttributes)
     {
-        if(auto found = aMesh.mStream.mAttributes.find(shaderAttribute.mSemantic);
-           found != aMesh.mStream.mAttributes.end())
+        if(auto found = aVertices.mAttributes.find(shaderAttribute.mSemantic);
+           found != aVertices.mAttributes.end())
         {
             const AttributeAccessor & accessor = found->second;
             const BufferView & bufferView = 
-                aMesh.mStream.mVertexBuffers.at(accessor.mBufferViewIndex);
+                aVertices.mVertexBuffers.at(accessor.mBufferViewIndex);
             attachAttribute(shaderAttribute, accessor.mAttribute, bufferView, 0, aProgram.name());
         }
         else if (auto found = aInstances.mAttributes.find(shaderAttribute.mSemantic);
@@ -111,11 +111,11 @@ graphics::VertexArrayObject prepareVAO(const Mesh & aMesh,
 
 
 const graphics::VertexArrayObject &
-VertexArrayRepository::get(const Mesh & aMesh, // Maybe it should just be the VertexStream?
+VertexArrayRepository::get(const VertexStream & aVertices,
                            const InstanceStream & aInstances,
                            const IntrospectProgram & aProgram)
 {
-    Key key = std::make_tuple(&aMesh, &aInstances, &static_cast<const graphics::Program &>(aProgram));
+    Key key = std::make_tuple(&aVertices, &aInstances, &static_cast<const graphics::Program &>(aProgram));
     if (auto found = mVAOs.find(key);
         found != mVAOs.end())
     {
@@ -123,7 +123,7 @@ VertexArrayRepository::get(const Mesh & aMesh, // Maybe it should just be the Ve
     }
     else
     {
-        return mVAOs.emplace(key, prepareVAO(aMesh, aInstances, aProgram)).first->second;
+        return mVAOs.emplace(key, prepareVAO(aVertices, aInstances, aProgram)).first->second;
     }
 }
 

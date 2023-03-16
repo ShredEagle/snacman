@@ -143,15 +143,14 @@ struct Scene
 
     void recompileRightView();
 
-    void render(Renderer & aRenderer);
+    void render(RendererAlt & aRenderer);
 
-    void drawSideBySide(Renderer & aRenderer,
-                        snac::UniformRepository & aUniforms,
-                        snac::UniformBlocks & aUniformBlocks);
+    void drawSideBySide(RendererAlt & aRenderer,
+                        ProgramSetup & aProgramSetup);
 
     const graphics::AppInterface & mAppInterface;
 
-    VisualEntities mEntities;
+    std::vector<Pass::Visual> mEntities;
 
     CameraBuffer mCamera;
     MouseOrbitalControl mCameraControl;
@@ -169,7 +168,7 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
                     const resource::ResourceFinder & aFinder) :
     mAppInterface{*aGlfwApp.getAppInterface()},
     mEntities{ 
-        moveInitVector<Visual, 1>({Visual{
+        moveInitVector<Pass::Visual, 1>({Pass::Visual{
             // Is it safe? Do we have a guarantee regarding member order?
             // (see the std::move)
             .mInstances = populateTripleInstances(aMesh.mStream.mBoundingBox),
@@ -227,7 +226,7 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
             }),
             .mName = "floor",
         };
-        mEntities.push_back(Visual{
+        mEntities.push_back(Pass::Visual{
             .mInstances = populateInstances({{
                 PoseColor{
                     .pose = math::trans3d::rotateX(math::Degree(-90.f)) // Normals to face "up"
@@ -270,22 +269,23 @@ inline void Scene::recompileRightView()
 }
 
 
-inline void Scene::render(Renderer & aRenderer)
+inline void Scene::render(RendererAlt & aRenderer)
 {
-    UniformBlocks uniformBlocks{
-         {BlockSemantic::Viewing, &mCamera.mViewing},
-    };
-
     math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
     math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
 
-    snac::UniformRepository uniforms{
-        {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
-        {snac::Semantic::LightPosition, {lightPosition}},
-        {snac::Semantic::AmbientColor, {ambientColor}},
-        {snac::Semantic::NearDistance, -mCamera.getCurrentParameters().zNear},
-        {snac::Semantic::FarDistance,  -mCamera.getCurrentParameters().zFar},
+    ProgramSetup setup{
+        .mUniforms{
+            {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
+            {snac::Semantic::LightPosition, {lightPosition}},
+            {snac::Semantic::AmbientColor, {ambientColor}},
+            {snac::Semantic::NearDistance, -mCamera.getCurrentParameters().zNear},
+            {snac::Semantic::FarDistance,  -mCamera.getCurrentParameters().zFar},
+        },
+        .mUniformBlocks{
+            {BlockSemantic::Viewing, &mCamera.mViewing},
+        },
     };
 
     {
@@ -298,10 +298,10 @@ inline void Scene::render(Renderer & aRenderer)
         switch(currentMode)
         {
             case 0:
-                drawSideBySide(aRenderer, uniforms, uniformBlocks);
+                drawSideBySide(aRenderer, setup);
                 break;
             case 1:
-                mDrawerShadows.draw(mEntities, aRenderer, uniforms, uniformBlocks);
+                mDrawerShadows.draw(mEntities, aRenderer, setup);
                 break;
         }
 
@@ -317,9 +317,8 @@ inline void Scene::render(Renderer & aRenderer)
 }
 
 
-void Scene::drawSideBySide(Renderer & aRenderer,
-                           snac::UniformRepository & aUniforms,
-                           snac::UniformBlocks & aUniformBlocks)
+void Scene::drawSideBySide(RendererAlt & aRenderer,
+                           ProgramSetup & aProgramSetup)
 {
     clear();
 
@@ -331,27 +330,24 @@ void Scene::drawSideBySide(Renderer & aRenderer,
                mAppInterface.getFramebufferSize().height());
 
     // Left view
+    static const Pass leftViewPass{"left-view", {{gViewSid, gLeftSid}}};
+
     glScissor(0,
               0,
               mAppInterface.getFramebufferSize().width()/2,
               mAppInterface.getFramebufferSize().height());
 
-    renderEntities(mEntities,
-                   aRenderer, 
-                   aUniforms,
-                   aUniformBlocks,
-                   { {gViewSid, gLeftSid}, });
+    leftViewPass.draw(mEntities, aRenderer, aProgramSetup);
+
     // Right view
+    static const Pass rightViewPass{"right-view", {{gViewSid, gRightSid}}};
+
     glScissor(mAppInterface.getFramebufferSize().width()/2,
               0, 
               mAppInterface.getFramebufferSize().width(),
               mAppInterface.getFramebufferSize().height());
 
-    renderEntities(mEntities,
-                   aRenderer, 
-                   aUniforms,
-                   aUniformBlocks,
-                   { {gViewSid, gRightSid}, });
+    rightViewPass.draw(mEntities, aRenderer, aProgramSetup);
 }
 
 

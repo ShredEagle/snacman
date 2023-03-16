@@ -71,10 +71,9 @@ void DrawerShadows::drawGui()
 
 
 void DrawerShadows::draw(
-    const VisualEntities & aEntities,
-    Renderer & aRenderer,
-    UniformRepository & aUniforms,
-    UniformBlocks & aUniformBlocks)
+    const std::vector<Pass::Visual> & aEntities,
+    RendererAlt & aRenderer,
+    ProgramSetup & aProgramSetup)
 {
     drawGui();
 
@@ -88,19 +87,17 @@ void DrawerShadows::draw(
 
     // Render shadow map
     {
+        static const Pass depthMapPass{"Depth-map", {{gPassSid, gDepthSid}}};
+
         graphics::ScopedBind fboScope{depthFBO};
 
         glViewport(0, 0, gShadowMapSize.width(), gShadowMapSize.height());
         glClear(GL_DEPTH_BUFFER_BIT);
 
         auto scopePush = 
-            aUniforms.push(Semantic::ViewingMatrix, lightViewPoint.assembleViewMatrix());
+            aProgramSetup.mUniforms.push(Semantic::ViewingMatrix, lightViewPoint.assembleViewMatrix());
 
-        renderEntities(aEntities,
-                       aRenderer,
-                       aUniforms, 
-                       aUniformBlocks,
-                       { {gPassSid, gDepthSid}, });
+        depthMapPass.draw(aEntities, aRenderer, aProgramSetup);
     }
 
     // Default framebuffer rendering
@@ -116,6 +113,8 @@ void DrawerShadows::draw(
 
     // Render scene with shadows
     {
+        static const Pass forwardShadowPass{"Forward-with-shadows", {{gPassSid, gForwardShadowSid}}};
+
         {
             graphics::ScopedBind scopedDepthMap{depthMap};
             glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
@@ -127,26 +126,21 @@ void DrawerShadows::draw(
                    mAppInterface.getFramebufferSize().width(), 
                    mAppInterface.getFramebufferSize().height());
 
-        TextureRepository textures{ 
-            {Semantic::ShadowMap, &depthMap},
-        };
+        auto texturePush = aProgramSetup.mTextures.push(Semantic::ShadowMap, &depthMap);
 
-        auto scopePush = 
-            aUniforms.push({
+        auto uniformPush = 
+            aProgramSetup.mUniforms.push({
                 {Semantic::LightViewingMatrix, lightViewPoint.assembleViewMatrix()},
                 {Semantic::ShadowBias, mShadowBias},
             });
 
-        renderEntities(aEntities,
-                       aRenderer,
-                       aUniforms, 
-                       aUniformBlocks,
-                       textures,
-                       { {gPassSid, gForwardShadowSid}, });
+        forwardShadowPass.draw(aEntities, aRenderer, aProgramSetup);
     }
 
     // Show shadow map in a viewport
     {
+        static const Pass showDepthmapPass{"debug-show-depthmap"};
+
         {
             graphics::ScopedBind scopedDepthMap{depthMap};
             glTexParameteri(depthMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_NONE);
@@ -158,15 +152,9 @@ void DrawerShadows::draw(
                 (GLsizei)(viewportHeight * getRatio<GLfloat>(gShadowMapSize)), 
                 viewportHeight);
 
-        TextureRepository textures{ 
-            {Semantic::BaseColorTexture, &depthMap},
-        };
+        auto scopedTexture = aProgramSetup.mTextures.push(Semantic::BaseColorTexture, &depthMap);
 
-        aRenderer.render(screenQuad,
-                         gNotInstanced,
-                         aUniforms,
-                         aUniformBlocks,
-                         textures);
+        showDepthmapPass.draw(screenQuad, aRenderer, aProgramSetup);
     }
 }
 

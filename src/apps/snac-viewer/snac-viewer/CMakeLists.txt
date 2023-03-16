@@ -9,7 +9,6 @@ set(${TARGET_NAME}_HEADERS
     DrawerShadows.h
     Logging.h
     Scene.h
-    Visuals.h
 )
 
 set(${TARGET_NAME}_SOURCES

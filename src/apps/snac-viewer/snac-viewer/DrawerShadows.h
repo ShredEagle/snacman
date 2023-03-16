@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Gui.h"
-#include "Visuals.h"
 
 #include <handy/StringId.h>
 
@@ -27,10 +26,9 @@ public:
                   const resource::ResourceFinder & aFinder);
 
     void draw(
-        const VisualEntities & aEntities,
-        Renderer & aRenderer,
-        UniformRepository & aUniforms,
-        UniformBlocks & aUniformBlocks);
+        const std::vector<Pass::Visual> & aEntities,
+        RendererAlt & aRenderer,
+        ProgramSetup & aProgramSetup);
 
 private:
     void drawGui();

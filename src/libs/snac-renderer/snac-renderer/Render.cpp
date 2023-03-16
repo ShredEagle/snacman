@@ -35,6 +35,76 @@ const IntrospectProgram * findTechnique(
 }
 
 
+const IntrospectProgram & RendererAlt::setupProgram(
+    std::string_view aPassName,
+    const IntrospectProgram & aProgram,
+    const UniformRepository & aUniforms,
+    const UniformBlocks & aUniformBlocks,
+    const TextureRepository & aTextures)
+{
+    WarningRepository::WarnedUniforms & warned = mWarningRepo.get(aPassName, aProgram);
+    setUniforms(aUniforms, aProgram, warned);
+    setTextures(aTextures, aProgram, warned);
+    setBlocks(aUniformBlocks, aProgram);
+    return aProgram;
+}
+
+
+void RendererAlt::draw(
+    const VertexStream & aVertices,
+    const InstanceStream & aInstances,
+    const IntrospectProgram & aProgram)
+{
+    auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
+
+    graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aVertices, aInstances, aProgram)};
+
+    graphics::ScopedBind usedProgram(aProgram);
+    if(aVertices.mIndices)
+    {
+        // Note: Range commands (providing a range of possible index values) are no longer usefull
+        // see: https://computergraphics.stackexchange.com/a/6199/11110
+        glDrawElementsInstanced(aVertices.mPrimitive,
+                                aVertices.mIndices->mIndexCount,
+                                aVertices.mIndices->mAttribute.mComponentType,
+                                (void*)aVertices.mIndices->mAttribute.mOffset,
+                                aInstances.mInstanceCount);
+    }
+    else
+    {
+        glDrawArraysInstanced(aVertices.mPrimitive,
+                              0, 
+                              aVertices.mVertexCount,
+                              aInstances.mInstanceCount);
+    }
+}
+
+
+void Pass::draw(std::span<const Visual> aVisuals, RendererAlt & aRenderer, ProgramSetup & aSetup) const
+{
+    // The naive algorithm, should be refined by sorting similarities.
+    for (const auto & [instances, mesh] : aVisuals)
+    {
+        draw(mesh, instances, aRenderer, aSetup);
+    }
+}
+
+
+void Pass::draw(const Mesh & aMesh, const InstanceStream & aInstances, RendererAlt & aRenderer, ProgramSetup & aSetup) const
+{
+    if(const IntrospectProgram * program = findTechnique(*aMesh.mMaterial, mFilter);
+        program != nullptr)
+    {
+        // TODO Is there a better way to handle several source for uniform values
+        auto scopeUniformPush = aSetup.mUniforms.push(aMesh.mMaterial->mUniforms);
+        auto scopeTexturePush = aSetup.mTextures.push(aMesh.mMaterial->mTextures);
+        aRenderer.setupProgram(mName, *program, aSetup);
+
+        aRenderer.draw(aMesh.mStream, aInstances, *program);
+    }
+}
+
+
 void Renderer::render(const Mesh & aMesh,
                       const InstanceStream & aInstances,
                       UniformRepository & aUniforms,
@@ -55,7 +125,7 @@ void Renderer::render(const Mesh & aMesh,
         setTextures(aTextures, *program, warned);
         setBlocks(aUniformBlocks, *program);
 
-        graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh, aInstances, *program)};
+        graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aMesh.mStream, aInstances, *program)};
 
         graphics::ScopedBind usedProgram(*program);
         if(aMesh.mStream.mIndices)

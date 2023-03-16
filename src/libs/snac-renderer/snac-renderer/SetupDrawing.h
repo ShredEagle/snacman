@@ -18,7 +18,7 @@ namespace snac {
 
 struct VertexArrayRepository
 {
-    const graphics::VertexArrayObject & get(const Mesh & aMesh,
+    const graphics::VertexArrayObject & get(const VertexStream & aVertices,
                                             const InstanceStream & aInstances,
                                             const IntrospectProgram & aProgram);
 
@@ -26,7 +26,7 @@ struct VertexArrayRepository
     //      this expose us to collision through address reuse.
     //      Instead, we should use values that are safe 
     //      (e.g. for a program, the value would be the attributes interface)
-    using Key = std::tuple<const Mesh *, const InstanceStream *, const graphics::Program *>;
+    using Key = std::tuple<const VertexStream *, const InstanceStream *, const graphics::Program *>;
     std::map<Key, graphics::VertexArrayObject> mVAOs;
 };
 

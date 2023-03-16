@@ -23,10 +23,79 @@ const IntrospectProgram * findTechnique(
     const std::vector<Technique::Annotation> & aTechniqueFilter);
 
 
+struct ProgramSetup
+{
+    UniformRepository mUniforms;
+    UniformBlocks mUniformBlocks;
+    TextureRepository mTextures;
+};
+
+
+class RendererAlt
+{
+public:
+    // TODO It should ideally be possible to call setupProgram several times on the same program
+    // **while** having consolidated warnings accross the calls. 
+    // This probably means that the warnings would be issued at draw call time. This is not done yet.
+    const IntrospectProgram & setupProgram(
+        std::string_view aPassName,
+        const IntrospectProgram & aProgram,
+        const UniformRepository & aUniforms,
+        const UniformBlocks & aUniformBlocks,
+        const TextureRepository & aTextures);
+
+    const IntrospectProgram & setupProgram(
+        std::string_view aPassName,
+        const IntrospectProgram & aProgram,
+        const ProgramSetup & aSetup)
+    { 
+        return setupProgram(aPassName, aProgram, aSetup.mUniforms, aSetup.mUniformBlocks, aSetup.mTextures); 
+    }
+
+    void draw(
+        const VertexStream & aVertices,
+        const InstanceStream & aInstances,
+        const IntrospectProgram & aProgram);
+
+private:
+    VertexArrayRepository mVertexArrayRepo;
+    WarningRepository mWarningRepo;
+};
+
+
+class Pass
+{
+public:
+    struct Visual
+    {
+        InstanceStream mInstances;
+        Mesh mMesh;
+    };
+
+    Pass(std::string aName, std::vector<Technique::Annotation> aTechniqueFilter = {}) :
+        mName{std::move(aName)},
+        mFilter{std::move(aTechniqueFilter)}
+    {}
+
+    void draw(std::span<const Visual> aVisuals, RendererAlt & aRenderer, ProgramSetup & aSetup) const;
+
+    void draw(const Mesh & aMesh, const InstanceStream & aInstances, RendererAlt & aRenderer, ProgramSetup & aSetup) const;
+
+    void draw(const Mesh & aMesh, RendererAlt & aRenderer, ProgramSetup & aSetup) const
+    { 
+        draw(aMesh, gNotInstanced, aRenderer, aSetup);
+    }
+
+private:
+    std::string mName;
+    std::vector<Technique::Annotation> mFilter;
+};
+
+
+/// \deprecated
 class Renderer
 {
 public:
-    /// \deprecated
     void render(const Mesh & aMesh,
                 const InstanceStream & aInstances,
                 UniformRepository & aUniforms,
@@ -34,7 +103,6 @@ public:
                 TextureRepository & aTextures,
                 const std::vector<Technique::Annotation> & aTechniqueFilter = {});
 
-    /// \deprecated
     void render(const Mesh & aMesh,
                 const InstanceStream & aInstances,
                 UniformRepository & aUniforms,
