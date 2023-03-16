@@ -146,12 +146,8 @@ struct Scene
     void render(Renderer & aRenderer);
 
     void drawSideBySide(Renderer & aRenderer,
-                        const snac::UniformRepository & aUniforms,
-                        const snac::UniformBlocks & aUniformBlocks);
-
-    void drawShadows(Renderer & aRenderer,
-                     const snac::UniformRepository & aUniforms,
-                     const snac::UniformBlocks & aUniformBlocks);
+                        snac::UniformRepository & aUniforms,
+                        snac::UniformBlocks & aUniformBlocks);
 
     const graphics::AppInterface & mAppInterface;
 
@@ -284,7 +280,7 @@ inline void Scene::render(Renderer & aRenderer)
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
     math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
 
-    const snac::UniformRepository uniforms{
+    snac::UniformRepository uniforms{
         {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
         {snac::Semantic::LightPosition, {lightPosition}},
         {snac::Semantic::AmbientColor, {ambientColor}},
@@ -322,8 +318,8 @@ inline void Scene::render(Renderer & aRenderer)
 
 
 void Scene::drawSideBySide(Renderer & aRenderer,
-                           const snac::UniformRepository & aUniforms,
-                           const snac::UniformBlocks & aUniformBlocks)
+                           snac::UniformRepository & aUniforms,
+                           snac::UniformBlocks & aUniformBlocks)
 {
     clear();
 
@@ -344,7 +340,6 @@ void Scene::drawSideBySide(Renderer & aRenderer,
                    aRenderer, 
                    aUniforms,
                    aUniformBlocks,
-                   {},
                    { {gViewSid, gLeftSid}, });
     // Right view
     glScissor(mAppInterface.getFramebufferSize().width()/2,
@@ -356,7 +351,6 @@ void Scene::drawSideBySide(Renderer & aRenderer,
                    aRenderer, 
                    aUniforms,
                    aUniformBlocks,
-                   {},
                    { {gViewSid, gRightSid}, });
 }
 

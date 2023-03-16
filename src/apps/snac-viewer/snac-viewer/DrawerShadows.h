@@ -29,8 +29,8 @@ public:
     void draw(
         const VisualEntities & aEntities,
         Renderer & aRenderer,
-        const UniformRepository & aUniforms,
-        const snac::UniformBlocks & aUniformBlocks);
+        UniformRepository & aUniforms,
+        UniformBlocks & aUniformBlocks);
 
 private:
     void drawGui();

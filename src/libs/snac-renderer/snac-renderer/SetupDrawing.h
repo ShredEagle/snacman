@@ -4,6 +4,8 @@
 #include "Mesh.h"
 #include "UniformParameters.h"
 
+#include <handy/StringId.h>
+
 #include <renderer/VertexSpecification.h>
 
 #include <map>
@@ -39,10 +41,10 @@ struct WarningRepository
     // Note: also used for textures
     using WarnedUniforms = std::set<std::string>;
 
-    WarningRepository::WarnedUniforms & get(const Mesh & aMesh,
+    WarningRepository::WarnedUniforms & get(std::string_view aPassName,
                                             const IntrospectProgram & aProgram);
 
-    using Key = std::pair<const Mesh *, const graphics::Program *>;
+    using Key = std::pair<handy::StringId /*pass*/, const graphics::Program *>;
     std::map<Key, WarnedUniforms> mWarnings;
 };
 

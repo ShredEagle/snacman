@@ -41,8 +41,8 @@ TextRenderer::TextRenderer() :
 
 void TextRenderer::render(Renderer & aRenderer,
                           const visu::GraphicState & aState,
-                          const snac::UniformRepository & aUniforms,
-                          const snac::UniformBlocks & aUniformBlocks)
+                          snac::UniformRepository & aUniforms,
+                          snac::UniformBlocks & aUniformBlocks)
 {
     TIME_RECURRING_CLASSFUNC(Render);
 

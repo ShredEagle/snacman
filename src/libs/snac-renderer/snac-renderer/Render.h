@@ -18,22 +18,32 @@ inline void clear()
 }
 
 
+const IntrospectProgram * findTechnique(
+    const Material & aMaterial,
+    const std::vector<Technique::Annotation> & aTechniqueFilter);
+
+
 class Renderer
 {
 public:
+    /// \deprecated
     void render(const Mesh & aMesh,
                 const InstanceStream & aInstances,
-                UniformRepository aUniforms,
-                const UniformBlocks & aUniformBlocks,
-                TextureRepository aTextures,
+                UniformRepository & aUniforms,
+                UniformBlocks & aUniformBlocks,
+                TextureRepository & aTextures,
                 const std::vector<Technique::Annotation> & aTechniqueFilter = {});
 
+    /// \deprecated
     void render(const Mesh & aMesh,
                 const InstanceStream & aInstances,
-                UniformRepository aUniforms,
-                const UniformBlocks & aUniformBlocks,
+                UniformRepository & aUniforms,
+                UniformBlocks & aUniformBlocks,
                 const std::vector<Technique::Annotation> & aTechniqueFilter = {})
-    { render(aMesh, aInstances, std::move(aUniforms), aUniformBlocks, {}, aTechniqueFilter); }
+    { 
+        TextureRepository textureRepo;
+        render(aMesh, aInstances, aUniforms, aUniformBlocks, textureRepo, aTechniqueFilter);
+    }
 
 private:
     VertexArrayRepository mVertexArrayRepo;

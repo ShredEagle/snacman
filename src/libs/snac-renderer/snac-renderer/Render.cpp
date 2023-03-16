@@ -13,11 +13,11 @@ namespace ad {
 namespace snac {
 
 
-const IntrospectProgram * filterTechniques(
-    const Mesh & aMesh,
+const IntrospectProgram * findTechnique(
+    const Material & aMaterial,
     const std::vector<Technique::Annotation> & aTechniqueFilter)
 {
-    for(const auto & technique : aMesh.mMaterial->mEffect->mTechniques)
+    for(const auto & technique : aMaterial.mEffect->mTechniques)
     {
         if(std::all_of(
             aTechniqueFilter.begin(), aTechniqueFilter.end(),
@@ -37,21 +37,21 @@ const IntrospectProgram * filterTechniques(
 
 void Renderer::render(const Mesh & aMesh,
                       const InstanceStream & aInstances,
-                      UniformRepository aUniforms,
-                      const UniformBlocks & aUniformBlocks,
-                      TextureRepository aTextures,
+                      UniformRepository & aUniforms,
+                      UniformBlocks & aUniformBlocks,
+                      TextureRepository & aTextures,
                       const std::vector<Technique::Annotation> & aTechniqueFilter)
 {
     auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
-    if (const IntrospectProgram * program = filterTechniques(aMesh, aTechniqueFilter);
+    if (const IntrospectProgram * program = findTechnique(*aMesh.mMaterial, aTechniqueFilter);
         program != nullptr)
     {
-        WarningRepository::WarnedUniforms & warned = mWarningRepo.get(aMesh, *program);
+        WarningRepository::WarnedUniforms & warned = mWarningRepo.get("<deprecated-renderer-pass>", *program);
         // TODO Is there a better way to handle several source for uniform values
-        aUniforms.merge(UniformRepository{aMesh.mMaterial->mUniforms});
+        auto scopeUniformPush = aUniforms.push(aMesh.mMaterial->mUniforms);
         setUniforms(aUniforms, *program, warned);
-        aTextures.merge(TextureRepository{aMesh.mMaterial->mTextures});
+        auto scopeTexturePush = aTextures.push(aMesh.mMaterial->mTextures);
         setTextures(aTextures, *program, warned);
         setBlocks(aUniformBlocks, *program);
 

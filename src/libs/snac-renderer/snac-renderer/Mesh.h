@@ -20,11 +20,6 @@ namespace ad {
 namespace snac {
 
 
-// TODO this approach based on specialized repositories feels cumbersome.
-using TextureRepository = std::map<Semantic,
-                                   std::variant<std::shared_ptr<graphics::Texture>,
-                                                graphics::Texture *>>;
-
 
 // TODO extend with passes
 struct Technique

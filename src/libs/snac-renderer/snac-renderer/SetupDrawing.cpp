@@ -129,14 +129,14 @@ VertexArrayRepository::get(const Mesh & aMesh, // Maybe it should just be the Ve
 
 
 WarningRepository::WarnedUniforms &
-WarningRepository::get(const Mesh & aMesh, const IntrospectProgram & aProgram)
+WarningRepository::get(std::string_view aPassName, const IntrospectProgram & aProgram)
 {
-    Key key = std::make_pair(&aMesh, &static_cast<const graphics::Program &>(aProgram));
+    Key key = std::make_pair(handy::StringId{aPassName}, &static_cast<const graphics::Program &>(aProgram));
     auto [iterator, didInsert] = mWarnings.try_emplace(key);
     if (didInsert)
     {
-        SELOG(debug)("Added a new warning set to the repository, for key ('{}', '{}').",
-                     fmt::streamed(aMesh), aProgram.name());
+        SELOG(debug)("Added a new warning set to the repository, for key (pass:'{}', program:'{}').",
+                     aPassName, aProgram.name());
     }
     return iterator->second;
 }

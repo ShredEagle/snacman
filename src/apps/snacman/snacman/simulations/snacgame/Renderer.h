@@ -27,8 +27,8 @@ struct TextRenderer
 
     void render(Renderer & aRenderer, 
                 const visu::GraphicState & aState,
-                const snac::UniformRepository & aUniforms,
-                const snac::UniformBlocks & aUniformBlocks);
+                snac::UniformRepository & aUniforms,
+                snac::UniformBlocks & aUniformBlocks);
 
     snac::InstanceStream mGlyphInstances;
 };

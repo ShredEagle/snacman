@@ -73,8 +73,8 @@ void DrawerShadows::drawGui()
 void DrawerShadows::draw(
     const VisualEntities & aEntities,
     Renderer & aRenderer,
-    const UniformRepository & aUniforms,
-    const snac::UniformBlocks & aUniformBlocks)
+    UniformRepository & aUniforms,
+    UniformBlocks & aUniformBlocks)
 {
     drawGui();
 
@@ -93,14 +93,13 @@ void DrawerShadows::draw(
         glViewport(0, 0, gShadowMapSize.width(), gShadowMapSize.height());
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        UniformRepository uniforms{aUniforms};
-        uniforms.emplace(Semantic::ViewingMatrix, lightViewPoint.assembleViewMatrix());
+        auto scopePush = 
+            aUniforms.push(Semantic::ViewingMatrix, lightViewPoint.assembleViewMatrix());
 
         renderEntities(aEntities,
                        aRenderer,
-                       uniforms, 
+                       aUniforms, 
                        aUniformBlocks,
-                       {},
                        { {gPassSid, gDepthSid}, });
     }
 
@@ -132,13 +131,15 @@ void DrawerShadows::draw(
             {Semantic::ShadowMap, &depthMap},
         };
 
-        UniformRepository uniforms{aUniforms};
-        uniforms.emplace(Semantic::LightViewingMatrix, lightViewPoint.assembleViewMatrix());
-        uniforms.emplace(Semantic::ShadowBias, mShadowBias);
+        auto scopePush = 
+            aUniforms.push({
+                {Semantic::LightViewingMatrix, lightViewPoint.assembleViewMatrix()},
+                {Semantic::ShadowBias, mShadowBias},
+            });
 
         renderEntities(aEntities,
                        aRenderer,
-                       uniforms, 
+                       aUniforms, 
                        aUniformBlocks,
                        textures,
                        { {gPassSid, gForwardShadowSid}, });

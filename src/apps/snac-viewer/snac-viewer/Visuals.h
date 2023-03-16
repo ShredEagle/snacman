@@ -23,9 +23,9 @@ using VisualEntities = std::vector<Visual>;
 
 inline void renderEntities(const VisualEntities & aEntities,
                            Renderer & aRenderer,
-                           const snac::UniformRepository & aUniforms,
-                           const snac::UniformBlocks & aUniformBlocks,
-                           const snac::TextureRepository & aTextureRepository,
+                           snac::UniformRepository & aUniforms,
+                           snac::UniformBlocks & aUniformBlocks,
+                           snac::TextureRepository & aTextureRepository,
                            const std::vector<Technique::Annotation> & aTechniqueFilter)
 {
     for(auto & [instances, mesh] : aEntities)
@@ -39,6 +39,16 @@ inline void renderEntities(const VisualEntities & aEntities,
     }
 }
 
+
+inline void renderEntities(const VisualEntities & aEntities,
+                           Renderer & aRenderer,
+                           snac::UniformRepository & aUniforms,
+                           snac::UniformBlocks & aUniformBlocks,
+                           const std::vector<Technique::Annotation> & aTechniqueFilter)
+{
+    snac::TextureRepository textureRepo;
+    renderEntities(aEntities, aRenderer, aUniforms, aUniformBlocks, textureRepo, aTechniqueFilter);
+}
 
 
 } // namespace snac
