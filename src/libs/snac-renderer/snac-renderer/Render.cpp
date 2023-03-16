@@ -35,7 +35,7 @@ const IntrospectProgram * findTechnique(
 }
 
 
-const IntrospectProgram & RendererAlt::setupProgram(
+const IntrospectProgram & Renderer::setupProgram(
     std::string_view aPassName,
     const IntrospectProgram & aProgram,
     const UniformRepository & aUniforms,
@@ -50,7 +50,7 @@ const IntrospectProgram & RendererAlt::setupProgram(
 }
 
 
-void RendererAlt::draw(
+void Renderer::draw(
     const VertexStream & aVertices,
     const InstanceStream & aInstances,
     const IntrospectProgram & aProgram)
@@ -80,7 +80,7 @@ void RendererAlt::draw(
 }
 
 
-void Pass::draw(std::span<const Visual> aVisuals, RendererAlt & aRenderer, ProgramSetup & aSetup) const
+void Pass::draw(std::span<const Visual> aVisuals, Renderer & aRenderer, ProgramSetup & aSetup) const
 {
     // The naive algorithm, should be refined by sorting similarities.
     for (const auto & [instances, mesh] : aVisuals)
@@ -90,7 +90,7 @@ void Pass::draw(std::span<const Visual> aVisuals, RendererAlt & aRenderer, Progr
 }
 
 
-void Pass::draw(const Mesh & aMesh, const InstanceStream & aInstances, RendererAlt & aRenderer, ProgramSetup & aSetup) const
+void Pass::draw(const Mesh & aMesh, const InstanceStream & aInstances, Renderer & aRenderer, ProgramSetup & aSetup) const
 {
     if(const IntrospectProgram * program = findTechnique(*aMesh.mMaterial, mFilter);
         program != nullptr)
@@ -105,7 +105,7 @@ void Pass::draw(const Mesh & aMesh, const InstanceStream & aInstances, RendererA
 }
 
 
-void Renderer::render(const Mesh & aMesh,
+void RendererDeprecated::render(const Mesh & aMesh,
                       const InstanceStream & aInstances,
                       UniformRepository & aUniforms,
                       UniformBlocks & aUniformBlocks,

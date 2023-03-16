@@ -72,7 +72,7 @@ void DrawerShadows::drawGui()
 
 void DrawerShadows::draw(
     const std::vector<Pass::Visual> & aEntities,
-    RendererAlt & aRenderer,
+    Renderer & aRenderer,
     ProgramSetup & aProgramSetup)
 {
     drawGui();

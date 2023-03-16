@@ -67,7 +67,7 @@ void runApplication()
                   loadEffect(finder.pathFor("effects/MeshTextures.sefx"), finder)),
         finder,
     };
-    RendererAlt renderer;
+    Renderer renderer;
 
     //
     // Main simulation loop

@@ -27,7 +27,7 @@ public:
 
     void draw(
         const std::vector<Pass::Visual> & aEntities,
-        RendererAlt & aRenderer,
+        Renderer & aRenderer,
         ProgramSetup & aProgramSetup);
 
 private:

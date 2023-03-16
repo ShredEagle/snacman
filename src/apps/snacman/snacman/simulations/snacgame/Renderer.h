@@ -55,7 +55,7 @@ public:
 
 private:
     graphics::AppInterface & mAppInterface;
-    snac::Renderer mRenderer;
+    snac::RendererDeprecated mRenderer;
     snac::CameraBuffer mCamera;
     snac::InstanceStream mMeshInstances;
     TextRenderer mTextRenderer;

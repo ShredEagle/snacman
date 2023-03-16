@@ -31,7 +31,7 @@ struct ProgramSetup
 };
 
 
-class RendererAlt
+class Renderer
 {
 public:
     // TODO It should ideally be possible to call setupProgram several times on the same program
@@ -77,11 +77,11 @@ public:
         mFilter{std::move(aTechniqueFilter)}
     {}
 
-    void draw(std::span<const Visual> aVisuals, RendererAlt & aRenderer, ProgramSetup & aSetup) const;
+    void draw(std::span<const Visual> aVisuals, Renderer & aRenderer, ProgramSetup & aSetup) const;
 
-    void draw(const Mesh & aMesh, const InstanceStream & aInstances, RendererAlt & aRenderer, ProgramSetup & aSetup) const;
+    void draw(const Mesh & aMesh, const InstanceStream & aInstances, Renderer & aRenderer, ProgramSetup & aSetup) const;
 
-    void draw(const Mesh & aMesh, RendererAlt & aRenderer, ProgramSetup & aSetup) const
+    void draw(const Mesh & aMesh, Renderer & aRenderer, ProgramSetup & aSetup) const
     { 
         draw(aMesh, gNotInstanced, aRenderer, aSetup);
     }
@@ -93,7 +93,7 @@ private:
 
 
 /// \deprecated
-class Renderer
+class RendererDeprecated
 {
 public:
     void render(const Mesh & aMesh,

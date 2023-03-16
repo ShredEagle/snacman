@@ -143,9 +143,9 @@ struct Scene
 
     void recompileRightView();
 
-    void render(RendererAlt & aRenderer);
+    void render(Renderer & aRenderer);
 
-    void drawSideBySide(RendererAlt & aRenderer,
+    void drawSideBySide(Renderer & aRenderer,
                         ProgramSetup & aProgramSetup);
 
     const graphics::AppInterface & mAppInterface;
@@ -269,7 +269,7 @@ inline void Scene::recompileRightView()
 }
 
 
-inline void Scene::render(RendererAlt & aRenderer)
+inline void Scene::render(Renderer & aRenderer)
 {
     math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
@@ -317,7 +317,7 @@ inline void Scene::render(RendererAlt & aRenderer)
 }
 
 
-void Scene::drawSideBySide(RendererAlt & aRenderer,
+void Scene::drawSideBySide(Renderer & aRenderer,
                            ProgramSetup & aProgramSetup)
 {
     clear();
