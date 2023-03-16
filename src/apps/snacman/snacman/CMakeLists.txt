@@ -41,6 +41,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerMoveState.h
     simulations/snacgame/component/PlayerSlot.h
+    simulations/snacgame/component/SceneNode.h
     simulations/snacgame/component/Spawner.h
     simulations/snacgame/component/Text.h
 
