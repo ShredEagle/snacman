@@ -125,7 +125,7 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(filesystem::path aShape, snac::R
     if(aShape.string() == "CUBE")
     {
         return std::make_shared<snac::Mesh>(
-            snac::loadCube(aResources.getTrivialShaderEffect("shaders/PhongLighting.prog")));
+            snac::loadCube(aResources.getTrivialShaderEffect("shaders/PhongLightingVertexColor.prog")));
     }
     else
     {
