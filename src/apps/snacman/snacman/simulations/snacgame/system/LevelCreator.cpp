@@ -78,7 +78,7 @@ void LevelCreator::update(GameContext & aContext)
                     case 'K':
                         {
                             tiles.push_back(component::Tile{.mType = component::TileType::Portal});
-                            int portalIndex = tiles.size() - 1;
+                            int portalIndex = static_cast<int>(tiles.size() - 1);
                             portals.push_back(portalIndex);
                             createPortalEntity(aContext, createLevelPhase,
                                                math::Position<2, float>{xFloat, yFloat}, portalIndex);

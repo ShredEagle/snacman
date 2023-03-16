@@ -24,8 +24,8 @@ void PortalManagement::update()
                 if (currentTile.mType == component::TileType::Void)
                 {
                     int destFlatPosition = aMoveState.mDestinationPortal;
-                    playerPos.x() = destFlatPosition % colCount;
-                    playerPos.y() = destFlatPosition / colCount;
+                    playerPos.x() = static_cast<float>(destFlatPosition % colCount);
+                    playerPos.y() = static_cast<float>(destFlatPosition / colCount);
                 }
             }
 
