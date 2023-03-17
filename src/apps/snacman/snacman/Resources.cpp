@@ -77,6 +77,7 @@ std::shared_ptr<Mesh> Resources::MeshLoader(
 
 void Resources::recompilePrograms()
 {
+    // Note: this is a naive approach, I suspect this could lead to data races
     bool allSuccess = true;
     for(auto & [_stringId, effect] : mEffects) 
     {

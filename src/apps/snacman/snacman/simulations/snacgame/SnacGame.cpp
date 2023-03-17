@@ -83,90 +83,93 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 {
     TIME_RECURRING_FUNC(Main);
 
-    ent::Phase update;
-
-    std::lock_guard lock{mImguiUi.mFrameMutex};
-    mImguiUi.newFrame();
-    // We must make sure to match each newFrame() to a render(),
-    // otherwise we might get access violation in the RenderThread, when calling ImguiUi::renderBackend()
-    Guard renderGuard{[this]()
+    bool recompileShaders = false;
     {
-        this->mImguiUi.render();
-    }};
-
-    // NewFrame() updates the io catpure flag: consume them ASAP
-    // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
-    aInhibiter.resetCapture(static_cast<ImguiInhibiter::WantCapture>(
-        (mImguiUi.isCapturingMouse() ? ImguiInhibiter::Mouse
-                                     : ImguiInhibiter::Null)
-        | (mImguiUi.isCapturingKeyboard() ? ImguiInhibiter::Keyboard
-                                          : ImguiInhibiter::Null)));
-
-    mImguiDisplays.display();
-    if (mImguiDisplays.mShowLogLevel)
-    {
-        snac::imguiLogLevelSelection();
-    }
-    if (mImguiDisplays.mShowMappings)
-    {
-        mMappingContext->drawUi(aInput);
-    }
-    if (mImguiDisplays.mShowImguiDemo)
-    {
-        ImGui::ShowDemoWindow();
-    }
-    if (mImguiDisplays.mShowSimulationDelta)
-    {
-        ImGui::Begin("Gameloop");
-        int simulationDelta = (int) duration_cast<std::chrono::milliseconds>(
-                                  aSettings.mSimulationDelta)
-                                  .count();
-        if (ImGui::InputInt("Simulation period (ms)", &simulationDelta))
+        std::lock_guard lock{mImguiUi.mFrameMutex};
+        mImguiUi.newFrame();
+        // We must make sure to match each newFrame() to a render(),
+        // otherwise we might get access violation in the RenderThread, when calling ImguiUi::renderBackend()
+        Guard renderGuard{[this]()
         {
-            simulationDelta = std::clamp(simulationDelta, 1, 200);
-        }
-        aSettings.mSimulationDelta = std::chrono::milliseconds{simulationDelta};
-
-        int updateDuration = (int) duration_cast<std::chrono::milliseconds>(
-                                 aSettings.mUpdateDuration)
-                                 .count();
-        if (ImGui::InputInt("Update duration (ms)", &updateDuration))
-        {
-            updateDuration = std::clamp(updateDuration, 1, 500);
-        }
-        aSettings.mUpdateDuration = std::chrono::milliseconds{updateDuration};
-
-        bool interpolate = aSettings.mInterpolate;
-        ImGui::Checkbox("State interpolation", &interpolate);
-        aSettings.mInterpolate = interpolate;
-        ImGui::End();
-    }
-    if (mImguiDisplays.mShowMainProfiler)
-    {
-        ImGui::Begin("Main profiler");
-        std::string str;
-        snac::getProfiler(snac::Profiler::Main).print(str);
-        ImGui::TextUnformatted(str.c_str());
-        ImGui::End();
-    }
-    if (mImguiDisplays.mShowRenderProfiler)
-    {
-        ImGui::Begin("Render profiler");
-        ImGui::TextUnformatted(snac::getRenderProfilerPrint().get().c_str());
-        ImGui::End();
-    }
-    if (mImguiDisplays.mShowRenderControls)
-    {
-        // TODO This should be an easier raii object
-        ImGui::Begin("Render controls");
-        Guard endGuard{[](){
-            ImGui::End();
+            this->mImguiUi.render();
         }};
-        if(ImGui::Button("Recompile shaders"))
+
+        // NewFrame() updates the io catpure flag: consume them ASAP
+        // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
+        aInhibiter.resetCapture(static_cast<ImguiInhibiter::WantCapture>(
+            (mImguiUi.isCapturingMouse() ? ImguiInhibiter::Mouse
+                                        : ImguiInhibiter::Null)
+            | (mImguiUi.isCapturingKeyboard() ? ImguiInhibiter::Keyboard
+                                            : ImguiInhibiter::Null)));
+
+        mImguiDisplays.display();
+        if (mImguiDisplays.mShowLogLevel)
         {
-            mGameContext.mRenderThread.recompileShaders(mGameContext.mResources)
-                .get(); // so any exception is rethrown in this context
+            snac::imguiLogLevelSelection();
         }
+        if (mImguiDisplays.mShowMappings)
+        {
+            mMappingContext->drawUi(aInput);
+        }
+        if (mImguiDisplays.mShowImguiDemo)
+        {
+            ImGui::ShowDemoWindow();
+        }
+        if (mImguiDisplays.mShowSimulationDelta)
+        {
+            ImGui::Begin("Gameloop");
+            int simulationDelta = (int) duration_cast<std::chrono::milliseconds>(
+                                    aSettings.mSimulationDelta)
+                                    .count();
+            if (ImGui::InputInt("Simulation period (ms)", &simulationDelta))
+            {
+                simulationDelta = std::clamp(simulationDelta, 1, 200);
+            }
+            aSettings.mSimulationDelta = std::chrono::milliseconds{simulationDelta};
+
+            int updateDuration = (int) duration_cast<std::chrono::milliseconds>(
+                                    aSettings.mUpdateDuration)
+                                    .count();
+            if (ImGui::InputInt("Update duration (ms)", &updateDuration))
+            {
+                updateDuration = std::clamp(updateDuration, 1, 500);
+            }
+            aSettings.mUpdateDuration = std::chrono::milliseconds{updateDuration};
+
+            bool interpolate = aSettings.mInterpolate;
+            ImGui::Checkbox("State interpolation", &interpolate);
+            aSettings.mInterpolate = interpolate;
+            ImGui::End();
+        }
+        if (mImguiDisplays.mShowMainProfiler)
+        {
+            ImGui::Begin("Main profiler");
+            std::string str;
+            snac::getProfiler(snac::Profiler::Main).print(str);
+            ImGui::TextUnformatted(str.c_str());
+            ImGui::End();
+        }
+        if (mImguiDisplays.mShowRenderProfiler)
+        {
+            ImGui::Begin("Render profiler");
+            ImGui::TextUnformatted(snac::getRenderProfilerPrint().get().c_str());
+            ImGui::End();
+        }
+        if (mImguiDisplays.mShowRenderControls)
+        {
+            // TODO This should be an easier raii object
+            ImGui::Begin("Render controls");
+            Guard endGuard{[](){
+                ImGui::End();
+            }};
+            recompileShaders = ImGui::Button("Recompile shaders");
+        }
+    }
+
+    if (recompileShaders)
+    {
+        mGameContext.mRenderThread.recompileShaders(mGameContext.mResources)
+            .get(); // so any exception is rethrown in this context
     }
 }
 

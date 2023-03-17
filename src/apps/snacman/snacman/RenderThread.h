@@ -465,7 +465,7 @@ private:
 
             {
                 TIME_RECURRING(Render, "ImGui::renderBackend");
-                mImguiUi.tryRenderBackend();
+                mImguiUi.renderBackend();
             }
 
             END_RECURRING_GL(frameProfilerScope);
