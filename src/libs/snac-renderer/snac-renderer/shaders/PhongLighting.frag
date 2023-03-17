@@ -1,5 +1,7 @@
 #version 420
 
+#include "Gamma.glsl"
+
 in vec3 ex_Position_c;
 in vec3 ex_Normal_c;
 in vec4 ex_Tangent_c;
@@ -98,7 +100,6 @@ void main(void)
     vec3 phongColor = 
 #ifdef SHADOW
         (ambient + (diffuse + specular) * getShadowAttenuation(ex_Position_lightClip)) * color.xyz;
-        
 #else
         (ambient + diffuse + specular) * color.xyz;
 #endif
@@ -106,8 +107,5 @@ void main(void)
     //
     // Gamma correction
     //
-    float gamma = 2.2;
-    // Gamma compression from linear color space to "simple sRGB", as expected by the monitor.
-    // (The monitor will do the gamma expansion.)
-    out_Color = vec4(pow(phongColor, vec3(1./gamma)), color.w);
+    out_Color = correctGamma(vec4(phongColor, color.w));
 }

@@ -30,6 +30,7 @@ std::string to_string(Semantic aSemantic)
         MAPPING(Bearing)
         MAPPING(BaseColorFactor) 
         MAPPING(BaseColorUVIndex) 
+        MAPPING(Gamma) 
         MAPPING(NormalUVIndex) 
         MAPPING(NormalMapScale) 
         MAPPING(AmbientColor) 
@@ -88,6 +89,7 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(Bearing)
     MAPPING(BaseColorFactor) 
     MAPPING(BaseColorUVIndex) 
+    MAPPING(Gamma) 
     MAPPING(NormalUVIndex) 
     MAPPING(NormalMapScale) 
     MAPPING(AmbientColor) 
@@ -138,6 +140,7 @@ bool isNormalized(Semantic aSemantic)
         }
         case Semantic::BaseColorFactor:
         case Semantic::BaseColorUVIndex:
+        case Semantic::Gamma:
         case Semantic::NormalUVIndex:
         case Semantic::NormalMapScale:
         case Semantic::AmbientColor:
