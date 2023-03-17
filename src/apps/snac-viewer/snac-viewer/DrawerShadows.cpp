@@ -43,12 +43,12 @@ void DrawerShadows::drawGui()
     ImGui::DragFloat("Bias", &mShadowBias, 0.000001f, 0.0f, 0.01f, "%.6f");
     
     static const std::array<GLenum, 2> filtering{GL_NEAREST, GL_LINEAR};
-    static int item_current_idx = 0; // Here we store our selection data as an index.
+    static unsigned int item_current_idx = 0; // Here we store our selection data as an index.
     static ImGuiComboFlags flags = 0;
     const std::string combo_preview_value = graphics::to_string(filtering[item_current_idx]);  // Pass in the preview value visible before opening the combo (it could be anything)
     if (ImGui::BeginCombo("Depth filtering", combo_preview_value.c_str(), flags))
     {
-        for (int n = 0; n < std::size(filtering); n++)
+        for (unsigned int n = 0; n < std::size(filtering); n++)
         {
             const bool is_selected = (item_current_idx == n);
             if (ImGui::Selectable(graphics::to_string(filtering[n]).c_str(), is_selected))
