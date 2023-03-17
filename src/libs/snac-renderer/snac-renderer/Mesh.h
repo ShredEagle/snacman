@@ -124,7 +124,7 @@ const InstanceStream gNotInstanced{
     .mInstanceBuffer = BufferView{
         .mBuffer{graphics::VertexBufferObject::NullTag{}},
     },
-    .mInstanceCount{1},
+    .mInstanceCount = 1,
 };
 
 

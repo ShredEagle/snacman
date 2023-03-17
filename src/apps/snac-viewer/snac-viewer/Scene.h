@@ -229,7 +229,7 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
         mEntities.push_back(Pass::Visual{
             .mInstances = populateInstances({{
                 PoseColor{
-                    .pose = math::trans3d::rotateX(math::Degree(-90.f)) // Normals to face "up"
+                    .pose = math::trans3d::rotateX(math::Degree<float>(-90.f)) // Normals to face "up"
                         * math::trans3d::translate(math::Vec<3, float>{ 0.f, -2.f, 0.f}),
                 }
             }}),

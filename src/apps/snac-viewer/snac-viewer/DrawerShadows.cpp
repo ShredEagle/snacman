@@ -82,7 +82,7 @@ void DrawerShadows::draw(
 
     Camera lightViewPoint{math::getRatio<GLfloat>(gShadowMapSize), Camera::gDefaults};
     lightViewPoint.setPose(
-        math::trans3d::rotateX(math::Degree{55.f})
+        math::trans3d::rotateX(math::Degree<float>{55.f})
         * math::trans3d::translate<GLfloat>({0.f, -1.f, -15.f}));
 
     // Render shadow map

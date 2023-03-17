@@ -133,7 +133,8 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
             
             for(auto [category, value] : technique.at("annotations").items())
             {
-                inserted.mAnnotations.emplace(handy::StringId{category}, handy::StringId{value});
+                inserted.mAnnotations.emplace(handy::StringId{category},
+                                              handy::StringId{value.get<std::string>()});
             }
         }
     }
