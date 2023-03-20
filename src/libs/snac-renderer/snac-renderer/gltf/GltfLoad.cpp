@@ -290,16 +290,16 @@ namespace {
             //
             auto pbrMetallicRoughness =
                 gltfMaterial->pbrMetallicRoughness.value_or(gltf::material::gDefaultPbr);
-            material->mUniforms.emplace(Semantic::BaseColorFactor,
+            material->mUniforms.mStore.emplace(Semantic::BaseColorFactor,
                                         UniformParameter{pbrMetallicRoughness.baseColorFactor});
             if(auto baseColorTexture = pbrMetallicRoughness.baseColorTexture)
             {
-                material->mTextures.emplace(
+                material->mTextures.mStore.emplace(
                     Semantic::BaseColorTexture,
                     prepareTexture<math::sdr::Rgba>(
                         gltfMaterial.get<gltf::Texture>(baseColorTexture->index),
                         ColorSpace::sRGB));
-                material->mUniforms.emplace(Semantic::BaseColorUVIndex,
+                material->mUniforms.mStore.emplace(Semantic::BaseColorUVIndex,
                                             baseColorTexture->texCoord);
             }
 
@@ -308,14 +308,14 @@ namespace {
             //
             if(auto normalTexture = gltfMaterial->normalTexture)
             {
-                material->mTextures.emplace(
+                material->mTextures.mStore.emplace(
                     Semantic::NormalTexture,
                     prepareTexture<math::sdr::Rgb>(
                         gltfMaterial.get<gltf::Texture>(normalTexture->index),
                         ColorSpace::Linear));
-                material->mUniforms.emplace(Semantic::NormalUVIndex,
+                material->mUniforms.mStore.emplace(Semantic::NormalUVIndex,
                                             normalTexture->texCoord);
-                material->mUniforms.emplace(Semantic::NormalMapScale,
+                material->mUniforms.mStore.emplace(Semantic::NormalMapScale,
                                             normalTexture->scale);
             }
         }

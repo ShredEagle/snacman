@@ -4,6 +4,8 @@
 #include "Semantic.h"
 #include "UniformParameters.h"
 
+#include <handy/StringId.h>
+
 #include <math/Box.h>
 
 #include <renderer/Shading.h>
@@ -18,15 +20,25 @@ namespace ad {
 namespace snac {
 
 
-// TODO this approach based on specialized repositories feels cumbersome.
-using TextureRepository = std::map<Semantic,
-                                   std::variant<std::shared_ptr<graphics::Texture>,
-                                                graphics::Texture *>>;
+
+// TODO extend with passes
+struct Technique
+{
+    struct Annotation
+    {
+        handy::StringId mCategory;
+        handy::StringId mValue;
+    };
+
+    std::map<handy::StringId, handy::StringId> mAnnotations;
+    IntrospectProgram mProgram;
+    filesystem::path mProgramFile; // TODO I am unsure if the technique (or even effect) should be hosting this path
+};
 
 
 struct Effect
 {
-    IntrospectProgram mProgram;
+    std::vector<Technique> mTechniques;
 };
 
 
@@ -106,6 +118,13 @@ struct InstanceStream
     // No need for an Accessor to indicate the buffer view, as there is only one.
     std::map<Semantic, graphics::ClientAttribute> mAttributes;
     GLsizei mInstanceCount{0};
+};
+
+const InstanceStream gNotInstanced{
+    .mInstanceBuffer = BufferView{
+        .mBuffer{graphics::VertexBufferObject::NullTag{}},
+    },
+    .mInstanceCount = 1,
 };
 
 

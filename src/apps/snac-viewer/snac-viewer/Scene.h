@@ -1,59 +1,42 @@
 #pragma once
 
-
-#include <snac-renderer/Camera.h>
-#include <snac-renderer/Cube.h>
-#include <snac-renderer/Render.h>
-#include <snac-renderer/ResourceLoad.h>
+#include "DrawerShadows.h"
+#include "Gui.h"
 
 #include <graphics/AppInterface.h>
+#include <graphics/CameraUtilities.h>
+
+#include <handy/StringId.h>
+
+#include <resource/ResourceFinder.h>
 
 #include <math/Transformations.h>
-#include <math/VectorUtilities.h>
+
+#include <snac-renderer/Camera.h>
+#include <snac-renderer/ResourceLoad.h>
 
 
 namespace ad {
 namespace snac {
 
 
-InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
+handy::StringId gViewSid{"view"};
+handy::StringId gLeftSid{"left"};
+handy::StringId gRightSid{"right"};
+
+struct PoseColor
 {
-    
-    struct PoseColor
-    {
-        math::Matrix<4, 4, float> pose;
-        math::sdr::Rgba albedo{math::sdr::gWhite / 2};
-    };
+    math::Matrix<4, 4, float> pose;
+    math::sdr::Rgba albedo{math::sdr::gWhite / 2};
+};
 
-    GLfloat maxMagnitude = *aBoundingBox.dimension().getMaxMagnitudeElement();
-    if(maxMagnitude == 0.)
-    {
-        maxMagnitude =  1;
-        SELOG(warn)("Model bounding box is null, assuming unit size.");
-    }
 
-    auto scaling = math::trans3d::scaleUniform(3.f / maxMagnitude);
-
-    math::Vec<3, float> centerOffset = aBoundingBox.center().as<math::Vec>() * scaling;
-
-    std::vector<PoseColor> transformations{
-        {scaling * math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f} - centerOffset)},
-        {scaling * math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f} - centerOffset)},
-        {scaling * math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f} - centerOffset)},
-    };
-
-    InstanceStream instances{
-        .mInstanceCount = (GLsizei)std::size(transformations),
-    };
-    std::size_t instanceSize = sizeof(decltype(transformations)::value_type);
+// Make that dynamic too...
+InstanceStream prepareInstances()
+{
+    InstanceStream instances;
+    std::size_t instanceSize = sizeof(PoseColor);
     instances.mInstanceBuffer.mStride = (GLsizei)instanceSize;
-
-    bind(instances.mInstanceBuffer.mBuffer);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        instanceSize * std::size(transformations),
-        transformations.data(),
-        GL_DYNAMIC_DRAW);
 
     {
         graphics::ClientAttribute transformation{
@@ -71,49 +54,197 @@ InstanceStream makeInstances(math::Box<GLfloat> aBoundingBox)
         };
         instances.mAttributes.emplace(Semantic::Albedo, albedo);
     }
+
     return instances;
+}
+
+
+InstanceStream populateTripleInstances(math::Box<GLfloat> aBoundingBox)
+{
+    GLfloat maxMagnitude = *aBoundingBox.dimension().getMaxMagnitudeElement();
+    if(maxMagnitude == 0.)
+    {
+        maxMagnitude =  1;
+        SELOG(warn)("Model bounding box is null, assuming unit size.");
+    }
+
+    auto scaling = math::trans3d::scaleUniform(3.f / maxMagnitude);
+
+    math::Vec<3, float> centerOffset = aBoundingBox.center().as<math::Vec>() * scaling;
+
+    std::vector<PoseColor> transformations{
+        {scaling * math::trans3d::translate(math::Vec<3, float>{ 0.f, 0.f, -1.f} - centerOffset)},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{-4.f, 0.f, -1.f} - centerOffset)},
+        {scaling * math::trans3d::translate(math::Vec<3, float>{ 4.f, 0.f, -1.f} - centerOffset)},
+    };
+
+    InstanceStream instances = prepareInstances();
+    instances.mInstanceCount = (GLsizei)std::size(transformations),
+
+    bind(instances.mInstanceBuffer.mBuffer);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        sizeof(PoseColor) * std::size(transformations),
+        transformations.data(),
+        GL_DYNAMIC_DRAW);
+
+    return instances;
+}
+
+InstanceStream populateInstances(std::vector<PoseColor> aInstances)
+{
+    InstanceStream instances = prepareInstances();
+    instances.mInstanceCount = (GLsizei)std::size(aInstances),
+
+    bind(instances.mInstanceBuffer.mBuffer);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        sizeof(PoseColor) * std::size(aInstances),
+        aInstances.data(),
+        GL_DYNAMIC_DRAW);
+
+    return instances;
+}
+
+void duplicateTechniques(Effect & aEffect)
+{
+    std::vector<Technique> & techniques = aEffect.mTechniques;
+    // Reallocation would crash the loop.
+    techniques.reserve(techniques.size() * 2);
+    for (auto & technique : techniques)
+    {
+        technique.mAnnotations.emplace(gViewSid, gLeftSid);
+        techniques.push_back(Technique{
+            .mAnnotations = {{gViewSid, gRightSid}},
+            .mProgram = loadProgram(technique.mProgramFile),
+            .mProgramFile = technique.mProgramFile,
+        });
+    }
+}
+
+
+template <class T_value, std::size_t N>
+std::vector<T_value> moveInitVector(std::array<T_value, N> aValues)
+{
+    return std::vector<T_value>{
+        std::make_move_iterator(aValues.begin()),
+        std::make_move_iterator(aValues.end())
+    };
 }
 
 
 struct Scene
 {
-    Scene(graphics::AppInterface & aAppInterface, Mesh aMesh);
+    Scene(graphics::ApplicationGlfw & aGlfwApp,
+          Mesh aMesh,
+          const resource::ResourceFinder & aFinder);
 
     void update();
 
-    void render(Renderer & aRenderer) const;
+    void recompileRightView();
 
-    Mesh mMesh;
-    InstanceStream mInstances{makeInstances(mMesh.mStream.mBoundingBox)};
-    Camera mCamera;
+    void render(Renderer & aRenderer);
+
+    void drawSideBySide(Renderer & aRenderer,
+                        ProgramSetup & aProgramSetup);
+
+    const graphics::AppInterface & mAppInterface;
+
+    std::vector<Pass::Visual> mEntities;
+
+    CameraBuffer mCamera;
     MouseOrbitalControl mCameraControl;
+    const resource::ResourceFinder & mFinder;
 
-    std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListener;
+    DrawerShadows mDrawerShadows;
+
+    std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListening;
+    Gui mGui;
 };
 
 
-inline Scene::Scene(graphics::AppInterface & aAppInterface, Mesh aMesh) :
-    mMesh{std::move(aMesh)},
-    mCamera{math::getRatio<float>(aAppInterface.getFramebufferSize()), Camera::gDefaults},
-    mCameraControl{aAppInterface.getWindowSize(), Camera::gDefaults.vFov}
+inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
+                    Mesh aMesh,
+                    const resource::ResourceFinder & aFinder) :
+    mAppInterface{*aGlfwApp.getAppInterface()},
+    mEntities{ 
+        moveInitVector<Pass::Visual, 1>({Pass::Visual{
+            // Is it safe? Do we have a guarantee regarding member order?
+            // (see the std::move)
+            .mInstances = populateTripleInstances(aMesh.mStream.mBoundingBox),
+            .mMesh = std::move(aMesh),
+        }})
+    },
+    mCamera{math::getRatio<float>(aGlfwApp.getAppInterface()->getFramebufferSize()), Camera::gDefaults},
+    mCameraControl{aGlfwApp.getAppInterface()->getWindowSize(), Camera::gDefaults.vFov},
+    mFinder{aFinder},
+    mDrawerShadows{aGlfwApp, aFinder},
+    mGui{aGlfwApp}
 {
-    using namespace std::placeholders;
+    graphics::AppInterface & appInterface = *aGlfwApp.getAppInterface();
 
-    aAppInterface.registerCursorPositionCallback(
-        std::bind(&MouseOrbitalControl::callbackCursorPosition, &mCameraControl, _1, _2));
+    appInterface.registerCursorPositionCallback(
+        [this](double xpos, double ypos)
+        {
+            if(!mGui.mImguiUi.isCapturingMouse())
+            {
+                mCameraControl.callbackCursorPosition(xpos, ypos);
+            }
+        });
 
-    aAppInterface.registerMouseButtonCallback(
-        std::bind(&MouseOrbitalControl::callbackMouseButton, &mCameraControl, _1, _2, _3, _4, _5));
+    appInterface.registerMouseButtonCallback(
+        [this](int button, int action, int mods, double xpos, double ypos)
+        {
+            if(!mGui.mImguiUi.isCapturingMouse())
+            {
+                mCameraControl.callbackMouseButton(button, action, mods, xpos, ypos);
+            }
+        });
 
-    aAppInterface.registerScrollCallback(
-        std::bind(&MouseOrbitalControl::callbackScroll, &mCameraControl, _1, _2));
+    appInterface.registerScrollCallback(
+        [this](double xoffset, double yoffset)
+        {
+            if(!mGui.mImguiUi.isCapturingMouse())
+            {
+                mCameraControl.callbackScroll(xoffset, yoffset);
+            }
+        });
 
-    mSizeListener = aAppInterface.listenWindowResize(
+    mSizeListening = appInterface.listenWindowResize(
         [this](const math::Size<2, int> & size)
         {
             mCamera.resetProjection(math::getRatio<float>(size), Camera::gDefaults); 
             mCameraControl.setWindowSize(size);
         });
+
+    // Add floor
+    {
+        Mesh floor{
+            .mStream = makeRectangle(math::Rectangle<GLfloat>{{-5.f, -5.f}, {10.f, 10.f}}),
+            .mMaterial = std::make_shared<Material>(Material{
+                .mEffect = loadEffect(mFinder.pathFor("effects/Mesh.sefx"), mFinder),
+            }),
+            .mName = "floor",
+        };
+        mEntities.push_back(Pass::Visual{
+            .mInstances = populateInstances({{
+                PoseColor{
+                    .pose = math::trans3d::rotateX(math::Degree<float>(-90.f)) // Normals to face "up"
+                        * math::trans3d::translate(math::Vec<3, float>{ 0.f, -2.f, 0.f}),
+                }
+            }}),
+            .mMesh = std::move(floor),
+        });
+    }
+
+
+    // Annotate the existing techniques as "view: left"
+    // Add a copy of each technique, annotated "view: right"
+    for(auto & [_instances, mesh] : mEntities)
+    {
+        // TODO we have to check if the effect was already present on another mesh
+        duplicateTechniques(*mesh.mMaterial->mEffect);
+    }
 }
 
 
@@ -123,27 +254,100 @@ inline void Scene::update()
 }
 
 
-inline void Scene::render(Renderer & aRenderer) const
+inline void Scene::recompileRightView()
 {
-    UniformBlocks uniformBlocks{
-         {BlockSemantic::Viewing, &mCamera.mViewing},
-    };
+    for(auto & [_instances, mesh] : mEntities)
+    {
+        for (auto & technique : mesh.mMaterial->mEffect->mTechniques)
+        {
+            if(technique.mAnnotations.at(gViewSid) == gRightSid)
+            {
+                attemptRecompile(technique);
+            }
+        }
+    }
+}
 
+
+inline void Scene::render(Renderer & aRenderer)
+{
     math::hdr::Rgb_f lightColor =  to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
-    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.2f, 0.1f};
+    math::hdr::Rgb_f ambientColor =  math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
 
-    snac::UniformRepository uniforms{
-        {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
-        {snac::Semantic::LightPosition, {lightPosition}},
-        {snac::Semantic::AmbientColor, {ambientColor}},
+    ProgramSetup setup{
+        .mUniforms{
+            {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
+            {snac::Semantic::LightPosition, {lightPosition}},
+            {snac::Semantic::AmbientColor, {ambientColor}},
+            {snac::Semantic::NearDistance, -mCamera.getCurrentParameters().zNear},
+            {snac::Semantic::FarDistance,  -mCamera.getCurrentParameters().zFar},
+        },
+        .mUniformBlocks{
+            {BlockSemantic::Viewing, &mCamera.mViewing},
+        },
     };
 
+    {
+        auto scopedUI = mGui.startUI();
+        ImGui::Begin("Render Controls");
+
+        static const char* modes[] = {"Side-by-side", "Shadows"};
+        static int currentMode = 0;
+        ImGui::ListBox("Mode", &currentMode, modes, IM_ARRAYSIZE(modes), 4);
+        switch(currentMode)
+        {
+            case 0:
+                drawSideBySide(aRenderer, setup);
+                break;
+            case 1:
+                mDrawerShadows.draw(mEntities, aRenderer, setup);
+                break;
+        }
+
+        if(ImGui::Button("Recompile Right"))
+        {
+            recompileRightView();
+        }
+
+        ImGui::End();
+    }
+
+    mGui.render();
+}
+
+
+void Scene::drawSideBySide(Renderer & aRenderer,
+                           ProgramSetup & aProgramSetup)
+{
     clear();
-    aRenderer.render(mMesh,
-                     mInstances,
-                     std::move(uniforms),
-                     uniformBlocks);
+
+    auto scissorScope = graphics::scopeFeature(GL_SCISSOR_TEST, true);
+
+    glViewport(0,
+               0, 
+               mAppInterface.getFramebufferSize().width(), 
+               mAppInterface.getFramebufferSize().height());
+
+    // Left view
+    static const Pass leftViewPass{"left-view", {{gViewSid, gLeftSid}}};
+
+    glScissor(0,
+              0,
+              mAppInterface.getFramebufferSize().width()/2,
+              mAppInterface.getFramebufferSize().height());
+
+    leftViewPass.draw(mEntities, aRenderer, aProgramSetup);
+
+    // Right view
+    static const Pass rightViewPass{"right-view", {{gViewSid, gRightSid}}};
+
+    glScissor(mAppInterface.getFramebufferSize().width()/2,
+              0, 
+              mAppInterface.getFramebufferSize().width(),
+              mAppInterface.getFramebufferSize().height());
+
+    rightViewPass.draw(mEntities, aRenderer, aProgramSetup);
 }
 
 

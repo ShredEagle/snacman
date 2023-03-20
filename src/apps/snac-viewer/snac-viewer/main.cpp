@@ -52,9 +52,7 @@ void runApplication()
                                       //TODO, applicationFlags
     };
 
-    // Match the viewport to the framebuffer size.
-    auto viewportListening = glfwApp.getAppInterface()->listenFramebufferResize(
-        [](const math::Size<2, int> & size){ glViewport(0, 0, size.width(), size.height()); });
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
     resource::ResourceFinder finder = makeResourceFinder();
 
@@ -63,10 +61,11 @@ void runApplication()
     //
 
     Scene scene{
-        *glfwApp.getAppInterface(),
+        glfwApp,
         //loadModel(finder.pathFor("Box/glTF/Box.gltf"),
         loadModel(finder.pathFor("Avocado/glTF/Avocado.gltf"),
-                  loadEffect(finder.pathFor("shaders/PhongLightingTextures.prog")))
+                  loadEffect(finder.pathFor("effects/MeshTextures.sefx"), finder)),
+        finder,
     };
     Renderer renderer;
 
@@ -100,7 +99,7 @@ int main(int argc, char * argv[])
     try
     {
         snac::detail::initializeLogging();
-        spdlog::set_level(spdlog::level::trace);
+        spdlog::set_level(spdlog::level::debug);
     }
     catch (std::exception & aException)
     {

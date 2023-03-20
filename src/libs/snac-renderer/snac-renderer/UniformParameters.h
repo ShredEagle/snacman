@@ -2,12 +2,14 @@
 
 
 #include "Semantic.h"
+#include "StackRepository.h"
 
 #include <renderer/AttributeDimension.h>
 #include <renderer/GL_Loader.h>
 #include <renderer/MappedGL.h>
 #include <renderer/Uniforms.h>
 #include <renderer/UniformBuffer.h>
+#include <renderer/Texture.h>
 
 #include <map>
 #include <variant>
@@ -61,9 +63,14 @@ struct UniformParameter
 };
 
 
-using UniformRepository = std::map<Semantic, UniformParameter>;
+using UniformRepository = StackRepository<Semantic, UniformParameter>;
 
-using UniformBlocks = std::map<BlockSemantic, const graphics::UniformBufferObject *>;
+using UniformBlocks = StackRepository<BlockSemantic, const graphics::UniformBufferObject *>;
+
+// TODO We should get rid of the std::variant, but the Text system causes a complication here
+using TextureRepository = StackRepository<Semantic,
+                                          std::variant<std::shared_ptr<graphics::Texture>,
+                                                       graphics::Texture *>>;
 
 
 } // namespace snac

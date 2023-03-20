@@ -1,5 +1,9 @@
 #pragma once
 
+
+#include <spdlog/spdlog.h>
+
+
 namespace ad {
 namespace snac {
 

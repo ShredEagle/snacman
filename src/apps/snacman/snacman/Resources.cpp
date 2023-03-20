@@ -18,6 +18,12 @@ struct Effect;
 struct Font;
 struct Mesh;
 
+Resources::~Resources()
+{
+    SELOG(debug)("Destructing snacman::Resources instance.");
+}
+
+
 std::shared_ptr<Mesh> Resources::getShape(filesystem::path aShape)
 {
     // This is bad design, but lazy to get the result quickly
@@ -43,7 +49,7 @@ std::shared_ptr<Font> Resources::getFont(filesystem::path aFont, unsigned int aP
 }
 
 
-std::shared_ptr<Effect> Resources::getShaderEffect(filesystem::path aProgram)
+std::shared_ptr<Effect> Resources::getTrivialShaderEffect(filesystem::path aProgram)
 {
     return mEffects.load(aProgram, mFinder, mRenderThread, *this);
 }
@@ -54,7 +60,7 @@ std::shared_ptr<Effect> Resources::EffectLoader(
     RenderThread<snacgame::Renderer> & aRenderThread,
     Resources & /*aResources*/)
 {
-    return loadEffect(aProgram);
+    return loadTrivialEffect(aProgram);
 }
 
 
@@ -76,6 +82,28 @@ std::shared_ptr<Mesh> Resources::MeshLoader(
 {
     return aRenderThread.loadShape(aMesh, aResources)
             .get(); // synchronize call
+}
+
+
+void Resources::recompilePrograms()
+{
+    // Note: this is a naive approach, I suspect this could lead to data races
+    bool allSuccess = true;
+    for(auto & [_stringId, effect] : mEffects) 
+    {
+        for (auto & technique : effect->mTechniques)
+        {
+            if (!attemptRecompile(technique))
+            {
+                allSuccess = false;
+            }
+        }
+    }
+
+    if(allSuccess)
+    {
+        SELOG(info)("All programs were recompiled successfully.");
+    }
 }
 
 

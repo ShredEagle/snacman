@@ -126,6 +126,7 @@ inline std::vector<math::Position<3, float>> getExpandedCubeVertices()
 }
 
 
+//  TODO use PositionNormalUV instead
 struct PositionNormal
 {
     math::Position<3, float> position;
@@ -202,9 +203,10 @@ inline VertexStream makeCube()
 }
 
 
-struct PositionUV
+struct PositionNormalUV
 {
     math::Position<3, float> position;
+    math::Vec<3, float> normal;
     math::Position<2, float> uv;
 };
 
@@ -217,16 +219,32 @@ inline VertexStream makeRectangle(math::Rectangle<GLfloat> aRectangle)
     // Make a VBO and load the vertices into it
     auto index = geometry.mVertexBuffers.size();
 
-    std::array<PositionUV, 4> vertices = {
-        PositionUV{.position = {aRectangle.topLeft(), 0.f},     .uv = {0.f, 1.f}},
-        PositionUV{.position = {aRectangle.bottomLeft(), 0.f},  .uv = {0.f, 0.f}},
-        PositionUV{.position = {aRectangle.topRight(), 0.f},    .uv = {1.f, 1.f}},
-        PositionUV{.position = {aRectangle.bottomRight(), 0.f}, .uv = {1.f, 0.f}},
+    std::array<PositionNormalUV, 4> vertices = {
+        PositionNormalUV{
+            .position = {aRectangle.topLeft(), 0.f},
+            .normal = {0.f, 0.f, 1.f},
+            .uv = {0.f, 1.f}
+        },
+        PositionNormalUV{
+            .position = {aRectangle.bottomLeft(), 0.f},
+            .normal = {0.f, 0.f, 1.f},
+            .uv = {0.f, 0.f}
+        },
+        PositionNormalUV{
+            .position = {aRectangle.topRight(), 0.f},
+            .normal = {0.f, 0.f, 1.f},
+            .uv = {1.f, 1.f}
+        },
+        PositionNormalUV{
+            .position = {aRectangle.bottomRight(), 0.f},
+            .normal = {0.f, 0.f, 1.f},
+            .uv = {1.f, 0.f}
+        },
     };
 
     geometry.mVertexBuffers.push_back({
         .mBuffer = loadVBO(std::span{vertices}),
-        .mStride = sizeof(PositionUV),
+        .mStride = sizeof(PositionNormalUV),
     });
 
     {
@@ -237,11 +255,18 @@ inline VertexStream makeRectangle(math::Rectangle<GLfloat> aRectangle)
         };
         geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, position});
     }
-
+    {
+        graphics::ClientAttribute normal{
+            .mDimension = 3,
+            .mOffset = offsetof(PositionNormal, normal),
+            .mComponentType = GL_FLOAT
+        };
+        geometry.mAttributes.emplace(Semantic::Normal, AttributeAccessor{index, normal});
+    }
     {
         graphics::ClientAttribute uv{
             .mDimension = 2,
-            .mOffset = offsetof(PositionUV, uv),
+            .mOffset = offsetof(PositionNormalUV, uv),
             .mComponentType = GL_FLOAT
         };
         geometry.mAttributes.emplace(Semantic::TextureCoords0, AttributeAccessor{index, uv});

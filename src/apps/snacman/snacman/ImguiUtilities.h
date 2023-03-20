@@ -9,7 +9,7 @@
 namespace ad {
 namespace snac {
 
-// TODO Those utilities should be more generic, and leave in some shared repo.
+// TODO Those utilities should be more generic, and live in some shared repo.
 void imguiLogLevelSelection(bool * open = nullptr)
 {
     ImGui::Begin("Logging", open);

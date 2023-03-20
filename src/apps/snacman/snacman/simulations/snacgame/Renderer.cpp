@@ -37,8 +37,8 @@ TextRenderer::TextRenderer() :
 
 void TextRenderer::render(Renderer & aRenderer,
                           const visu::GraphicState & aState,
-                          const snac::UniformRepository & aUniforms,
-                          const snac::UniformBlocks & aUniformBlocks)
+                          snac::UniformRepository & aUniforms,
+                          snac::UniformBlocks & aUniformBlocks)
 {
     TIME_RECURRING_CLASSFUNC(Render);
 
@@ -125,14 +125,13 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(filesystem::path aShape,
 {
     if (aShape.string() == "CUBE")
     {
-        return std::make_shared<snac::Mesh>(snac::loadCube(
-            aResources.getShaderEffect("shaders/PhongLighting.prog")));
+        return std::make_shared<snac::Mesh>(
+            snac::loadCube(aResources.getTrivialShaderEffect("shaders/PhongLightingVertexColor.prog")));
     }
     else
     {
-        return std::make_shared<snac::Mesh>(loadModel(
-            aShape,
-            aResources.getShaderEffect("shaders/PhongLightingTextures.prog")));
+        return std::make_shared<snac::Mesh>(
+            loadModel(aShape, aResources.getTrivialShaderEffect("shaders/PhongLightingTextures.prog")));
     }
 }
 
@@ -141,8 +140,10 @@ std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
                                                snac::Resources & aResources)
 {
     return std::make_shared<snac::Font>(
-        std::move(aFontFace), aPixelHeight,
-        aResources.getShaderEffect("shaders/Text.prog"));
+        std::move(aFontFace),
+        aPixelHeight,
+        aResources.getTrivialShaderEffect("shaders/Text.prog")
+    );
 }
 
 void Renderer::render(const visu::GraphicState & aState)

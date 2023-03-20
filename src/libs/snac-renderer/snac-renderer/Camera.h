@@ -10,23 +10,30 @@
 namespace ad {
 namespace snac {
 
+math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVerticalFov,
+                                                    float aAspectRatio,
+                                                    float aZNear,
+                                                    float aZFar);
 
-// TODO rename to camera buffer
 struct Camera
 {
+    // TODO rename perspectiveparameters
     struct Parameters
     {
         math::Radian<float> vFov;
-        float zNear = -0.1f;
-        float zFar = -500.f;
+        float zNear;
+        float zFar;
     };
 
     Camera(float aAspectRatio, Parameters aParameters);
 
-    void resetProjection(float aAspectRatio, Parameters aParameters);
-    void setWorldToCamera(const math::AffineMatrix<4, GLfloat> & aTransformation);
+    void setPose(math::AffineMatrix<4, GLfloat> aPose)
+    { mWorldToCamera = aPose; }
 
-    graphics::UniformBufferObject mViewing;
+    void setPerspectiveProjection(float aAspectRatio, Parameters aParameters);
+
+    math::Matrix<4, 4, GLfloat> assembleViewMatrix() const
+    { return mWorldToCamera * mProjection; }
 
     static constexpr Parameters gDefaults{
         .vFov = math::Degree<float>{45.f},
@@ -35,6 +42,27 @@ struct Camera
         .zNear = -0.1f,
         .zFar = -500.f,
     };
+
+private:
+    math::AffineMatrix<4, GLfloat> mWorldToCamera = math::AffineMatrix<4, GLfloat>::Identity();
+    math::Matrix<4, 4, GLfloat> mProjection;
+};
+
+// TODO redesign, potentially in term of a Camera member?
+struct CameraBuffer
+{
+    CameraBuffer(float aAspectRatio, Camera::Parameters aParameters);
+
+    void resetProjection(float aAspectRatio, Camera::Parameters aParameters);
+    void setWorldToCamera(const math::AffineMatrix<4, GLfloat> & aTransformation);
+
+    graphics::UniformBufferObject mViewing;
+
+    const Camera::Parameters getCurrentParameters() const
+    { return mCurrentParameters; }
+
+private:
+    Camera::Parameters mCurrentParameters;
 };
 
 

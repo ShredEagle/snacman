@@ -68,6 +68,7 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     Input.cpp
+    RenderThread.cpp
     Resources.cpp
 
     simulations/snacgame/Entities.cpp

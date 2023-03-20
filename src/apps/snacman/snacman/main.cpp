@@ -79,6 +79,14 @@ void runApplication()
 
     ConfigurableSettings configurableSettings;
 
+    // Must outlive all FontFaces: 
+    // * it must outlive the EntityManager (which might contain Freetype FontFaces)
+    // * it must outlive the resource managers holding fonts
+    // * it must outlive the RenderThread, holding fonts
+    // TODO Design a clearer approach to "long lived library objects"
+    // This has been a recurring problem, moving this freetype instance up each time to try to outlive all the things.
+    arte::Freetype freetype;
+
     //
     // Initialize rendering subsystem
     //
@@ -91,8 +99,13 @@ void runApplication()
     glfwApp.removeCurrentContext();
 
     GraphicStateFifo<snacgame::Renderer> graphicStates;
-    RenderThread renderingThread{glfwApp, graphicStates, std::move(renderer),
-                                imguiUi, configurableSettings.mInterpolate};
+    RenderThread renderingThread{
+        glfwApp,
+        graphicStates,
+        std::move(renderer),
+        imguiUi,
+        configurableSettings
+    };
 
     //
     // Initialize input devices
@@ -109,6 +122,7 @@ void runApplication()
         renderingThread,
         imguiUi,
         makeResourceFinder(),
+        freetype,
         input};
 
     //END_SINGLE(appInitSingle);

@@ -25,18 +25,25 @@ enum class Semantic
     // Usually uniform
     BaseColorFactor,
     BaseColorUVIndex,
+    Gamma,
     NormalUVIndex, // Index of the normal texture coordinates in the array of UV coordinates
     NormalMapScale,
     AmbientColor,
     LightColor,
     LightPosition,
+    LightViewingMatrix,
     WorldToCamera,
     Projection,
+    ViewingMatrix, // Composed WorldToCamera and Projection matrices.
     FramebufferResolution,
+    NearDistance,
+    FarDistance,
+    ShadowBias,
     // Usually samplers
     BaseColorTexture,
     NormalTexture,
     MetallicRoughnessTexture,
+    ShadowMap,
     FontAtlas, // TODO should it just be atlas, used for both sprites and fonts?
     //SpriteAtlas,
 

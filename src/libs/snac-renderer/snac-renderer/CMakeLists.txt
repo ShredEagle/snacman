@@ -13,6 +13,7 @@ set(${TARGET_NAME}_HEADERS
     Semantic.h
     SetupDrawing.h
     ShaderResource.h
+    StackRepository.h
     UniformParameters.h
 
     gltf/GltfLoad.h

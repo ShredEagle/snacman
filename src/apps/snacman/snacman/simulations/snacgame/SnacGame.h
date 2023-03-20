@@ -50,6 +50,7 @@ struct ImguiDisplays
     bool mShowRenderProfiler = false;
     bool mSpeedControl = false;
     bool mShowPlayerInfo = false;
+    bool mShowRenderControls = false;
 
     void display()
     {
@@ -61,6 +62,7 @@ struct ImguiDisplays
         ImGui::Checkbox("Main profiler",  &mShowMainProfiler);
         ImGui::Checkbox("Render profiler",  &mShowRenderProfiler);
         ImGui::Checkbox("Player info",  &mShowPlayerInfo);
+        ImGui::Checkbox("Render controls",  &mShowRenderControls);
         ImGui::Checkbox("ImguiDemo", &mShowImguiDemo);
         ImGui::End();
     }
@@ -101,6 +103,7 @@ public:
              snac::RenderThread<Renderer_t> & aRenderThread,
              imguiui::ImguiUi & aImguiUi,
              resource::ResourceFinder aResourceFinder,
+             arte::Freetype & aFreetype,
              RawInput & aInput);
 
     bool update(float aDelta, RawInput & aInput);

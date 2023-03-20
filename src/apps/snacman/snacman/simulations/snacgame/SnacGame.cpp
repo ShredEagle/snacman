@@ -19,6 +19,8 @@
 
 #include <snacman/Profiling.h>
 
+#include <handy/Guard.h>
+
 #include <imguiui/ImguiUi.h>
 #include <math/Color.h>
 
@@ -54,11 +56,12 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    snac::RenderThread<Renderer_t> & aRenderThread,
                    imguiui::ImguiUi & aImguiUi,
                    resource::ResourceFinder aResourceFinder,
+                   arte::Freetype & aFreetype,
                    RawInput & aInput) :
     mAppInterface{&aAppInterface},
     mGameContext{
-        .mResources =
-            snac::Resources{std::move(aResourceFinder), aRenderThread},
+        .mResources = 
+            snac::Resources{std::move(aResourceFinder), aFreetype, aRenderThread},
         .mRenderThread = aRenderThread,
     },
     mMappingContext{mGameContext.mWorld, mGameContext.mResources},
@@ -93,131 +96,149 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 {
     TIME_RECURRING_FUNC(Main);
 
-    mImguiUi.mFrameMutex.lock();
+    bool recompileShaders = false;
     {
-        TIME_RECURRING(Main, "new frame");
+        std::lock_guard lock{mImguiUi.mFrameMutex};
         mImguiUi.newFrame();
-    }
-    // NewFrame() updates the io catpure flag: consume them ASAP
-    // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
-    // mImguiUi.newFrame();
-    aInhibiter.resetCapture(static_cast<ImguiInhibiter::WantCapture>(
-        (mImguiUi.isCapturingMouse() ? ImguiInhibiter::Mouse
-                                     : ImguiInhibiter::Null)
-        | (mImguiUi.isCapturingKeyboard() ? ImguiInhibiter::Keyboard
-                                          : ImguiInhibiter::Null)));
+        // We must make sure to match each newFrame() to a render(),
+        // otherwise we might get access violation in the RenderThread, when calling ImguiUi::renderBackend()
+        Guard renderGuard{[this]()
+        {
+            this->mImguiUi.render();
+        }};
 
-    if (mImguiDisplays.mShowPlayerInfo)
-    {
-        ent::Phase update;
-        ent::Query<component::PlayerSlot, component::Geometry, component::PlayerMoveState> playerQuery{
-            mGameContext.mWorld};
-        int playerIndex = 0;
-        ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
-        playerQuery.each([&](const component::Geometry & aPlayerGeometry, component::PlayerMoveState & aMoveState) {
-            int intPosX =
-                static_cast<int>(aPlayerGeometry.mPosition.x() + 0.5f);
-            int intPosY =
-                static_cast<int>(aPlayerGeometry.mPosition.y() + 0.5f);
-            float fracPosX = aPlayerGeometry.mPosition.x() - intPosX;
-            float fracPosY = aPlayerGeometry.mPosition.y() - intPosY;
+        // NewFrame() updates the io catpure flag: consume them ASAP
+        // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
+        aInhibiter.resetCapture(static_cast<ImguiInhibiter::WantCapture>(
+            (mImguiUi.isCapturingMouse() ? ImguiInhibiter::Mouse
+                                        : ImguiInhibiter::Null)
+            | (mImguiUi.isCapturingKeyboard() ? ImguiInhibiter::Keyboard
+                                            : ImguiInhibiter::Null)));
 
-            char playerHeader[64];
-            std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", playerIndex);
-            if(ImGui::CollapsingHeader(playerHeader))
+        mImguiDisplays.display();
+
+        if (mImguiDisplays.mShowPlayerInfo)
+        {
+            ent::Phase update;
+            ent::Query<component::PlayerSlot, component::Geometry, component::PlayerMoveState> playerQuery{
+                mGameContext.mWorld};
+            int playerIndex = 0;
+            ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
+            playerQuery.each([&](const component::Geometry & aPlayerGeometry, component::PlayerMoveState & aMoveState) {
+                int intPosX =
+                    static_cast<int>(aPlayerGeometry.mPosition.x() + 0.5f);
+                int intPosY =
+                    static_cast<int>(aPlayerGeometry.mPosition.y() + 0.5f);
+                float fracPosX = aPlayerGeometry.mPosition.x() - intPosX;
+                float fracPosY = aPlayerGeometry.mPosition.y() - intPosY;
+
+                char playerHeader[64];
+                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", playerIndex);
+                if(ImGui::CollapsingHeader(playerHeader))
+                {
+                    ImGui::Text("Player pos: %f, %f", aPlayerGeometry.mPosition.x(),
+                                aPlayerGeometry.mPosition.y());
+                    ImGui::Text("Player integral part: %d, %d", intPosX, intPosY);
+                    ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
+                    ImGui::Text("Current portal %d", aMoveState.mCurrentPortal);
+                    ImGui::Text("Dest portal %d", aMoveState.mDestinationPortal);
+                    ImGui::Text("Player MoveState:");
+                    if (aMoveState.mAllowedMove & gPlayerMoveFlagDown)
+                    {
+                        ImGui::SameLine();
+                        ImGui::Text("Down");
+                    }
+                    if (aMoveState.mAllowedMove & gPlayerMoveFlagUp)
+                    {
+                        ImGui::SameLine();
+                        ImGui::Text("Up");
+                    }
+                    if (aMoveState.mAllowedMove & gPlayerMoveFlagRight)
+                    {
+                        ImGui::SameLine();
+                        ImGui::Text("Right");
+                    }
+                    if (aMoveState.mAllowedMove & gPlayerMoveFlagLeft)
+                    {
+                        ImGui::SameLine();
+                        ImGui::Text("Left");
+                    }
+                }
+            });
+            ImGui::End();
+        }
+        if (mImguiDisplays.mShowLogLevel)
+        {
+            snac::imguiLogLevelSelection(&mImguiDisplays.mShowLogLevel);
+        }
+        if (mImguiDisplays.mShowMappings)
+        {
+            mMappingContext->drawUi(aInput, &mImguiDisplays.mShowMappings);
+        }
+        if (mImguiDisplays.mShowImguiDemo)
+        {
+            ImGui::ShowDemoWindow(&mImguiDisplays.mShowImguiDemo);
+        }
+        if (mImguiDisplays.mSpeedControl)
+        {
+            mGameContext.mSimulationControl.drawSimulationUi(mGameContext.mWorld, &mImguiDisplays.mSpeedControl);
+        }
+        if (mImguiDisplays.mShowSimulationDelta)
+        {
+            ImGui::Begin("Gameloop");
+            int simulationDelta = (int) duration_cast<std::chrono::milliseconds>(
+                                    aSettings.mSimulationDelta)
+                                    .count();
+            if (ImGui::InputInt("Simulation period (ms)", &simulationDelta))
             {
-                ImGui::Text("Player pos: %f, %f", aPlayerGeometry.mPosition.x(),
-                            aPlayerGeometry.mPosition.y());
-                ImGui::Text("Player integral part: %d, %d", intPosX, intPosY);
-                ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
-                ImGui::Text("Current portal %d", aMoveState.mCurrentPortal);
-                ImGui::Text("Dest portal %d", aMoveState.mDestinationPortal);
-                ImGui::Text("Player MoveState:");
-                if (aMoveState.mAllowedMove & gPlayerMoveFlagDown)
-                {
-                    ImGui::SameLine();
-                    ImGui::Text("Down");
-                }
-                if (aMoveState.mAllowedMove & gPlayerMoveFlagUp)
-                {
-                    ImGui::SameLine();
-                    ImGui::Text("Up");
-                }
-                if (aMoveState.mAllowedMove & gPlayerMoveFlagRight)
-                {
-                    ImGui::SameLine();
-                    ImGui::Text("Right");
-                }
-                if (aMoveState.mAllowedMove & gPlayerMoveFlagLeft)
-                {
-                    ImGui::SameLine();
-                    ImGui::Text("Left");
-                }
+                simulationDelta = std::clamp(simulationDelta, 1, 200);
             }
-        });
-        ImGui::End();
-    }
+            aSettings.mSimulationDelta = std::chrono::milliseconds{simulationDelta};
+            int updateDuration = (int) duration_cast<std::chrono::milliseconds>(
+                                    aSettings.mUpdateDuration)
+                                    .count();
+            if (ImGui::InputInt("Update duration (ms)", &updateDuration))
+            {
+                updateDuration = std::clamp(updateDuration, 1, 500);
+            }
+            aSettings.mUpdateDuration = std::chrono::milliseconds{updateDuration};
 
-    mImguiDisplays.display();
-    if (mImguiDisplays.mShowLogLevel)
-    {
-        snac::imguiLogLevelSelection(&mImguiDisplays.mShowLogLevel);
-    }
-    if (mImguiDisplays.mShowMappings)
-    {
-        mMappingContext->drawUi(aInput, &mImguiDisplays.mShowMappings);
-    }
-    if (mImguiDisplays.mShowImguiDemo)
-    {
-        ImGui::ShowDemoWindow(&mImguiDisplays.mShowImguiDemo);
-    }
-    if (mImguiDisplays.mSpeedControl)
-    {
-        mGameContext.mSimulationControl.drawSimulationUi(mGameContext.mWorld, &mImguiDisplays.mSpeedControl);
-    }
-    if (mImguiDisplays.mShowSimulationDelta)
-    {
-        ImGui::Begin("Gameloop", &mImguiDisplays.mShowSimulationDelta);
-        int simulationDelta = (int) duration_cast<std::chrono::milliseconds>(
-                                  aSettings.mSimulationDelta)
-                                  .count();
-        if (ImGui::InputInt("Simulation period (ms)", &simulationDelta))
-        {
-            simulationDelta = std::clamp(simulationDelta, 1, 200);
+            bool interpolate = aSettings.mInterpolate;
+            ImGui::Checkbox("State interpolation", &interpolate);
+            aSettings.mInterpolate = interpolate;
+            ImGui::End();
         }
-        aSettings.mSimulationDelta = std::chrono::milliseconds{simulationDelta};
 
-        int updateDuration = (int) duration_cast<std::chrono::milliseconds>(
-                                 aSettings.mUpdateDuration)
-                                 .count();
-        if (ImGui::InputInt("Update duration (ms)", &updateDuration))
+        if (mImguiDisplays.mShowMainProfiler)
         {
-            updateDuration = std::clamp(updateDuration, 1, 500);
+            ImGui::Begin("Main profiler", &mImguiDisplays.mShowMainProfiler);
+            std::string str;
+            snac::getProfiler(snac::Profiler::Main).print(str);
+            ImGui::TextUnformatted(str.c_str());
+            ImGui::End();
         }
-        aSettings.mUpdateDuration = std::chrono::milliseconds{updateDuration};
-
-        bool interpolate = aSettings.mInterpolate;
-        ImGui::Checkbox("State interpolation", &interpolate);
-        aSettings.mInterpolate = interpolate;
-        ImGui::End();
-    }
-    if (mImguiDisplays.mShowMainProfiler)
-    {
-        ImGui::Begin("Main profiler", &mImguiDisplays.mShowMainProfiler);
-        std::string str;
-        snac::getProfiler(snac::Profiler::Main).print(str);
-        ImGui::TextUnformatted(str.c_str());
-        ImGui::End();
-    }
-    if (mImguiDisplays.mShowRenderProfiler)
-    {
-        ImGui::Begin("Render profiler", &mImguiDisplays.mShowRenderProfiler);
-        ImGui::TextUnformatted(snac::getRenderProfilerPrint().get().c_str());
-        ImGui::End();
+        if (mImguiDisplays.mShowRenderProfiler)
+        {
+            ImGui::Begin("Render profiler", &mImguiDisplays.mShowRenderProfiler);
+            ImGui::TextUnformatted(snac::getRenderProfilerPrint().get().c_str());
+            ImGui::End();
+        }
+        if (mImguiDisplays.mShowRenderControls)
+        {
+            // TODO This should be an easier raii object
+            ImGui::Begin("Render controls");
+            Guard endGuard{[](){
+                ImGui::End();
+            }};
+            recompileShaders = ImGui::Button("Recompile shaders");
+        }
     }
 
-    mImguiUi.render();
-    mImguiUi.mFrameMutex.unlock();
+    if (recompileShaders)
+    {
+        mGameContext.mRenderThread.recompileShaders(mGameContext.mResources)
+            .get(); // so any exception is rethrown in this context
+    }
 }
 
 bool SnacGame::update(float aDelta, RawInput & aInput)

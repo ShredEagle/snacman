@@ -4,6 +4,8 @@
 #include "Mesh.h"
 #include "UniformParameters.h"
 
+#include <handy/StringId.h>
+
 #include <renderer/VertexSpecification.h>
 
 #include <map>
@@ -16,7 +18,7 @@ namespace snac {
 
 struct VertexArrayRepository
 {
-    const graphics::VertexArrayObject & get(const Mesh & aMesh,
+    const graphics::VertexArrayObject & get(const VertexStream & aVertices,
                                             const InstanceStream & aInstances,
                                             const IntrospectProgram & aProgram);
 
@@ -24,7 +26,7 @@ struct VertexArrayRepository
     //      this expose us to collision through address reuse.
     //      Instead, we should use values that are safe 
     //      (e.g. for a program, the value would be the attributes interface)
-    using Key = std::tuple<const Mesh *, const InstanceStream *, const graphics::Program *>;
+    using Key = std::tuple<const VertexStream *, const InstanceStream *, const graphics::Program *>;
     std::map<Key, graphics::VertexArrayObject> mVAOs;
 };
 
@@ -36,12 +38,13 @@ struct VertexArrayRepository
 /// might need reworking.
 struct WarningRepository
 {
+    // Note: also used for textures
     using WarnedUniforms = std::set<std::string>;
 
-    WarningRepository::WarnedUniforms & get(const Mesh & aMesh,
+    WarningRepository::WarnedUniforms & get(std::string_view aPassName,
                                             const IntrospectProgram & aProgram);
 
-    using Key = std::pair<const Mesh *, const graphics::Program *>;
+    using Key = std::pair<handy::StringId /*pass*/, const graphics::Program *>;
     std::map<Key, WarnedUniforms> mWarnings;
 };
 
@@ -50,7 +53,9 @@ void setUniforms(const UniformRepository & aUniforms,
                  const IntrospectProgram & aProgram,
                  WarningRepository::WarnedUniforms & aWarnedUniforms);
 
-void setTextures(const TextureRepository & aTextures, const IntrospectProgram & aProgram);
+void setTextures(const TextureRepository & aTextures,
+                 const IntrospectProgram & aProgram,
+                 WarningRepository::WarnedUniforms & aWarnedUniforms);
 
 void setBlocks(const UniformBlocks & aUniformBlocks, const IntrospectProgram & aProgram);
 
