@@ -55,8 +55,6 @@ void Renderer::draw(
     const InstanceStream & aInstances,
     const IntrospectProgram & aProgram)
 {
-    auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
-
     graphics::ScopedBind boundVAO{mVertexArrayRepo.get(aVertices, aInstances, aProgram)};
 
     graphics::ScopedBind usedProgram(aProgram);
@@ -112,8 +110,6 @@ void RendererDeprecated::render(const Mesh & aMesh,
                       TextureRepository & aTextures,
                       const std::vector<Technique::Annotation> & aTechniqueFilter)
 {
-    auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
-
     if (const IntrospectProgram * program = findTechnique(*aMesh.mMaterial, aTechniqueFilter);
         program != nullptr)
     {

@@ -322,6 +322,8 @@ void Scene::drawSideBySide(Renderer & aRenderer,
 {
     clear();
 
+    auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
+
     auto scissorScope = graphics::scopeFeature(GL_SCISSOR_TEST, true);
 
     glViewport(0,

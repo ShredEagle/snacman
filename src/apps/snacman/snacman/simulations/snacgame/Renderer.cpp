@@ -37,10 +37,11 @@ TextRenderer::TextRenderer() :
 
 void TextRenderer::render(Renderer & aRenderer,
                           const visu::GraphicState & aState,
-                          snac::UniformRepository & aUniforms,
-                          snac::UniformBlocks & aUniformBlocks)
+                          snac::ProgramSetup & aProgramSetup)
 {
     TIME_RECURRING_CLASSFUNC(Render);
+
+    auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
 
     // Note: this is pessimised code.
     // Most of these expensive operations should be taken out and the results
@@ -76,9 +77,10 @@ void TextRenderer::render(Renderer & aRenderer,
         // font.
         mGlyphInstances.respecifyData(std::span{textBufferData});
         BEGIN_RECURRING_GL("Draw string", drawStringProfile);
-        auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
-        aRenderer.mRenderer.render(text.mFont->mGlyphMesh, mGlyphInstances,
-                                   aUniforms, aUniformBlocks);
+        aRenderer.mTextPass.draw(text.mFont->mGlyphMesh,
+                                 mGlyphInstances,
+                                 aRenderer.mRenderer,
+                                 aProgramSetup);
         END_RECURRING_GL(drawStringProfile);
     }
 }
@@ -173,24 +175,25 @@ void Renderer::render(const visu::GraphicState & aState)
     math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
     math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
 
-    snac::UniformRepository uniforms{
-        {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
-        {snac::Semantic::LightPosition, {lightPosition}},
-        {snac::Semantic::AmbientColor, {ambientColor}},
-        {snac::Semantic::FramebufferResolution,
-         mAppInterface.getFramebufferSize()},
-    };
-
-    snac::UniformBlocks uniformBlocks{
-        {snac::BlockSemantic::Viewing, &mCamera.mViewing},
+    snac::ProgramSetup programSetup{
+        .mUniforms{
+            {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
+            {snac::Semantic::LightPosition, {lightPosition}},
+            {snac::Semantic::AmbientColor, {ambientColor}},
+            {snac::Semantic::FramebufferResolution,
+            mAppInterface.getFramebufferSize()},
+        },
+        .mUniformBlocks{
+            {snac::BlockSemantic::Viewing, &mCamera.mViewing},
+        }
     };
 
     BEGIN_RECURRING_GL("Draw_meshes", drawMeshProfile);
     for (const auto & [mesh, instances] : sortedMeshes)
     {
+        auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
         mMeshInstances.respecifyData(std::span{instances});
-        auto depthTest = graphics::scopeFeature(GL_DEPTH_TEST, true);
-        mRenderer.render(*mesh, mMeshInstances, uniforms, uniformBlocks);
+        mForwardMeshPass.draw(*mesh, mMeshInstances, mRenderer, programSetup);
     }
     END_RECURRING_GL(drawMeshProfile);
 
@@ -201,7 +204,7 @@ void Renderer::render(const visu::GraphicState & aState)
     // TODO Why it does not start at 20, but at 32 ????!
     // graphics::detail::RenderedGlyph glyph = mGlyphAtlas.mGlyphMap.at(90);
 
-    mTextRenderer.render(*this, aState, uniforms, uniformBlocks);
+    mTextRenderer.render(*this, aState, programSetup);
 }
 
 } // namespace snacgame

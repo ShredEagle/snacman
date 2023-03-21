@@ -77,6 +77,8 @@ void DrawerShadows::draw(
 {
     drawGui();
 
+    auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
+
     // GL_LINEAR seems required to get hardware PCF with sampler2DShadow.
     graphics::setFiltering(depthMap, mDetphMapFilter);
 

@@ -32,8 +32,7 @@ struct TextRenderer
 
     void render(Renderer & aRenderer, 
                 const visu::GraphicState & aState,
-                snac::UniformRepository & aUniforms,
-                snac::UniformBlocks & aUniformBlocks);
+                snac::ProgramSetup & aProgramSetup);
 
     snac::InstanceStream mGlyphInstances;
 };
@@ -60,7 +59,9 @@ public:
 
 private:
     graphics::AppInterface & mAppInterface;
-    snac::RendererDeprecated mRenderer;
+    snac::Renderer mRenderer;
+    snac::Pass mForwardMeshPass{"forward_mesh"};
+    snac::Pass mTextPass{"text"};
     snac::CameraBuffer mCamera;
     snac::InstanceStream mMeshInstances;
     TextRenderer mTextRenderer;
