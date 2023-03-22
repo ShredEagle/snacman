@@ -192,10 +192,15 @@ void Renderer::render(const visu::GraphicState & aState)
     };
 
     {
-        static snac::Camera shadowLightViewPoint{1, snac::Camera::gDefaults};
+        static snac::Camera shadowLightViewPoint{1, 
+            {
+                .vFov = math::Degree<float>(75.f),
+                .zNear = -1.f,
+                .zFar = -50.f,
+            }};
         shadowLightViewPoint.setPose(
             math::trans3d::rotateX(math::Degree<float>{65.f})
-            * math::trans3d::translate<GLfloat>({0.f, -3.f, -3.f}));
+            * math::trans3d::translate<GLfloat>({-8.f, -6.f, -10.f}));
 
             TIME_RECURRING_GL("Draw_meshes");
         // Poor man's pool
