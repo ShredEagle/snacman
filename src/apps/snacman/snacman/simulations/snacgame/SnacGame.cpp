@@ -302,11 +302,13 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         .each([cellSize, &state](ent::Handle<ent::Entity> aHandle,
                                  const component::Geometry & aGeometry,
                                  const component::VisualMesh & aVisualMesh) {
-            float yCoord = static_cast<float>((int)aGeometry.mLayer) * cellSize * 0.1f;
+            // The game defines the grid in the X-Y plane (origin bottom-left)
+            // we convert it to the right-handed GL coordinate system (i.e Y becomes -Z)
+            float height = static_cast<float>((int)aGeometry.mLayer) * cellSize * 0.1f;
             auto worldPosition = math::Position<3, float>{
-                -(float) aGeometry.mPosition.y(),
-                yCoord,
-                -(float) aGeometry.mPosition.x(),
+                (GLfloat)aGeometry.mPosition.x(),
+                height,
+                -(GLfloat)aGeometry.mPosition.y(),
             };
             state->mEntities.insert(aHandle.id(),
                                     visu::Entity{
