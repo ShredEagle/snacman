@@ -77,6 +77,10 @@ void runApplication()
                                     // TODO, applicationFlags
     };
 
+    // Ensures the messages are sent synchronously with the event triggering them
+    // This makes debug stepping much more feasible.
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+
     imguiui::ImguiUi imguiUi(glfwApp);
 
     ConfigurableSettings configurableSettings;

@@ -236,7 +236,8 @@ void setTextures(const TextureRepository & aTextures,
                 if(auto [iterator, didInsert] = aWarnedUniforms.insert(textureString);
                    didInsert)
                 {
-                SELOG(warn)(
+                // This is likely an error: the sampler being available means it is probably used.
+                SELOG(error)(
                     "{}: Could not find an a texture for semantic '{}' in program '{}'.", 
                     __func__,
                     textureString,
