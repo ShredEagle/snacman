@@ -298,15 +298,21 @@ inline void Scene::render(Renderer & aRenderer)
     ProgramSetup setup{
         .mUniforms{
             {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
+            // TODO Consolidate the light used in forward phong shading (currently the camera)
+            // with the light used to generate shadow (currently fixed above the scene)
             {snac::Semantic::LightPosition, {lightPosition}},
             {snac::Semantic::AmbientColor, {ambientColor}},
-            {snac::Semantic::NearDistance, -mCamera.getCurrentParameters().zNear},
-            {snac::Semantic::FarDistance,  -mCamera.getCurrentParameters().zFar},
         },
         .mUniformBlocks{
             {BlockSemantic::Viewing, &mCamera.mViewing},
         },
     };
+
+    // Note: assumes a square shadow map ATM
+    Camera shadowLightViewPoint{1, Camera::gDefaults};
+    shadowLightViewPoint.setPose(
+        math::trans3d::rotateX(math::Degree<float>{55.f})
+        * math::trans3d::translate<GLfloat>({0.f, -1.f, -15.f}));
 
     {
         auto scopedUI = mGui.startUI();
@@ -321,7 +327,7 @@ inline void Scene::render(Renderer & aRenderer)
                 drawSideBySide(aRenderer, setup);
                 break;
             case 1:
-                mDrawerShadows.draw(getVisuals(), aRenderer, setup);
+                mDrawerShadows.execute(getVisuals(), shadowLightViewPoint, aRenderer, setup);
                 break;
         }
 

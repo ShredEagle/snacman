@@ -31,8 +31,9 @@ public:
         ForwardShadows{aAppInterface, aTechniqueLoader}
     {}
 
-    void draw(
+    void execute(
         const std::vector<Pass::Visual> & aEntities,
+        const Camera & aLightViewpoint,
         Renderer & aRenderer,
         ProgramSetup & aProgramSetup);
 

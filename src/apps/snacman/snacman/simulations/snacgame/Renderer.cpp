@@ -192,7 +192,12 @@ void Renderer::render(const visu::GraphicState & aState)
     };
 
     {
-        TIME_RECURRING_GL("Draw_meshes");
+        static snac::Camera shadowLightViewPoint{1, snac::Camera::gDefaults};
+        shadowLightViewPoint.setPose(
+            math::trans3d::rotateX(math::Degree<float>{65.f})
+            * math::trans3d::translate<GLfloat>({0.f, -3.f, -3.f}));
+
+            TIME_RECURRING_GL("Draw_meshes");
         // Poor man's pool
         static std::list<snac::InstanceStream> instanceStreams;
         while(instanceStreams.size() < sortedMeshes.size())
@@ -208,7 +213,7 @@ void Renderer::render(const visu::GraphicState & aState)
             visuals.push_back({&*streamIt, mesh});
             ++streamIt;
         }
-        mPipelineShadows.draw(visuals, mRenderer, programSetup);
+        mPipelineShadows.execute(visuals, shadowLightViewPoint, mRenderer, programSetup);
     }
 
     //

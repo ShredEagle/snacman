@@ -80,8 +80,9 @@ void ForwardShadows::drawGui()
 }
 
 
-void ForwardShadows::draw(
+void ForwardShadows::execute(
     const std::vector<Pass::Visual> & aEntities,
+    const Camera & aLightViewpoint,
     Renderer & aRenderer,
     ProgramSetup & aProgramSetup)
 {
@@ -90,13 +91,14 @@ void ForwardShadows::draw(
 
     auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
+    auto scopeUniforms = aProgramSetup.mUniforms.push({
+            // Note: Distance means "absolute value" here, so negate the plane Z coordinate (which is negative)
+            {snac::Semantic::NearDistance, -aLightViewpoint.getCurrentParameters().zNear},
+            {snac::Semantic::FarDistance,  -aLightViewpoint.getCurrentParameters().zFar},
+    });
+
     // GL_LINEAR seems required to get hardware PCF with sampler2DShadow.
     graphics::setFiltering(depthMap, mDetphMapFilter);
-
-    Camera lightViewPoint{math::getRatio<GLfloat>(gShadowMapSize), Camera::gDefaults};
-    lightViewPoint.setPose(
-        math::trans3d::rotateX(math::Degree<float>{55.f})
-        * math::trans3d::translate<GLfloat>({0.f, -1.f, -15.f}));
 
     // Render shadow map
     {
@@ -108,7 +110,7 @@ void ForwardShadows::draw(
         glClear(GL_DEPTH_BUFFER_BIT);
 
         auto scopePush = 
-            aProgramSetup.mUniforms.push(Semantic::ViewingMatrix, lightViewPoint.assembleViewMatrix());
+            aProgramSetup.mUniforms.push(Semantic::ViewingMatrix, aLightViewpoint.assembleViewMatrix());
 
         depthMapPass.draw(aEntities, aRenderer, aProgramSetup);
     }
@@ -143,7 +145,7 @@ void ForwardShadows::draw(
 
         auto uniformPush = 
             aProgramSetup.mUniforms.push({
-                {Semantic::LightViewingMatrix, lightViewPoint.assembleViewMatrix()},
+                {Semantic::LightViewingMatrix, aLightViewpoint.assembleViewMatrix()},
                 {Semantic::ShadowBias, mShadowBias},
             });
 
