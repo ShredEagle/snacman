@@ -70,7 +70,7 @@ void main(void)
     // The normal in tangent space
     vec3 normal_tbn = normalize(
         // Mapping from [0.0, 1.0] to [-1.0, 1.0]
-        (texture(u_NormalTexture, ex_TextureCoords[0]).xyz * 2.0 - vec3(1.0))
+        (texture(u_NormalTexture, ex_TextureCoords[u_NormalUVIndex]).xyz * 2.0 - vec3(1.0))
         * vec3(u_NormalMapScale, u_NormalMapScale, 1.0));
 
     // MikkT see: http://www.mikktspace.com/
