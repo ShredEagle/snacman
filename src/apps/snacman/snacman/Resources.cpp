@@ -2,7 +2,6 @@
 
 #include "RenderThread.h"                   // for RenderThread
 #include "simulations/snacgame/Renderer.h"  // for Renderer
-#include <snac-renderer/ResourceLoad.h>
 
 #include <resource/ResourceManager.h>               // for ResourceManager
                                                     //
@@ -49,18 +48,18 @@ std::shared_ptr<Font> Resources::getFont(filesystem::path aFont, unsigned int aP
 }
 
 
-std::shared_ptr<Effect> Resources::getTrivialShaderEffect(filesystem::path aProgram)
+std::shared_ptr<Effect> Resources::getShaderEffect(filesystem::path aEffect)
 {
-    return mEffects.load(aProgram, mFinder, mRenderThread, *this);
+    return mEffects.load(aEffect, mFinder, mRenderThread, *this);
 }
 
 
 std::shared_ptr<Effect> Resources::EffectLoader(
-    filesystem::path aProgram, 
+    filesystem::path aEffect, 
     RenderThread<snacgame::Renderer> & aRenderThread,
-    Resources & /*aResources*/)
+    Resources & aResources)
 {
-    return loadTrivialEffect(aProgram);
+    return loadEffect(aEffect, aResources.getTechniqueLoader());
 }
 
 

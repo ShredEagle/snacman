@@ -1,6 +1,5 @@
 #pragma once
 
-#include "DrawerShadows.h"
 #include "Gui.h"
 
 #include <graphics/AppInterface.h>
@@ -13,7 +12,9 @@
 #include <math/Transformations.h>
 
 #include <snac-renderer/Camera.h>
+#include <snac-renderer/Cube.h>
 #include <snac-renderer/ResourceLoad.h>
+#include <snac-renderer/pipelines/ForwardShadows.h> 
 
 
 namespace ad {
@@ -148,15 +149,22 @@ struct Scene
     void drawSideBySide(Renderer & aRenderer,
                         ProgramSetup & aProgramSetup);
 
+    std::vector<Pass::Visual> getVisuals() const;
+
     const graphics::AppInterface & mAppInterface;
 
-    std::vector<Pass::Visual> mEntities;
+    struct Entity
+    {
+        InstanceStream mInstances;
+        Mesh mMesh;
+    };
+    std::vector<Entity> mEntities;
 
     CameraBuffer mCamera;
     MouseOrbitalControl mCameraControl;
     const resource::ResourceFinder & mFinder;
 
-    DrawerShadows mDrawerShadows;
+    ForwardShadows mDrawerShadows;
 
     std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListening;
     Gui mGui;
@@ -168,7 +176,7 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
                     const resource::ResourceFinder & aFinder) :
     mAppInterface{*aGlfwApp.getAppInterface()},
     mEntities{ 
-        moveInitVector<Pass::Visual, 1>({Pass::Visual{
+        moveInitVector<Entity, 1>({Entity{
             // Is it safe? Do we have a guarantee regarding member order?
             // (see the std::move)
             .mInstances = populateTripleInstances(aMesh.mStream.mBoundingBox),
@@ -178,7 +186,7 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
     mCamera{math::getRatio<float>(aGlfwApp.getAppInterface()->getFramebufferSize()), Camera::gDefaults},
     mCameraControl{aGlfwApp.getAppInterface()->getWindowSize(), Camera::gDefaults.vFov},
     mFinder{aFinder},
-    mDrawerShadows{aGlfwApp, aFinder},
+    mDrawerShadows{*aGlfwApp.getAppInterface(), TechniqueLoader{aFinder}},
     mGui{aGlfwApp}
 {
     graphics::AppInterface & appInterface = *aGlfwApp.getAppInterface();
@@ -222,11 +230,11 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
         Mesh floor{
             .mStream = makeRectangle(math::Rectangle<GLfloat>{{-5.f, -5.f}, {10.f, 10.f}}),
             .mMaterial = std::make_shared<Material>(Material{
-                .mEffect = loadEffect(mFinder.pathFor("effects/Mesh.sefx"), mFinder),
+                .mEffect = loadEffect(mFinder.pathFor("effects/Mesh.sefx"), TechniqueLoader{mFinder}),
             }),
             .mName = "floor",
         };
-        mEntities.push_back(Pass::Visual{
+        mEntities.push_back({
             .mInstances = populateInstances({{
                 PoseColor{
                     .pose = math::trans3d::rotateX(math::Degree<float>(-90.f)) // Normals to face "up"
@@ -245,6 +253,18 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
         // TODO we have to check if the effect was already present on another mesh
         duplicateTechniques(*mesh.mMaterial->mEffect);
     }
+}
+
+
+std::vector<Pass::Visual> Scene::getVisuals() const
+{
+    std::vector<Pass::Visual> visuals;
+    visuals.reserve(mEntities.size());
+    for (const auto & [instance, mesh] : mEntities)
+    {
+        visuals.push_back({&instance, &mesh});
+    }
+    return visuals;
 }
 
 
@@ -301,7 +321,7 @@ inline void Scene::render(Renderer & aRenderer)
                 drawSideBySide(aRenderer, setup);
                 break;
             case 1:
-                mDrawerShadows.draw(mEntities, aRenderer, setup);
+                mDrawerShadows.draw(getVisuals(), aRenderer, setup);
                 break;
         }
 
@@ -322,6 +342,8 @@ void Scene::drawSideBySide(Renderer & aRenderer,
 {
     clear();
 
+    auto visuals = getVisuals();
+
     auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
     auto scissorScope = graphics::scopeFeature(GL_SCISSOR_TEST, true);
@@ -339,7 +361,7 @@ void Scene::drawSideBySide(Renderer & aRenderer,
               mAppInterface.getFramebufferSize().width()/2,
               mAppInterface.getFramebufferSize().height());
 
-    leftViewPass.draw(mEntities, aRenderer, aProgramSetup);
+    leftViewPass.draw(visuals, aRenderer, aProgramSetup);
 
     // Right view
     static const Pass rightViewPass{"right-view", {{gViewSid, gRightSid}}};
@@ -349,7 +371,7 @@ void Scene::drawSideBySide(Renderer & aRenderer,
               mAppInterface.getFramebufferSize().width(),
               mAppInterface.getFramebufferSize().height());
 
-    rightViewPass.draw(mEntities, aRenderer, aProgramSetup);
+    rightViewPass.draw(visuals, aRenderer, aProgramSetup);
 }
 
 

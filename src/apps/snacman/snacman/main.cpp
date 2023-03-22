@@ -22,6 +22,8 @@
 
 #include <resource/ResourceFinder.h>
 
+#include <snac-renderer/ResourceLoad.h>
+
 #include <fstream>
 
 using namespace ad;
@@ -87,12 +89,17 @@ void runApplication()
     // This has been a recurring problem, moving this freetype instance up each time to try to outlive all the things.
     arte::Freetype freetype;
 
+    resource::ResourceFinder finder = makeResourceFinder();
+
     //
     // Initialize rendering subsystem
     //
 
     // Initialize the renderer
-    snacgame::Renderer renderer{*glfwApp.getAppInterface()};
+    // TODO we provide a Load<Technique> so the shadow pipeline can use it to load the effects for its cube.
+    // this complicates the interface a lot, and since it does not use the ResourceManager those effects are not hot-recompilable.
+    snac::TechniqueLoader techniqueLoader{finder};
+    snacgame::Renderer renderer{*glfwApp.getAppInterface(), techniqueLoader};
 
     // Context must be removed from this thread before it can be made current on
     // the render thread.
@@ -121,7 +128,7 @@ void runApplication()
         *glfwApp.getAppInterface(),
         renderingThread,
         imguiUi,
-        makeResourceFinder(),
+        std::move(finder),
         freetype,
         input};
 

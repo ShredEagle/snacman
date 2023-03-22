@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Gui.h"
+
+#include "../LoadInterface.h"
+#include "../Render.h"
 
 #include <handy/StringId.h>
 
@@ -11,19 +13,23 @@
 
 #include <resource/ResourceFinder.h>
 
-#include <snac-renderer/Cube.h>
-#include <snac-renderer/Render.h>
+#include <imguiui/ImguiUi.h>
 
 
 namespace ad {
 namespace snac {
 
 
-class DrawerShadows
+class ForwardShadows
 {
 public:
-    DrawerShadows(graphics::ApplicationGlfw & aGlfwApp,
-                  const resource::ResourceFinder & aFinder);
+    ForwardShadows(const graphics::AppInterface & aAppInterface,
+                   Load<Technique> & aTechniqueLoader);
+
+    ForwardShadows(const graphics::AppInterface & aAppInterface,
+                   Load<Technique> && aTechniqueLoader) :
+        ForwardShadows{aAppInterface, aTechniqueLoader}
+    {}
 
     void draw(
         const std::vector<Pass::Visual> & aEntities,
@@ -36,7 +42,6 @@ private:
     static constexpr math::Size<2, int> gShadowMapSize{1024, 1024};
 
     const graphics::AppInterface & mAppInterface;
-    const resource::ResourceFinder & mFinder;
 
     graphics::Texture depthMap{GL_TEXTURE_2D};
     graphics::FrameBuffer depthFBO;

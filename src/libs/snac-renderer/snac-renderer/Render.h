@@ -66,10 +66,11 @@ private:
 class Pass
 {
 public:
+    // TODO this is probably too specific an approach. But it avoids a lot of templating for the time being.
     struct Visual
     {
-        InstanceStream mInstances;
-        Mesh mMesh;
+        const InstanceStream * mInstances;
+        const Mesh * mMesh;
     };
 
     Pass(std::string aName, std::vector<Technique::Annotation> aTechniqueFilter = {}) :

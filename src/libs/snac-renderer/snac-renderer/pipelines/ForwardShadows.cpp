@@ -1,9 +1,11 @@
-#include "DrawerShadows.h"
+#include "ForwardShadows.h"
+
+#include "../Cube.h"
+#include "../ResourceLoad.h"
 
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 
-#include <snac-renderer/ResourceLoad.h>
 
 
 namespace ad {
@@ -15,10 +17,9 @@ handy::StringId gDepthSid{"depth"};
 handy::StringId gForwardShadowSid{"forward_shadow"};
 
 
-DrawerShadows::DrawerShadows(graphics::ApplicationGlfw & aGlfwApp,
-                             const resource::ResourceFinder & aFinder) :
-    mAppInterface{*aGlfwApp.getAppInterface()},
-    mFinder{aFinder},
+ForwardShadows::ForwardShadows(const graphics::AppInterface & aAppInterface,
+                               Load<Technique> & aTechniqueLoader) :
+    mAppInterface{aAppInterface},
     screenQuad{
         .mStream = makeQuad(),
         .mMaterial = std::make_shared<Material>(Material{
@@ -32,11 +33,12 @@ DrawerShadows::DrawerShadows(graphics::ApplicationGlfw & aGlfwApp,
     graphics::attachImage(depthFBO, depthMap, GL_DEPTH_ATTACHMENT);
 
     screenQuad.mMaterial->mEffect->mTechniques.push_back(
-        loadTechnique(mFinder.pathFor("shaders/ShowDepth.prog")));
+        aTechniqueLoader.get("shaders/ShowDepth.prog"));
+        //loadTechnique(mFinder.pathFor("shaders/ShowDepth.prog")));
 }
 
 
-void DrawerShadows::drawGui()
+void ForwardShadows::drawGui()
 {
     ImGui::Begin("Shadow Controls");
 
@@ -70,12 +72,13 @@ void DrawerShadows::drawGui()
 }
 
 
-void DrawerShadows::draw(
+void ForwardShadows::draw(
     const std::vector<Pass::Visual> & aEntities,
     Renderer & aRenderer,
     ProgramSetup & aProgramSetup)
 {
-    drawGui();
+    // TODO restore
+    //drawGui();
 
     auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
@@ -150,9 +153,9 @@ void DrawerShadows::draw(
 
         GLsizei viewportHeight = mAppInterface.getFramebufferSize().height() / 4;
         glViewport(0,
-                0, 
-                (GLsizei)(viewportHeight * getRatio<GLfloat>(gShadowMapSize)), 
-                viewportHeight);
+                   0, 
+                   (GLsizei)(viewportHeight * getRatio<GLfloat>(gShadowMapSize)), 
+                   viewportHeight);
 
         auto scopedTexture = aProgramSetup.mTextures.push(Semantic::BaseColorTexture, &depthMap);
 
