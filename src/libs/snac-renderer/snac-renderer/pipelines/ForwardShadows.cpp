@@ -162,10 +162,13 @@ void ForwardShadows::execute(
         }
 
         GLsizei viewportHeight = mAppInterface.getFramebufferSize().height() / 4;
-        glViewport(0,
-                   0, 
-                   (GLsizei)(viewportHeight * getRatio<GLfloat>(gShadowMapSize)), 
-                   viewportHeight);
+        Guard scopedViewport = graphics::scopeViewport({
+            {0, 0}, 
+            {
+                (GLsizei)(viewportHeight * getRatio<GLfloat>(gShadowMapSize)), 
+                   viewportHeight
+            }
+        });
 
         auto scopedTexture = aProgramSetup.mTextures.push(Semantic::BaseColorTexture, &depthMap);
 

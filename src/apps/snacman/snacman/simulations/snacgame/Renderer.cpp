@@ -224,7 +224,7 @@ void Renderer::render(const visu::GraphicState & aState)
     //
     // Text
     //
-    //mTextRenderer.render(*this, aState, programSetup);
+    mTextRenderer.render(*this, aState, programSetup);
 }
 
 } // namespace snacgame
