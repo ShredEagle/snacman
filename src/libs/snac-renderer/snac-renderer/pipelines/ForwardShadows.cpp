@@ -29,6 +29,14 @@ ForwardShadows::ForwardShadows(const graphics::AppInterface & aAppInterface,
     }
 {
     graphics::allocateStorage(depthMap, GL_DEPTH_COMPONENT24, gShadowMapSize);
+    {
+        auto boundDepthMap = graphics::ScopedBind{depthMap};
+        glTexParameteri(depthMap.mTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(depthMap.mTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glTexParameterfv(depthMap.mTarget, 
+                         GL_TEXTURE_BORDER_COLOR,
+                         math::hdr::Rgba_f{1.f, 0.f, 0.f, 0.f}.data());
+    }
 
     graphics::attachImage(depthFBO, depthMap, GL_DEPTH_ATTACHMENT);
 
