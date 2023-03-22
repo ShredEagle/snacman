@@ -124,17 +124,15 @@ public:
         mViewportListening{
             aGlfwApp.getAppInterface()->listenFramebufferResize(std::bind(
                 &RenderThread::resizeViewport, this, std::placeholders::_1))},
+        mRenderer{std::move(aRenderer)},
         mImguiUi{aImguiUi},
         mControls{
             .mInterpolate = aSettingsIncludingControls.mInterpolate,
         }
     {
         mThread = std::thread{
-            [this, &aStates, renderer = std::move(aRenderer)]() mutable {
-                // Note: the move below is why we cannot use std::bind.
-                // We know that the lambda is invoked only once, so we can move
-                // from its closure.
-                run(aStates, std::move(renderer));
+            [this, &aStates]() mutable {
+                run(aStates);
             }};
     }
 
@@ -280,11 +278,11 @@ private:
         mThread.join();
     }
 
-    void run(GraphicStateFifo_t & aStates, T_renderer && aRenderer)
+    void run(GraphicStateFifo_t & aStates)
     {
         try
         {
-            run_impl(aStates, std::move(aRenderer));
+            run_impl(aStates);
         }
         catch (...)
         {
@@ -335,7 +333,7 @@ private:
         }
     }
 
-    void run_impl(GraphicStateFifo_t & aStates, T_renderer && aRenderer)
+    void run_impl(GraphicStateFifo_t & aStates)
     {
         SELOG(info)("Render thread started");
 
@@ -348,19 +346,6 @@ private:
         // functions.
         mApplication.makeContextCurrent();
 
-        // At first, Renderer was constructed here directly, in the render
-        // thread, because the ctor makes OpenGL calls (and the GL context is
-        // current on the render thread).
-        // T_renderer renderer{aWindowSize_world};
-
-        // Yet, I am afraid it would be limiting, so it could either:
-        // * forward variadic ctor args
-        // * forward a factory function
-        // * move a fully constructed Renderer here (constructed in main thread,
-        // before releasing GL context) We currently use the 3rd approach.
-        // Important: move into a **local copy**, so dtor is called on the
-        // render thread, where GL context is active.
-        T_renderer renderer{std::move(aRenderer)};
 
         // Used by non-interpolating path, to decide if frame is dirty.
         Clock::time_point renderedPushTime;
@@ -372,7 +357,7 @@ private:
         {
             // Note: this is busy looping at the moment.
             // This should only be for a brief period at the beginning.
-            serviceOperations(aRenderer);
+            serviceOperations(*mRenderer);
 
             if(aStates.size() >= EntryBuffer<T_renderer>::BufferDepth)
             {
@@ -391,7 +376,7 @@ private:
             // Service all queued operations first.
             {
                 TIME_RECURRING(Render, "Service_operations");
-                serviceOperations(aRenderer);
+                serviceOperations(*mRenderer);
             }
 
             // TODO simulate delay in the render thread:
@@ -460,7 +445,7 @@ private:
                 
             mApplication.getAppInterface()->clear();
 
-            renderer.render(state);
+            mRenderer->render(state);
             SELOG(trace)("Render thread: Frame sent to GPU.");
 
             {
@@ -480,13 +465,33 @@ private:
                 getRenderProfilerPrint().print();
             }
         }
-
+        // This is smelly, but a consequence of the need to access it from both main and render thread
+        // while the destruction should occur on the render thread (where the GL context is)
+        mRenderer.reset(); // destruct on clean exit.
         SELOG(info)("Render thread stopping.");
     };
 
 private:
     graphics::ApplicationGlfw & mApplication;
     std::shared_ptr<graphics::AppInterface::SizeListener> mViewportListening;
+
+    // At first, Renderer was constructed in the run_impl scope, running on the render
+    // thread, because the ctor makes OpenGL calls (and the GL context is
+    // current on the render thread).
+    // Yet, it was limiting, so we could either:
+    // * forward variadic ctor args
+    // * forward a factory function
+    // * move a fully constructed Renderer here (constructed in main thread,
+    // before releasing GL context) We currently use the 3rd approach.
+    // Important: It was moved into a **local copy** scoped to run_impl, so dtor is called on the
+    // render thread, where GL context is active.
+    // This ensured that even in the case of exception cleaning occured on the RenderThread.
+    // Yet, this conflicts with the need to call the drawGui method from the main thread.
+    // This method needs to call drawGui() on the Renderer, and it would be unsafe to allow
+    // the renderer to be destroyed on one thread while it could be used on another.
+    // Kept in an optional so we can destruct it on "normal" exit, at the end of run_impl()
+    // (can you guess from the length of this comment I am not satisfied by this design?)
+    std::optional<T_renderer> mRenderer;
 
     std::queue<Operation> mOperations;
     std::mutex mOperationsMutex;
