@@ -151,6 +151,22 @@ std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
     );
 }
 
+
+void Renderer::continueGui()
+{
+    static std::atomic<bool> showShadowControls{false};
+    {
+        bool showShadow{showShadowControls};
+        ImGui::Checkbox("Shadows", &showShadow);
+        showShadowControls = showShadow;
+        if (showShadowControls)
+        {
+            mPipelineShadows.drawGui();
+        }
+    }
+}
+
+
 void Renderer::render(const visu::GraphicState & aState)
 {
     TIME_RECURRING(Render, "Render");

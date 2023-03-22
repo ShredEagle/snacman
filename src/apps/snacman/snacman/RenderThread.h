@@ -254,6 +254,11 @@ public:
         return future;
     }
 
+    void continueGui()
+    {
+        assert(!mStop); // It is unsafe to call this while the render thread might be (explicitly) destructing the Renderer.
+        mRenderer->continueGui();
+    }
 
     void checkRethrow()
     {

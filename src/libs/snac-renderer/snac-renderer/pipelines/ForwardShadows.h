@@ -22,6 +22,15 @@ namespace snac {
 
 class ForwardShadows
 {
+    struct Controls
+    {
+        void drawGui();
+
+        inline static const std::array<GLenum, 2> gAvailableFilters{GL_NEAREST, GL_LINEAR};
+        GLfloat mShadowBias = 0.00005f;
+        GLenum mDetphMapFilter = GL_LINEAR;
+    };
+
 public:
     ForwardShadows(const graphics::AppInterface & aAppInterface,
                    Load<Technique> & aTechniqueLoader);
@@ -37,9 +46,10 @@ public:
         Renderer & aRenderer,
         ProgramSetup & aProgramSetup);
 
-private:
-    void drawGui();
+    void drawGui()
+    { mControls.drawGui(); }
 
+private:
     static constexpr math::Size<2, int> gShadowMapSize{1024, 1024};
 
     const graphics::AppInterface & mAppInterface;
@@ -48,8 +58,7 @@ private:
     graphics::FrameBuffer depthFBO;
     Mesh screenQuad;
 
-    GLfloat mShadowBias = 0.00005f;
-    GLenum mDetphMapFilter = GL_NEAREST;
+    Controls mControls;
 };
 
 

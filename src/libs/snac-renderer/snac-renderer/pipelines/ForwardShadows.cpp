@@ -46,25 +46,27 @@ ForwardShadows::ForwardShadows(const graphics::AppInterface & aAppInterface,
 }
 
 
-void ForwardShadows::drawGui()
+void ForwardShadows::Controls::drawGui()
 {
-    ImGui::Begin("Shadow Controls");
+    ImGui::Begin("ForwardShadow");
 
-    ImGui::DragFloat("Bias", &mShadowBias, 0.000001f, 0.0f, 0.01f, "%.6f");
+    GLfloat bias = mShadowBias;
+    ImGui::DragFloat("Bias", &bias, 0.000001f, 0.0f, 0.01f, "%.6f");
+    mShadowBias = bias;
     
-    static const std::array<GLenum, 2> filtering{GL_NEAREST, GL_LINEAR};
     static unsigned int item_current_idx = 0; // Here we store our selection data as an index.
     static ImGuiComboFlags flags = 0;
-    const std::string combo_preview_value = graphics::to_string(filtering[item_current_idx]);  // Pass in the preview value visible before opening the combo (it could be anything)
+    // Pass in the preview value visible before opening the combo (it could be anything)
+    const std::string combo_preview_value = graphics::to_string(mDetphMapFilter);
     if (ImGui::BeginCombo("Depth filtering", combo_preview_value.c_str(), flags))
     {
-        for (unsigned int n = 0; n < std::size(filtering); n++)
+        for (unsigned int n = 0; n < std::size(gAvailableFilters); n++)
         {
-            const bool is_selected = (item_current_idx == n);
-            if (ImGui::Selectable(graphics::to_string(filtering[n]).c_str(), is_selected))
+            GLenum iteratedFilter = gAvailableFilters[n];
+            const bool is_selected = (mDetphMapFilter == iteratedFilter);
+            if (ImGui::Selectable(graphics::to_string(iteratedFilter).c_str(), is_selected))
             {
-                item_current_idx = n;
-                mDetphMapFilter = filtering[n];
+                mDetphMapFilter = iteratedFilter;
             }
 
             // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
@@ -86,9 +88,6 @@ void ForwardShadows::execute(
     Renderer & aRenderer,
     ProgramSetup & aProgramSetup)
 {
-    // TODO restore
-    //drawGui();
-
     auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
 
     auto scopeUniforms = aProgramSetup.mUniforms.push({
@@ -98,7 +97,7 @@ void ForwardShadows::execute(
     });
 
     // GL_LINEAR seems required to get hardware PCF with sampler2DShadow.
-    graphics::setFiltering(depthMap, mDetphMapFilter);
+    graphics::setFiltering(depthMap, mControls.mDetphMapFilter);
 
     // Render shadow map
     {
@@ -146,7 +145,7 @@ void ForwardShadows::execute(
         auto uniformPush = 
             aProgramSetup.mUniforms.push({
                 {Semantic::LightViewingMatrix, aLightViewpoint.assembleViewMatrix()},
-                {Semantic::ShadowBias, mShadowBias},
+                {Semantic::ShadowBias, mControls.mShadowBias/*.load()*/},
             });
 
         forwardShadowPass.draw(aEntities, aRenderer, aProgramSetup);

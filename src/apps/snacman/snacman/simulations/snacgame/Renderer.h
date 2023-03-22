@@ -59,6 +59,8 @@ public:
                                          unsigned int aPixelHeight,
                                          snac::Resources & aResources);
 
+    void continueGui();
+
     void render(const visu::GraphicState & aState);
 
 private:
