@@ -20,6 +20,22 @@ namespace ad {
 namespace snac {
 
 
+// Hackish class, to allow to use atomic with movable types.
+// Note that this is dangerous, if a thread is using the moved from atomic
+// to synchronise with a thread already using the moved to atomic (i.e. sync is lost)
+// Yet this is useful if the move is only part of the initialization process.
+template <class T>
+struct MovableAtomic : public std::atomic<T>
+{
+    using std::atomic<T>::atomic;
+    using std::atomic<T>::operator=;
+
+    MovableAtomic(MovableAtomic && aOther) :
+        std::atomic<T>{aOther.load()}
+    {};
+};
+
+
 class ForwardShadows
 {
     struct Controls
@@ -27,8 +43,9 @@ class ForwardShadows
         void drawGui();
 
         inline static const std::array<GLenum, 2> gAvailableFilters{GL_NEAREST, GL_LINEAR};
-        GLfloat mShadowBias = 0.00005f;
-        GLenum mDetphMapFilter = GL_LINEAR;
+        MovableAtomic<GLenum> mDetphMapFilter = GL_LINEAR;
+        MovableAtomic<GLfloat> mShadowBias = 0.0001f;
+        MovableAtomic<bool> mShowDepthMap{false};
     };
 
 public:

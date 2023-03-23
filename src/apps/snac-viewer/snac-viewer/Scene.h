@@ -328,6 +328,7 @@ inline void Scene::render(Renderer & aRenderer)
                 break;
             case 1:
                 mDrawerShadows.execute(getVisuals(), shadowLightViewPoint, aRenderer, setup);
+                mDrawerShadows.drawGui();
                 break;
         }
 

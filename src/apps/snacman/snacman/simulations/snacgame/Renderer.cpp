@@ -154,15 +154,13 @@ std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
 
 void Renderer::continueGui()
 {
-    static std::atomic<bool> showShadowControls{false};
+    // This boolean is only accessed by main thread
+    static bool showShadowControls = false;
+    ImGui::Checkbox("Shadows", &showShadowControls);
+    showShadowControls = showShadowControls;
+    if (showShadowControls)
     {
-        bool showShadow{showShadowControls};
-        ImGui::Checkbox("Shadows", &showShadow);
-        showShadowControls = showShadow;
-        if (showShadowControls)
-        {
-            mPipelineShadows.drawGui();
-        }
+        mPipelineShadows.drawGui();
     }
 }
 

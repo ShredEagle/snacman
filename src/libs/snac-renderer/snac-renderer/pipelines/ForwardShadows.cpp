@@ -17,6 +17,14 @@ handy::StringId gDepthSid{"depth"};
 handy::StringId gForwardShadowSid{"forward_shadow"};
 
 
+void addCheckbox(const char * aLabel, MovableAtomic<bool> & aValue)
+{
+    bool value = aValue;
+    ImGui::Checkbox(aLabel, &value);
+    aValue = value;
+}
+
+
 ForwardShadows::ForwardShadows(const graphics::AppInterface & aAppInterface,
                                Load<Technique> & aTechniqueLoader) :
     mAppInterface{aAppInterface},
@@ -77,6 +85,8 @@ void ForwardShadows::Controls::drawGui()
         }
         ImGui::EndCombo();
     }
+
+    addCheckbox("Show depthmap", mShowDepthMap);
 
     ImGui::End();
 }
@@ -145,13 +155,14 @@ void ForwardShadows::execute(
         auto uniformPush = 
             aProgramSetup.mUniforms.push({
                 {Semantic::LightViewingMatrix, aLightViewpoint.assembleViewMatrix()},
-                {Semantic::ShadowBias, mControls.mShadowBias/*.load()*/},
+                {Semantic::ShadowBias, mControls.mShadowBias.load()},
             });
 
         forwardShadowPass.draw(aEntities, aRenderer, aProgramSetup);
     }
 
     // Show shadow map in a viewport
+    if(mControls.mShowDepthMap)
     {
         static const Pass showDepthmapPass{"debug-show-depthmap"};
 
