@@ -229,7 +229,7 @@ void Renderer::render(const visu::GraphicState & aState)
         for (const auto & [mesh, instances] : sortedMeshes)
         {
             streamIt->respecifyData(std::span{instances});
-            visuals.push_back({&*streamIt, mesh});
+            visuals.push_back({mesh, &*streamIt});
             ++streamIt;
         }
         mPipelineShadows.execute(visuals, shadowLightViewPoint, mRenderer, programSetup);

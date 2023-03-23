@@ -260,9 +260,10 @@ std::vector<Pass::Visual> Scene::getVisuals() const
 {
     std::vector<Pass::Visual> visuals;
     visuals.reserve(mEntities.size());
+    // Note: the order in entities is reverses compared to Visual
     for (const auto & [instance, mesh] : mEntities)
     {
-        visuals.push_back({&instance, &mesh});
+        visuals.push_back({&mesh, &instance});
     }
     return visuals;
 }
