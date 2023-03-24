@@ -72,23 +72,23 @@ namespace cube {
     constexpr std::array<GLushort, 6*6> gIndices
     {
         // Left
-        0, 2, 1,
-        1, 2, 3,
+        0, 1, 2,
+        2, 1, 3,
         // Front
-        1, 3, 5,
-        5, 3, 7,
+        1, 5, 3,
+        3, 5, 7,
         // Right,
-        5, 7, 4,
-        4, 7, 6,
+        5, 4, 7,
+        7, 4, 6,
         // Back
-        4, 6, 0,
-        0, 6, 2,
+        4, 0, 6,
+        6, 0, 2,
         // Top
-        6, 7, 2,
-        2, 7, 3,
+        6, 2, 7,
+        7, 2, 3,
         // Bottom,
-        0, 1, 4,
-        4, 1, 5,
+        0, 4, 1,
+        1, 4, 5,
     };
 
     constexpr std::array<math::Vec<3, float>, 6> gNormals =
