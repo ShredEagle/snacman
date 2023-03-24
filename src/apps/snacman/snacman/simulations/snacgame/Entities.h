@@ -26,27 +26,21 @@ namespace scene { struct Transition; }
 
 struct GameContext;
 
-void createPill(GameContext & aContext,
-                ent::Phase & aInit,
+ent::Handle<ent::Entity> createPill(GameContext & aContext,
                 const math::Position<2, float> & Pos);
 ent::Handle<ent::Entity> createPathEntity(GameContext & aContext,
-                                          ent::Phase & aInit,
                                           const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>
 createPortalEntity(GameContext & aContext,
-                   ent::Phase & aInit,
                    const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
-                   ent::Phase & aInit,
                    const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>
 createPlayerSpawnEntity(GameContext & aContext,
-                        ent::Phase & aInit,
                         const math::Position<2, float> & aPos);
 
-void fillSlotWithPlayer(GameContext & aContext,
-                        ent::Phase & aInit,
+ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
                         ControllerType aControllerType,
                         ent::Handle<ent::Entity> aSlot,
                         int aControllerId = 0);
@@ -71,7 +65,7 @@ createMenuItem(GameContext & aContext,
                bool aSelected = false,
                const math::Size<2, float> & aScale = {1.f, 1.f});
 
-bool findSlotAndBind(GameContext & aContext,
+std::optional<ent::Handle<ent::Entity>> findSlotAndBind(GameContext & aContext,
                      ent::Phase & aBindPhase,
                      ent::Query<component::PlayerSlot> & aSlots,
                      ControllerType aType,

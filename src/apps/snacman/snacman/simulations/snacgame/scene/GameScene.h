@@ -31,7 +31,9 @@ class GameScene : public Scene
 public:
     GameScene(const std::string & aName,
               ent::EntityManager & aWorld,
-              EntityWrap<component::MappingContext> & aContext);
+              EntityWrap<component::MappingContext> & aContext,
+              ent::Handle<ent::Entity> aSceneRoot,
+              GameContext & aGameContext);
 
     std::optional<Transition> update(GameContext & aContext,
                                      float aDelta,
@@ -39,7 +41,7 @@ public:
 
     void setup(GameContext & aContext, const Transition & aTransition, RawInput & aInput) override;
 
-    void teardown(RawInput & aInput) override;
+    void teardown(GameContext & aContext, RawInput & aInput) override;
 
 private:
     ent::Handle<ent::Entity> mLevel;
