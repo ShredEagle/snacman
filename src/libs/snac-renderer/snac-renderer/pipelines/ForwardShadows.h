@@ -45,7 +45,7 @@ class ForwardShadows
         inline static const std::array<GLenum, 2> gAvailableFilters{GL_NEAREST, GL_LINEAR};
         MovableAtomic<GLenum> mDetphMapFilter = GL_LINEAR;
 
-        MovableAtomic<GLfloat> mShadowBias = 0.0001f;
+        MovableAtomic<GLfloat> mShadowBias = 0.0005f;
 
         inline static const std::array<GLenum, 2> gCullFaceModes{GL_FRONT, GL_BACK};
         MovableAtomic<GLenum> mCullFaceMode{GL_BACK};

@@ -32,12 +32,13 @@ uniform float u_ShadowBias = 0.;
 
 uniform sampler2DShadow u_ShadowMap;
 
-float getShadowAttenuation(vec4 fragPosition_lightClip)
+float getShadowAttenuation(vec4 fragPosition_lightClip, float bias)
 {
     // From light clip-space to light texture coordinates [0, 1]
     vec3 fragPosition_shadowTexture = 
         (fragPosition_lightClip.xyz/fragPosition_lightClip.w + 1) / 2;
-    fragPosition_shadowTexture.z -= u_ShadowBias;
+    
+    fragPosition_shadowTexture.z -= bias;
 
     return texture(u_ShadowMap, fragPosition_shadowTexture).r;
 }
@@ -93,14 +94,17 @@ void main(void)
     //
     vec3 ambient = 
         u_AmbientColor;
-    vec3 diffuse = 
+    vec3 diffuse =
         u_LightColor * max(0.f, dot(normal_c, light_c));
     vec3 specular = 
         u_LightColor * pow(max(0.f, dot(normal_c, h_c)), specularExponent);
-    vec3 phongColor = 
+
 #ifdef SHADOW
-        (ambient + (diffuse + specular) * getShadowAttenuation(ex_Position_lightClip)) * color.xyz;
+        float bias = max(8 * (1 - dot(normalize(ex_Normal_c), light_c)), 1) * u_ShadowBias;
+    vec3 phongColor = 
+        (ambient + (diffuse + specular) * getShadowAttenuation(ex_Position_lightClip, bias)) * color.xyz;
 #else
+    vec3 phongColor = 
         (ambient + diffuse + specular) * color.xyz;
 #endif
 
