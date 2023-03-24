@@ -188,14 +188,23 @@ void Renderer::render(const visu::GraphicState & aState)
     // Position camera
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
+    const math::AffineMatrix<4, GLfloat> worldToLight = 
+        math::trans3d::rotateX(math::Degree<float>{65.f})
+        * math::trans3d::translate<GLfloat>({-8.f, -6.f, -10.f});
+
+    math::Position<3, GLfloat> lightPosition_cam = 
+        (math::homogeneous::makePosition(math::Position<3, GLfloat>::Zero()) // light position in light space is the origin
+        * worldToLight.inverse()
+        * aState.mCamera.mWorldToCamera).xyz();
+
     math::hdr::Rgb_f lightColor = to_hdr<float>(math::sdr::gWhite) * 0.8f;
-    math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
     math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
+
 
     snac::ProgramSetup programSetup{
         .mUniforms{
             {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
-            {snac::Semantic::LightPosition, {lightPosition}},
+            {snac::Semantic::LightPosition, {lightPosition_cam}},
             {snac::Semantic::AmbientColor, {ambientColor}},
             {snac::Semantic::FramebufferResolution,
             mAppInterface.getFramebufferSize()},
@@ -212,9 +221,7 @@ void Renderer::render(const visu::GraphicState & aState)
                 .zNear = -1.f,
                 .zFar = -50.f,
             }};
-        shadowLightViewPoint.setPose(
-            math::trans3d::rotateX(math::Degree<float>{65.f})
-            * math::trans3d::translate<GLfloat>({-8.f, -6.f, -10.f}));
+        shadowLightViewPoint.setPose(worldToLight);
 
             TIME_RECURRING_GL("Draw_meshes");
         // Poor man's pool
