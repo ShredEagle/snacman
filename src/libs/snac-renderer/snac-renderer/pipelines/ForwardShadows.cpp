@@ -25,6 +25,42 @@ void addCheckbox(const char * aLabel, MovableAtomic<bool> & aValue)
 }
 
 
+template <class T_enumeration, std::size_t N_spanExtent>
+void addCombo(const char * aLabel,
+              MovableAtomic<T_enumeration> & aValue,
+              const std::span<const T_enumeration, N_spanExtent> & aAvailableValues)
+{
+    using graphics::to_string;
+
+    static const ImGuiComboFlags flags = 0;
+    const T_enumeration value = aValue.load();
+    // Pass in the preview value visible before opening the combo (it could be anything)
+    const std::string combo_preview_value = to_string(value);
+    if (ImGui::BeginCombo(aLabel, combo_preview_value.c_str(), flags))
+    {
+        Guard scopeCombo([]()
+        {
+            ImGui::EndCombo();
+        });
+
+        for (unsigned int n = 0; n < std::size(aAvailableValues); n++)
+        {
+            T_enumeration candidate = aAvailableValues[n];
+            const bool isSelected = (value == candidate);
+            if (ImGui::Selectable(to_string(candidate).c_str(), isSelected))
+            {
+                aValue = candidate;
+            }
+
+            // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+            if (isSelected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+    }
+}
+
 ForwardShadows::ForwardShadows(const graphics::AppInterface & aAppInterface,
                                Load<Technique> & aTechniqueLoader) :
     mAppInterface{aAppInterface},
@@ -50,45 +86,26 @@ ForwardShadows::ForwardShadows(const graphics::AppInterface & aAppInterface,
 
     screenQuad.mMaterial->mEffect->mTechniques.push_back(
         aTechniqueLoader.get("shaders/ShowDepth.prog"));
-        //loadTechnique(mFinder.pathFor("shaders/ShowDepth.prog")));
 }
 
 
 void ForwardShadows::Controls::drawGui()
 {
     ImGui::Begin("ForwardShadow");
+    Guard scopeWindow([]()
+    {
+        ImGui::End();
+    });
 
     GLfloat bias = mShadowBias;
-    ImGui::DragFloat("Bias", &bias, 0.000001f, 0.0f, 0.01f, "%.6f");
+    ImGui::DragFloat("Bias", &bias, 0.000001f, -0.01f, 0.01f, "%.6f");
     mShadowBias = bias;
     
-    static unsigned int item_current_idx = 0; // Here we store our selection data as an index.
-    static ImGuiComboFlags flags = 0;
-    // Pass in the preview value visible before opening the combo (it could be anything)
-    const std::string combo_preview_value = graphics::to_string(mDetphMapFilter);
-    if (ImGui::BeginCombo("Depth filtering", combo_preview_value.c_str(), flags))
-    {
-        for (unsigned int n = 0; n < std::size(gAvailableFilters); n++)
-        {
-            GLenum iteratedFilter = gAvailableFilters[n];
-            const bool is_selected = (mDetphMapFilter == iteratedFilter);
-            if (ImGui::Selectable(graphics::to_string(iteratedFilter).c_str(), is_selected))
-            {
-                mDetphMapFilter = iteratedFilter;
-            }
+    addCombo("Depth filtering", mDetphMapFilter, std::span{gAvailableFilters});
 
-            // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-            if (is_selected)
-            {
-                ImGui::SetItemDefaultFocus();
-            }
-        }
-        ImGui::EndCombo();
-    }
+    addCombo("Culled faces", mCullFaceMode, std::span{gCullFaceModes});
 
     addCheckbox("Show depthmap", mShowDepthMap);
-
-    ImGui::End();
 }
 
 
@@ -99,6 +116,8 @@ void ForwardShadows::execute(
     ProgramSetup & aProgramSetup)
 {
     auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
+
+    auto scopeCullFeature = graphics::scopeFeature(GL_CULL_FACE, true);
 
     auto scopeUniforms = aProgramSetup.mUniforms.push({
             // Note: Distance means "absolute value" here, so negate the plane Z coordinate (which is negative)
@@ -111,6 +130,8 @@ void ForwardShadows::execute(
 
     // Render shadow map
     {
+        auto scopeCullMode = graphics::scopeCullFace(mControls.mCullFaceMode);
+
         static const Pass depthMapPass{"Depth-map", {{gPassSid, gDepthSid}}};
 
         graphics::ScopedBind fboScope{depthFBO};
