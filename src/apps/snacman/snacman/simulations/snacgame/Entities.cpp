@@ -152,9 +152,6 @@ createPlayerSpawnEntity(GameContext & aContext,
                         const math::Position<2, float> & aGridPos)
 {
     ent::Phase init;
-    math::Position<3, float> tilePos = {static_cast<float>(aGridPos.x()),
-                                        static_cast<float>(aGridPos.y()),
-                                        lLevelHeight};
     math::Position<3, float> spawnPos = {static_cast<float>(aGridPos.x()),
                                          static_cast<float>(aGridPos.y()),
                                          lPlayerHeight};
@@ -200,7 +197,7 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             .mColor = playerSlot.mColor,
         })
         .add(component::PoseScreenSpace{
-            .mPosition_u = {-0.9f + 0.2f * playerSlot.mIndex, 0.8f}})
+            .mPosition_u = {-0.9f + 0.2f * static_cast<float>(playerSlot.mIndex), 0.8f}})
         .add(component::Collision{component::gPlayerHitbox});
 
     return aSlot;
@@ -228,7 +225,7 @@ findSlotAndBind(GameContext & aContext,
 ent::Handle<ent::Entity>
 createMenuItem(GameContext & aContext,
                ent::Phase & aInit,
-               std::string aString,
+               const std::string & aString,
                std::shared_ptr<snac::Font> aFont,
                const math::Position<2, float> & aPos,
                const std::unordered_map<int, std::string> & aNeighbors,
@@ -251,7 +248,7 @@ createMenuItem(GameContext & aContext,
 ent::Handle<ent::Entity>
 makeText(GameContext & aContext,
          ent::Phase & aPhase,
-         std::string aString,
+         const std::string & aString,
          std::shared_ptr<snac::Font> aFont,
          const math::hdr::Rgba_f & aColor,
          const math::Position<2, float> & aPosition_unitscreen,
@@ -261,7 +258,7 @@ makeText(GameContext & aContext,
 
     handle.get(aPhase)
         ->add(component::Text{
-            .mString{std::move(aString)},
+            .mString{aString},
             .mFont = std::move(aFont),
             .mColor = aColor,
         })

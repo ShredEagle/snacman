@@ -19,7 +19,7 @@ void OrbitalCamera::update(const RawInput & aInput,
         // Panning
         snac::Orbital & orbital = *mCamera;
         float viewedHeightOrbitPlane_world = 2 * tan(aVerticalFov / 2) * std::abs(orbital.radius());
-        float factor = viewedHeightOrbitPlane_world / aWindowHeight_screen;
+        float factor = viewedHeightOrbitPlane_world / (float)aWindowHeight_screen;
         orbital.pan(aInput.mMouse.mCursorDisplacement * factor);              
     }
 

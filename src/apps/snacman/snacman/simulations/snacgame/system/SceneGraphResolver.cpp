@@ -137,7 +137,8 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
     {
         ent::Handle<ent::Entity> current = *aSceneNode.aFirstChild;
 
-        for (int i = 0; i < aSceneNode.mChildCount; i++)
+        // TODO: (franz) use the optionalness of next child and prev child
+        for (std::size_t i = 0; i < aSceneNode.mChildCount; i++)
         {
             const component::SceneNode & node =
                 current.get(aPhase)->get<component::SceneNode>();

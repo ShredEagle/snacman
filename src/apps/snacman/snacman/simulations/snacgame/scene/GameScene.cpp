@@ -47,7 +47,7 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-const char * gMarkovRoot{"markov/"};
+const char * const gMarkovRoot{"markov/"};
 
 namespace {
 
@@ -188,7 +188,7 @@ GameScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
         {
             int command = gNoCommand;
             const bool controllerIsKeyboard =
-                controlIndex == gKeyboardControllerIndex;
+                (int)controlIndex == gKeyboardControllerIndex;
 
             if (controllerIsKeyboard)
             {
