@@ -271,7 +271,7 @@ makeText(GameContext & aContext,
 
 EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
 {
-    component::PlayerSlot slot = aHandle.get(aPhase)->get<component::PlayerSlot>();
+    component::PlayerSlot & slot = aHandle.get(aPhase)->get<component::PlayerSlot>();
     slot.mFilled = false;
 
     aHandle.get(aPhase)->remove<component::Controller>();

@@ -140,12 +140,12 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
             playerSlotQuery.each([&](EntHandle aPlayer, const component::PlayerSlot & aPlayerSlot) {
                 ImGui::PushID(aPlayerSlot.mIndex);
-                // This is an assumption but currently player that have
-                // a geometry should have a globalPose and a PlayerMoveState
                 char playerHeader[64];
-                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", aPlayerSlot.mIndex);
+                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", aPlayerSlot.mIndex + 1);
                 if(ImGui::CollapsingHeader(playerHeader))
                 {
+                    // This is an assumption but currently player that have
+                    // a geometry should have a globalPose and a PlayerMoveState
                     if (aPlayer.get(update)->has<component::Geometry>())
                     {
                         Entity player = *aPlayer.get(update);
