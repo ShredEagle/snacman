@@ -63,6 +63,10 @@ public:
 
     void render(const visu::GraphicState & aState);
 
+    /// \brief Forwards the request to reset repositories down to the generic renderer.
+    void resetRepositories()
+    { mRenderer.resetRepositories(); }
+
 private:
     graphics::AppInterface & mAppInterface;
     snac::Renderer mRenderer;

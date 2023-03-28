@@ -189,7 +189,7 @@ void Renderer::render(const visu::GraphicState & aState)
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
     const math::AffineMatrix<4, GLfloat> worldToLight = 
-        math::trans3d::rotateX(math::Degree<float>{65.f})
+        math::trans3d::rotateX(math::Degree<float>{65.f}) // this is about the worst angle for shadows, on closest labyrinth row
         * math::trans3d::translate<GLfloat>({-8.f, -6.f, -10.f});
 
     math::Position<3, GLfloat> lightPosition_cam = 

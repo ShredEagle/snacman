@@ -244,6 +244,9 @@ public:
                 try
                 {
                     recompilePrograms(aResources);
+                    // Required because the actual interface of the shader might have changed
+                    // (either explicitly by code, or implicitly because optimizer discarded some attributes/uniforms)
+                    aRenderer.resetRepositories();
                     promise->set_value();
                 }
                 catch(...)

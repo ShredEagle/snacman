@@ -57,6 +57,12 @@ public:
         const InstanceStream & aInstances,
         const IntrospectProgram & aProgram);
 
+    void resetRepositories()
+    {
+        mVertexArrayRepo= VertexArrayRepository{};
+        mWarningRepo = WarningRepository{};
+    }
+
 private:
     VertexArrayRepository mVertexArrayRepo;
     WarningRepository mWarningRepo;
