@@ -10,22 +10,20 @@ namespace ad {
 namespace snacgame {
 namespace component {
 
-enum class GeometryLayer
-{
-    Level = 0,
-    Player = 2,
-    Pill = 6,
-};
-
-
 struct Geometry
 {
     // Pose
-    math::Position<2, float> mPosition;
-    math::Size<3, float> mScaling = math::Size<3, float>{1.f, 1.f, 1.f};
-    GeometryLayer mLayer = GeometryLayer::Level;
+    math::Position<3, float> mPosition = math::Position<3, float>::Zero();
+    // Since we only authorize uniform scaling transfer in the scene graph
+    // (meaning a scaling that is also applied to the child)
+    // mScaling is a single float that we be used
+    // like this math::trans3d::scale(mScaling, mScaling, mScaling);
+    float mScaling = 1.f;
+    // mInstanceScaling is not used in scene graph resolution
+    // And thus can be non uniform
+    math::Size<3, float> mInstanceScaling = math::Size<3, float>{1.f, 1.f, 1.f};
     math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
-    math::hdr::Rgba_f mColor;
+    math::hdr::Rgba_f mColor = math::hdr::gBlack<float>;
 };
 
 

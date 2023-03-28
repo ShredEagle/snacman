@@ -21,7 +21,7 @@ public:
                                      float aDelta,
                                      RawInput & aInput) override;
     void setup(GameContext & aContext, const Transition & Transition, RawInput & aInput) override;
-    void teardown(RawInput & aInput) override;
+    void teardown(GameContext & aContext, RawInput & aInput) override;
 };
 
 } // namespace scene

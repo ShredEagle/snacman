@@ -15,8 +15,8 @@ void PortalManagement::update()
 
         mPlayer.each([&](component::Geometry & aPlayerGeo,
                          component::PlayerMoveState & aMoveState) {
-            math::Position<2, float> & playerPos = aPlayerGeo.mPosition;
-            const math::Position<2, int> intPlayerPos{playerPos};
+            math::Position<3, float> & playerPos = aPlayerGeo.mPosition;
+            const math::Position<2, int> intPlayerPos{playerPos.xy()};
 
             if (aMoveState.mCurrentPortal != -1 && aMoveState.mDestinationPortal != -1)
             {
@@ -33,7 +33,7 @@ void PortalManagement::update()
             aMoveState.mDestinationPortal = -1;
 
             mPortals.each([&](component::Geometry & aPortalGeo, component::Portal & aPortal) {
-                math::Position<2, int> intPortalPos{aPortalGeo.mPosition};
+                math::Position<2, int> intPortalPos{aPortalGeo.mPosition.xy()};
                 if (intPlayerPos == intPortalPos)
                 {
                     int destinationPortalIndex = -1;

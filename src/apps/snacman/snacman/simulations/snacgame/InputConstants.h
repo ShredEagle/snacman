@@ -2,6 +2,7 @@
 
 namespace ad {
 namespace snacgame {
+constexpr int gNoCommand = -1;
 constexpr int gPlayerMoveFlagNone = 0;
 
 constexpr int gPositiveEdge = 1 << 0;

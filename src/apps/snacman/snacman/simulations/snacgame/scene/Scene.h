@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/component/SceneNode.h"
 #include "../EntityWrap.h"
 
 #include <entity/Entity.h>
@@ -66,11 +67,13 @@ public:
     //TODO :(franz) make a cpp file please
     Scene(const std::string & aName,
           ent::EntityManager & aWorld,
-          EntityWrap<component::MappingContext> & aContext) :
+          EntityWrap<component::MappingContext> & aContext,
+          ent::Handle<ent::Entity> aSceneRoot) :
         mName{aName},
         mWorld{aWorld},
         mSystems{mWorld.addEntity()},
-        mContext{aContext}
+        mContext{aContext},
+        mSceneRoot{aSceneRoot}
     {}
     Scene(const Scene &) = default;
     Scene(Scene &&) = delete;
@@ -84,7 +87,7 @@ public:
 
     virtual void setup(GameContext & aContext, const Transition & aTransition, RawInput & aInput) = 0;
 
-    virtual void teardown(RawInput & aInput) = 0;
+    virtual void teardown(GameContext & aContext, RawInput & aInput) = 0;
 
     std::string mName;
     std::unordered_map<Transition, SceneId> mStateTransition;
@@ -94,6 +97,7 @@ protected:
     ent::Handle<ent::Entity> mSystems;
     std::vector<ent::Handle<ent::Entity>> mOwnedEntities;
     EntityWrap<component::MappingContext> & mContext;
+    ent::Handle<ent::Entity> mSceneRoot;
 };
 
 } // namespace scene

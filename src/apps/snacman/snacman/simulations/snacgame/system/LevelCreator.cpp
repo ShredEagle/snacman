@@ -1,13 +1,14 @@
 #include "LevelCreator.h"
 
-#include "../Entities.h"
 #include "../component/LevelData.h"
-
-#include <snacman/Profiling.h>
+#include "../component/SceneNode.h"
+#include "../Entities.h"
+#include "../SceneGraph.h"
+#include "../typedef.h"
 
 #include <entity/Entity.h>
-
 #include <markovjunior/Interpreter.h>
+#include <snacman/Profiling.h>
 
 namespace ad {
 namespace snacgame {
@@ -17,8 +18,7 @@ void LevelCreator::update(GameContext & aContext)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    ent::Phase createLevelPhase;
-    mCreatable.each([&](ent::Handle<ent::Entity> aHandle,
+    mCreatable.each([&](EntHandle aLevelHandle,
                         component::LevelData & aLevelData) {
         markovjunior::Interpreter interpreter(
             aLevelData.mAssetRoot, aLevelData.mFile, aLevelData.mSize,
@@ -67,33 +67,38 @@ void LevelCreator::update(GameContext & aContext)
                     switch (value)
                     {
                     case 'W':
-                        tiles.push_back(component::Tile{.mType = component::TileType::Path});
-                        createPathEntity(aContext, 
-                                         createLevelPhase,
-                                         math::Position<2, float>{xFloat, yFloat});
-                        createPill(aContext,
-                                   createLevelPhase,
-                                   math::Position<2, float>{xFloat, yFloat});
+                    {
+                        tiles.push_back(component::Tile{
+                            .mType = component::TileType::Path});
+                        EntHandle path = createPathEntity(
+                            aContext, math::Position<2, float>{xFloat, yFloat});
+                        insertEntityInScene(path, aLevelHandle);
+                        EntHandle pill = createPill(
+                            aContext, math::Position<2, float>{xFloat, yFloat});
+                        insertEntityInScene(pill, aLevelHandle);
                         break;
+                    }
                     case 'K':
-                        {
-                            tiles.push_back(component::Tile{.mType = component::TileType::Portal});
-                            int portalIndex = static_cast<int>(tiles.size() - 1);
-                            portals.push_back(portalIndex);
-                            createPortalEntity(aContext, createLevelPhase,
-                                               math::Position<2, float>{xFloat, yFloat}, portalIndex);
-                        }
+                    {
+                        tiles.push_back(component::Tile{
+                            .mType = component::TileType::Portal});
+                        int portalIndex = static_cast<int>(tiles.size() - 1);
+                        portals.push_back(portalIndex);
+                        EntHandle portal = createPortalEntity(
+                            aContext, math::Position<2, float>{xFloat, yFloat},
+                            portalIndex);
+                        insertEntityInScene(portal, aLevelHandle);
                         break;
-                    case 'O':
-                        tiles.push_back(component::Tile{.mType = component::TileType::Pen});
-                        createCopPenEntity(aContext, createLevelPhase,
-                                           math::Position<2, float>{xFloat, yFloat});
-                        break;
+                    }
                     case 'U':
-                        tiles.push_back(component::Tile{.mType = component::TileType::Spawn});
-                        createPlayerSpawnEntity(aContext, createLevelPhase,
-                                                math::Position<2, float>{xFloat, yFloat});
+                    {
+                        tiles.push_back(component::Tile{
+                            .mType = component::TileType::Spawn});
+                        EntHandle spawn = createPlayerSpawnEntity(
+                            aContext, math::Position<2, float>{xFloat, yFloat});
+                        insertEntityInScene(spawn, aLevelHandle);
                         break;
+                    }
                     default:
                         tiles.push_back(component::Tile{
                             .mType = component::TileType::Void});
@@ -148,8 +153,9 @@ void LevelCreator::update(GameContext & aContext)
             }
         }
 
-        aHandle.get(createLevelPhase)->remove<component::LevelToCreate>();
-        aHandle.get(createLevelPhase)->add(component::LevelCreated{});
+        ent::Phase createLevelPhase;
+        aLevelHandle.get(createLevelPhase)->remove<component::LevelToCreate>();
+        aLevelHandle.get(createLevelPhase)->add(component::LevelCreated{});
     });
 }
 
