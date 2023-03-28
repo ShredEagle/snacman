@@ -269,5 +269,23 @@ makeText(GameContext & aContext,
     return handle;
 }
 
+EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
+{
+    component::PlayerSlot & slot = aHandle.get(aPhase)->get<component::PlayerSlot>();
+    slot.mFilled = false;
+
+    aHandle.get(aPhase)->remove<component::Controller>();
+    aHandle.get(aPhase)->remove<component::Geometry>();
+    aHandle.get(aPhase)->remove<component::PlayerLifeCycle>();
+    aHandle.get(aPhase)->remove<component::PlayerMoveState>();
+    aHandle.get(aPhase)->remove<component::Text>();
+    aHandle.get(aPhase)->remove<component::VisualMesh>();
+    aHandle.get(aPhase)->remove<component::PoseScreenSpace>();
+    aHandle.get(aPhase)->remove<component::SceneNode>();
+    aHandle.get(aPhase)->remove<component::GlobalPose>();
+
+    return aHandle;
+}
+
 } // namespace snacgame
 } // namespace ad

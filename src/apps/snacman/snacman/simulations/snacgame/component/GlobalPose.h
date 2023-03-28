@@ -15,6 +15,8 @@ struct GlobalPose
     math::Size<3, float> mInstanceScaling = math::Size<3, float>{1.f, 1.f, 1.f};
     math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
     math::hdr::Rgba_f mColor;
+
+    void drawUi() const;
 };
 }
 }

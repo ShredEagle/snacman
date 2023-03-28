@@ -7,15 +7,22 @@
 #include "component/PoseScreenSpace.h"
 #include "component/Text.h"
 #include "component/VisualMesh.h"
+#include "component/GlobalPose.h"
 #include "GameContext.h"
 #include "GameParameters.h"
 #include "InputConstants.h"
 #include "scene/Scene.h"
 #include "SimulationControl.h"
-#include "snacman/simulations/snacgame/component/GlobalPose.h"
+#include "Entities.h"
+#include "snacman/simulations/snacgame/component/Controller.h"
+#include "typedef.h"
 #include "system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
 
+#include <snacman/Profiling.h>
+#include <snacman/QueryManipulation.h>
+#include <snacman/ImguiUtilities.h>
+#include <snacman/LoopSettings.h>
 #include <snacman/Profiling.h>
 
 #include <handy/Guard.h>
@@ -38,9 +45,6 @@
 #include <math/Color.h>
 #include <mutex>
 #include <optional>
-#include <snacman/ImguiUtilities.h>
-#include <snacman/LoopSettings.h>
-#include <snacman/Profiling.h>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -130,61 +134,69 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         if (mImguiDisplays.mShowPlayerInfo)
         {
             ent::Phase update;
-            ent::Query<component::PlayerSlot, component::Geometry, component::PlayerMoveState, component::GlobalPose> playerQuery{
+            static ent::Query<component::PlayerSlot> playerSlotQuery{
                 mGameContext.mWorld};
-            int playerIndex = 0;
+            static ent::Query<component::Controller> controllerQuery{mGameContext.mWorld};
             ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
-            playerQuery.each([&](const component::Geometry & aPlayerGeometry, const component::PlayerMoveState & aMoveState, const component::GlobalPose & aPose) {
-                int intPosX =
-                    static_cast<int>(aPlayerGeometry.mPosition.x() + 0.5f);
-                int intPosY =
-                    static_cast<int>(aPlayerGeometry.mPosition.y() + 0.5f);
-                float fracPosX = aPlayerGeometry.mPosition.x() - intPosX;
-                float fracPosY = aPlayerGeometry.mPosition.y() - intPosY;
-
+            playerSlotQuery.each([&](EntHandle aPlayer, const component::PlayerSlot & aPlayerSlot) {
+                ImGui::PushID(aPlayerSlot.mIndex);
                 char playerHeader[64];
-                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", playerIndex);
+                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", aPlayerSlot.mIndex + 1);
                 if(ImGui::CollapsingHeader(playerHeader))
                 {
-                    ImGui::Text("Player pos: %f, %f", aPlayerGeometry.mPosition.x(),
-                                aPlayerGeometry.mPosition.y());
-                    ImGui::Text("Player integral part: %d, %d", intPosX, intPosY);
-                    ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
-                    ImGui::Text("Current portal %d", aMoveState.mCurrentPortal);
-                    ImGui::Text("Dest portal %d", aMoveState.mDestinationPortal);
-                    ImGui::Text("Player orientation: %f, (%f, %f, %f)", aPlayerGeometry.mOrientation.w(),
-                                aPlayerGeometry.mOrientation.x(), aPlayerGeometry.mOrientation.y(), aPlayerGeometry.mOrientation.z());
-                    ImGui::Text("Player instance scaling: %f, %f %f", aPlayerGeometry.mInstanceScaling.width(),
-                                aPlayerGeometry.mInstanceScaling.height(), aPlayerGeometry.mInstanceScaling.depth());
-                    ImGui::Text("Player global pos: %f, %f, %f", aPose.mPosition.x(),
-                                aPose.mPosition.y(), aPose.mPosition.z());
-                    ImGui::Text("Player global scaling: %f", aPose.mScaling);
-                    ImGui::Text("Player global orientation: %f, (%f, %f, %f)", aPose.mOrientation.w(),
-                                aPose.mOrientation.x(), aPose.mOrientation.y(), aPose.mOrientation.z());
-                    ImGui::Text("Player global instance scaling: %f, %f %f", aPose.mInstanceScaling.width(),
-                                aPose.mInstanceScaling.width(), aPose.mInstanceScaling.depth());
-                    ImGui::Text("Player MoveState:");
-                    if (aMoveState.mAllowedMove & gPlayerMoveFlagDown)
+                    // This is an assumption but currently player that have
+                    // a geometry should have a globalPose and a PlayerMoveState
+                    if (aPlayer.get(update)->has<component::Geometry>())
                     {
+                        Entity player = *aPlayer.get(update);
+                        const component::Geometry & geo = player.get<component::Geometry>();
+                        const component::Controller & controller = player.get<component::Controller>();
+                        const component::GlobalPose & pose = player.get<component::GlobalPose>();
+                        const component::PlayerMoveState & moveState = player.get<component::PlayerMoveState>();
+
+                        ImGui::BeginChild("Action", ImVec2(200.f, 0.f), true);
+                        if (controller.mType == ControllerType::Dummy)
+                        {
+                            if (ImGui::Button("Bind to keyboard"))
+                            {
+                                OptEntHandle oldController = snac::getFirstHandle(controllerQuery, [](const component::Controller & aController ) {
+                                    return aController.mType == ControllerType::Keyboard;
+                                });
+
+                                if (oldController)
+                                {
+                                    oldController->get(update)->get<component::Controller>().mType = ControllerType::Dummy;
+                                    oldController->get(update)->get<component::Controller>().mControllerId = gDummyControllerIndex;
+                                }
+                                aPlayer.get(update)->get<component::Controller>().mType = ControllerType::Keyboard;
+                                aPlayer.get(update)->get<component::Controller>().mControllerId = gKeyboardControllerIndex;
+                            }
+
+                            if (ImGui::Button("Remove player"))
+                            {
+                                removePlayerFromGame(update, aPlayer);
+                            }
+                        }
+                        ImGui::EndChild();
                         ImGui::SameLine();
-                        ImGui::Text("Down");
+                        ImGui::BeginChild("Info");
+                        geo.drawUi();
+                        pose.drawUi();
+                        moveState.drawUi();
+                        controller.drawUi();
+                        ImGui::EndChild();
                     }
-                    if (aMoveState.mAllowedMove & gPlayerMoveFlagUp)
-                    {
-                        ImGui::SameLine();
-                        ImGui::Text("Up");
-                    }
-                    if (aMoveState.mAllowedMove & gPlayerMoveFlagRight)
-                    {
-                        ImGui::SameLine();
-                        ImGui::Text("Right");
-                    }
-                    if (aMoveState.mAllowedMove & gPlayerMoveFlagLeft)
-                    {
-                        ImGui::SameLine();
-                        ImGui::Text("Left");
+                    else {
+                        if(ImGui::Button("Create dummy player"))
+                        {
+                            {
+                                ent::Phase hello;
+                                fillSlotWithPlayer(mGameContext, hello, ControllerType::Dummy, aPlayer, gDummyControllerIndex);
+                            }
+                        }
                     }
                 }
+                ImGui::PopID();
             });
             ImGui::End();
         }

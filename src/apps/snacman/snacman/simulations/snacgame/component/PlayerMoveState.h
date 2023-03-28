@@ -12,6 +12,8 @@ struct PlayerMoveState
     int mAllowedMove = gPlayerMoveFlagDown;
     int mCurrentPortal = -1;
     int mDestinationPortal = -1;
+
+    void drawUi() const;
 };
 
 

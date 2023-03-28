@@ -44,6 +44,7 @@ createPlayerSpawnEntity(GameContext & aContext,
                         const math::Position<2, float> & aPos);
 
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
+                                            ent::Phase & aInit,
                                             ControllerType aControllerType,
                                             ent::Handle<ent::Entity> aSlot,
                                             int aControllerId = 0);
@@ -74,6 +75,8 @@ findSlotAndBind(GameContext & aContext,
                 ent::Query<component::PlayerSlot> & aSlots,
                 ControllerType aType,
                 int aIndex);
+
+ent::Handle<ent::Entity> removePlayerFromGame(ent::Phase & aPhase, ent::Handle<ent::Entity> aHandle);
 
 } // namespace snacgame
 } // namespace ad

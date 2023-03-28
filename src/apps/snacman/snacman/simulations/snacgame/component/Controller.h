@@ -13,6 +13,8 @@ struct Controller
     ControllerType mType = ControllerType::Keyboard;
     int mCommandQuery = 0;
     int mControllerId;
+
+    void drawUi() const;
 };
 
 } // namespace component

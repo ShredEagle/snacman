@@ -27,6 +27,7 @@ constexpr float gTriggerDeadzone = 0.1f;
 
 // This can't be between 0 and 15 (those are controller index)
 constexpr int gKeyboardControllerIndex = -1;
+constexpr int gDummyControllerIndex = -2;
 
 using ButtonEnum_t = std::int8_t;
 
@@ -149,6 +150,7 @@ enum class ControllerType
 {
     Keyboard,
     Gamepad,
+    Dummy,
 };
 
 struct GamepadState
