@@ -135,12 +135,16 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
 {
     if (aSceneNode.aFirstChild)
     {
-        ent::Handle<ent::Entity> current = *aSceneNode.aFirstChild;
+        const component::SceneNode fakePrevNode{
+            .aNextChild = *aSceneNode.aFirstChild,
+        };
+        const component::SceneNode * prevNode = &fakePrevNode;
 
         // TODO: (franz) use the optionalness of next child and prev child
         for (std::size_t i = 0; i < aSceneNode.mChildCount; i++)
         {
-            const component::SceneNode & node =
+            ent::Handle<ent::Entity> current = *prevNode->aNextChild;
+            const component::SceneNode & node = 
                 current.get(aPhase)->get<component::SceneNode>();
             const component::Geometry geo =
                 current.get(aPhase)->get<component::Geometry>();
@@ -156,7 +160,8 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
             gPose.mInstanceScaling = geo.mInstanceScaling;
  
             depthFirstResolve(node, wTransform, aPhase);
-            current = *node.aNextChild;
+
+            prevNode = &node;
         }
     }
 }
