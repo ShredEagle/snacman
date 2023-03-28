@@ -12,6 +12,7 @@
 #include "InputConstants.h"
 #include "scene/Scene.h"
 #include "SimulationControl.h"
+#include "typedef.h"
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
@@ -130,59 +131,32 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         if (mImguiDisplays.mShowPlayerInfo)
         {
             ent::Phase update;
-            ent::Query<component::PlayerSlot, component::Geometry, component::PlayerMoveState, component::GlobalPose> playerQuery{
+            ent::Query<component::PlayerSlot> playerSlotQuery{
                 mGameContext.mWorld};
-            int playerIndex = 0;
             ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
-            playerQuery.each([&](const component::Geometry & aPlayerGeometry, const component::PlayerMoveState & aMoveState, const component::GlobalPose & aPose) {
-                int intPosX =
-                    static_cast<int>(aPlayerGeometry.mPosition.x() + 0.5f);
-                int intPosY =
-                    static_cast<int>(aPlayerGeometry.mPosition.y() + 0.5f);
-                float fracPosX = aPlayerGeometry.mPosition.x() - intPosX;
-                float fracPosY = aPlayerGeometry.mPosition.y() - intPosY;
-
+            playerSlotQuery.each([&](EntHandle aPlayer, const component::PlayerSlot & aPlayerSlot) {
+                // This is an assumption but currently player that have
+                // a geometry should have a globalPose and a PlayerMoveState
                 char playerHeader[64];
-                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", playerIndex);
+                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", aPlayerSlot.mIndex);
                 if(ImGui::CollapsingHeader(playerHeader))
                 {
-                    ImGui::Text("Player pos: %f, %f", aPlayerGeometry.mPosition.x(),
-                                aPlayerGeometry.mPosition.y());
-                    ImGui::Text("Player integral part: %d, %d", intPosX, intPosY);
-                    ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
-                    ImGui::Text("Current portal %d", aMoveState.mCurrentPortal);
-                    ImGui::Text("Dest portal %d", aMoveState.mDestinationPortal);
-                    ImGui::Text("Player orientation: %f, (%f, %f, %f)", aPlayerGeometry.mOrientation.w(),
-                                aPlayerGeometry.mOrientation.x(), aPlayerGeometry.mOrientation.y(), aPlayerGeometry.mOrientation.z());
-                    ImGui::Text("Player instance scaling: %f, %f %f", aPlayerGeometry.mInstanceScaling.width(),
-                                aPlayerGeometry.mInstanceScaling.height(), aPlayerGeometry.mInstanceScaling.depth());
-                    ImGui::Text("Player global pos: %f, %f, %f", aPose.mPosition.x(),
-                                aPose.mPosition.y(), aPose.mPosition.z());
-                    ImGui::Text("Player global scaling: %f", aPose.mScaling);
-                    ImGui::Text("Player global orientation: %f, (%f, %f, %f)", aPose.mOrientation.w(),
-                                aPose.mOrientation.x(), aPose.mOrientation.y(), aPose.mOrientation.z());
-                    ImGui::Text("Player global instance scaling: %f, %f %f", aPose.mInstanceScaling.width(),
-                                aPose.mInstanceScaling.width(), aPose.mInstanceScaling.depth());
-                    ImGui::Text("Player MoveState:");
-                    if (aMoveState.mAllowedMove & gPlayerMoveFlagDown)
+                    if (aPlayer.get(update)->has<component::Geometry>())
                     {
-                        ImGui::SameLine();
-                        ImGui::Text("Down");
+                        Entity player = *aPlayer.get(update);
+                        const component::Geometry & aPlayerGeometry = player.get<component::Geometry>();
+                        const component::GlobalPose & aPose = player.get<component::GlobalPose>();
+                        const component::PlayerMoveState & aMoveState = player.get<component::PlayerMoveState>();
+
+                            aPlayerGeometry.drawUi();
+                            aPose.drawUi();
+                            aMoveState.drawUi();
                     }
-                    if (aMoveState.mAllowedMove & gPlayerMoveFlagUp)
-                    {
-                        ImGui::SameLine();
-                        ImGui::Text("Up");
-                    }
-                    if (aMoveState.mAllowedMove & gPlayerMoveFlagRight)
-                    {
-                        ImGui::SameLine();
-                        ImGui::Text("Right");
-                    }
-                    if (aMoveState.mAllowedMove & gPlayerMoveFlagLeft)
-                    {
-                        ImGui::SameLine();
-                        ImGui::Text("Left");
+                    else {
+                        if(ImGui::Button("Create dummy player"))
+                        {
+                            SELOG(info)("Creating dummy player");
+                        }
                     }
                 }
             });
