@@ -23,8 +23,9 @@ class MenuScene : public Scene
 public:
     MenuScene(const std::string & aName,
               ent::EntityManager & aWorld,
-              EntityWrap<component::MappingContext> & aContext) :
-        Scene(aName, aWorld, aContext), mSlots{mWorld}, mItems{mWorld}
+              EntityWrap<component::MappingContext> & aContext,
+              ent::Handle<ent::Entity> aSceneRoot) :
+        Scene(aName, aWorld, aContext, aSceneRoot), mSlots{mWorld}, mItems{mWorld}
     {}
 
     std::optional<Transition>
@@ -34,7 +35,7 @@ public:
                const Transition & aTransition,
                RawInput & aInput) override;
 
-    void teardown(RawInput & aInput) override;
+    void teardown(GameContext & aContext, RawInput & aInput) override;
 
 private:
     ent::Query<component::PlayerSlot> mSlots;

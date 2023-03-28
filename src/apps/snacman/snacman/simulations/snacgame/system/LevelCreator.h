@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../component/SceneNode.h"
 #include "../GameContext.h"
 #include "../component/LevelData.h"
 
@@ -19,7 +20,7 @@ public:
     void update(GameContext & aContext);
 
 private:
-    ent::Query<component::LevelData, component::LevelToCreate> mCreatable;
+    ent::Query<component::LevelData, component::LevelToCreate, component::SceneNode> mCreatable;
 };
 
 } // namespace system

@@ -30,8 +30,8 @@ public:
 
 private:
     static constexpr math::Spherical<float> gInitialCameraSpherical{
-        40.f, math::Radian<float>{0.15f * math::pi<float>},
-        math::Radian<float>{0.5f * math::pi<float>}};
+        20.f, math::Turn<float>{0.075f},
+        math::Turn<float>{0.f}};
     static constexpr math::Vec<2, GLfloat> gMouseControlFactor{1 / 500.f,
                                                                1 / 500.f};
     static constexpr float gScrollFactor = 0.05f;

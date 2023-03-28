@@ -1,21 +1,20 @@
 #include "SnacGame.h"
 
 #include "component/Context.h"
+#include "component/Geometry.h"
+#include "component/PlayerMoveState.h"
+#include "component/PlayerSlot.h"
+#include "component/PoseScreenSpace.h"
+#include "component/Text.h"
+#include "component/VisualMesh.h"
 #include "GameContext.h"
 #include "GameParameters.h"
 #include "InputConstants.h"
 #include "scene/Scene.h"
 #include "SimulationControl.h"
-#include "snacman/ImguiUtilities.h"
-#include "snacman/LoopSettings.h"
-#include "snacman/simulations/snacgame/component/Geometry.h"
-#include "snacman/simulations/snacgame/component/PlayerMoveState.h"
-#include "snacman/simulations/snacgame/component/PlayerSlot.h"
+#include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
-#include "component/VisualMesh.h"
-#include "component/Text.h"
-#include "component/PoseScreenSpace.h"
 
 #include <snacman/Profiling.h>
 
@@ -29,12 +28,20 @@
 #include <string>
 #include <optional>
 #include <algorithm>
-#include <cstdio>
 #include <array>
 #include <atomic>
+#include <cstdio>
 #include <filesystem>
+#include <imgui.h>
+#include <imguiui/ImguiUi.h>
 #include <map>
+#include <math/Color.h>
 #include <mutex>
+#include <optional>
+#include <snacman/ImguiUtilities.h>
+#include <snacman/LoopSettings.h>
+#include <snacman/Profiling.h>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -42,7 +49,10 @@
 namespace ad {
 struct RawInput;
 
-namespace snac { template <class T_renderer> class RenderThread; }
+namespace snac {
+template <class T_renderer>
+class RenderThread;
+}
 namespace snacgame {
 
 std::array<math::hdr::Rgba_f, 4> gSlotColors{
@@ -68,7 +78,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mStateMachine{
         mGameContext.mWorld, mGameContext.mWorld,
         *mGameContext.mResources.find("scenes/scene_description.json"),
-        mMappingContext},
+        mMappingContext, mGameContext},
     mSystemOrbitalCamera{mGameContext.mWorld, mGameContext.mWorld},
     mQueryRenderable{mGameContext.mWorld, mGameContext.mWorld},
     mQueryText{mGameContext.mWorld, mGameContext.mWorld},
@@ -120,11 +130,11 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         if (mImguiDisplays.mShowPlayerInfo)
         {
             ent::Phase update;
-            ent::Query<component::PlayerSlot, component::Geometry, component::PlayerMoveState> playerQuery{
+            ent::Query<component::PlayerSlot, component::Geometry, component::PlayerMoveState, component::GlobalPose> playerQuery{
                 mGameContext.mWorld};
             int playerIndex = 0;
             ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
-            playerQuery.each([&](const component::Geometry & aPlayerGeometry, component::PlayerMoveState & aMoveState) {
+            playerQuery.each([&](const component::Geometry & aPlayerGeometry, const component::PlayerMoveState & aMoveState, const component::GlobalPose & aPose) {
                 int intPosX =
                     static_cast<int>(aPlayerGeometry.mPosition.x() + 0.5f);
                 int intPosY =
@@ -142,6 +152,17 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                     ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
                     ImGui::Text("Current portal %d", aMoveState.mCurrentPortal);
                     ImGui::Text("Dest portal %d", aMoveState.mDestinationPortal);
+                    ImGui::Text("Player orientation: %f, (%f, %f, %f)", aPlayerGeometry.mOrientation.w(),
+                                aPlayerGeometry.mOrientation.x(), aPlayerGeometry.mOrientation.y(), aPlayerGeometry.mOrientation.z());
+                    ImGui::Text("Player instance scaling: %f, %f %f", aPlayerGeometry.mInstanceScaling.width(),
+                                aPlayerGeometry.mInstanceScaling.height(), aPlayerGeometry.mInstanceScaling.depth());
+                    ImGui::Text("Player global pos: %f, %f, %f", aPose.mPosition.x(),
+                                aPose.mPosition.y(), aPose.mPosition.z());
+                    ImGui::Text("Player global scaling: %f", aPose.mScaling);
+                    ImGui::Text("Player global orientation: %f, (%f, %f, %f)", aPose.mOrientation.w(),
+                                aPose.mOrientation.x(), aPose.mOrientation.y(), aPose.mOrientation.z());
+                    ImGui::Text("Player global instance scaling: %f, %f %f", aPose.mInstanceScaling.width(),
+                                aPose.mInstanceScaling.width(), aPose.mInstanceScaling.depth());
                     ImGui::Text("Player MoveState:");
                     if (aMoveState.mAllowedMove & gPlayerMoveFlagDown)
                     {
@@ -248,7 +269,8 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
         snac::Camera::gDefaults.vFov, // TODO Should be dynamic
         mAppInterface->getWindowSize().height());
 
-    if (!mGameContext.mSimulationControl.mPlaying && !mGameContext.mSimulationControl.mStep)
+    if (!mGameContext.mSimulationControl.mPlaying
+        && !mGameContext.mSimulationControl.mStep)
     {
         return false;
     }
@@ -296,26 +318,23 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     auto state = std::make_unique<visu::GraphicState>();
 
     ent::Phase nomutation;
-    const float cellSize = gCellSize;
 
     mQueryRenderable.get(nomutation)
-        .each([cellSize, &state](ent::Handle<ent::Entity> aHandle,
-                                 const component::Geometry & aGeometry,
-                                 const component::VisualMesh & aVisualMesh) {
-            float yCoord = static_cast<float>((int)aGeometry.mLayer) * cellSize * 0.1f;
-            auto worldPosition = math::Position<3, float>{
-                -(float) aGeometry.mPosition.y(),
-                yCoord,
-                -(float) aGeometry.mPosition.x(),
-            };
-            state->mEntities.insert(aHandle.id(),
-                                    visu::Entity{
-                                        .mPosition_world = worldPosition,
-                                        .mScaling = aGeometry.mScaling,
-                                        .mOrientation = aGeometry.mOrientation,
-                                        .mColor = aGeometry.mColor,
-                                        .mMesh = aVisualMesh.mMesh,
-                                    });
+        .each([&state](ent::Handle<ent::Entity> aHandle,
+                       const component::GlobalPose & aGlobPose,
+                       const component::VisualMesh & aVisualMesh) {
+            state->mEntities.insert(
+                aHandle.id(),
+                visu::Entity{
+                    .mPosition_world = aGlobPose.mPosition,
+                    .mScaling = math::Size<3, float>{aGlobPose.mScaling,
+                                                     aGlobPose.mScaling,
+                                                     aGlobPose.mScaling}
+                                    .cwMul(aGlobPose.mInstanceScaling),
+                    .mOrientation = aGlobPose.mOrientation,
+                    .mColor = aGlobPose.mColor,
+                    .mMesh = aVisualMesh.mMesh,
+                });
         });
 
     //

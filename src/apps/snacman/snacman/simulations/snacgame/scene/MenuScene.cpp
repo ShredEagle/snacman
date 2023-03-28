@@ -45,7 +45,7 @@ void MenuScene::setup(GameContext & aContext,
     mOwnedEntities.push_back(quitHandle);
 }
 
-void MenuScene::teardown(RawInput & aInput)
+void MenuScene::teardown(GameContext & aContext, RawInput & aInput)
 {
     ent::Phase destroy;
 

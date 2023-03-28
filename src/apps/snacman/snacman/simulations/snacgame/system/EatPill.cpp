@@ -4,6 +4,7 @@
 #include "entity/Entity.h"
 #include "math/Homogeneous.h"
 #include "snacman/Profiling.h"
+#include "snacman/simulations/snacgame/component/SceneNode.h"
 
 #include <math/Transformations.h>
 
@@ -20,13 +21,7 @@ void EatPill::update()
                       component::PlayerLifeCycle & aPlayerData,
                       component::Text & aText) {
 
-        float zCoord = static_cast<float>((int)aPlayerGeo.mLayer) * gCellSize * 0.1f;
-        math::Vec<3,float> worldPos{
-            aPlayerGeo.mPosition.x(),
-            aPlayerGeo.mPosition.y(),
-            zCoord,
-        };
-
+        const math::Vec<3,float> & worldPos = aPlayerGeo.mPosition.as<math::Vec>();
         auto playerHitbox = aPlayerCol.mHitbox;
         math::Position<4, float> transformedPos =  math::homogeneous::makePosition(playerHitbox.mPosition) * math::trans3d::translate(worldPos);
         playerHitbox.mPosition = transformedPos.xyz();
@@ -34,13 +29,7 @@ void EatPill::update()
         mPills.each([&](ent::Handle<ent::Entity> aHandle,
                         const component::Geometry & aPillGeo,
                         const component::Collision & aPillCol) {
-            float zCoord = static_cast<float>((int)aPillGeo.mLayer) * gCellSize * 0.1f;
-            math::Vec<3,float> worldPos{
-                aPillGeo.mPosition.x(),
-                aPillGeo.mPosition.y(),
-                zCoord,
-            };
-
+            const math::Vec<3,float> & worldPos = aPillGeo.mPosition.as<math::Vec>();
             auto pillHitbox = aPillCol.mHitbox;
             math::Position<4, float> transformedPos =  math::homogeneous::makePosition(pillHitbox.mPosition) * math::trans3d::translate(worldPos);
             pillHitbox.mPosition = transformedPos.xyz();
