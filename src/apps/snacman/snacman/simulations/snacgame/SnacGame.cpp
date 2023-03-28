@@ -252,6 +252,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 ImGui::End();
             }};
             recompileShaders = ImGui::Button("Recompile shaders");
+
+            mGameContext.mRenderThread.continueGui();
         }
     }
 

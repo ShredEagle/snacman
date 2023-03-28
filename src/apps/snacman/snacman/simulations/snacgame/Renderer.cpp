@@ -6,11 +6,13 @@
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 #include <platform/Filesystem.h>
-#include <snac-renderer/ResourceLoad.h>
+
 #include <snac-renderer/text/Text.h>
 #include <snac-renderer/Semantic.h>
 #include <snac-renderer/Render.h>
 #include <snac-renderer/Mesh.h>
+#include <snac-renderer/ResourceLoad.h>
+
 #include <snacman/Profiling.h>
 #include <snacman/ProfilingGPU.h>
 #include <snacman/Resources.h>
@@ -109,8 +111,9 @@ snac::InstanceStream initializeInstanceStream()
     return instances;
 }
 
-Renderer::Renderer(graphics::AppInterface & aAppInterface) :
+Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Technique> & aTechniqueAccess) :
     mAppInterface{aAppInterface},
+    mPipelineShadows{aAppInterface, aTechniqueAccess},
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
             snac::Camera::gDefaults},
     mMeshInstances{initializeInstanceStream()}
@@ -128,12 +131,12 @@ std::shared_ptr<snac::Mesh> Renderer::LoadShape(filesystem::path aShape,
     if (aShape.string() == "CUBE")
     {
         return std::make_shared<snac::Mesh>(
-            snac::loadCube(aResources.getTrivialShaderEffect("shaders/PhongLightingVertexColor.prog")));
+            snac::loadCube(aResources.getShaderEffect("effects/Mesh.sefx")));
     }
     else
     {
         return std::make_shared<snac::Mesh>(
-            loadModel(aShape, aResources.getTrivialShaderEffect("shaders/PhongLightingTextures.prog")));
+            loadModel(aShape, aResources.getShaderEffect("effects/MeshTextures.sefx")));
     }
 }
 
@@ -144,9 +147,22 @@ std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
     return std::make_shared<snac::Font>(
         std::move(aFontFace),
         aPixelHeight,
-        aResources.getTrivialShaderEffect("shaders/Text.prog")
+        aResources.getShaderEffect("effects/Text.sefx")
     );
 }
+
+
+void Renderer::continueGui()
+{
+    // This boolean is only accessed by main thread
+    static bool showShadowControls = false;
+    ImGui::Checkbox("Shadows", &showShadowControls);
+    if (showShadowControls)
+    {
+        mPipelineShadows.drawGui();
+    }
+}
+
 
 void Renderer::render(const visu::GraphicState & aState)
 {
@@ -171,14 +187,23 @@ void Renderer::render(const visu::GraphicState & aState)
     // Position camera
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
 
+    const math::AffineMatrix<4, GLfloat> worldToLight = 
+        math::trans3d::rotateX(math::Degree<float>{65.f}) // this is about the worst angle for shadows, on closest labyrinth row
+        * math::trans3d::translate<GLfloat>({-8.f, -6.f, -10.f});
+
+    math::Position<3, GLfloat> lightPosition_cam = 
+        (math::homogeneous::makePosition(math::Position<3, GLfloat>::Zero()) // light position in light space is the origin
+        * worldToLight.inverse()
+        * aState.mCamera.mWorldToCamera).xyz();
+
     math::hdr::Rgb_f lightColor = to_hdr<float>(math::sdr::gWhite) * 0.8f;
-    math::Position<3, GLfloat> lightPosition{0.f, 0.f, 0.f};
     math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
+
 
     snac::ProgramSetup programSetup{
         .mUniforms{
             {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
-            {snac::Semantic::LightPosition, {lightPosition}},
+            {snac::Semantic::LightPosition, {lightPosition_cam}},
             {snac::Semantic::AmbientColor, {ambientColor}},
             {snac::Semantic::FramebufferResolution,
             mAppInterface.getFramebufferSize()},
@@ -188,22 +213,37 @@ void Renderer::render(const visu::GraphicState & aState)
         }
     };
 
-    BEGIN_RECURRING_GL("Draw_meshes", drawMeshProfile);
-    for (const auto & [mesh, instances] : sortedMeshes)
     {
-        auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
-        mMeshInstances.respecifyData(std::span{instances});
-        mForwardMeshPass.draw(*mesh, mMeshInstances, mRenderer, programSetup);
+        static snac::Camera shadowLightViewPoint{1, 
+            {
+                .vFov = math::Degree<float>(75.f),
+                .zNear = -1.f,
+                .zFar = -50.f,
+            }};
+        shadowLightViewPoint.setPose(worldToLight);
+
+            TIME_RECURRING_GL("Draw_meshes");
+        // Poor man's pool
+        static std::list<snac::InstanceStream> instanceStreams;
+        while(instanceStreams.size() < sortedMeshes.size())
+        {
+            instanceStreams.push_back(initializeInstanceStream());
+        }
+
+        auto streamIt = instanceStreams.begin();
+        std::vector<snac::Pass::Visual> visuals;
+        for (const auto & [mesh, instances] : sortedMeshes)
+        {
+            streamIt->respecifyData(std::span{instances});
+            visuals.push_back({mesh, &*streamIt});
+            ++streamIt;
+        }
+        mPipelineShadows.execute(visuals, shadowLightViewPoint, mRenderer, programSetup);
     }
-    END_RECURRING_GL(drawMeshProfile);
 
     //
     // Text
     //
-
-    // TODO Why it does not start at 20, but at 32 ????!
-    // graphics::detail::RenderedGlyph glyph = mGlyphAtlas.mGlyphMap.at(90);
-
     mTextRenderer.render(*this, aState, programSetup);
 }
 

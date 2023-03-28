@@ -136,12 +136,15 @@ namespace {
         sRGB,
     };
 
+
+    // Note: Might mutate the image, this is why it is taking it by value.
     template <class T_pixel>
     std::shared_ptr<graphics::Texture>
-    prepareTexture(arte::Const_Owned<gltf::Texture> aTexture, ColorSpace aSourceColorSpace)
+    prepareTexture(arte::Image<T_pixel> aImage,
+                   const gltf::texture::Sampler & aSampler,
+                   ColorSpace aSourceColorSpace)
     {
         auto result = std::make_shared<graphics::Texture>(GL_TEXTURE_2D);
-        arte::Image<T_pixel> image = loadImageData<T_pixel>(checkImage(aTexture));
         // Note: Alternatively to decoding the image to linear space on the CPU,
         // we might allocate texture storage with internal format GL_SRGB8_ALPHA8.
         // Yet "[OpenGL] implementations are allowed to perform this conversion after filtering,
@@ -149,28 +152,46 @@ namespace {
         // (see: glspec4.6 core section 8.24)
         graphics::loadImageCompleteMipmaps(
             *result, 
-            aSourceColorSpace == ColorSpace::sRGB ? decodeSRGBToLinear(image): image);
+            aSourceColorSpace == ColorSpace::sRGB ? decodeSRGBToLinear(aImage): aImage);
 
         // Sampling parameters
         {
             graphics::ScopedBind boundTexture{*result};
-            const gltf::texture::Sampler & sampler = aTexture->sampler ? 
-                aTexture.get(&gltf::Texture::sampler)
-                : gltf::texture::gDefaultSampler;
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrapS);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrapT);
-            if (sampler.magFilter)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, aSampler.wrapS);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, aSampler.wrapT);
+            if (aSampler.magFilter)
             {
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, *sampler.magFilter);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, *aSampler.magFilter);
             }
-            if (sampler.minFilter)
+            if (aSampler.minFilter)
             {
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, *sampler.minFilter);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, *aSampler.minFilter);
             }
         }
 
         return result;
+    }
+
+
+    template <class T_pixel>
+    std::shared_ptr<graphics::Texture>
+    prepareTexture(arte::Const_Owned<gltf::Texture> aTexture, ColorSpace aSourceColorSpace)
+    {
+        return prepareTexture(
+            loadImageData<T_pixel>(checkImage(aTexture)),
+            (aTexture->sampler ? 
+                aTexture.get(&gltf::Texture::sampler) : gltf::texture::gDefaultSampler),
+            aSourceColorSpace
+        );
+    }
+
+
+    std::shared_ptr<graphics::Texture> makeDefaultNormalMap()
+    {
+        return prepareTexture(arte::Image<math::sdr::Rgb>{ {1, 1}, math::sdr::Rgb{128, 128, 255}},
+                            gltf::texture::gDefaultSampler,
+                            ColorSpace::Linear);
     }
 
 
@@ -302,6 +323,12 @@ namespace {
                 material->mUniforms.mStore.emplace(Semantic::BaseColorUVIndex,
                                             baseColorTexture->texCoord);
             }
+            else
+            {
+                SELOG(error)
+                     ("Gltf models are expected to have a base color texture for the moment.");
+                throw std::runtime_error{"Gltf models are expected to have a base color texture for the moment."};
+            }
 
             //
             // Normal texture
@@ -317,6 +344,16 @@ namespace {
                                             normalTexture->texCoord);
                 material->mUniforms.mStore.emplace(Semantic::NormalMapScale,
                                             normalTexture->scale);
+            }
+            else
+            {
+                static std::shared_ptr<graphics::Texture> gDefaultNormalMap = makeDefaultNormalMap();
+                material->mTextures.mStore.emplace(Semantic::NormalTexture,
+                                                   gDefaultNormalMap);
+                material->mUniforms.mStore.emplace(Semantic::NormalUVIndex,
+                                                   0u); // Arbitrary index, any UV coords will sample the same texel
+                material->mUniforms.mStore.emplace(Semantic::NormalMapScale,
+                                                   1.0f);
             }
         }
 

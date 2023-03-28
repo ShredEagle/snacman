@@ -64,7 +64,7 @@ void runApplication()
         glfwApp,
         //loadModel(finder.pathFor("Box/glTF/Box.gltf"),
         loadModel(finder.pathFor("Avocado/glTF/Avocado.gltf"),
-                  loadEffect(finder.pathFor("effects/MeshTextures.sefx"), finder)),
+                  loadEffect(finder.pathFor("effects/MeshTextures.sefx"), TechniqueLoader{finder})),
         finder,
     };
     Renderer renderer;

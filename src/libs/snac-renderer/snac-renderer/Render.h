@@ -57,6 +57,12 @@ public:
         const InstanceStream & aInstances,
         const IntrospectProgram & aProgram);
 
+    void resetRepositories()
+    {
+        mVertexArrayRepo= VertexArrayRepository{};
+        mWarningRepo = WarningRepository{};
+    }
+
 private:
     VertexArrayRepository mVertexArrayRepo;
     WarningRepository mWarningRepo;
@@ -66,10 +72,11 @@ private:
 class Pass
 {
 public:
+    // TODO this is probably too specific an approach. But it avoids a lot of templating for the time being.
     struct Visual
     {
-        InstanceStream mInstances;
-        Mesh mMesh;
+        const Mesh * mMesh;
+        const InstanceStream * mInstances;
     };
 
     Pass(std::string aName, std::vector<Technique::Annotation> aTechniqueFilter = {}) :

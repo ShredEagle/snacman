@@ -81,9 +81,9 @@ void Renderer::draw(
 void Pass::draw(std::span<const Visual> aVisuals, Renderer & aRenderer, ProgramSetup & aSetup) const
 {
     // The naive algorithm, should be refined by sorting similarities.
-    for (const auto & [instances, mesh] : aVisuals)
+    for (const auto & [mesh, instances] : aVisuals)
     {
-        draw(mesh, instances, aRenderer, aSetup);
+        draw(*mesh, *instances, aRenderer, aSetup);
     }
 }
 

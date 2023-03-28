@@ -5,6 +5,7 @@ set(${TARGET_NAME}_HEADERS
     Cube.h
     Effect.h
     IntrospectProgram.h
+    LoadInterface.h
     Logging.h
     Material.h
     Mesh.h
@@ -16,13 +17,15 @@ set(${TARGET_NAME}_HEADERS
     StackRepository.h
     UniformParameters.h
 
+    3rdparty/nvpro/Profiler.hpp
+    3rdparty/nvpro/Profiler_gl.hpp
+
     gltf/GltfLoad.h
     gltf/LoadBuffer.h
 
-    text/Text.h
+    pipelines/ForwardShadows.h
 
-    3rdparty/nvpro/Profiler.hpp
-    3rdparty/nvpro/Profiler_gl.hpp
+    text/Text.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -38,13 +41,15 @@ set(${TARGET_NAME}_SOURCES
     SetupDrawing.cpp
     ShaderResource.cpp
 
+    3rdparty/nvpro/Profiler.cpp
+    3rdparty/nvpro/Profiler_gl.cpp
+
     text/Text.cpp
 
     gltf/GltfLoad.cpp
     gltf/LoadBuffer.cpp
 
-    3rdparty/nvpro/Profiler.cpp
-    3rdparty/nvpro/Profiler_gl.cpp
+    pipelines/ForwardShadows.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -95,6 +100,7 @@ target_link_libraries(${TARGET_NAME}
     PRIVATE
         ad::arte
         ad::graphics
+        ad::imguiui 
         ad::renderer
         ad::resource
 

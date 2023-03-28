@@ -17,6 +17,7 @@ namespace ad {
 namespace snac {
 
 
+// TODO move to a generic library
 math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVerticalFov,
                                                     float aAspectRatio,
                                                     float aZNear,
@@ -50,11 +51,11 @@ void Camera::setPerspectiveProjection(float aAspectRatio, Parameters aParameters
                                   aAspectRatio,
                                   aParameters.zNear,
                                   aParameters.zFar);
+    mCurrentParameters = aParameters;
 }
 
 
-CameraBuffer::CameraBuffer(float aAspectRatio, Camera::Parameters aParameters) :
-    mCurrentParameters{aParameters}
+CameraBuffer::CameraBuffer(float aAspectRatio, Camera::Parameters aParameters)
 {
     const std::array<math::Matrix<4, 4, float>, 2> identities{
         math::Matrix<4, 4, float>::Identity(),
@@ -72,7 +73,6 @@ void CameraBuffer::resetProjection(float aAspectRatio, Camera::Parameters aParam
     graphics::ScopedBind bound{mViewing};
     glBufferSubData(GL_UNIFORM_BUFFER, sizeof(math::Matrix<4, 4, float>), sizeof(perspectiveProjection),
                     perspectiveProjection.data());
-    mCurrentParameters = aParameters;
 }
 
 

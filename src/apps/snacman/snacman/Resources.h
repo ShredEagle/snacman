@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO might become useless once Resources itselfs become the Load<> implementer
+#include <snac-renderer/ResourceLoad.h>
 
 // Note: this is coupling the Resource class to the specifics of snacgame. 
 // But I do not want to template Resource on the renderer...
@@ -44,10 +46,14 @@ public:
     std::shared_ptr<Font> getFont(filesystem::path aFont, unsigned int aPixelHeight = gDefaultPixelHeight);
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
-    std::shared_ptr<Effect> getTrivialShaderEffect(filesystem::path aProgram);
+    std::shared_ptr<Effect> getShaderEffect(filesystem::path aEffect);
 
     auto find(const filesystem::path & aPath) const
     { return mFinder.find(aPath); }
+
+    // TODO might become useless once Resources itselfs become the Load<> implementer
+    snac::TechniqueLoader getTechniqueLoader() const
+    { return {mFinder}; }
 
     const arte::Freetype & getFreetype()
     { return mFreetype; }

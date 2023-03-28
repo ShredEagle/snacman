@@ -15,6 +15,7 @@ math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVertica
                                                     float aZNear,
                                                     float aZFar);
 
+// TODO extend with orthographic projection
 struct Camera
 {
     // TODO rename perspectiveparameters
@@ -27,13 +28,16 @@ struct Camera
 
     Camera(float aAspectRatio, Parameters aParameters);
 
-    void setPose(math::AffineMatrix<4, GLfloat> aPose)
-    { mWorldToCamera = aPose; }
+    void setPose(math::AffineMatrix<4, GLfloat> aWorldToCamera)
+    { mWorldToCamera = aWorldToCamera; }
 
     void setPerspectiveProjection(float aAspectRatio, Parameters aParameters);
 
     math::Matrix<4, 4, GLfloat> assembleViewMatrix() const
     { return mWorldToCamera * mProjection; }
+
+    const Camera::Parameters getCurrentParameters() const
+    { return mCurrentParameters; }
 
     static constexpr Parameters gDefaults{
         .vFov = math::Degree<float>{45.f},
@@ -46,6 +50,8 @@ struct Camera
 private:
     math::AffineMatrix<4, GLfloat> mWorldToCamera = math::AffineMatrix<4, GLfloat>::Identity();
     math::Matrix<4, 4, GLfloat> mProjection;
+
+    Camera::Parameters mCurrentParameters;
 };
 
 // TODO redesign, potentially in term of a Camera member?
@@ -57,12 +63,6 @@ struct CameraBuffer
     void setWorldToCamera(const math::AffineMatrix<4, GLfloat> & aTransformation);
 
     graphics::UniformBufferObject mViewing;
-
-    const Camera::Parameters getCurrentParameters() const
-    { return mCurrentParameters; }
-
-private:
-    Camera::Parameters mCurrentParameters;
 };
 
 

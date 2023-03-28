@@ -119,7 +119,7 @@ std::shared_ptr<Effect> loadTrivialEffect(filesystem::path aProgram)
 
 
 std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
-                                   const resource::ResourceFinder & aFinder)
+                                   Load<Technique> & aTechniqueAccess)
 {
     auto result = std::make_shared<Effect>();
 
@@ -127,7 +127,7 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
     for (const auto & technique : effect.at("techniques"))
     {
         result->mTechniques.push_back(
-            loadTechnique(aFinder.pathFor(technique.at("programfile")))
+            aTechniqueAccess.get(technique.at("programfile"))
         );
         if(technique.contains("annotations"))
         {
