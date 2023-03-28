@@ -1,7 +1,7 @@
 editables:
-    MarkovJunior.cpp/f21e4306a7@adnn/develop:
+    MarkovJunior.cpp/1c8bd4662f@adnn/develop:
         path: ../../../MarkovJunior.cpp/conan
-    entity/46a11641b0@adnn/develop:
+    entity/29ce7b6ff0@adnn/develop:
         path: ../../../entity/conan
     graphics/8b097360a2@adnn/develop:
         path: ../../../graphics/conan
