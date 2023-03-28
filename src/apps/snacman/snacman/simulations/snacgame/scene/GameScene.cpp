@@ -90,7 +90,7 @@ void GameScene::setup(GameContext & aContext,
     {
         ent::Phase init;
         mSystems.get(init)->add(system::SceneGraphResolver{mWorld, mSceneRoot});
-        mSystems.get(init)->add(system::PlayerSpawner{mWorld});
+        mSystems.get(init)->add(system::PlayerSpawner{mWorld, mLevel});
         mSystems.get(init)->add(system::RoundMonitor{mWorld});
         mSystems.get(init)->add(system::PlayerInvulFrame{mWorld});
         mSystems.get(init)->add(system::DeterminePlayerAction{mWorld, mLevel});
@@ -104,12 +104,6 @@ void GameScene::setup(GameContext & aContext,
     // Can't insert mLevel before the createLevel phase is over
     // otherwise mLevel does not have the correct component
     insertEntityInScene(mLevel, mSceneRoot);
-
-    OptEntHandle player = snac::getFirstHandle(mPlayers);
-    if (player)
-    {
-        insertEntityInScene(*player, mLevel);
-    }
 }
 
 void GameScene::teardown(GameContext & aContext, RawInput & aInput)
