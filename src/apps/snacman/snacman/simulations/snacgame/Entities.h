@@ -44,6 +44,7 @@ createPlayerSpawnEntity(GameContext & aContext,
                         const math::Position<2, float> & aPos);
 
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
+                                            ent::Phase & aInit,
                                             ControllerType aControllerType,
                                             ent::Handle<ent::Entity> aSlot,
                                             int aControllerId = 0);
