@@ -113,9 +113,9 @@ snac::InstanceStream initializeInstanceStream()
 
 Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Technique> & aTechniqueAccess) :
     mAppInterface{aAppInterface},
+    mPipelineShadows{aAppInterface, aTechniqueAccess},
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
             snac::Camera::gDefaults},
-    mPipelineShadows{aAppInterface, aTechniqueAccess},
     mMeshInstances{initializeInstanceStream()}
 {}
 
@@ -157,7 +157,6 @@ void Renderer::continueGui()
     // This boolean is only accessed by main thread
     static bool showShadowControls = false;
     ImGui::Checkbox("Shadows", &showShadowControls);
-    showShadowControls = showShadowControls;
     if (showShadowControls)
     {
         mPipelineShadows.drawGui();

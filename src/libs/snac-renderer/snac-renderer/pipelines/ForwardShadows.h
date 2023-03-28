@@ -15,6 +15,8 @@
 
 #include <imguiui/ImguiUi.h>
 
+#include <atomic>
+
 
 namespace ad {
 namespace snac {
