@@ -76,5 +76,7 @@ findSlotAndBind(GameContext & aContext,
                 ControllerType aType,
                 int aIndex);
 
+ent::Handle<ent::Entity> removePlayerFromGame(ent::Phase & aPhase, ent::Handle<ent::Entity> aHandle);
+
 } // namespace snacgame
 } // namespace ad

@@ -124,17 +124,8 @@ void GameScene::teardown(GameContext & aContext, RawInput & aInput)
 
     mPlayers.each([&destroy](EntHandle aHandle, component::PlayerSlot & aSlot,
                              component::Controller & aController) {
-        aSlot.mFilled = false;
 
-        aHandle.get(destroy)->remove<component::Controller>();
-        aHandle.get(destroy)->remove<component::Geometry>();
-        aHandle.get(destroy)->remove<component::PlayerLifeCycle>();
-        aHandle.get(destroy)->remove<component::PlayerMoveState>();
-        aHandle.get(destroy)->remove<component::Text>();
-        aHandle.get(destroy)->remove<component::VisualMesh>();
-        aHandle.get(destroy)->remove<component::PoseScreenSpace>();
-        aHandle.get(destroy)->remove<component::SceneNode>();
-        aHandle.get(destroy)->remove<component::GlobalPose>();
+        removePlayerFromGame(destroy, aHandle);
     });
 }
 
