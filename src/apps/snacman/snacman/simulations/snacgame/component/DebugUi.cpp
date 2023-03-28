@@ -4,6 +4,7 @@
 #include "PlayerMoveState.h"
 
 #include "imgui.h"
+#include "snacman/simulations/snacgame/component/Controller.h"
 
 namespace ad {
 namespace snacgame {
@@ -61,6 +62,23 @@ void PlayerMoveState::drawUi() const
     {
         ImGui::SameLine();
         ImGui::Text("Left");
+    }
+}
+
+void Controller::drawUi() const
+{
+    ImGui::Text("Controller id %d", mControllerId);
+    switch (mType)
+    {
+        case ControllerType::Keyboard:
+            ImGui::Text("Keyboard");
+            break;
+        case ControllerType::Gamepad:
+            ImGui::Text("Gamepad");
+            break;
+        case ControllerType::Dummy:
+            ImGui::Text("Dummy");
+            break;
     }
 }
 } // namespace component
