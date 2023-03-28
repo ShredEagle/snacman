@@ -189,7 +189,7 @@ void Renderer::render(const visu::GraphicState & aState)
 
     const math::AffineMatrix<4, GLfloat> worldToLight = 
         math::trans3d::rotateX(math::Degree<float>{65.f}) // this is about the worst angle for shadows, on closest labyrinth row
-        * math::trans3d::translate<GLfloat>({-8.f, -6.f, -10.f});
+        * math::trans3d::translate<GLfloat>({0.f, 0.f, -14.f});
 
     math::Position<3, GLfloat> lightPosition_cam = 
         (math::homogeneous::makePosition(math::Position<3, GLfloat>::Zero()) // light position in light space is the origin
