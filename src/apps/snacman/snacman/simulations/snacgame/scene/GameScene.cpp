@@ -23,6 +23,7 @@
 #include "../SceneGraph.h"
 #include "../system/DeterminePlayerAction.h"
 #include "../system/EatPill.h"
+#include "../system/Pathfinding.h"
 #include "../system/IntegratePlayerMovement.h"
 #include "../system/LevelCreator.h"
 #include "../system/MovementIntegration.h"
@@ -99,6 +100,7 @@ void GameScene::setup(GameContext & aContext,
         mSystems.get(init)->add(system::MovementIntegration{mWorld});
         mSystems.get(init)->add(system::EatPill{mWorld});
         mSystems.get(init)->add(system::PortalManagement{mWorld, mLevel});
+        mSystems.get(init)->add(system::Pathfinding{mWorld, mLevel});
     }
 
     // Can't insert mLevel before the createLevel phase is over
@@ -216,6 +218,7 @@ GameScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
     mSystems.get(update)->get<system::DeterminePlayerAction>().update();
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
     mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
+    mSystems.get(update)->get<system::Pathfinding>().update(aDelta);
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
