@@ -14,7 +14,10 @@
 #include "scene/Scene.h"
 #include "SimulationControl.h"
 #include "Entities.h"
+#include "snacman/simulations/snacgame/SceneGraph.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
+#include "snacman/simulations/snacgame/component/PathToOnGrid.h"
+#include "snacman/simulations/snacgame/component/SceneNode.h"
 #include "typedef.h"
 #include "system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
@@ -266,6 +269,33 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             recompileShaders = ImGui::Button("Recompile shaders");
 
             mGameContext.mRenderThread.continueGui();
+        }
+        if (mImguiDisplays.mDebugFunction)
+        {
+            ImGui::Begin("Debug function");
+            if (ImGui::Button("Create pathfinder"))
+            {
+                EntHandle pathfinder = mGameContext.mWorld.addEntity();
+                EntHandle player = *snac::getFirstHandle(ent::Query<component::PlayerSlot, component::Geometry>{mGameContext.mWorld});
+                {
+                    Phase pathfinding;
+                    Entity pEntity = *pathfinder.get(pathfinding);
+                    addMeshGeoNode(pathfinding,
+                            mGameContext,
+                            pEntity,
+                            "CUBE",
+                            {7.f, 7.f, gPillHeight},
+                            1.f,
+                            {0.5f, 0.5f, 0.5f}
+                        );
+                    pEntity.add(component::PathToOnGrid{player});
+                }
+                EntHandle root = mStateMachine->getCurrentScene()->mSceneRoot;
+                Phase phase;
+                EntHandle level = *root.get(phase)->get<component::SceneNode>().aFirstChild;
+                insertEntityInScene(pathfinder, level);
+            }
+            ImGui::End();
         }
     }
 

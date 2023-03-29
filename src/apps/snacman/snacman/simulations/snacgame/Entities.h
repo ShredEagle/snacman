@@ -1,5 +1,8 @@
 #pragma once
 
+#include "GameParameters.h"
+
+#include "math/Quaternion.h"
 #include <entity/Entity.h>
 #include <entity/Query.h>
 #include <math/Color.h>
@@ -27,6 +30,20 @@ struct Transition;
 }
 
 struct GameContext;
+
+constexpr float gPillHeight = 6 * gCellSize * 0.1f;
+constexpr float gPlayerHeight = 2 * gCellSize * 0.1f;
+constexpr float gLevelHeight = 0 * gCellSize * 0.1f;
+
+void addMeshGeoNode(ent::Phase & aPhase,
+                    GameContext & aContext,
+                    ent::Entity & aEnt,
+                    const char * aModelPath,
+                    math::Position<3, float> aPos = math::Position<3, float>::Zero(),
+                    float aScale = 1.f,
+                    math::Size<3, float> aInstanceScale = {1.f, 1.f, 1.f},
+                    math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
+                    math::hdr::Rgba_f aColor = math::hdr::gBlack<float>);
 
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
                                     const math::Position<2, float> & Pos);

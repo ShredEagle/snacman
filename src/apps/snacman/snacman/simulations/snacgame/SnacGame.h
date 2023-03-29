@@ -51,6 +51,7 @@ struct ImguiDisplays
     bool mSpeedControl = false;
     bool mShowPlayerInfo = false;
     bool mShowRenderControls = false;
+    bool mDebugFunction = false;
 
     void display()
     {
@@ -63,6 +64,7 @@ struct ImguiDisplays
         ImGui::Checkbox("Render profiler",  &mShowRenderProfiler);
         ImGui::Checkbox("Player info",  &mShowPlayerInfo);
         ImGui::Checkbox("Render controls",  &mShowRenderControls);
+        ImGui::Checkbox("DebugFunction", &mDebugFunction);
         ImGui::Checkbox("ImguiDemo", &mShowImguiDemo);
         ImGui::End();
     }

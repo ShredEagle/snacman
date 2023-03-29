@@ -16,7 +16,6 @@
 #include "component/Text.h"
 #include "component/VisualMesh.h"
 #include "GameContext.h"
-#include "GameParameters.h"
 #include "scene/MenuScene.h"
 #include "typedef.h"
 
@@ -45,22 +44,17 @@
 namespace ad {
 namespace snacgame {
 
-constexpr float lPillHeight = 6 * gCellSize * 0.1f;
-constexpr float lPlayerHeight = 2 * gCellSize * 0.1f;
-constexpr float lLevelHeight = 0 * gCellSize * 0.1f;
-
 constexpr Size3 lLevelElementScaling = {0.5f, 0.5f, 0.1f};
 
-namespace {
 void addMeshGeoNode(Phase & aPhase,
                     GameContext & aContext,
                     Entity & aEnt,
                     const char * aModelPath,
-                    Pos3 aPos = Pos3::Zero(),
-                    float aScale = 1.f,
-                    Size3 aInstanceScale = {1.f, 1.f, 1.f},
-                    Quat_f aOrientation = Quat_f::Identity(),
-                    HdrColor_f aColor = math::hdr::gBlack<float>)
+                    Pos3 aPos,
+                    float aScale,
+                    Size3 aInstanceScale,
+                    Quat_f aOrientation,
+                    HdrColor_f aColor)
 {
     aEnt.add(component::Geometry{.mPosition = aPos,
                                  .mScaling = aScale,
@@ -74,6 +68,7 @@ void addMeshGeoNode(Phase & aPhase,
         .add(component::GlobalPose{});
 }
 
+namespace {
 void createLevelElement(Phase & aPhase,
                         EntHandle aHandle,
                         GameContext & aContext,
@@ -83,7 +78,7 @@ void createLevelElement(Phase & aPhase,
     Entity path = *aHandle.get(aPhase);
     addMeshGeoNode(aPhase, aContext, path, "CUBE",
                    {static_cast<float>(aGridPos.x()),
-                    static_cast<float>(aGridPos.y()), lLevelHeight},
+                    static_cast<float>(aGridPos.y()), gLevelHeight},
                    1.f, lLevelElementScaling, Quat_f::Identity(), aColor);
     path.add(component::LevelEntity{});
 }
@@ -98,7 +93,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
     addMeshGeoNode(
         init, aContext, pill, "models/burger/burger.gltf",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
-         lPillHeight},
+         gPillHeight},
         1.f, {1.6f, 1.6f, 1.6f},
         math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 math::Degree<float>{25.f}});
@@ -155,7 +150,7 @@ createPlayerSpawnEntity(GameContext & aContext,
     ent::Phase init;
     math::Position<3, float> spawnPos = {static_cast<float>(aGridPos.x()),
                                          static_cast<float>(aGridPos.y()),
-                                         lPlayerHeight};
+                                         gPlayerHeight};
     auto spawner = aContext.mWorld.addEntity();
     createLevelElement(init, spawner, aContext, aGridPos,
                        math::hdr::gCyan<float>);
@@ -182,7 +177,7 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
 
     addMeshGeoNode(
         aInit, aContext, player, "models/avocado/Avocado.gltf",
-        {0.f, 0.f, lPlayerHeight}, 1.f, {50.f, 50.f, 50.f},
+        {0.f, 0.f, gPlayerHeight}, 1.f, {50.f, 50.f, 50.f},
         math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 math::Turn<float>{0.25f}},
         playerSlot.mColor);
