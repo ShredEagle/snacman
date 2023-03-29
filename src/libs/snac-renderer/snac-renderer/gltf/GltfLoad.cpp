@@ -187,11 +187,18 @@ namespace {
     }
 
 
+    std::shared_ptr<graphics::Texture> makeDefaultColorTexture()
+    {
+        return prepareTexture(arte::Image<math::sdr::Rgba>{ {1, 1}, math::sdr::Rgba{255, 255, 255, 255}},
+                              gltf::texture::gDefaultSampler,
+                              ColorSpace::sRGB);
+    }
+
     std::shared_ptr<graphics::Texture> makeDefaultNormalMap()
     {
         return prepareTexture(arte::Image<math::sdr::Rgb>{ {1, 1}, math::sdr::Rgb{128, 128, 255}},
-                            gltf::texture::gDefaultSampler,
-                            ColorSpace::Linear);
+                              gltf::texture::gDefaultSampler,
+                              ColorSpace::Linear);
     }
 
 
@@ -321,13 +328,17 @@ namespace {
                         gltfMaterial.get<gltf::Texture>(baseColorTexture->index),
                         ColorSpace::sRGB));
                 material->mUniforms.mStore.emplace(Semantic::BaseColorUVIndex,
-                                            baseColorTexture->texCoord);
+                                                   baseColorTexture->texCoord);
             }
             else
             {
-                SELOG(error)
-                     ("Gltf models are expected to have a base color texture for the moment.");
-                throw std::runtime_error{"Gltf models are expected to have a base color texture for the moment."};
+                static std::shared_ptr<graphics::Texture> gDefaultColorTexture = makeDefaultColorTexture();
+                material->mTextures.mStore.emplace(
+                    Semantic::BaseColorTexture,
+                    gDefaultColorTexture);
+                material->mUniforms.mStore.emplace(Semantic::BaseColorUVIndex,
+                                                   // Arbitrary index, any UV coords will sample the same texel
+                                                   0u); 
             }
 
             //
@@ -380,6 +391,8 @@ Model loadGltf(filesystem::path aModel, std::string_view aName)
         .mName = std::string{aName},
     };
 
+    bool firstPrimitive = true;
+
     // Collapse the primitives from all meshes in the file into a single collection of primitives.
     for (Owned<gltf::Mesh> gltfMesh : gltf.getMeshes())
     {
@@ -390,8 +403,16 @@ Model loadGltf(filesystem::path aModel, std::string_view aName)
         {
             model.mParts.push_back(makeFromPrimitive(gltfPrimitive));
             model.mParts.back().mName = meshName + "_<prim#" + std::to_string(gltfPrimitive.id()) + ">";
+            if(firstPrimitive)
+            {
+                model.mBoundingBox = model.mParts.back().mStream.mBoundingBox;
+                firstPrimitive = false;
+            }
+            else
+            {
+                model.mBoundingBox.uniteAssign(model.mParts.back().mStream.mBoundingBox);
+            }
         }
-
     }
 
     return model;

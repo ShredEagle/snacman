@@ -111,6 +111,7 @@ struct Mesh
 struct Model
 {
     std::vector<Mesh> mParts;
+    math::Box<GLfloat> mBoundingBox;
     std::string mName;
 };
 
