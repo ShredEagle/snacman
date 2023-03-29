@@ -379,7 +379,10 @@ private:
 
         while (!mStop)
         {
-            Guard frameProfiling = profileFrame(snac::Profiler::Render);
+            Guard frameProfiling = profileFrame(getProfilerGL());
+
+            // Without the swap buffer
+            BEGIN_RECURRING_GL("Iteration", iterationScope);
 
             // Service all queued operations first.
             {
@@ -457,14 +460,15 @@ private:
             SELOG(trace)("Render thread: Frame sent to GPU.");
 
             {
-                TIME_RECURRING(Render, "ImGui::renderBackend");
+                TIME_RECURRING_GL( "ImGui::renderBackend");
                 mImguiUi.renderBackend();
             }
 
             END_RECURRING_GL(frameProfilerScope);
+            END_RECURRING_GL(iterationScope);
 
             {
-                TIME_RECURRING(Render, "Swap buffers");
+                TIME_RECURRING_GL("Swap buffers");
                 mApplication.swapBuffers();
             }
 

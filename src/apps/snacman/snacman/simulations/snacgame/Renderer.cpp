@@ -41,7 +41,7 @@ void TextRenderer::render(Renderer & aRenderer,
                           const visu::GraphicState & aState,
                           snac::ProgramSetup & aProgramSetup)
 {
-    TIME_RECURRING_CLASSFUNC(Render);
+    TIME_RECURRING_CLASSFUNC_GL();
 
     auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
 
@@ -169,7 +169,7 @@ void Renderer::continueGui()
 
 void Renderer::render(const visu::GraphicState & aState)
 {
-    TIME_RECURRING(Render, "Render");
+    TIME_RECURRING_GL("Render");
 
     // Stream the instance buffer data
     std::map<snac::Model *, std::vector<PoseColor>> sortedModels;
@@ -185,7 +185,7 @@ void Renderer::render(const visu::GraphicState & aState)
             .albedo = to_sdr(entity.mColor),
         });
     }
-    END_RECURRING(sortMeshProfile);
+    END_RECURRING_GL(sortModelProfile);
 
     // Position camera
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
