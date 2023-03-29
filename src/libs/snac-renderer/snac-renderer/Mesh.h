@@ -98,6 +98,7 @@ struct VertexStream
 };
 
 
+/// \warning Correspond to the `Mesh Primitive` in glTF (2.0) lingua.
 struct Mesh
 {
     VertexStream mStream;
@@ -106,7 +107,15 @@ struct Mesh
 };
 
 
-std::ostream & operator<<(std::ostream & aOut, const Mesh & aMesh);
+/// \warning Correspond to the `Mesh` in glTF (2.0) lingua.
+struct Model
+{
+    std::vector<Mesh> mParts;
+    std::string mName;
+};
+
+
+std::ostream & operator<<(std::ostream & aOut, const Model & aModel);
 
 
 struct InstanceStream

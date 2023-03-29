@@ -5,15 +5,15 @@ namespace ad {
 namespace snac {
 
 
-std::ostream & operator<<(std::ostream & aOut, const Mesh & aMesh)
+std::ostream & operator<<(std::ostream & aOut, const Model & aModel)
 {
-    if(aMesh.mName.empty())
+    if(aModel.mName.empty())
     {
-        return aOut << "unnamed mesh (at " << &aMesh << ")";
+        return aOut << "unnamed mesh (at " << &aModel << ")";
     }
     else
     {
-        return aOut << aMesh.mName << "(at " << &aMesh << ")";
+        return aOut << aModel.mName << "(at " << &aModel << ")";
     }
 }
 

@@ -48,8 +48,7 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
 
 Mesh loadCube(std::shared_ptr<Effect> aEffect);
 
-Mesh loadModel(filesystem::path aGltf, std::shared_ptr<Effect> aEffect);
-
+Model loadModel(filesystem::path aGltf, std::shared_ptr<Effect> aEffect);
 
 } // namespace graphics
 } // namespace ad
