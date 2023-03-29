@@ -73,6 +73,9 @@ public:
     void drawGui()
     { mControls.drawGui(); }
 
+    Controls & getControls()
+    { return mControls; }
+
 private:
     static constexpr math::Size<2, int> gShadowMapSize{1024, 1024};
 

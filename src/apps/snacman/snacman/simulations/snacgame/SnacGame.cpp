@@ -336,7 +336,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     mQueryRenderable.get(nomutation)
         .each([&state](ent::Handle<ent::Entity> aHandle,
                        const component::GlobalPose & aGlobPose,
-                       const component::VisualMesh & aVisualMesh) {
+                       const component::VisualModel & aVisualModel) {
             state->mEntities.insert(
                 aHandle.id(),
                 visu::Entity{
@@ -347,7 +347,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                                     .cwMul(aGlobPose.mInstanceScaling),
                     .mOrientation = aGlobPose.mOrientation,
                     .mColor = aGlobPose.mColor,
-                    .mMesh = aVisualMesh.mMesh,
+                    .mModel = aVisualModel.mModel,
                 });
         });
 

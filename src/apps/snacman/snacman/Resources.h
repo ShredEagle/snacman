@@ -22,7 +22,7 @@ namespace snac {
 
 struct Effect;
 struct Font;
-struct Mesh;
+struct Model;
 template <class T_renderer> class RenderThread;
 
 constexpr unsigned int gDefaultPixelHeight = 64;
@@ -41,7 +41,7 @@ public:
     // Just to log it
     ~Resources();
 
-    std::shared_ptr<Mesh> getShape(filesystem::path aShape);
+    std::shared_ptr<Model> getModel(filesystem::path aModel);
 
     std::shared_ptr<Font> getFont(filesystem::path aFont, unsigned int aPixelHeight = gDefaultPixelHeight);
 
@@ -72,8 +72,8 @@ private:
         RenderThread<snacgame::Renderer> & aRenderThread,
         Resources & aResources);
 
-    static std::shared_ptr<Mesh> MeshLoader(
-        filesystem::path aMesh, 
+    static std::shared_ptr<Model> ModelLoader(
+        filesystem::path aModel, 
         RenderThread<snacgame::Renderer> & aRenderThread,
         Resources & aResources);
     
@@ -84,10 +84,10 @@ private:
     arte::Freetype & mFreetype;
     RenderThread<snacgame::Renderer> & mRenderThread;
     
-    std::shared_ptr<Mesh> mCube = nullptr;
+    std::shared_ptr<Model> mCube = nullptr;
     resource::ResourceManager<std::shared_ptr<Font>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;
     resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;
-    resource::ResourceManager<std::shared_ptr<Mesh>,   resource::ResourceFinder, &Resources::MeshLoader>  mMeshes;
+    resource::ResourceManager<std::shared_ptr<Model>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
 };
 
 

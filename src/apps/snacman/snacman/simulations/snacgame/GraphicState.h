@@ -27,7 +27,7 @@ struct Entity
     math::Size<3, float> mScaling; // TODO were is it used?
     math::Quaternion<float> mOrientation;
     math::hdr::Rgba_f mColor;
-    std::shared_ptr<snac::Mesh> mMesh;
+    std::shared_ptr<snac::Model> mModel;
 };
 
                     
@@ -38,7 +38,7 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
         math::lerp(aLeftEntity.mScaling,        aRightEntity.mScaling,          aInterpolant),
         math::slerp(aLeftEntity.mOrientation,   aRightEntity.mOrientation,      aInterpolant),
         math::lerp(aLeftEntity.mColor,          aRightEntity.mColor,            aInterpolant),
-        aRightEntity.mMesh,
+        aRightEntity.mModel,
     };
 }
 

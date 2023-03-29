@@ -53,7 +53,7 @@ public:
     void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
     // TODO Extend beyond cubes.
-    static std::shared_ptr<snac::Mesh> LoadShape(filesystem::path aShape, snac::Resources & aResources);
+    static std::shared_ptr<snac::Model> LoadModel(filesystem::path aModel, snac::Resources & aResources);
 
     std::shared_ptr<snac::Font> loadFont(arte::FontFace aFontFace,
                                          unsigned int aPixelHeight,
