@@ -137,7 +137,7 @@ std::vector<T_value> moveInitVector(std::array<T_value, N> aValues)
 struct Scene
 {
     Scene(graphics::ApplicationGlfw & aGlfwApp,
-          Mesh aMesh,
+          Model aModel,
           const resource::ResourceFinder & aFinder);
 
     void update();
@@ -156,7 +156,7 @@ struct Scene
     struct Entity
     {
         InstanceStream mInstances;
-        Mesh mMesh;
+        Model mModel;
     };
     std::vector<Entity> mEntities;
 
@@ -172,15 +172,15 @@ struct Scene
 
 
 inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
-                    Mesh aMesh,
+                    Model aModel,
                     const resource::ResourceFinder & aFinder) :
     mAppInterface{*aGlfwApp.getAppInterface()},
     mEntities{ 
         moveInitVector<Entity, 1>({Entity{
             // Is it safe? Do we have a guarantee regarding member order?
             // (see the std::move)
-            .mInstances = populateTripleInstances(aMesh.mStream.mBoundingBox),
-            .mMesh = std::move(aMesh),
+            .mInstances = populateTripleInstances(aModel.mBoundingBox),
+            .mModel = std::move(aModel),
         }})
     },
     mCamera{math::getRatio<float>(aGlfwApp.getAppInterface()->getFramebufferSize()), Camera::gDefaults},
@@ -241,17 +241,26 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
                         * math::trans3d::translate(math::Vec<3, float>{ 0.f, -2.f, 0.f}),
                 }
             }}),
-            .mMesh = std::move(floor),
+            .mModel = {
+                .mParts = moveInitVector<Mesh, 1>({std::move(floor),}),
+            }
         });
     }
 
 
     // Annotate the existing techniques as "view: left"
     // Add a copy of each technique, annotated "view: right"
-    for(auto & [_instances, mesh] : mEntities)
+    std::set<Effect*> duplicatedEffects;
+    for(auto & [_instances, model] : mEntities)
     {
-        // TODO we have to check if the effect was already present on another mesh
-        duplicateTechniques(*mesh.mMaterial->mEffect);
+        for(auto & mesh : model.mParts)
+        {
+            // Only duplicate the techniques if this effect was not already present.
+            if(duplicatedEffects.insert(mesh.mMaterial->mEffect.get()).second)
+            {
+                duplicateTechniques(*mesh.mMaterial->mEffect);
+            }
+        }
     }
 }
 
@@ -260,10 +269,12 @@ std::vector<Pass::Visual> Scene::getVisuals() const
 {
     std::vector<Pass::Visual> visuals;
     visuals.reserve(mEntities.size());
-    // Note: the order in entities is reverses compared to Visual
-    for (const auto & [instance, mesh] : mEntities)
+    for (const auto & [instance, model] : mEntities)
     {
-        visuals.push_back({&mesh, &instance});
+        for (const auto & mesh : model.mParts)
+        {
+            visuals.push_back({&mesh, &instance});
+        }
     }
     return visuals;
 }
@@ -277,13 +288,16 @@ inline void Scene::update()
 
 inline void Scene::recompileRightView()
 {
-    for(auto & [_instances, mesh] : mEntities)
+    for(auto & [_instances, model] : mEntities)
     {
-        for (auto & technique : mesh.mMaterial->mEffect->mTechniques)
+        for (const auto & mesh : model.mParts)
         {
-            if(technique.mAnnotations.at(gViewSid) == gRightSid)
+            for (auto & technique : mesh.mMaterial->mEffect->mTechniques)
             {
-                attemptRecompile(technique);
+                if(technique.mAnnotations.at(gViewSid) == gRightSid)
+                {
+                    attemptRecompile(technique);
+                }
             }
         }
     }

@@ -63,7 +63,8 @@ void runApplication()
     Scene scene{
         glfwApp,
         //loadModel(finder.pathFor("Box/glTF/Box.gltf"),
-        loadModel(finder.pathFor("Avocado/glTF/Avocado.gltf"),
+        //loadModel(finder.pathFor("Avocado/glTF/Avocado.gltf"),
+        loadModel(finder.pathFor("models/burger/burger.gltf"),
                   loadEffect(finder.pathFor("effects/MeshTextures.sefx"), TechniqueLoader{finder})),
         finder,
     };
