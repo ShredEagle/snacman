@@ -3,6 +3,9 @@
 #include "math/Color.h"
 #include "snacman/Input.h"
 #include "snacman/Logging.h"
+#include "snacman/simulations/snacgame/LevelHelper.h"
+
+#include "../typedef.h"
 
 #include "../component/AllowedMovement.h"
 #include "../component/LevelData.h"
@@ -31,13 +34,12 @@ void AllowMovement::update()
                     component::AllowedMovement & aAllowedMovement) {
         int allowedMovementFlag = component::gAllowedMovementNone;
 
-        int intPosX = static_cast<int>(aGeo.mPosition.x() + 0.5f);
-        int intPosY = static_cast<int>(aGeo.mPosition.y() + 0.5f);
-        float fracPosX = aGeo.mPosition.x() - intPosX;
-        float fracPosY = aGeo.mPosition.y() - intPosY;
+        Pos2_i intPos = getLevelPosition_i(aGeo.mPosition);
+        float fracPosX = aGeo.mPosition.x() - intPos.x();
+        float fracPosY = aGeo.mPosition.y() - intPos.y();
 
         auto pathUnderPlayerAllowedMove =
-            tiles.at(intPosX + intPosY * colCount);
+            tiles.at(intPos.x() + intPos.y() * colCount);
 
         if (fracPosY < 0.f
             || (pathUnderPlayerAllowedMove.mAllowedMove

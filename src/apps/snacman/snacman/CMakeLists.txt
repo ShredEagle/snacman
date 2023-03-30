@@ -26,6 +26,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/GraphicState.h
     simulations/snacgame/InputConstants.h
     simulations/snacgame/InputCommandConverter.h
+    simulations/snacgame/LevelHelper.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SceneGraph.h
     simulations/snacgame/SnacGame.h

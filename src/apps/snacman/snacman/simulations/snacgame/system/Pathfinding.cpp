@@ -4,6 +4,7 @@
 
 #include "../../../Logging.h"
 #include "../typedef.h"
+#include "../LevelHelper.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -14,15 +15,12 @@ namespace snacgame {
 namespace system {
 
 namespace {
+
 float manhattan(const Pos2 & aA, const Pos2 & aB)
 {
     return std::abs(aA.x() - aB.x()) + std::abs(aA.y() - aB.y());
 }
 
-Pos2 getLevelPosition(const Pos3 & aPos)
-{
-    return Pos2{std::floor(aPos.x() + 0.5f), std::floor(aPos.y() + 0.5f)};
-}
 } // namespace
 
 void Pathfinding::update()
