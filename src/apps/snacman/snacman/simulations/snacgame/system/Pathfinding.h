@@ -31,7 +31,7 @@ private:
         size_t mIndex;
         math::Position<2, float> mPos;
         bool mPathable = false;
-        bool opened = false;
+        bool mOpened = false;
     };
 
     ent::Query<component::PathToOnGrid, component::Geometry> mPathfinder;

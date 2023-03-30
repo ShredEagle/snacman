@@ -28,47 +28,64 @@ Pos2 getLevelPosition(const Pos3 & aPos)
 void Pathfinding::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    // Should be in an Entity
-    ent::Phase init;
-    component::LevelData data = mLevel.get(init)->get<component::LevelData>();
+    assert(mLevel.isValid() && "Can't pathfind if there is no Level");
+
+    ent::Phase pathfinding;
+    // TODO: (franz) we're starting to access mLevel in a lot of place
+    // we should think about putting in GameContext
+    component::LevelData levelData = mLevel.get(pathfinding)->get<component::LevelData>();
+    const std::vector<component::Tile> & tiles = levelData.mTiles;
+    int stride = levelData.mSize.height();
     mNodes.clear();
-    mNodes.reserve(data.mTiles.size());
-    for (size_t i = 0; i < data.mTiles.size(); ++i)
+    mNodes.reserve(tiles.size());
+    for (size_t i = 0; i < tiles.size(); ++i)
     {
         mNodes.push_back({.mIndex = i,
                           .mPos =
                               math::Position<2, float>{
-                                  static_cast<float>(i % data.mSize.height()),
-                                  static_cast<float>(i / data.mSize.height())},
-                          .mPathable = data.mTiles.at(i).mType
+                                  static_cast<float>(i % stride),
+                                  static_cast<float>(i / stride)},
+                          .mPathable = tiles.at(i).mType
                                        != component::TileType::Void});
     }
-    // Should be in an Entity
 
-    ent::Phase pathfinding;
-    const component::LevelData & levelData =
-        mLevel.get(pathfinding)->get<component::LevelData>();
-    const std::vector<component::Tile> & tiles = levelData.mTiles;
-    int stride = levelData.mSize.height();
-
-    // Compartor is basically greater on the cost
+    // Comparator is basically greater on the reduced cost
     // this make the priority queue store the lowest cost
     // node at the top
     auto comparator = [](Node * aLhs, Node * aRhs) {
         return aLhs->mReducedCost > aRhs->mReducedCost;
     };
 
-    mPathfinder.each([stride, &tiles, &pathfinding, this](
+    using PathfindingQueue =
+        std::priority_queue<Node *, std::vector<Node *>, decltype(comparator)>;
+
+    auto visit = [](Node & node, Node * current, float newCost,
+                    const Pos2 & targetPos, PathfindingQueue & queue) {
+        node.mCost = newCost;
+        node.mReducedCost = newCost + manhattan(node.mPos, targetPos);
+        node.mPrev = current;
+
+        if (!node.mOpened)
+        {
+            queue.push(&node);
+            node.mOpened = true;
+        }
+    };
+
+    mPathfinder.each([stride, &tiles, &pathfinding, this, &visit](
                          component::PathToOnGrid & aPathfinder,
-                         component::Geometry & aGeo) {
+                         const component::Geometry & aGeo) {
         EntHandle target = aPathfinder.mEntityTarget;
+        assert(target.isValid()
+               && "Trying to pathfind to an obsolete handle");
         assert(target.get(pathfinding)->has<component::Geometry>()
                && "Trying to pathfind to an entity with no geometry");
         const Pos2 & targetPos = getLevelPosition(
             target.get(pathfinding)->get<component::Geometry>().mPosition);
 
-        std::priority_queue<Node *, std::vector<Node *>, decltype(comparator)>
-            openedNode;
+        // Since priority do not have a clear() method we need to reinstantiate
+        // a priority queue for all pathfinder
+        PathfindingQueue openedNode;
 
         // We need a copy of mNodes to make the calculation in place
         std::vector<Node> localNodes = mNodes;
@@ -83,34 +100,48 @@ void Pathfinding::update()
             return;
         }
 
+        // Setup opened node with the start position and the node
+        // where the pathfinder is residing so that when we try to path
+        // so that the residing node is a possible destination
+
         Pos2 startPos = getLevelPosition(aGeo.mPosition);
         Node start{
+            .mReducedCost = manhattan(aGeo.mPosition.xy(), targetPos),
+            .mCost = 0,
             .mIndex = (size_t) startPos.x() + (size_t) startPos.y() * stride,
             .mPos = aGeo.mPosition.xy(),
+            .mOpened = true,
         };
-        start.mCost = 0;
-        start.mReducedCost = manhattan(aGeo.mPosition.xy(), targetPos);
         openedNode.push(&start);
-        start.opened = true;
+
         Node & startTile = localNodes.at(start.mIndex);
         startTile.mCost = (aGeo.mPosition.xy() - startTile.mPos).getNorm();
         startTile.mPrev = &start;
         startTile.mReducedCost =
             startTile.mCost + manhattan(startTile.mPos, targetPos);
 
+        // If the start tile as the cost of zero it means
+        // that the pathfinder is perfectly on the tile we must not
+        // path to the tile otherwise we will be stuck
         if (startTile.mCost != 0.f)
         {
             openedNode.push(&startTile);
-            startTile.opened = true;
+            startTile.mOpened = true;
         }
 
         Node * closestNode = nullptr;
 
         while (openedNode.size() > 0)
         {
+            // When we want to find a new node to explore we want to
+            // find the node with the lowest reduced cost
+            // (distance from start + heuristic)
+            // However when we think about revisiting a node
+            // we want to allow revisit if the new cost (distance from start) is lower 
+            // than the previous visit
             Node * current = openedNode.top();
             openedNode.pop();
-            current->opened = false;
+            current->mOpened = false;
 
             if (current->mPos == targetPos)
             {
@@ -127,21 +158,7 @@ void Pathfinding::update()
                 if (visitedNode.mPathable && newCost < visitedNode.mCost
                     && distance <= 1.f)
                 {
-                    // All node have a 1 cost right now
-                    // because in manhattan distance all tile have a cost
-                    // of 1 (maybe we could discard this)
-                    visitedNode.mCost = newCost;
-                    visitedNode.mReducedCost =
-                        newCost
-                        + manhattan(current->mPos + Vec2{(float) x, 0.f},
-                                    targetPos);
-                    visitedNode.mPrev = current;
-
-                    if (!visitedNode.opened)
-                    {
-                        openedNode.push(&visitedNode);
-                        visitedNode.opened = true;
-                    }
+                    visit(visitedNode, current, newCost, targetPos, openedNode);
                 }
             }
             for (int y = -1; y <= 1; y += 2)
@@ -153,24 +170,16 @@ void Pathfinding::update()
                 if (visitedNode.mPathable && newCost < visitedNode.mCost
                     && distance <= 1.f)
                 {
-                    // All node have a 1 cost right now
-                    // because in manhattan distance all tile have a cost
-                    // of 1 (maybe we could discard this)
-                    visitedNode.mCost = newCost;
-                    visitedNode.mReducedCost =
-                        newCost
-                        + manhattan(current->mPos + Vec2{(float) y, 0.f},
-                                    targetPos);
-                    visitedNode.mPrev = current;
-                    if (!visitedNode.opened)
-                    {
-                        openedNode.push(&visitedNode);
-                        visitedNode.opened = true;
-                    }
+                    visit(visitedNode, current, newCost, targetPos, openedNode);
                 }
             }
         }
 
+        // There is two possible states
+        // 1. The target and pathfinder are perfectly on the same tile -> there
+        //    is only one node in the path
+        // 2. All other case -> there is at least two node in the path and we
+        //    want the second node in the path to be the target
         while (closestNode->mPrev != nullptr
                && closestNode->mPrev->mPrev != nullptr)
         {
