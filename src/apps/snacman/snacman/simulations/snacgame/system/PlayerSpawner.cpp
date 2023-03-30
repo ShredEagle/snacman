@@ -24,12 +24,13 @@ void PlayerSpawner::update(float aDelta)
             } else {
                 // TODO: Needs an alg to choose the right spawner if there are
                 // many spawner
-                mSpawner.each([mLevel, aPlayerHandle, &aPlayer, &aPlayerGeometry](component::Spawner aSpawner) {
-                    if (!aPlayer.mIsAlive) {
+                mSpawner.each([mLevel, aPlayerHandle, &aPlayer, &aPlayerGeometry](component::Spawner & aSpawner) {
+                    if (!aPlayer.mIsAlive && !aSpawner.mSpawnedPlayer) {
                         aPlayer.mIsAlive = true;
                         aPlayer.mTimeToRespawn = component::gBaseTimeToRespawn;
                         aPlayer.mInvulFrameCounter = component::gBaseInvulFrameDuration;
                         aPlayerGeometry.mPosition = aSpawner.mSpawnPosition;
+                        aSpawner.mSpawnedPlayer = true;
                         insertEntityInScene(aPlayerHandle, mLevel);
                     }
                 });

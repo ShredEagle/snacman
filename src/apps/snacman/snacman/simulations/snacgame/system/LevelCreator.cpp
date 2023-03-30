@@ -90,7 +90,7 @@ void LevelCreator::update()
                         insertEntityInScene(portal, aLevelHandle);
                         break;
                     }
-                    case 'U':
+                    case 'G':
                     {
                         tiles.push_back(component::Tile{
                             .mType = component::TileType::Spawn});
