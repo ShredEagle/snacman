@@ -141,7 +141,7 @@ const InstanceStream gNotInstanced{
 template <class T_value, std::size_t N_spanExtent>
 void InstanceStream::respecifyData(std::span<T_value, N_spanExtent> aData)
 {
-    respecifyBuffer(mInstanceBuffer.mBuffer, aData);
+    respecifyBuffer(mInstanceBuffer.mBuffer, aData, graphics::BufferHint::StreamDraw);
     mInstanceCount = (GLsizei)aData.size();
 }
 

@@ -23,7 +23,7 @@ class SnacmanConan(ConanFile):
 
     requires = (
         ("entity/29ce7b6ff0@adnn/develop"),
-        ("graphics/8b097360a2@adnn/develop"),
+        ("graphics/3111a8d45f@adnn/develop"),
         ("handy/ea306467e6@adnn/develop"),
         ("math/2e4c0458a2@adnn/develop"),
         ("MarkovJunior.cpp/1c8bd4662f@adnn/develop"),
