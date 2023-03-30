@@ -19,6 +19,7 @@ struct GameContext
     ent::EntityManager mWorld;
     snac::RenderThread<Renderer> & mRenderThread;
     SimulationControl mSimulationControl;
+    std::optional<ent::Handle<ent::Entity>> mLevel;
 };
 
 

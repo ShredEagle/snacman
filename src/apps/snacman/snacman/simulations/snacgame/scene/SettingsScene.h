@@ -17,11 +17,10 @@ class SettingsScene : public Scene
 public:
     using Scene::Scene;
 
-    std::optional<Transition> update(GameContext & aContext,
-                                     float aDelta,
+    std::optional<Transition> update(float aDelta,
                                      RawInput & aInput) override;
-    void setup(GameContext & aContext, const Transition & Transition, RawInput & aInput) override;
-    void teardown(GameContext & aContext, RawInput & aInput) override;
+    void setup(const Transition & Transition, RawInput & aInput) override;
+    void teardown(RawInput & aInput) override;
 };
 
 } // namespace scene

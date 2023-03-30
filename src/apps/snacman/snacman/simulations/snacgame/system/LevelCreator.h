@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../component/LevelData.h"
 #include "../component/SceneNode.h"
 #include "../GameContext.h"
-#include "../component/LevelData.h"
 
 #include <entity/Query.h>
 
@@ -13,14 +13,18 @@ namespace system {
 class LevelCreator
 {
 public:
-    LevelCreator(ent::EntityManager * aWorld) :
-        mCreatable{*aWorld}
+    LevelCreator(GameContext & aGameContext) :
+        mGameContext{&aGameContext}, mCreatable{mGameContext->mWorld}
     {}
 
-    void update(GameContext & aContext);
+    void update();
 
 private:
-    ent::Query<component::LevelData, component::LevelToCreate, component::SceneNode> mCreatable;
+    GameContext * mGameContext;
+    ent::Query<component::LevelData,
+               component::LevelToCreate,
+               component::SceneNode>
+        mCreatable;
 };
 
 } // namespace system

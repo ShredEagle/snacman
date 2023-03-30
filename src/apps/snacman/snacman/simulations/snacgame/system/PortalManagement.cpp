@@ -1,24 +1,29 @@
 #include "PortalManagement.h"
 
+#include "../../../Profiling.h"
+
 #include "../typedef.h"
+#include "../LevelHelper.h"
 
 namespace ad {
 namespace snacgame {
 namespace system {
 void PortalManagement::update()
 {
-    if (mLevel.isValid())
+    TIME_RECURRING_CLASSFUNC(Main);
+    EntHandle level = *mGameContext->mLevel;
+    if (level.isValid())
     {
         ent::Phase portalPhase;
         const component::LevelData & levelData =
-            mLevel.get(portalPhase)->get<component::LevelData>();
+            level.get(portalPhase)->get<component::LevelData>();
         const std::vector<component::Tile> & tiles = levelData.mTiles;
         int colCount = levelData.mSize.height();
 
         mPlayer.each([&](component::Geometry & aPlayerGeo,
                          component::PlayerMoveState & aMoveState) {
             math::Position<3, float> & playerPos = aPlayerGeo.mPosition;
-            const math::Position<2, int> intPlayerPos{playerPos.xy() + Vec2{0.5f, 0.5f}};
+            const Pos2_i intPlayerPos = getLevelPosition_i(playerPos);
 
             if (aMoveState.mCurrentPortal != -1 && aMoveState.mDestinationPortal != -1)
             {

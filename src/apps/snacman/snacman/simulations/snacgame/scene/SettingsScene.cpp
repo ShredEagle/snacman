@@ -4,12 +4,11 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void SettingsScene::setup(GameContext &, const Transition & aTransition, RawInput & aInput) {}
+void SettingsScene::setup(const Transition & aTransition, RawInput & aInput) {}
 
-void SettingsScene::teardown(GameContext & aContext, RawInput & aInput) {}
+void SettingsScene::teardown(RawInput & aInput) {}
 
-std::optional<Transition> SettingsScene::update(GameContext & aContext,
-                                                float aDelta,
+std::optional<Transition> SettingsScene::update(float aDelta,
                                                 RawInput & aInput)
 {
     return std::nullopt;

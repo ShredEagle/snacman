@@ -1,6 +1,7 @@
 #include "IntegratePlayerMovement.h"
 
 #include "snac-renderer/Cube.h"
+#include "snacman/simulations/snacgame/LevelHelper.h"
 
 #include "../component/LevelData.h"
 #include "../GameParameters.h"
@@ -21,12 +22,11 @@ void IntegratePlayerMovement::update(float aDelta)
 
     mPlayer.each([aDelta](component::Geometry & aGeometry,
                           const component::PlayerMoveState & aMoveState) {
-        int intPosX = static_cast<int>(aGeometry.mPosition.x() + gCellSize / 2);
-        int intPosY = static_cast<int>(aGeometry.mPosition.y() + gCellSize / 2);
+        Pos2_i intPos = getLevelPosition_i(aGeometry.mPosition);
         if (aMoveState.mMoveState & gPlayerMoveFlagUp)
         {
             aGeometry.mPosition.y() += 1.f * gBasePlayerSpeed * aDelta;
-            aGeometry.mPosition.x() = static_cast<float>(intPosX);
+            aGeometry.mPosition.x() = static_cast<float>(intPos.x());
             aGeometry.mOrientation =
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
@@ -38,7 +38,7 @@ void IntegratePlayerMovement::update(float aDelta)
         else if (aMoveState.mMoveState & gPlayerMoveFlagDown)
         {
             aGeometry.mPosition.y() += -1.f * gBasePlayerSpeed * aDelta;
-            aGeometry.mPosition.x() = static_cast<float>(intPosX);
+            aGeometry.mPosition.x() = static_cast<float>(intPos.x());
             aGeometry.mOrientation =
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
@@ -50,7 +50,7 @@ void IntegratePlayerMovement::update(float aDelta)
         else if (aMoveState.mMoveState & gPlayerMoveFlagLeft)
         {
             aGeometry.mPosition.x() += -1.f * gBasePlayerSpeed * aDelta;
-            aGeometry.mPosition.y() = static_cast<float>(intPosY);
+            aGeometry.mPosition.y() = static_cast<float>(intPos.y());
             aGeometry.mOrientation =
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
@@ -62,7 +62,7 @@ void IntegratePlayerMovement::update(float aDelta)
         else if (aMoveState.mMoveState & gPlayerMoveFlagRight)
         {
             aGeometry.mPosition.x() += 1.f * gBasePlayerSpeed * aDelta;
-            aGeometry.mPosition.y() = static_cast<float>(intPosY);
+            aGeometry.mPosition.y() = static_cast<float>(intPos.y());
             aGeometry.mOrientation =
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{0.f, 0.f, 1.f}},

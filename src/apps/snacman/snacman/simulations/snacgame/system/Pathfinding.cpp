@@ -4,6 +4,7 @@
 
 #include "../../../Logging.h"
 #include "../typedef.h"
+#include "../LevelHelper.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -14,26 +15,24 @@ namespace snacgame {
 namespace system {
 
 namespace {
+
 float manhattan(const Pos2 & aA, const Pos2 & aB)
 {
     return std::abs(aA.x() - aB.x()) + std::abs(aA.y() - aB.y());
 }
 
-Pos2 getLevelPosition(const Pos3 & aPos)
-{
-    return Pos2{std::floor(aPos.x() + 0.5f), std::floor(aPos.y() + 0.5f)};
-}
 } // namespace
 
 void Pathfinding::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    assert(mLevel.isValid() && "Can't pathfind if there is no Level");
+    EntHandle level = *mGameContext->mLevel;
+    assert(level.isValid() && "Can't pathfind if there is no Level");
 
     ent::Phase pathfinding;
     // TODO: (franz) we're starting to access mLevel in a lot of place
     // we should think about putting in GameContext
-    component::LevelData levelData = mLevel.get(pathfinding)->get<component::LevelData>();
+    component::LevelData levelData = level.get(pathfinding)->get<component::LevelData>();
     const std::vector<component::Tile> & tiles = levelData.mTiles;
     int stride = levelData.mSize.height();
     mNodes.clear();

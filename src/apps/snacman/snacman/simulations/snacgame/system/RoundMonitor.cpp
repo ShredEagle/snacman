@@ -1,5 +1,6 @@
 #include "RoundMonitor.h"
 #include "snacman/simulations/snacgame/component/LevelData.h"
+#include "../typedef.h"
 
 #include <snacman/Profiling.h>
 
@@ -17,12 +18,13 @@ void RoundMonitor::update()
         mLevelEntities.each([&destroyLevel](ent::Handle<ent::Entity> aHandle) {
                 aHandle.get(destroyLevel)->erase();
         });
-        mLevel.each([&destroyLevel](ent::Handle<ent::Entity> aHandle, component::LevelData & aLevelData) {
-                aLevelData.mSeed++;
-                aLevelData.mTiles.clear();
-                aHandle.get(destroyLevel)->remove<component::LevelCreated>();
-                aHandle.get(destroyLevel)->add(component::LevelToCreate{});
-        });
+
+        EntHandle level = *mGameContext->mLevel;
+        component::LevelData & levelData = level.get(destroyLevel)->get<component::LevelData>();
+        levelData.mSeed++;
+        levelData.mTiles.clear();
+        level.get(destroyLevel)->remove<component::LevelCreated>();
+        level.get(destroyLevel)->add(component::LevelToCreate{});
         mPlayers.each([](component::PlayerLifeCycle & lifeCycle) {
                 lifeCycle.mIsAlive = false;
         });

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/GameContext.h"
 #include "../component/LevelTags.h"
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
@@ -15,18 +16,18 @@ namespace system {
 class PortalManagement
 {
 public:
-    PortalManagement(ent::EntityManager & aWorld, ent::Handle<ent::Entity> mLevel) :
-        mPlayer{aWorld},
-        mPortals{aWorld},
-        mLevel{mLevel}
+    PortalManagement(GameContext & aGameContext) :
+        mGameContext{&aGameContext},
+        mPlayer{mGameContext->mWorld},
+        mPortals{mGameContext->mWorld}
     {}
 
     void update();
 
 private:
+    GameContext * mGameContext;
     ent::Query<component::Geometry, component::PlayerMoveState> mPlayer;
     ent::Query<component::Geometry, component::Portal> mPortals;
-    ent::Handle<ent::Entity> mLevel;
 };
 
 } // namespace system

@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "snacman/simulations/snacgame/GameContext.h"
 #include <snacman/Logging.h>
 #include "../SceneGraph.h"
 
@@ -21,9 +22,9 @@ namespace system {
 class SceneGraphResolver
 {
 public:
-    SceneGraphResolver(ent::EntityManager & aWorld,
+    SceneGraphResolver(GameContext & aGameContext,
                        ent::Handle<ent::Entity> aSceneRoot) :
-        mSceneRoot{aSceneRoot}, mNodes{aWorld}
+        mSceneRoot{aSceneRoot}, mNodes{aGameContext.mWorld}
     {
         mNodes.onRemoveEntity([](ent::Handle<ent::Entity> aHandle,
                                   component::SceneNode & aNode,

@@ -2,8 +2,10 @@
 #include "GlobalPose.h"
 #include "../InputConstants.h"
 #include "PlayerMoveState.h"
+#include "../typedef.h"
 
 #include "imgui.h"
+#include "snacman/simulations/snacgame/LevelHelper.h"
 #include "snacman/simulations/snacgame/component/AllowedMovement.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
 
@@ -12,15 +14,12 @@ namespace snacgame {
 namespace component {
 void Geometry::drawUi() const
 {
-    int intPosX =
-        static_cast<int>(mPosition.x() + 0.5f);
-    int intPosY =
-        static_cast<int>(mPosition.y() + 0.5f);
-    float fracPosX = mPosition.x() - intPosX;
-    float fracPosY = mPosition.y() - intPosY;
+    Pos2_i intPos = getLevelPosition_i(mPosition);
+    float fracPosX = mPosition.x() - intPos.x();
+    float fracPosY = mPosition.y() - intPos.y();
     ImGui::Text("Player pos: %f, %f", mPosition.x(),
                 mPosition.y());
-    ImGui::Text("Player integral part: %d, %d", intPosX, intPosY);
+    ImGui::Text("Player integral part: %d, %d", intPos.x(), intPos.y());
     ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
     ImGui::Text("Player orientation: %f, (%f, %f, %f)", mOrientation.w(),
                 mOrientation.x(), mOrientation.y(), mOrientation.z());

@@ -54,74 +54,74 @@ const char * const gMarkovRoot{"markov/"};
 
 namespace {
 
-EntHandle createLevel(ent::EntityManager & aWorld, GameContext & aContext)
+EntHandle createLevel(GameContext & aContext)
 {
-    EntHandle level = aWorld.addEntity();
+    EntHandle level = aContext.mWorld.addEntity();
     {
         ent::Phase createLevel;
         auto markovRoot = aContext.mResources.find(gMarkovRoot);
         ent::Entity levelEntity = *level.get(createLevel);
         levelEntity.add(component::LevelData(
-            aWorld, markovRoot.value(), "snaclvl.xml", {15, 15, 1}, 123123));
+            aContext.mWorld, markovRoot.value(), "snaclvl.xml", {15, 15, 1}, 123123));
         levelEntity.add(component::LevelToCreate{});
         levelEntity.add(component::SceneNode{});
         levelEntity.add(component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
         levelEntity.add(component::GlobalPose{});
     }
+    aContext.mLevel = level;
     return level;
 }
 
 }
 
 GameScene::GameScene(const std::string & aName,
-                     ent::EntityManager & aWorld,
+                     GameContext & aGameContext,
                      EntityWrap<component::MappingContext> & aContext,
-                     EntHandle aSceneRoot,
-                     GameContext & aGameContext) :
-    Scene(aName, aWorld, aContext, aSceneRoot),
-    mLevel{createLevel(mWorld, aGameContext)},
-    mTiles{mWorld},
-    mSlots{mWorld},
-    mPlayers{mWorld},
-    mPathfinders{mWorld}
-{}
+                     EntHandle aSceneRoot) :
+    Scene(aName, aGameContext, aContext, aSceneRoot),
+    mTiles{mGameContext.mWorld},
+    mSlots{mGameContext.mWorld},
+    mPlayers{mGameContext.mWorld},
+    mPathfinders{mGameContext.mWorld}
+{
+    createLevel(mGameContext);
+}
 
-void GameScene::setup(GameContext & aContext,
-                      const Transition & aTransition,
+void GameScene::setup(const Transition & aTransition,
                       RawInput & aInput)
 {
     {
         ent::Phase init;
-        mSystems.get(init)->add(system::SceneGraphResolver{mWorld, mSceneRoot});
-        mSystems.get(init)->add(system::PlayerSpawner{mWorld, mLevel});
-        mSystems.get(init)->add(system::RoundMonitor{mWorld});
-        mSystems.get(init)->add(system::PlayerInvulFrame{mWorld});
-        mSystems.get(init)->add(system::AllowMovement{mWorld, mLevel});
-        mSystems.get(init)->add(system::ConsolidateGridMovement{mWorld});
-        mSystems.get(init)->add(system::IntegratePlayerMovement{mWorld});
-        mSystems.get(init)->add(system::LevelCreator{&mWorld});
-        mSystems.get(init)->add(system::MovementIntegration{mWorld});
-        mSystems.get(init)->add(system::EatPill{mWorld});
-        mSystems.get(init)->add(system::PortalManagement{mWorld, mLevel});
-        mSystems.get(init)->add(system::Pathfinding{mWorld, mLevel});
+        mSystems.get(init)->add(system::SceneGraphResolver{mGameContext, mSceneRoot});
+        mSystems.get(init)->add(system::PlayerSpawner{mGameContext});
+        mSystems.get(init)->add(system::RoundMonitor{mGameContext});
+        mSystems.get(init)->add(system::PlayerInvulFrame{mGameContext});
+        mSystems.get(init)->add(system::AllowMovement{mGameContext});
+        mSystems.get(init)->add(system::ConsolidateGridMovement{mGameContext});
+        mSystems.get(init)->add(system::IntegratePlayerMovement{mGameContext});
+        mSystems.get(init)->add(system::LevelCreator{mGameContext});
+        mSystems.get(init)->add(system::MovementIntegration{mGameContext});
+        mSystems.get(init)->add(system::EatPill{mGameContext});
+        mSystems.get(init)->add(system::PortalManagement{mGameContext});
+        mSystems.get(init)->add(system::Pathfinding{mGameContext});
     }
 
     // Can't insert mLevel before the createLevel phase is over
     // otherwise mLevel does not have the correct component
-    insertEntityInScene(mLevel, mSceneRoot);
+    insertEntityInScene(*mGameContext.mLevel, mSceneRoot);
 }
 
-void GameScene::teardown(GameContext & aContext, RawInput & aInput)
+void GameScene::teardown(RawInput & aInput)
 {
     ent::Phase destroy;
 
     removeEntityFromScene(*mSceneRoot.get(destroy)->get<component::SceneNode>().aFirstChild);
 
     mSystems.get(destroy)->erase();
-    mSystems = mWorld.addEntity();
+    mSystems = mGameContext.mWorld.addEntity();
 
-    mLevel.get(destroy)->erase();
-    mLevel = createLevel(mWorld, aContext);
+    mGameContext.mLevel->get(destroy)->erase();
+    mGameContext.mLevel = createLevel(mGameContext);
 
     mTiles.each([&destroy](EntHandle aHandle, const component::LevelEntity &) {
         aHandle.get(destroy)->erase();
@@ -139,7 +139,7 @@ void GameScene::teardown(GameContext & aContext, RawInput & aInput)
 }
 
 std::optional<Transition>
-GameScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
+GameScene::update(float aDelta, RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
 
@@ -201,13 +201,13 @@ GameScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
             if (command & gJoin)
             {
                 OptEntHandle player = findSlotAndBind(
-                    aContext, bindPlayerPhase, mSlots,
+                    mGameContext, bindPlayerPhase, mSlots,
                     controllerIsKeyboard ? ControllerType::Keyboard
                                          : ControllerType::Gamepad,
                     static_cast<int>(controlIndex));
                 if (player)
                 {
-                    insertEntityInScene(*player, mLevel);
+                    insertEntityInScene(*player, *mGameContext.mLevel);
                 }
             }
         }
@@ -218,7 +218,7 @@ GameScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
         return Transition{.mTransitionName = "back"};
     }
 
-    mSystems.get(update)->get<system::LevelCreator>().update(aContext);
+    mSystems.get(update)->get<system::LevelCreator>().update();
     mSystems.get(update)->get<system::RoundMonitor>().update();
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
     mSystems.get(update)->get<system::PortalManagement>().update();
