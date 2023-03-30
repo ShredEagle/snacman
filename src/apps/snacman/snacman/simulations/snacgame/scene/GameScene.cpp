@@ -82,7 +82,8 @@ GameScene::GameScene(const std::string & aName,
     mLevel{createLevel(mWorld, aGameContext)},
     mTiles{mWorld},
     mSlots{mWorld},
-    mPlayers{mWorld}
+    mPlayers{mWorld},
+    mPathfinders{mWorld}
 {}
 
 void GameScene::setup(GameContext & aContext,
@@ -123,6 +124,10 @@ void GameScene::teardown(GameContext & aContext, RawInput & aInput)
     mLevel = createLevel(mWorld, aContext);
 
     mTiles.each([&destroy](EntHandle aHandle, const component::LevelEntity &) {
+        aHandle.get(destroy)->erase();
+    });
+
+    mPathfinders.each([&destroy](EntHandle aHandle, const component::PathToOnGrid &) {
         aHandle.get(destroy)->erase();
     });
 

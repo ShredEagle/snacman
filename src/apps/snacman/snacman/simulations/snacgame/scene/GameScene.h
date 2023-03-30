@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Scene.h"
+#include "snacman/simulations/snacgame/component/PathToOnGrid.h"
 
 #include "../component/Controller.h"
 #include "../component/LevelTags.h"
@@ -48,6 +49,7 @@ private:
     ent::Query<component::LevelEntity> mTiles;
     ent::Query<component::PlayerSlot> mSlots;
     ent::Query<component::PlayerSlot, component::Controller> mPlayers;
+    ent::Query<component::PathToOnGrid> mPathfinders;
 };
 
 } // namespace scene
