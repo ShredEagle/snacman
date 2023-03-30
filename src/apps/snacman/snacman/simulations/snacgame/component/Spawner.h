@@ -10,6 +10,7 @@ namespace component {
 struct Spawner
 {
     math::Position<3, float> mSpawnPosition;
+    bool mSpawnedPlayer = false;
 };
 
 
