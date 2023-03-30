@@ -41,6 +41,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/LevelTags.h
     simulations/snacgame/component/MenuItem.h
     simulations/snacgame/component/MovementScreenSpace.h
+    simulations/snacgame/component/PathToOnGrid.h
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerMoveState.h
     simulations/snacgame/component/PlayerSlot.h
@@ -53,11 +54,13 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/scene/Scene.h
     simulations/snacgame/scene/SettingsScene.h
 
-    simulations/snacgame/system/DeterminePlayerAction.h
+    simulations/snacgame/system/ConsolidateGridMovement.h
+    simulations/snacgame/system/AllowMovement.h
     simulations/snacgame/system/EatPill.h
     simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/MovementIntegration.h
     simulations/snacgame/system/LevelCreator.h
+    simulations/snacgame/system/Pathfinding.h
     simulations/snacgame/system/PlayerSpawner.h
     simulations/snacgame/system/PlayerInvulFrame.h
     simulations/snacgame/system/PortalManagement.h
@@ -89,12 +92,14 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/scene/MenuScene.cpp
     simulations/snacgame/scene/SettingsScene.cpp
 
-    simulations/snacgame/system/DeterminePlayerAction.cpp
+    simulations/snacgame/system/ConsolidateGridMovement.cpp
+    simulations/snacgame/system/AllowMovement.cpp
     simulations/snacgame/system/EatPill.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
     simulations/snacgame/system/MovementIntegration.cpp
     simulations/snacgame/system/LevelCreator.cpp
     simulations/snacgame/system/SystemOrbitalCamera.cpp
+    simulations/snacgame/system/Pathfinding.cpp
     simulations/snacgame/system/PlayerSpawner.cpp
     simulations/snacgame/system/PlayerInvulFrame.cpp
     simulations/snacgame/system/PortalManagement.cpp

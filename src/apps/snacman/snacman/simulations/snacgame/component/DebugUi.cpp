@@ -4,6 +4,7 @@
 #include "PlayerMoveState.h"
 
 #include "imgui.h"
+#include "snacman/simulations/snacgame/component/AllowedMovement.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
 
 namespace ad {
@@ -42,23 +43,27 @@ void PlayerMoveState::drawUi() const
 {
     ImGui::Text("Current portal %d", mCurrentPortal);
     ImGui::Text("Dest portal %d", mDestinationPortal);
-    ImGui::Text("Player MoveState:");
-    if (mAllowedMove & gPlayerMoveFlagDown)
+}
+
+void AllowedMovement::drawUi() const
+{
+    ImGui::Text("AllowedMovement:");
+    if (mAllowedMovement & gPlayerMoveFlagDown)
     {
         ImGui::SameLine();
         ImGui::Text("Down");
     }
-    if (mAllowedMove & gPlayerMoveFlagUp)
+    if (mAllowedMovement & gPlayerMoveFlagUp)
     {
         ImGui::SameLine();
         ImGui::Text("Up");
     }
-    if (mAllowedMove & gPlayerMoveFlagRight)
+    if (mAllowedMovement & gPlayerMoveFlagRight)
     {
         ImGui::SameLine();
         ImGui::Text("Right");
     }
-    if (mAllowedMove & gPlayerMoveFlagLeft)
+    if (mAllowedMovement & gPlayerMoveFlagLeft)
     {
         ImGui::SameLine();
         ImGui::Text("Left");

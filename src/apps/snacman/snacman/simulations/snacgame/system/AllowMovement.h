@@ -5,7 +5,7 @@
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
-#include "../component/PlayerMoveState.h"
+#include "../component/AllowedMovement.h"
 #include "../InputCommandConverter.h"
 
 #include <entity/EntityManager.h>
@@ -15,21 +15,20 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
-class DeterminePlayerAction
+class AllowMovement
 {
 public:
-    DeterminePlayerAction(ent::EntityManager & aWorld,
+    AllowMovement(ent::EntityManager & aWorld,
                           ent::Handle<ent::Entity> aLevel) :
-        mPlayer{aWorld}, mLevel{aWorld}
+        mMover{aWorld}, mLevel{aWorld}
     {}
 
     void update();
 
 private:
-    ent::Query<component::Controller,
-               component::Geometry,
-               component::PlayerMoveState>
-        mPlayer;
+    ent::Query<component::Geometry,
+               component::AllowedMovement>
+        mMover;
 
     ent::Query<component::LevelData, component::LevelCreated> mLevel;
 };

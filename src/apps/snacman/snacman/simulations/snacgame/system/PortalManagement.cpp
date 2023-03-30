@@ -1,5 +1,7 @@
 #include "PortalManagement.h"
 
+#include "../typedef.h"
+
 namespace ad {
 namespace snacgame {
 namespace system {
@@ -16,7 +18,7 @@ void PortalManagement::update()
         mPlayer.each([&](component::Geometry & aPlayerGeo,
                          component::PlayerMoveState & aMoveState) {
             math::Position<3, float> & playerPos = aPlayerGeo.mPosition;
-            const math::Position<2, int> intPlayerPos{playerPos.xy()};
+            const math::Position<2, int> intPlayerPos{playerPos.xy() + Vec2{0.5f, 0.5f}};
 
             if (aMoveState.mCurrentPortal != -1 && aMoveState.mDestinationPortal != -1)
             {

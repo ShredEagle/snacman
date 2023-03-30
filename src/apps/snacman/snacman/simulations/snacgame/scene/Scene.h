@@ -70,10 +70,10 @@ public:
           EntityWrap<component::MappingContext> & aContext,
           ent::Handle<ent::Entity> aSceneRoot) :
         mName{aName},
+        mSceneRoot{aSceneRoot},
         mWorld{aWorld},
         mSystems{mWorld.addEntity()},
-        mContext{aContext},
-        mSceneRoot{aSceneRoot}
+        mContext{aContext}
     {}
     Scene(const Scene &) = default;
     Scene(Scene &&) = delete;
@@ -91,13 +91,13 @@ public:
 
     std::string mName;
     std::unordered_map<Transition, SceneId> mStateTransition;
+    ent::Handle<ent::Entity> mSceneRoot;
 
 protected:
     ent::EntityManager & mWorld;
     ent::Handle<ent::Entity> mSystems;
     std::vector<ent::Handle<ent::Entity>> mOwnedEntities;
     EntityWrap<component::MappingContext> & mContext;
-    ent::Handle<ent::Entity> mSceneRoot;
 };
 
 } // namespace scene
