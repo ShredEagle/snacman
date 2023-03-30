@@ -16,7 +16,7 @@ void PlayerSpawner::update(float aDelta)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    mSpawnable.each([this, aDelta, mLevel = mLevel](EntHandle aPlayerHandle, component::PlayerLifeCycle & aPlayer,
+    mSpawnable.each([this, aDelta, mLevel = *mGameContext->mLevel](EntHandle aPlayerHandle, component::PlayerLifeCycle & aPlayer,
                                    component::Geometry & aPlayerGeometry) {
         if (!aPlayer.mIsAlive) {
             if (aPlayer.mTimeToRespawn < 0) {

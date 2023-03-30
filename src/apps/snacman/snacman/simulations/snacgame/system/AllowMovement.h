@@ -1,6 +1,7 @@
 #pragma once
 
 #include "snacman/Input.h"
+#include "snacman/simulations/snacgame/GameContext.h"
 
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
@@ -18,19 +19,18 @@ namespace system {
 class AllowMovement
 {
 public:
-    AllowMovement(ent::EntityManager & aWorld,
-                          ent::Handle<ent::Entity> aLevel) :
-        mMover{aWorld}, mLevel{aWorld}
+    AllowMovement(GameContext & aGameContext) :
+        mGameContext{&aGameContext},
+        mMover{mGameContext->mWorld}
     {}
 
     void update();
 
 private:
+    GameContext * mGameContext;
     ent::Query<component::Geometry,
                component::AllowedMovement>
         mMover;
-
-    ent::Query<component::LevelData, component::LevelCreated> mLevel;
 };
 
 } // namespace system

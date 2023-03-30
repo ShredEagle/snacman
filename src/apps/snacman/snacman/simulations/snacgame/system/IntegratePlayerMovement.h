@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/GameContext.h"
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
 #include "../component/PlayerMoveState.h"
@@ -14,8 +15,8 @@ namespace system {
 class IntegratePlayerMovement
 {
 public:
-    IntegratePlayerMovement(ent::EntityManager & aWorld) :
-        mPlayer{aWorld}
+    IntegratePlayerMovement(GameContext & aGameContext) :
+        mPlayer{aGameContext.mWorld}
     {}
 
     void update(float aDelta);

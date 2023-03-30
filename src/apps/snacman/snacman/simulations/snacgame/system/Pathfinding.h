@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/GameContext.h"
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
 #include "../component/PathToOnGrid.h"
@@ -16,8 +17,9 @@ namespace system {
 class Pathfinding
 {
 public:
-    Pathfinding(ent::EntityManager & aWorld, ent::Handle<ent::Entity> aLevel) :
-        mPathfinder{aWorld}, mLevel{aLevel}
+    Pathfinding(GameContext & aGameContext) :
+        mGameContext{&aGameContext},
+        mPathfinder{mGameContext->mWorld}
     {}
 
     void update();
@@ -34,8 +36,8 @@ private:
         bool mOpened = false;
     };
 
+    GameContext * mGameContext;
     ent::Query<component::PathToOnGrid, component::Geometry> mPathfinder;
-    ent::Handle<ent::Entity> mLevel;
     std::vector<Node> mNodes;
 };
 

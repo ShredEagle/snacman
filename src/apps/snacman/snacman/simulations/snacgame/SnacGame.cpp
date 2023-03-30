@@ -105,7 +105,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         component::PlayerSlot{3, false, gSlotColors.at(3)});
 
     scene::Scene * scene = mStateMachine->getCurrentScene();
-    scene->setup(mGameContext, scene::Transition{}, aInput);
+    scene->setup(scene::Transition{}, aInput);
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
@@ -326,7 +326,7 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
     std::optional<scene::Transition> transition =
-        mStateMachine->getCurrentScene()->update(mGameContext, updateDelta,
+        mStateMachine->getCurrentScene()->update(updateDelta,
                                                  aInput);
 
     if (transition)

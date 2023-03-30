@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/GameContext.h"
 #include "../component/Geometry.h"
 #include "../component/MovementScreenSpace.h"
 #include "../component/PoseScreenSpace.h"
@@ -15,8 +16,8 @@ namespace system {
 class MovementIntegration
 {
 public:
-    MovementIntegration(ent::EntityManager & aWorld) :
-        mMovables{aWorld}, mScreenMovables{aWorld}
+    MovementIntegration(GameContext & aGameContext) :
+        mMovables{aGameContext.mWorld}, mScreenMovables{aGameContext.mWorld}
     {}
 
     void update(float aDelta);

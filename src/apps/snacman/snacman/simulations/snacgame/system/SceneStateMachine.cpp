@@ -43,17 +43,17 @@ SceneStateMachine::SceneStateMachine(ent::EntityManager & aWorld,
         if (name.compare(gMainSceneName) == 0)
         {
             mPossibleScene.push_back(
-                std::make_shared<MenuScene>(name, aWorld, aContext, sceneRoot));
+                std::make_shared<MenuScene>(name, aGameContext, aContext, sceneRoot));
         }
         else if (name.compare(gSettingsSceneName) == 0)
         {
             mPossibleScene.push_back(
-                std::make_shared<SettingsScene>(name, aWorld, aContext, sceneRoot));
+                std::make_shared<SettingsScene>(name, aGameContext, aContext, sceneRoot));
         }
         else if (name.compare(gGameSceneName) == 0)
         {
             mPossibleScene.push_back(
-                std::make_shared<GameScene>(name, aWorld, aContext, sceneRoot, aGameContext));
+                std::make_shared<GameScene>(name, aGameContext, aContext, sceneRoot));
         }
     }
 
@@ -93,7 +93,7 @@ void SceneStateMachine::changeState(GameContext & aContext, Transition & aTransi
 
     if (aTransition.shouldTeardown)
     {
-        oldScene->teardown(aContext, aInput);
+        oldScene->teardown(aInput);
     }
 
     mCurrentSceneId = oldScene->mStateTransition.at(aTransition);
@@ -103,7 +103,7 @@ void SceneStateMachine::changeState(GameContext & aContext, Transition & aTransi
 
     if (aTransition.shouldSetup)
     {
-        newScene->setup(aContext, aTransition, aInput);
+        newScene->setup(aTransition, aInput);
     }
 }
 

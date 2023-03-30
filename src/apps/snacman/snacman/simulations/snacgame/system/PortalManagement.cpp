@@ -7,11 +7,12 @@ namespace snacgame {
 namespace system {
 void PortalManagement::update()
 {
-    if (mLevel.isValid())
+    EntHandle level = *mGameContext->mLevel;
+    if (level.isValid())
     {
         ent::Phase portalPhase;
         const component::LevelData & levelData =
-            mLevel.get(portalPhase)->get<component::LevelData>();
+            level.get(portalPhase)->get<component::LevelData>();
         const std::vector<component::Tile> & tiles = levelData.mTiles;
         int colCount = levelData.mSize.height();
 

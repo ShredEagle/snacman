@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/GameContext.h"
 #include "../component/Geometry.h"
 #include "../component/PlayerLifeCycle.h"
 
@@ -13,7 +14,7 @@ namespace system {
 class PlayerInvulFrame
 {
 public:
-    PlayerInvulFrame(ent::EntityManager & aWorld) : mPlayer{aWorld} {}
+    PlayerInvulFrame(GameContext & aGameContext) : mPlayer{aGameContext.mWorld} {}
 
     void update(float aDelta);
 

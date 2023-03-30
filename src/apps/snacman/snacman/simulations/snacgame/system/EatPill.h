@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/GameContext.h"
 #include "../component/Collision.h"
 #include "../component/Geometry.h"
 #include "../component/Text.h"
@@ -17,8 +18,8 @@ namespace system {
 class EatPill
 {
 public:
-    EatPill(ent::EntityManager & aWorld) :
-        mPlayers{aWorld}, mPills{aWorld}
+    EatPill(GameContext & aGameContext) :
+        mPlayers{aGameContext.mWorld}, mPills{aGameContext.mWorld}
     {}
 
     void update();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "snacman/Input.h"
+#include "snacman/simulations/snacgame/GameContext.h"
 #include "snacman/simulations/snacgame/component/PathToOnGrid.h"
 #include "../component/PlayerMoveState.h"
 
@@ -20,8 +21,8 @@ namespace system {
 class ConsolidateGridMovement
 {
 public:
-    ConsolidateGridMovement(ent::EntityManager & aWorld) :
-        mPlayer{aWorld}, mPathfinder{aWorld}
+    ConsolidateGridMovement(GameContext & aGameContext) :
+        mPlayer{aGameContext.mWorld}, mPathfinder{aGameContext.mWorld}
     {}
 
     void update(float aDelta);

@@ -22,20 +22,19 @@ class MenuScene : public Scene
 {
 public:
     MenuScene(const std::string & aName,
-              ent::EntityManager & aWorld,
+            GameContext & aGameContext,
               EntityWrap<component::MappingContext> & aContext,
               ent::Handle<ent::Entity> aSceneRoot) :
-        Scene(aName, aWorld, aContext, aSceneRoot), mSlots{mWorld}, mItems{mWorld}
+        Scene(aName, aGameContext, aContext, aSceneRoot), mSlots{mGameContext.mWorld}, mItems{mGameContext.mWorld}
     {}
 
     std::optional<Transition>
-    update(GameContext & aContext, float aDelta, RawInput & aInput) override;
+    update(float aDelta, RawInput & aInput) override;
 
-    void setup(GameContext & aContext,
-               const Transition & aTransition,
+    void setup(const Transition & aTransition,
                RawInput & aInput) override;
 
-    void teardown(GameContext & aContext, RawInput & aInput) override;
+    void teardown(RawInput & aInput) override;
 
 private:
     ent::Query<component::PlayerSlot> mSlots;

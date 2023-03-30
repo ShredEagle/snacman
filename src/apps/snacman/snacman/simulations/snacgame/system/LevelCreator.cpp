@@ -14,7 +14,7 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
-void LevelCreator::update(GameContext & aContext)
+void LevelCreator::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
@@ -71,10 +71,10 @@ void LevelCreator::update(GameContext & aContext)
                         tiles.push_back(component::Tile{
                             .mType = component::TileType::Path});
                         EntHandle path = createPathEntity(
-                            aContext, math::Position<2, float>{xFloat, yFloat});
+                            *mGameContext, math::Position<2, float>{xFloat, yFloat});
                         insertEntityInScene(path, aLevelHandle);
                         EntHandle pill = createPill(
-                            aContext, math::Position<2, float>{xFloat, yFloat});
+                            *mGameContext, math::Position<2, float>{xFloat, yFloat});
                         insertEntityInScene(pill, aLevelHandle);
                         break;
                     }
@@ -85,7 +85,7 @@ void LevelCreator::update(GameContext & aContext)
                         int portalIndex = static_cast<int>(tiles.size() - 1);
                         portals.push_back(portalIndex);
                         EntHandle portal = createPortalEntity(
-                            aContext, math::Position<2, float>{xFloat, yFloat},
+                            *mGameContext, math::Position<2, float>{xFloat, yFloat},
                             portalIndex);
                         insertEntityInScene(portal, aLevelHandle);
                         break;
@@ -95,7 +95,7 @@ void LevelCreator::update(GameContext & aContext)
                         tiles.push_back(component::Tile{
                             .mType = component::TileType::Spawn});
                         EntHandle spawn = createPlayerSpawnEntity(
-                            aContext, math::Position<2, float>{xFloat, yFloat});
+                            *mGameContext, math::Position<2, float>{xFloat, yFloat});
                         insertEntityInScene(spawn, aLevelHandle);
                         break;
                     }

@@ -28,12 +28,13 @@ Pos2 getLevelPosition(const Pos3 & aPos)
 void Pathfinding::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    assert(mLevel.isValid() && "Can't pathfind if there is no Level");
+    EntHandle level = *mGameContext->mLevel;
+    assert(level.isValid() && "Can't pathfind if there is no Level");
 
     ent::Phase pathfinding;
     // TODO: (franz) we're starting to access mLevel in a lot of place
     // we should think about putting in GameContext
-    component::LevelData levelData = mLevel.get(pathfinding)->get<component::LevelData>();
+    component::LevelData levelData = level.get(pathfinding)->get<component::LevelData>();
     const std::vector<component::Tile> & tiles = levelData.mTiles;
     int stride = levelData.mSize.height();
     mNodes.clear();

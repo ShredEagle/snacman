@@ -20,21 +20,20 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-void MenuScene::setup(GameContext & aContext,
-                      const Transition & Transition,
+void MenuScene::setup(const Transition & Transition,
                       RawInput & aInput)
 {
-    auto font = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf");
+    auto font = mGameContext.mResources.getFont("fonts/FredokaOne-Regular.ttf");
 
     ent::Phase init;
     auto startHandle = createMenuItem(
-        aContext, init, "Start", font, math::Position<2, float>{-0.55f, 0.0f},
+        mGameContext, init, "Start", font, math::Position<2, float>{-0.55f, 0.0f},
         {
             {gGoDown, "quit"},
         },
         scene::Transition{.mTransitionName = "start"}, true, {3.f, 3.f});
     auto quitHandle = createMenuItem(
-        aContext, init, "quit", font, math::Position<2, float>{-0.55f, -0.3f},
+        mGameContext, init, "quit", font, math::Position<2, float>{-0.55f, -0.3f},
         {
             {gGoUp, "Start"},
         },
@@ -45,7 +44,7 @@ void MenuScene::setup(GameContext & aContext,
     mOwnedEntities.push_back(quitHandle);
 }
 
-void MenuScene::teardown(GameContext & aContext, RawInput & aInput)
+void MenuScene::teardown(RawInput & aInput)
 {
     ent::Phase destroy;
 
@@ -58,7 +57,7 @@ void MenuScene::teardown(GameContext & aContext, RawInput & aInput)
 }
 
 std::optional<Transition>
-MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
+MenuScene::update(float aDelta, RawInput & aInput)
 {
     TIME_RECURRING_CLASSFUNC(Main);
     ControllerCommand keyboardCommand{
@@ -100,7 +99,7 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
     std::optional<Transition> menuTransition = std::nullopt;
 
     mItems.each([this, &menuTransition, accumulatedCommand, &bindPlayerPhase,
-                 &aContext, keyboardCommand, &controllerCommandList,
+                 keyboardCommand, &controllerCommandList,
                  filteredForMenuCommand, &newItem](component::MenuItem & aItem,
                                                    component::Text & aText) {
         if (aItem.mSelected)
@@ -115,7 +114,7 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
             {
                 if (keyboardCommand.mCommand & gSelectItem)
                 {
-                    findSlotAndBind(aContext, bindPlayerPhase, mSlots,
+                    findSlotAndBind(mGameContext, bindPlayerPhase, mSlots,
                                     keyboardCommand.mControllerType,
                                     keyboardCommand.mId);
                     menuTransition = aItem.mTransition;
@@ -124,7 +123,7 @@ MenuScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
                 {
                     if (command.mCommand & gSelectItem)
                     {
-                        findSlotAndBind(aContext, bindPlayerPhase, mSlots,
+                        findSlotAndBind(mGameContext, bindPlayerPhase, mSlots,
                                         command.mControllerType, command.mId);
                         menuTransition = aItem.mTransition;
                     }
