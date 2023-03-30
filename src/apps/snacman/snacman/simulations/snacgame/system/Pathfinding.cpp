@@ -1,5 +1,7 @@
 #include "Pathfinding.h"
 
+#include "snacman/Profiling.h"
+
 #include "../../../Logging.h"
 #include "../typedef.h"
 
@@ -12,33 +14,34 @@ namespace snacgame {
 namespace system {
 
 namespace {
-int manhattan(Pos2_i aA, Pos2_i aB)
+float manhattan(const Pos2 & aA, const Pos2 & aB)
 {
     return std::abs(aA.x() - aB.x()) + std::abs(aA.y() - aB.y());
 }
 
-Pos2_i getLevelPosition(Pos3 aPos)
+Pos2 getLevelPosition(const Pos3 & aPos)
 {
-    return Pos2_i{static_cast<int>(aPos.x() + 0.5f),
-                  static_cast<int>(aPos.y() + 0.5f)};
+    return Pos2{std::floor(aPos.x() + 0.5f), std::floor(aPos.y() + 0.5f)};
 }
 } // namespace
 
-void Pathfinding::update(float aDelta)
+void Pathfinding::update()
 {
+    TIME_RECURRING_CLASSFUNC(Main);
     // Should be in an Entity
     ent::Phase init;
-    component::LevelData data =
-        mLevel.get(init)->get<component::LevelData>();
+    component::LevelData data = mLevel.get(init)->get<component::LevelData>();
     mNodes.clear();
     mNodes.reserve(data.mTiles.size());
     for (size_t i = 0; i < data.mTiles.size(); ++i)
     {
         mNodes.push_back({.mIndex = i,
-                        .mPos = math::Position<2, int>{
-                            static_cast<int>(i % data.mSize.height()),
-                            static_cast<int>(i / data.mSize.height())},
-                            .mVisited = data.mTiles.at(i).mType == component::TileType::Void});
+                          .mPos =
+                              math::Position<2, float>{
+                                  static_cast<float>(i % data.mSize.height()),
+                                  static_cast<float>(i / data.mSize.height())},
+                          .mPathable = data.mTiles.at(i).mType
+                                       != component::TileType::Void});
     }
     // Should be in an Entity
 
@@ -52,20 +55,17 @@ void Pathfinding::update(float aDelta)
     // this make the priority queue store the lowest cost
     // node at the top
     auto comparator = [](Node * aLhs, Node * aRhs) {
-        return aLhs->mCost > aRhs->mCost;
+        return aLhs->mReducedCost > aRhs->mReducedCost;
     };
 
-    mPathfinder.each([aDelta, stride, &tiles, &pathfinding, this](
+    mPathfinder.each([stride, &tiles, &pathfinding, this](
                          component::PathToOnGrid & aPathfinder,
                          component::Geometry & aGeo) {
-
         EntHandle target = aPathfinder.mEntityTarget;
         assert(target.get(pathfinding)->has<component::Geometry>()
                && "Trying to pathfind to an entity with no geometry");
-        const Pos2_i & targetPos = getLevelPosition(
+        const Pos2 & targetPos = getLevelPosition(
             target.get(pathfinding)->get<component::Geometry>().mPosition);
-
-        const Pos2_i pathfinderPos = getLevelPosition(aGeo.mPosition);
 
         std::priority_queue<Node *, std::vector<Node *>, decltype(comparator)>
             openedNode;
@@ -73,7 +73,8 @@ void Pathfinding::update(float aDelta)
         // We need a copy of mNodes to make the calculation in place
         std::vector<Node> localNodes = mNodes;
 
-        if (tiles.at(targetPos.x() + targetPos.y() * stride).mType
+        if (tiles.at((size_t) targetPos.x() + (size_t) targetPos.y() * stride)
+                .mType
             == component::TileType::Void)
         {
             SELOG(info)("Pathfinding to a entity not on a Path");
@@ -82,11 +83,26 @@ void Pathfinding::update(float aDelta)
             return;
         }
 
-        Node & current =
-            localNodes.at(pathfinderPos.x() + pathfinderPos.y() * stride);
-        current.mCost = 0;
+        Pos2 startPos = getLevelPosition(aGeo.mPosition);
+        Node start{
+            .mIndex = (size_t) startPos.x() + (size_t) startPos.y() * stride,
+            .mPos = aGeo.mPosition.xy(),
+        };
+        start.mCost = 0;
+        start.mReducedCost = manhattan(aGeo.mPosition.xy(), targetPos);
+        openedNode.push(&start);
+        start.opened = true;
+        Node & startTile = localNodes.at(start.mIndex);
+        startTile.mCost = (aGeo.mPosition.xy() - startTile.mPos).getNorm();
+        startTile.mPrev = &start;
+        startTile.mReducedCost =
+            startTile.mCost + manhattan(startTile.mPos, targetPos);
 
-        openedNode.push(&current);
+        if (startTile.mCost != 0.f)
+        {
+            openedNode.push(&startTile);
+            startTile.opened = true;
+        }
 
         Node * closestNode = nullptr;
 
@@ -94,6 +110,7 @@ void Pathfinding::update(float aDelta)
         {
             Node * current = openedNode.top();
             openedNode.pop();
+            current->opened = false;
 
             if (current->mPos == targetPos)
             {
@@ -101,58 +118,70 @@ void Pathfinding::update(float aDelta)
                 break;
             }
 
-            current->mVisited = true;
-
             for (int x = -1; x <= 1; x += 2)
             {
                 Node & visitedNode =
-                    localNodes.at((int) current->mIndex + x);
-                if (!visitedNode.mVisited)
+                    localNodes.at(static_cast<int>(current->mIndex) + x);
+                float distance = (visitedNode.mPos - current->mPos).getNorm();
+                float newCost = current->mCost + distance;
+                if (visitedNode.mPathable && newCost < visitedNode.mCost
+                    && distance <= 1.f)
                 {
                     // All node have a 1 cost right now
                     // because in manhattan distance all tile have a cost
                     // of 1 (maybe we could discard this)
-                    visitedNode.mCost =
-                        current->mCost + 1
-                        + manhattan(current->mPos + Vec2_i{x, 0},
+                    visitedNode.mCost = newCost;
+                    visitedNode.mReducedCost =
+                        newCost
+                        + manhattan(current->mPos + Vec2{(float) x, 0.f},
                                     targetPos);
                     visitedNode.mPrev = current;
-                    openedNode.push(&visitedNode);
+
+                    if (!visitedNode.opened)
+                    {
+                        openedNode.push(&visitedNode);
+                        visitedNode.opened = true;
+                    }
                 }
             }
             for (int y = -1; y <= 1; y += 2)
             {
                 Node & visitedNode =
                     localNodes.at((int) current->mIndex + y * stride);
-                if (!visitedNode.mVisited)
+                float distance = (visitedNode.mPos - current->mPos).getNorm();
+                float newCost = current->mCost + distance;
+                if (visitedNode.mPathable && newCost < visitedNode.mCost
+                    && distance <= 1.f)
                 {
-                    visitedNode.mVisited = true;
                     // All node have a 1 cost right now
                     // because in manhattan distance all tile have a cost
                     // of 1 (maybe we could discard this)
-                    visitedNode.mCost =
-                        current->mCost + 1
-                        + manhattan(current->mPos + Vec2_i{0, y},
+                    visitedNode.mCost = newCost;
+                    visitedNode.mReducedCost =
+                        newCost
+                        + manhattan(current->mPos + Vec2{(float) y, 0.f},
                                     targetPos);
                     visitedNode.mPrev = current;
-                    openedNode.push(&visitedNode);
+                    if (!visitedNode.opened)
+                    {
+                        openedNode.push(&visitedNode);
+                        visitedNode.opened = true;
+                    }
                 }
             }
         }
 
-        while (closestNode->mPrev != nullptr && closestNode->mPrev->mPrev != nullptr)
+        while (closestNode->mPrev != nullptr
+               && closestNode->mPrev->mPrev != nullptr)
         {
             closestNode = closestNode->mPrev;
         }
 
         aPathfinder.mCurrentTarget = closestNode->mPos;
-        Vec3 displacement = Vec3{ 
-            static_cast<float>(aPathfinder.mCurrentTarget.x() - pathfinderPos.x()),
-            static_cast<float>(aPathfinder.mCurrentTarget.y() - pathfinderPos.y()), 0.f} * aDelta;
-        aGeo.mPosition = aGeo.mPosition + displacement;
+        aPathfinder.mTargetFound = true;
     });
 }
 
-} // namespace component
+} // namespace system
 } // namespace snacgame
 } // namespace ad

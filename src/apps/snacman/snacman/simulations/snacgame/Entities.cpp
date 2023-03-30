@@ -17,6 +17,7 @@
 #include "component/VisualMesh.h"
 #include "GameContext.h"
 #include "scene/MenuScene.h"
+#include "snacman/simulations/snacgame/component/AllowedMovement.h"
 #include "typedef.h"
 
 #include "../../QueryManipulation.h"
@@ -185,6 +186,7 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
     player
         .add(component::PlayerLifeCycle{.mIsAlive = false})
         .add(component::PlayerMoveState{})
+        .add(component::AllowedMovement{})
         .add(component::Controller{.mType = aControllerType,
                                    .mControllerId = aControllerId})
         .add(component::Text{

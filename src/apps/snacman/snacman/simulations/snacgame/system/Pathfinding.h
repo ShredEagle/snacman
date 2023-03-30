@@ -20,16 +20,18 @@ public:
         mPathfinder{aWorld}, mLevel{aLevel}
     {}
 
-    void update(float aDelta);
+    void update();
 
 private:
     struct Node
     {
-        unsigned int mCost = std::numeric_limits<unsigned int>::max();
+        float mReducedCost = std::numeric_limits<float>::max();
+        float mCost = std::numeric_limits<float>::max();
         Node * mPrev = nullptr;
         size_t mIndex;
-        math::Position<2, int> mPos;
-        bool mVisited = false;
+        math::Position<2, float> mPos;
+        bool mPathable = false;
+        bool opened = false;
     };
 
     ent::Query<component::PathToOnGrid, component::Geometry> mPathfinder;

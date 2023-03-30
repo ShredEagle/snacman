@@ -9,6 +9,9 @@ namespace snacgame {
 
 constexpr int gGridSize = 29;
 constexpr float gCellSize = 1.f;
+constexpr float gPlayerTurningZoneHalfWidth = 0.2f;
+constexpr float gOtherTurningZoneHalfWidth = 0.05f;
+
 
 static const math::Quaternion<float> gWorldCoordTo3dCoordQuat = math::Quaternion<float>{
     math::UnitVec<3, float>::MakeFromUnitLength({-1.f, 0.f, 0.f}),

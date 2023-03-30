@@ -19,6 +19,7 @@ using TransformMatrix = math::AffineMatrix<4, float>;
 using RotationMatrix = math::LinearMatrix<3, 3, float>;
 using ScaleMatrix = math::LinearMatrix<3, 3, float>;
 using Pos3 = math::Position<3, float>;
+using Pos2 = math::Position<2, float>;
 using Vec3 = math::Vec<3, float>;
 using Vec2 = math::Vec<2, float>;
 using Pos2_i = math::Position<2, int>;

@@ -15,6 +15,7 @@
 #include "SimulationControl.h"
 #include "Entities.h"
 #include "snacman/simulations/snacgame/SceneGraph.h"
+#include "snacman/simulations/snacgame/component/AllowedMovement.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
 #include "snacman/simulations/snacgame/component/PathToOnGrid.h"
 #include "snacman/simulations/snacgame/component/SceneNode.h"
@@ -270,7 +271,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
             mGameContext.mRenderThread.continueGui();
         }
-        if (mImguiDisplays.mDebugFunction)
+        if (mImguiDisplays.mPathfinding)
         {
             ImGui::Begin("Debug function");
             if (ImGui::Button("Create pathfinder"))
@@ -288,6 +289,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                             1.f,
                             {0.5f, 0.5f, 0.5f}
                         );
+                    pEntity.add(component::AllowedMovement{.mWindow = gOtherTurningZoneHalfWidth});
                     pEntity.add(component::PathToOnGrid{player});
                 }
                 EntHandle root = mStateMachine->getCurrentScene()->mSceneRoot;

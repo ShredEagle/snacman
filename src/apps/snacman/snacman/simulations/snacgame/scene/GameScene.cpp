@@ -21,7 +21,8 @@
 #include "../InputConstants.h" // for gJoin
 #include "../scene/Scene.h"    // for Trans...
 #include "../SceneGraph.h"
-#include "../system/DeterminePlayerAction.h"
+#include "../system/AllowMovement.h"
+#include "../system/ConsolidateGridMovement.h"
 #include "../system/EatPill.h"
 #include "../system/Pathfinding.h"
 #include "../system/IntegratePlayerMovement.h"
@@ -94,7 +95,8 @@ void GameScene::setup(GameContext & aContext,
         mSystems.get(init)->add(system::PlayerSpawner{mWorld, mLevel});
         mSystems.get(init)->add(system::RoundMonitor{mWorld});
         mSystems.get(init)->add(system::PlayerInvulFrame{mWorld});
-        mSystems.get(init)->add(system::DeterminePlayerAction{mWorld, mLevel});
+        mSystems.get(init)->add(system::AllowMovement{mWorld, mLevel});
+        mSystems.get(init)->add(system::ConsolidateGridMovement{mWorld});
         mSystems.get(init)->add(system::IntegratePlayerMovement{mWorld});
         mSystems.get(init)->add(system::LevelCreator{&mWorld});
         mSystems.get(init)->add(system::MovementIntegration{mWorld});
@@ -215,10 +217,11 @@ GameScene::update(GameContext & aContext, float aDelta, RawInput & aInput)
     mSystems.get(update)->get<system::RoundMonitor>().update();
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
     mSystems.get(update)->get<system::PortalManagement>().update();
-    mSystems.get(update)->get<system::DeterminePlayerAction>().update();
+    mSystems.get(update)->get<system::AllowMovement>().update();
+    mSystems.get(update)->get<system::ConsolidateGridMovement>().update(aDelta);
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
     mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
-    mSystems.get(update)->get<system::Pathfinding>().update(aDelta);
+    mSystems.get(update)->get<system::Pathfinding>().update();
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
