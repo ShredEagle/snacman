@@ -99,7 +99,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
         init, aContext, pill, "models/burger/burger.gltf",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          lPillHeight},
-        1.f, {1.f, 1.f, 1.f},
+        1.f, {1.6f, 1.6f, 1.6f},
         math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 math::Degree<float>{25.f}});
     pill
