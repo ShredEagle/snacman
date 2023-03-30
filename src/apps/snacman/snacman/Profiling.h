@@ -61,10 +61,10 @@ inline ProfilerPrint & getRenderProfilerPrint()
 }
 
 
-inline Guard profileFrame(Profiler aProfiler)
+inline Guard profileFrame(nvh::Profiler & aProfiler)
 {
-    getProfiler(aProfiler).beginFrame();
-    return Guard{[aProfiler]{getProfiler(aProfiler).endFrame();}};
+    aProfiler.beginFrame();
+    return Guard{[&aProfiler]{aProfiler.endFrame();}};
 }
 
 inline std::string keepLevels(std::string_view aStr, unsigned int aLevels = 1)

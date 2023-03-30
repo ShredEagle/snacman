@@ -15,7 +15,7 @@ namespace snac {
 
 struct Effect;
 struct Font;
-struct Mesh;
+struct Model;
 
 Resources::~Resources()
 {
@@ -23,21 +23,21 @@ Resources::~Resources()
 }
 
 
-std::shared_ptr<Mesh> Resources::getShape(filesystem::path aShape)
+std::shared_ptr<Model> Resources::getModel(filesystem::path aModel)
 {
     // This is bad design, but lazy to get the result quickly
-    if(aShape.string() == "CUBE")
+    if(aModel.string() == "CUBE")
     {
         if (!mCube)
         {
-            mCube = mRenderThread.loadShape(aShape, *this)
+            mCube = mRenderThread.loadModel(aModel, *this)
                 .get(); // synchronize call
         }
         return mCube;
     }
     else
     {
-        return mMeshes.load(aShape, mFinder, mRenderThread, *this);
+        return mModels.load(aModel, mFinder, mRenderThread, *this);
     }
 }
 
@@ -74,12 +74,12 @@ std::shared_ptr<Font> Resources::FontLoader(
 }
 
 
-std::shared_ptr<Mesh> Resources::MeshLoader(
-    filesystem::path aMesh, 
+std::shared_ptr<Model> Resources::ModelLoader(
+    filesystem::path aModel, 
     RenderThread<snacgame::Renderer> & aRenderThread,
     Resources & aResources)
 {
-    return aRenderThread.loadShape(aMesh, aResources)
+    return aRenderThread.loadModel(aModel, aResources)
             .get(); // synchronize call
 }
 

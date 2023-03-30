@@ -67,8 +67,8 @@ void addMeshGeoNode(Phase & aPhase,
                                  .mInstanceScaling = aInstanceScale,
                                  .mOrientation = aOrientation,
                                  .mColor = aColor})
-        .add(component::VisualMesh{
-            .mMesh = aContext.mResources.getShape(aModelPath),
+        .add(component::VisualModel{
+            .mModel = aContext.mResources.getModel(aModelPath),
         })
         .add(component::SceneNode{})
         .add(component::GlobalPose{});
@@ -99,7 +99,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
         init, aContext, pill, "models/burger/burger.gltf",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          lPillHeight},
-        1.f, {1.f, 1.f, 1.f},
+        1.f, {1.6f, 1.6f, 1.6f},
         math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 math::Degree<float>{25.f}});
     pill
@@ -279,7 +279,7 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
     aHandle.get(aPhase)->remove<component::PlayerLifeCycle>();
     aHandle.get(aPhase)->remove<component::PlayerMoveState>();
     aHandle.get(aPhase)->remove<component::Text>();
-    aHandle.get(aPhase)->remove<component::VisualMesh>();
+    aHandle.get(aPhase)->remove<component::VisualModel>();
     aHandle.get(aPhase)->remove<component::PoseScreenSpace>();
     aHandle.get(aPhase)->remove<component::SceneNode>();
     aHandle.get(aPhase)->remove<component::GlobalPose>();

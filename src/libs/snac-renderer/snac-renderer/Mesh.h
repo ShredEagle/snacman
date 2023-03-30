@@ -98,6 +98,7 @@ struct VertexStream
 };
 
 
+/// \warning Correspond to the `Mesh Primitive` in glTF (2.0) lingua.
 struct Mesh
 {
     VertexStream mStream;
@@ -106,7 +107,16 @@ struct Mesh
 };
 
 
-std::ostream & operator<<(std::ostream & aOut, const Mesh & aMesh);
+/// \warning Correspond to the `Mesh` in glTF (2.0) lingua.
+struct Model
+{
+    std::vector<Mesh> mParts;
+    math::Box<GLfloat> mBoundingBox;
+    std::string mName;
+};
+
+
+std::ostream & operator<<(std::ostream & aOut, const Model & aModel);
 
 
 struct InstanceStream
@@ -131,7 +141,7 @@ const InstanceStream gNotInstanced{
 template <class T_value, std::size_t N_spanExtent>
 void InstanceStream::respecifyData(std::span<T_value, N_spanExtent> aData)
 {
-    respecifyBuffer(mInstanceBuffer.mBuffer, aData);
+    respecifyBuffer(mInstanceBuffer.mBuffer, aData, graphics::BufferHint::StreamDraw);
     mInstanceCount = (GLsizei)aData.size();
 }
 

@@ -41,7 +41,7 @@ void TextRenderer::render(Renderer & aRenderer,
                           const visu::GraphicState & aState,
                           snac::ProgramSetup & aProgramSetup)
 {
-    TIME_RECURRING_CLASSFUNC(Render);
+    TIME_RECURRING_CLASSFUNC_GL();
 
     auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
 
@@ -117,7 +117,9 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Tech
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
             snac::Camera::gDefaults},
     mMeshInstances{initializeInstanceStream()}
-{}
+{
+    mPipelineShadows.getControls().mShadowBias = 0.0005f;
+}
 
 void Renderer::resetProjection(float aAspectRatio,
                                snac::Camera::Parameters aParameters)
@@ -125,18 +127,19 @@ void Renderer::resetProjection(float aAspectRatio,
     mCamera.resetProjection(aAspectRatio, aParameters);
 }
 
-std::shared_ptr<snac::Mesh> Renderer::LoadShape(filesystem::path aShape,
-                                                snac::Resources & aResources)
+std::shared_ptr<snac::Model> Renderer::LoadModel(filesystem::path aModel,
+                                                 snac::Resources & aResources)
 {
-    if (aShape.string() == "CUBE")
+    if (aModel.string() == "CUBE")
     {
-        return std::make_shared<snac::Mesh>(
-            snac::loadCube(aResources.getShaderEffect("effects/Mesh.sefx")));
+        auto model = std::make_shared<snac::Model>();
+        model->mParts.push_back({snac::loadCube(aResources.getShaderEffect("effects/Mesh.sefx"))});
+        return model;
     }
     else
     {
-        return std::make_shared<snac::Mesh>(
-            loadModel(aShape, aResources.getShaderEffect("effects/MeshTextures.sefx")));
+        return std::make_shared<snac::Model>(
+            loadModel(aModel, aResources.getShaderEffect("effects/MeshTextures.sefx")));
     }
 }
 
@@ -166,15 +169,15 @@ void Renderer::continueGui()
 
 void Renderer::render(const visu::GraphicState & aState)
 {
-    TIME_RECURRING(Render, "Render");
+    TIME_RECURRING_GL("Render");
 
     // Stream the instance buffer data
-    std::map<snac::Mesh *, std::vector<PoseColor>> sortedMeshes;
+    std::map<snac::Model *, std::vector<PoseColor>> sortedModels;
 
-    BEGIN_RECURRING(Render, "Sort_meshes", sortMeshProfile);
+    BEGIN_RECURRING_GL("Sort_meshes", sortModelProfile);
     for (const visu::Entity & entity : aState.mEntities)
     {
-        sortedMeshes[entity.mMesh.get()].push_back(PoseColor{
+        sortedModels[entity.mModel.get()].push_back(PoseColor{
             .pose = math::trans3d::scale(entity.mScaling)
                     * entity.mOrientation.toRotationMatrix()
                     * math::trans3d::translate(
@@ -182,7 +185,7 @@ void Renderer::render(const visu::GraphicState & aState)
             .albedo = to_sdr(entity.mColor),
         });
     }
-    END_RECURRING(sortMeshProfile);
+    END_RECURRING_GL(sortModelProfile);
 
     // Position camera
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
@@ -222,20 +225,23 @@ void Renderer::render(const visu::GraphicState & aState)
             }};
         shadowLightViewPoint.setPose(worldToLight);
 
-            TIME_RECURRING_GL("Draw_meshes");
+        TIME_RECURRING_GL("Draw_meshes");
         // Poor man's pool
         static std::list<snac::InstanceStream> instanceStreams;
-        while(instanceStreams.size() < sortedMeshes.size())
+        while(instanceStreams.size() < sortedModels.size())
         {
             instanceStreams.push_back(initializeInstanceStream());
         }
 
         auto streamIt = instanceStreams.begin();
         std::vector<snac::Pass::Visual> visuals;
-        for (const auto & [mesh, instances] : sortedMeshes)
+        for (const auto & [model, instances] : sortedModels)
         {
             streamIt->respecifyData(std::span{instances});
-            visuals.push_back({mesh, &*streamIt});
+            for (const auto & mesh : model->mParts)
+            {
+                visuals.push_back({&mesh, &*streamIt});
+            }
             ++streamIt;
         }
         mPipelineShadows.execute(visuals, shadowLightViewPoint, mRenderer, programSetup);

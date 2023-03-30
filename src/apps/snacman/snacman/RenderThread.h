@@ -174,7 +174,7 @@ public:
         });
     }
 
-    std::future<std::shared_ptr<snac::Mesh>> loadShape(filesystem::path aShape, Resources & aResources)
+    std::future<std::shared_ptr<snac::Model>> loadModel(filesystem::path aModel, Resources & aResources)
     {
         // Almost certainly a programming error:
         // There is a risk the calling code will block on the future completion
@@ -183,14 +183,14 @@ public:
 
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
-        auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Mesh>>>();
-        std::future<std::shared_ptr<snac::Mesh>> future = promise->get_future();
-        push([promise = std::move(promise), shape = std::move(aShape), &aResources]
+        auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Model>>>();
+        std::future<std::shared_ptr<snac::Model>> future = promise->get_future();
+        push([promise = std::move(promise), shape = std::move(aModel), &aResources]
              (T_renderer & aRenderer) 
              {
                 try
                 {
-                    promise->set_value(aRenderer.LoadShape(shape, aResources));
+                    promise->set_value(aRenderer.LoadModel(shape, aResources));
                 }
                 catch(...)
                 {
@@ -379,7 +379,10 @@ private:
 
         while (!mStop)
         {
-            Guard frameProfiling = profileFrame(snac::Profiler::Render);
+            Guard frameProfiling = profileFrame(getProfilerGL());
+
+            // Without the swap buffer
+            BEGIN_RECURRING_GL("Iteration", iterationScope);
 
             // Service all queued operations first.
             {
@@ -457,14 +460,15 @@ private:
             SELOG(trace)("Render thread: Frame sent to GPU.");
 
             {
-                TIME_RECURRING(Render, "ImGui::renderBackend");
+                TIME_RECURRING_GL( "ImGui::renderBackend");
                 mImguiUi.renderBackend();
             }
 
             END_RECURRING_GL(frameProfilerScope);
+            END_RECURRING_GL(iterationScope);
 
             {
-                TIME_RECURRING(Render, "Swap buffers");
+                TIME_RECURRING_GL("Swap buffers");
                 mApplication.swapBuffers();
             }
 

@@ -187,11 +187,18 @@ namespace {
     }
 
 
+    std::shared_ptr<graphics::Texture> makeDefaultColorTexture()
+    {
+        return prepareTexture(arte::Image<math::sdr::Rgba>{ {1, 1}, math::sdr::Rgba{255, 255, 255, 255}},
+                              gltf::texture::gDefaultSampler,
+                              ColorSpace::sRGB);
+    }
+
     std::shared_ptr<graphics::Texture> makeDefaultNormalMap()
     {
         return prepareTexture(arte::Image<math::sdr::Rgb>{ {1, 1}, math::sdr::Rgb{128, 128, 255}},
-                            gltf::texture::gDefaultSampler,
-                            ColorSpace::Linear);
+                              gltf::texture::gDefaultSampler,
+                              ColorSpace::Linear);
     }
 
 
@@ -321,13 +328,17 @@ namespace {
                         gltfMaterial.get<gltf::Texture>(baseColorTexture->index),
                         ColorSpace::sRGB));
                 material->mUniforms.mStore.emplace(Semantic::BaseColorUVIndex,
-                                            baseColorTexture->texCoord);
+                                                   baseColorTexture->texCoord);
             }
             else
             {
-                SELOG(error)
-                     ("Gltf models are expected to have a base color texture for the moment.");
-                throw std::runtime_error{"Gltf models are expected to have a base color texture for the moment."};
+                static std::shared_ptr<graphics::Texture> gDefaultColorTexture = makeDefaultColorTexture();
+                material->mTextures.mStore.emplace(
+                    Semantic::BaseColorTexture,
+                    gDefaultColorTexture);
+                material->mUniforms.mStore.emplace(Semantic::BaseColorUVIndex,
+                                                   // Arbitrary index, any UV coords will sample the same texel
+                                                   0u); 
             }
 
             //
@@ -372,28 +383,39 @@ namespace {
 } // unnamed namespace
 
 
-Mesh loadGltf(filesystem::path aModel)
+Model loadGltf(filesystem::path aModel, std::string_view aName)
 {
     arte::Gltf gltf{aModel};
 
-    // TODO this should be extended, to allow picking sub-meshes from a Gltf file
-    // and even support multiple primitives in a Mesh (but the Mesh class will need redesigning) 
+    Model model{
+        .mName = std::string{aName},
+    };
 
-    // Get first mesh
-    Owned<gltf::Mesh> gltfMesh = gltf.get(gltf::Index<gltf::Mesh>{0});
-    // Load the first (and only) primitive
-    if(gltfMesh->primitives.size() != 1)
+    bool firstPrimitive = true;
+
+    // Collapse the primitives from all meshes in the file into a single collection of primitives.
+    for (Owned<gltf::Mesh> gltfMesh : gltf.getMeshes())
     {
-        SELOG(error)
-            ("The gltf model '{}' first mesh has {} primitives, exactly 1 is required.",
-            aModel.string(), gltfMesh->primitives.size());
-        throw std::runtime_error{"Gltf file without a single primitive on the first mesh."};
+        const std::string & meshName = 
+            (gltfMesh->name.empty() ? std::string{"<mesh#"} + std::to_string(gltfMesh.id()) + ">" : gltfMesh->name);
+    
+        for (Const_Owned<gltf::Primitive> gltfPrimitive : gltfMesh.iterate(&gltf::Mesh::primitives))
+        {
+            model.mParts.push_back(makeFromPrimitive(gltfPrimitive));
+            model.mParts.back().mName = meshName + "_<prim#" + std::to_string(gltfPrimitive.id()) + ">";
+            if(firstPrimitive)
+            {
+                model.mBoundingBox = model.mParts.back().mStream.mBoundingBox;
+                firstPrimitive = false;
+            }
+            else
+            {
+                model.mBoundingBox.uniteAssign(model.mParts.back().mStream.mBoundingBox);
+            }
+        }
     }
 
-    Mesh result = makeFromPrimitive({gltf, gltfMesh->primitives.at(0), 0});
-    result.mName = (gltfMesh->name.empty() ?  aModel.filename().string() : gltfMesh->name)
-        + "_Prim#0";
-    return result;
+    return model;
 }
 
 

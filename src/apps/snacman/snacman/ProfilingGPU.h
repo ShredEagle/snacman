@@ -23,8 +23,15 @@ inline nvgl::ProfilerGL & getProfilerGL()
 #define BEGIN_RECURRING_GL(name, var) \
     auto var ## _gl = std::make_optional(::ad::snac::getProfilerGL().timeRecurring(name))
 
+
 #define END_RECURRING_GL(var) \
     var ## _gl.reset()
+
+
+#define TIME_RECURRING_CLASSFUNC_GL() \
+    static std::string keptStringForProfiling = ::ad::snac::keepLevels(SNAC_FUNCTION_NAME, 1); \
+    TIME_RECURRING_GL(keptStringForProfiling.c_str())
+
 
 } // namespace snac
 } // namespace ad

@@ -159,11 +159,14 @@ Mesh loadCube(std::shared_ptr<Effect> aEffect)
 }
 
 
-Mesh loadModel(filesystem::path aGltf, std::shared_ptr<Effect> aEffect)
+Model loadModel(filesystem::path aGltf, std::shared_ptr<Effect> aEffect)
 {
-    snac::Mesh mesh{loadGltf(aGltf)};
-    mesh.mMaterial->mEffect = std::move(aEffect);
-    return mesh;
+    snac::Model model{loadGltf(aGltf)};
+    for (snac::Mesh & mesh : model.mParts)
+    {
+        mesh.mMaterial->mEffect = aEffect;
+    }
+    return model;
 }
 
 

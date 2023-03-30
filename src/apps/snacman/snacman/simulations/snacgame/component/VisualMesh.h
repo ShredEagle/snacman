@@ -9,9 +9,9 @@ namespace snacgame {
 namespace component {
 
 
-struct VisualMesh
+struct VisualModel
 {
-    std::shared_ptr<snac::Mesh> mMesh;
+    std::shared_ptr<snac::Model> mModel;
 };
 
 

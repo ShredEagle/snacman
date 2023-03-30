@@ -32,7 +32,7 @@ struct GlobalPose;
 struct MappingContext;
 struct PoseScreenSpace;
 struct Text;
-struct VisualMesh;
+struct VisualModel;
 }
 namespace system {
 class OrbitalCamera; 
@@ -123,7 +123,7 @@ private:
     EntityWrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
     EntityWrap<system::SceneStateMachine> mStateMachine;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
-    EntityWrap<ent::Query<component::GlobalPose, component::VisualMesh>> mQueryRenderable;
+    EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
 
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
 

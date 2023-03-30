@@ -146,7 +146,7 @@ void runApplication()
 
     while (glfwApp.handleEvents())
     {
-        Guard frameProfiling = profileFrame(snac::Profiler::Main);
+        Guard stepProfiling = profileFrame(getProfiler(snac::Profiler::Main));
 
         BEGIN_RECURRING(Main, "Step", stepRecurringScope);
 
