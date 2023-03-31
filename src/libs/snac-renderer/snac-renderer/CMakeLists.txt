@@ -3,7 +3,9 @@ set(TARGET_NAME snac-renderer)
 set(${TARGET_NAME}_HEADERS
     Camera.h
     Cube.h
+    DebugDrawer.h
     Effect.h
+    Instances.h
     IntrospectProgram.h
     LoadInterface.h
     Logging.h
@@ -30,6 +32,7 @@ set(${TARGET_NAME}_HEADERS
 
 set(${TARGET_NAME}_SOURCES
     Camera.cpp
+    DebugDrawer.cpp
     Effect.cpp
     IntrospectProgram.cpp
     Logging.cpp

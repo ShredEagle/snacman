@@ -34,10 +34,13 @@ struct TechniqueLoader : public Load<Technique>
 };
 
 
-/// \deprecated An effect should not be made from a single program file.
-std::shared_ptr<Effect> loadTrivialEffect(filesystem::path aProgram);
+/// \brief Make an Effect with a single Technique, without annotations.
+std::shared_ptr<Effect> loadTrivialEffect(Technique aTechnique);
 
-/// \deprecated Should not take a finder directly, but a resource manager
+inline std::shared_ptr<Effect> loadTrivialEffect(filesystem::path aProgram)
+{ return loadTrivialEffect(loadTechnique(std::move(aProgram))); }
+
+
 std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
                                    Load<Technique> & aTechniqueAccess);
 
@@ -46,7 +49,7 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
                                    Load<Technique> && aTechniqueAccess)
 { return loadEffect(aEffectFile, aTechniqueAccess); }
 
-Mesh loadCube(std::shared_ptr<Effect> aEffect);
+Mesh loadCube(std::shared_ptr<Effect> aEffect, std::string_view aName = "procedural_cube");
 
 Model loadModel(filesystem::path aGltf, std::shared_ptr<Effect> aEffect);
 

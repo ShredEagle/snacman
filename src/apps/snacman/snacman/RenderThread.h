@@ -166,13 +166,13 @@ public:
         });
     }
 
-    void resetProjection(float aAspectRatio,
-                         snac::Camera::Parameters aParameters)
-    {
-        push([=](T_renderer & aRenderer) {
-            aRenderer.resetProjection(aAspectRatio, aParameters);
-        });
-    }
+    //void resetProjection(float aAspectRatio,
+    //                     snac::Camera::Parameters aParameters)
+    //{
+    //    push([=](T_renderer & aRenderer) {
+    //        aRenderer.resetProjection(aAspectRatio, aParameters);
+    //    });
+    //}
 
     std::future<std::shared_ptr<snac::Model>> loadModel(filesystem::path aModel, Resources & aResources)
     {

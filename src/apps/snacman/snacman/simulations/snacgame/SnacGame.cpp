@@ -310,6 +310,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
 bool SnacGame::update(float aDelta, RawInput & aInput)
 {
+    mDebugDrawer.startFrame();
+
     mSystemOrbitalCamera->update(
         aInput,
         snac::Camera::gDefaults.vFov, // TODO Should be dynamic
@@ -403,6 +405,10 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         });
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
+
+    mDebugDrawer.addBox({});
+    state->mDebugDrawList = mDebugDrawer.endFrame();
+
     return state;
 }
 

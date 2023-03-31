@@ -95,6 +95,8 @@ void runApplication()
 
     resource::ResourceFinder finder = makeResourceFinder();
 
+    auto scopeDebugDrawing = initializeDebugDrawing(snac::pass(snac::TechniqueLoader{finder}));
+
     //
     // Initialize rendering subsystem
     //

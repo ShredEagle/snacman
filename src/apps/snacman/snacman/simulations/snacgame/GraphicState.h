@@ -10,6 +10,7 @@
 #include <math/Interpolation/Interpolation.h>
 #include <math/Interpolation/QuaternionInterpolation.h>
 
+#include <snac-renderer/DebugDrawer.h>
 #include <snac-renderer/text/Text.h>
 
 #include <functional>
@@ -71,6 +72,8 @@ inline TextScreen interpolate(const TextScreen & aLeftEntity, const TextScreen &
 }
 
 
+// TODO #camera can we use a complete snac::Camera instead?
+//      This way the Renderer gets the complete camera each frame.
 struct Camera
 {
     // TODO #pose replace with position and orientation
@@ -88,6 +91,8 @@ struct GraphicState
     Camera mCamera; 
 
     snac::SparseSet<TextScreen, MaxEntityId> mTextEntities;
+
+    snac::DebugDrawer::DrawList mDebugDrawList = snac::DebugDrawer::DrawList::MakeEmpty();
 };
 
 
@@ -114,6 +119,8 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         // TODO #pose
         //.mCamera = math::lerp(aLeft.mCamera.mPosition_world, aRight.mCamera.mPosition_world, aInterpolant),
         .mCamera{aRight.mCamera},
+        // Note: For the moment, we do not interpolate the debug drawings, both for simplicity and performance
+        .mDebugDrawList{aRight.mDebugDrawList},
     };
 
     interpolateEach(aInterpolant, aLeft.mEntities, aRight.mEntities, state.mEntities);

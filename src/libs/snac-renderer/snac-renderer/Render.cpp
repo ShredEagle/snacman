@@ -90,6 +90,7 @@ void Pass::draw(std::span<const Visual> aVisuals, Renderer & aRenderer, ProgramS
 
 void Pass::draw(const Mesh & aMesh, const InstanceStream & aInstances, Renderer & aRenderer, ProgramSetup & aSetup) const
 {
+    assert(aMesh.mMaterial);
     if(const IntrospectProgram * program = findTechnique(*aMesh.mMaterial, mFilter);
         program != nullptr)
     {

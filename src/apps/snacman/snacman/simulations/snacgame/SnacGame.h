@@ -9,7 +9,10 @@
 #include <entity/Query.h>
 
 #include <resource/ResourceFinder.h>
+
 #include <platform/Filesystem.h>
+
+#include <snac-renderer/DebugDrawer.h>
 
 #include <imgui.h>
 
@@ -134,6 +137,8 @@ private:
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;
+
+    snac::DebugDrawer mDebugDrawer;
 };
 
 } // namespace snacgame

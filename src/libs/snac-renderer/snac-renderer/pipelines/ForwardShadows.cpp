@@ -17,6 +17,7 @@ handy::StringId gDepthSid{"depth"};
 handy::StringId gForwardShadowSid{"forward_shadow"};
 
 
+// TODO #imgui move to ImguiUI and reuse in Renderer
 void addCheckbox(const char * aLabel, MovableAtomic<bool> & aValue)
 {
     bool value = aValue;

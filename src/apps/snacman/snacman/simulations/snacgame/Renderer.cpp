@@ -8,6 +8,7 @@
 #include <platform/Filesystem.h>
 
 #include <snac-renderer/text/Text.h>
+#include <snac-renderer/Instances.h>
 #include <snac-renderer/Semantic.h>
 #include <snac-renderer/Render.h>
 #include <snac-renderer/Mesh.h>
@@ -23,15 +24,6 @@
 namespace ad {
 namespace snacgame {
 
-namespace {
-
-struct PoseColor
-{
-    math::Matrix<4, 4, float> pose;
-    math::sdr::Rgba albedo;
-};
-
-} // anonymous namespace
 
 TextRenderer::TextRenderer() :
     mGlyphInstances{snac::initializeGlyphInstanceStream()}
@@ -87,45 +79,22 @@ void TextRenderer::render(Renderer & aRenderer,
     }
 }
 
-snac::InstanceStream initializeInstanceStream()
-{
-    snac::InstanceStream instances;
-    {
-        graphics::ClientAttribute transformation{
-            .mDimension = {4, 4},
-            .mOffset = offsetof(PoseColor, pose),
-            .mComponentType = GL_FLOAT,
-        };
-        instances.mAttributes.emplace(snac::Semantic::LocalToWorld,
-                                      transformation);
-    }
-    {
-        graphics::ClientAttribute albedo{
-            .mDimension = 4,
-            .mOffset = offsetof(PoseColor, albedo),
-            .mComponentType = GL_UNSIGNED_BYTE,
-        };
-        instances.mAttributes.emplace(snac::Semantic::Albedo, albedo);
-    }
-    instances.mInstanceBuffer.mStride = sizeof(PoseColor);
-    return instances;
-}
 
 Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Technique> & aTechniqueAccess) :
     mAppInterface{aAppInterface},
     mPipelineShadows{aAppInterface, aTechniqueAccess},
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
             snac::Camera::gDefaults},
-    mMeshInstances{initializeInstanceStream()}
+    mMeshInstances{snac::initializeInstanceStream<snac::PoseColor>()}
 {
     mPipelineShadows.getControls().mShadowBias = 0.0005f;
 }
 
-void Renderer::resetProjection(float aAspectRatio,
-                               snac::Camera::Parameters aParameters)
-{
-    mCamera.resetProjection(aAspectRatio, aParameters);
-}
+//void Renderer::resetProjection(float aAspectRatio,
+//                               snac::Camera::Parameters aParameters)
+//{
+//    mCamera.resetProjection(aAspectRatio, aParameters);
+//}
 
 std::shared_ptr<snac::Model> Renderer::LoadModel(filesystem::path aModel,
                                                  snac::Resources & aResources)
@@ -154,13 +123,25 @@ std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
     );
 }
 
+// TODO remove, should be reused from imguiui
+void addCheckbox(const char * aLabel, std::atomic<bool> & aValue)
+{
+    bool value = aValue;
+    ImGui::Checkbox(aLabel, &value);
+    aValue = value;
+}
+void addCheckbox(const char * aLabel, bool & aValue)
+{
+    ImGui::Checkbox(aLabel, &aValue);
+}
 
 void Renderer::continueGui()
 {
-    // This boolean is only accessed by main thread
-    static bool showShadowControls = false;
-    ImGui::Checkbox("Shadows", &showShadowControls);
-    if (showShadowControls)
+    addCheckbox("Render models", mControl.mRenderModels);
+    addCheckbox("Render text", mControl.mRenderText);
+
+    ImGui::Checkbox("Shadow controls", &mControl.mShowShadowControls);
+    if (mControl.mShowShadowControls)
     {
         mPipelineShadows.drawGui();
     }
@@ -172,12 +153,12 @@ void Renderer::render(const visu::GraphicState & aState)
     TIME_RECURRING_GL("Render");
 
     // Stream the instance buffer data
-    std::map<snac::Model *, std::vector<PoseColor>> sortedModels;
+    std::map<snac::Model *, std::vector<snac::PoseColor>> sortedModels;
 
     BEGIN_RECURRING_GL("Sort_meshes", sortModelProfile);
     for (const visu::Entity & entity : aState.mEntities)
     {
-        sortedModels[entity.mModel.get()].push_back(PoseColor{
+        sortedModels[entity.mModel.get()].push_back(snac::PoseColor{
             .pose = math::trans3d::scale(entity.mScaling)
                     * entity.mOrientation.toRotationMatrix()
                     * math::trans3d::translate(
@@ -189,6 +170,12 @@ void Renderer::render(const visu::GraphicState & aState)
 
     // Position camera
     mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
+    // TODO #camera remove that local camera
+    snac::Camera cam{
+        math::getRatio<float>(mAppInterface.getWindowSize()),
+        snac::Camera::gDefaults};
+    cam.setPose(aState.mCamera.mWorldToCamera);
+
 
     const math::AffineMatrix<4, GLfloat> worldToLight = 
         math::trans3d::rotateX(math::Degree<float>{65.f}) // this is about the worst angle for shadows, on closest labyrinth row
@@ -208,14 +195,15 @@ void Renderer::render(const visu::GraphicState & aState)
             {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
             {snac::Semantic::LightPosition, {lightPosition_cam}},
             {snac::Semantic::AmbientColor, {ambientColor}},
-            {snac::Semantic::FramebufferResolution,
-            mAppInterface.getFramebufferSize()},
+            {snac::Semantic::FramebufferResolution, mAppInterface.getFramebufferSize()},
+            {snac::Semantic::ViewingMatrix, cam.assembleViewMatrix()}
         },
         .mUniformBlocks{
             {snac::BlockSemantic::Viewing, &mCamera.mViewing},
         }
     };
 
+    if (mControl.mRenderModels)
     {
         static snac::Camera shadowLightViewPoint{1, 
             {
@@ -230,7 +218,7 @@ void Renderer::render(const visu::GraphicState & aState)
         static std::list<snac::InstanceStream> instanceStreams;
         while(instanceStreams.size() < sortedModels.size())
         {
-            instanceStreams.push_back(initializeInstanceStream());
+            instanceStreams.push_back(snac::initializeInstanceStream<snac::PoseColor>());
         }
 
         auto streamIt = instanceStreams.begin();
@@ -250,7 +238,12 @@ void Renderer::render(const visu::GraphicState & aState)
     //
     // Text
     //
-    mTextRenderer.render(*this, aState, programSetup);
+    if (mControl.mRenderText)
+    {
+        mTextRenderer.render(*this, aState, programSetup);
+    }
+
+    aState.mDebugDrawList.render(mRenderer, programSetup);
 }
 
 } // namespace snacgame

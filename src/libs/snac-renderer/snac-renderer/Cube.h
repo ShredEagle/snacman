@@ -170,7 +170,9 @@ inline VertexStream makeCube()
 {
     VertexStream geometry{
         .mPrimitive = GL_TRIANGLES,
+        .mBoundingBox = math::Box<GLfloat>{ {-1.f, -1.f, -1.f}, {2.f, 2.f, 2.f}}
     };
+
     // Note: Binding the VAO is not required for loading vertex buffers
     // Make a VBO and load the cube vertices into it
     // Save the index of the next VBO.

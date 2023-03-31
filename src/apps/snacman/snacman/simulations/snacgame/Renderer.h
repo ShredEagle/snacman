@@ -45,12 +45,24 @@ class Renderer
 {
     friend struct TextRenderer;
 
+    struct Control
+    {
+        // TODO make atomic
+        bool mRenderModels{true};
+        bool mRenderText{true};
+        //std::atomic<bool> mRenderModels{true};
+        //std::atomic<bool> mRenderText{true};
+
+        // This boolean is only accessed by main thread
+        bool mShowShadowControls{false};
+    };
+
 public:
     using GraphicState_t = visu::GraphicState;
 
     Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Technique> & aTechniqueAccess);
 
-    void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
+    //void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
     // TODO Extend beyond cubes.
     static std::shared_ptr<snac::Model> LoadModel(filesystem::path aModel, snac::Resources & aResources);
@@ -68,6 +80,7 @@ public:
     { mRenderer.resetRepositories(); }
 
 private:
+    Control mControl;
     graphics::AppInterface & mAppInterface;
     snac::Renderer mRenderer;
     // TODO Is it the correct place to host the pipeline instance?
@@ -75,6 +88,7 @@ private:
     snac::ForwardShadows mPipelineShadows;
     snac::Pass mTextPass{"text"};
     snac::CameraBuffer mCamera;
+    // TODO remove
     snac::InstanceStream mMeshInstances;
     TextRenderer mTextRenderer;
 };
