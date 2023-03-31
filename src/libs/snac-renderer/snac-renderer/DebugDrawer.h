@@ -33,7 +33,7 @@ class DebugDrawer
     };
 
 public:
-    struct Instance
+    struct Entry
     {
         math::Position<3, GLfloat> mPosition;
         math::Size<3, GLfloat> mScaling{1.f, 1.f, 1.f};
@@ -46,7 +46,7 @@ public:
     private:
         friend class DebugDrawer;
 
-        std::vector<Instance> mBoxes;
+        std::vector<Entry> mBoxes;
     };
 
     class DrawList
@@ -84,7 +84,7 @@ public:
     DrawList endFrame()
     { return {std::move(mCommands), gSharedData.get()}; }
 
-    void addBox(Instance aInstance);
+    void addBox(const Entry & aEntry);
 
 private:
     std::shared_ptr<Commands> mCommands;

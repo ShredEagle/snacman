@@ -406,7 +406,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
 
-    mDebugDrawer.addBox({});
+    mDebugDrawer.addBox({.mColor = math::hdr::gCyan<GLfloat>});
     state->mDebugDrawList = mDebugDrawer.endFrame();
 
     return state;

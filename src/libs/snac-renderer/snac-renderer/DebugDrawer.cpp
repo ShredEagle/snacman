@@ -38,9 +38,9 @@ void DebugDrawer::startFrame()
 }
 
 
-void DebugDrawer::addBox(Instance aInstance)
+void DebugDrawer::addBox(const Entry & aEntry)
 {
-    mCommands->mBoxes.push_back(std::move(aInstance));
+    mCommands->mBoxes.push_back(aEntry);
 }
 
 
@@ -57,7 +57,7 @@ void DebugDrawer::DrawList::render(Renderer & aRenderer, ProgramSetup & aSetup) 
     std::vector<PoseColor> instances;
     instances.reserve(mCommands->mBoxes.size());
 
-    for(const Instance & instance : mCommands->mBoxes)
+    for(const Entry & instance : mCommands->mBoxes)
     {
         instances.push_back(PoseColor{
                 .pose = math::trans3d::scale(instance.mScaling)
