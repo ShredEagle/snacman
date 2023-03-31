@@ -3,8 +3,12 @@
 #include "renderer/ScopeGuards.h"
 
 #include <graphics/AppInterface.h>
+
+#include <imguiui/Widgets.h> 
+
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
+
 #include <platform/Filesystem.h>
 
 #include <snac-renderer/text/Text.h>
@@ -123,24 +127,16 @@ std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
     );
 }
 
-// TODO remove, should be reused from imguiui
-void addCheckbox(const char * aLabel, std::atomic<bool> & aValue)
-{
-    bool value = aValue;
-    ImGui::Checkbox(aLabel, &value);
-    aValue = value;
-}
-void addCheckbox(const char * aLabel, bool & aValue)
-{
-    ImGui::Checkbox(aLabel, &aValue);
-}
 
 void Renderer::continueGui()
 {
+    using namespace imguiui;
+
     addCheckbox("Render models", mControl.mRenderModels);
     addCheckbox("Render text", mControl.mRenderText);
+    addCheckbox("Render debug", mControl.mRenderDebug);
 
-    ImGui::Checkbox("Shadow controls", &mControl.mShowShadowControls);
+    ImGui::Checkbox("Show shadow controls", &mControl.mShowShadowControls);
     if (mControl.mShowShadowControls)
     {
         mPipelineShadows.drawGui();
@@ -243,7 +239,10 @@ void Renderer::render(const visu::GraphicState & aState)
         mTextRenderer.render(*this, aState, programSetup);
     }
 
-    aState.mDebugDrawList.render(mRenderer, programSetup);
+    if (mControl.mRenderDebug)
+    {
+        aState.mDebugDrawList.render(mRenderer, programSetup);
+    }
 }
 
 } // namespace snacgame

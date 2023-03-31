@@ -47,11 +47,9 @@ class Renderer
 
     struct Control
     {
-        // TODO make atomic
-        bool mRenderModels{true};
-        bool mRenderText{true};
-        //std::atomic<bool> mRenderModels{true};
-        //std::atomic<bool> mRenderText{true};
+        MovableAtomic<bool> mRenderModels{true};
+        MovableAtomic<bool> mRenderText{true};
+        MovableAtomic<bool> mRenderDebug{true};
 
         // This boolean is only accessed by main thread
         bool mShowShadowControls{false};
