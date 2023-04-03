@@ -27,6 +27,9 @@ void Debug_BoundingBoxes::update()
 
     mPlayers.each(addBox);
     mPills.each(addBox);
+
+    // Also add the world basis
+    mGameContext->mDebugDrawer.addBasis({});
 }
 
 

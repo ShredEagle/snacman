@@ -145,10 +145,10 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
 }
 
 
-Mesh loadBox(math::Box<float> aBox, std::shared_ptr<Effect> aEffect, std::string_view aName)
+Mesh loadVertices(VertexStream aVertices, std::shared_ptr<Effect> aEffect, std::string_view aName)
 {
     snac::Mesh mesh{
-        .mStream = makeBox(aBox),
+        .mStream = std::move(aVertices),
         .mMaterial = std::make_shared<snac::Material>(snac::Material{
             .mEffect = std::move(aEffect)
         }),
@@ -156,6 +156,12 @@ Mesh loadBox(math::Box<float> aBox, std::shared_ptr<Effect> aEffect, std::string
     }; 
 
     return mesh;
+}
+
+
+Mesh loadBox(math::Box<float> aBox, std::shared_ptr<Effect> aEffect, std::string_view aName)
+{
+    return loadVertices(makeBox(aBox), std::move(aEffect), aName);
 }
 
 

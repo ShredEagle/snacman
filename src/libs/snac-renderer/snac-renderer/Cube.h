@@ -141,6 +141,29 @@ inline std::vector<math::Position<3, float>> getExpandedCubeVertices()
     return result;
 }
 
+inline const std::array<math::Position<3, float>, 10> & getArrowVertices()
+{
+    using Pos = math::Position<3, float>;
+    static std::array<Pos, 10> gVertices{
+        // Tail
+        Pos{0.f, 0.f, 0.f},
+        Pos{0.f, 1.f, 0.f},
+        // Heads
+        Pos{0.f, 1.f, 0.f},
+        Pos{0.f, 0.75f, 0.15f},
+
+        Pos{0.f, 1.f, 0.f},
+        Pos{0.f, 0.75f, -0.15f},
+
+        Pos{0.f, 1.f, 0.f},
+        Pos{0.15f, 0.75f, 0.f},
+
+        Pos{0.f, 1.f, 0.f},
+        Pos{-0.15f, 0.75f, 0.f},
+    };
+    return gVertices;
+}
+
 
 //  TODO use PositionNormalUV instead
 struct PositionNormal
@@ -241,6 +264,35 @@ inline VertexStream makeBox(math::Box<float> aBox)
 inline VertexStream makeCube()
 {
     return makeBox({{-1.f, -1.f, -1.f}, {2.f, 2.f, 2.f}});
+}
+
+
+inline VertexStream makeArrow()
+{
+    VertexStream geometry{
+        .mPrimitive = GL_LINES,
+        .mBoundingBox = math::Box<GLfloat>{ {-.15f, 0.f, -0.15f}, {0.3f, 1.f, 0.3f}}
+    };
+
+    auto index = geometry.mVertexBuffers.size();
+    const auto & vertices = getArrowVertices();
+    geometry.mVertexBuffers.push_back({
+        .mBuffer = loadVBO(std::span{vertices}),
+        .mStride = sizeof(std::remove_cvref_t<decltype(vertices)>::value_type),
+    });
+
+    {
+        graphics::ClientAttribute position{
+            .mDimension = 3,
+            .mOffset = 0,
+            .mComponentType = GL_FLOAT
+        };
+        geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, position});
+    }
+    
+    geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
+
+    return geometry;
 }
 
 

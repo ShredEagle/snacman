@@ -49,6 +49,8 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
                                    Load<Technique> && aTechniqueAccess)
 { return loadEffect(aEffectFile, aTechniqueAccess); }
 
+Mesh loadVertices(VertexStream aVertices, std::shared_ptr<Effect> aEffect, std::string_view aName);
+
 Mesh loadBox(math::Box<float> aBox, std::shared_ptr<Effect> aEffect, std::string_view aName = "procedural_box");
 
 inline Mesh loadCube(std::shared_ptr<Effect> aEffect, std::string_view aName = "procedural_cube")

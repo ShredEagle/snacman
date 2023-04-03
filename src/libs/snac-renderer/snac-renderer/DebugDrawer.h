@@ -29,6 +29,7 @@ class DebugDrawer
     struct SharedData
     {
         Mesh mCube;
+        Mesh mArrow;
         InstanceStream mInstances;
     };
 
@@ -47,6 +48,7 @@ public:
         friend class DebugDrawer;
 
         std::vector<Entry> mBoxes;
+        std::vector<Entry> mArrows;
     };
 
     class DrawList
@@ -89,6 +91,12 @@ public:
 
     /// @brief Adds a unit the box `aBox` with pose defined by `aEntry`.
     void addBox(Entry aEntry, const math::Box<GLfloat> aBox);
+
+    void addArrow(const Entry & aEntry);
+
+    /// @brief Add a frame-of-reference as 3 arrows along positive X(red), Y(green) and Z(blue).
+    /// @note The color in `aEntry` will be ignored. 
+    void addBasis(Entry aEntry);
 
 private:
     std::shared_ptr<Commands> mCommands;

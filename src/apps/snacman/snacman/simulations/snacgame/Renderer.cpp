@@ -241,6 +241,7 @@ void Renderer::render(const visu::GraphicState & aState)
 
     if (mControl.mRenderDebug)
     {
+        TIME_RECURRING_GL("Draw_debug");
         aState.mDebugDrawList.render(mRenderer, programSetup);
     }
 }
