@@ -86,8 +86,6 @@ private:
     snac::ForwardShadows mPipelineShadows;
     snac::Pass mTextPass{"text"};
     snac::CameraBuffer mCamera;
-    // TODO remove
-    snac::InstanceStream mMeshInstances;
     TextRenderer mTextRenderer;
 };
 

@@ -88,8 +88,7 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Tech
     mAppInterface{aAppInterface},
     mPipelineShadows{aAppInterface, aTechniqueAccess},
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
-            snac::Camera::gDefaults},
-    mMeshInstances{snac::initializeInstanceStream<snac::PoseColor>()}
+            snac::Camera::gDefaults}
 {
     mPipelineShadows.getControls().mShadowBias = 0.0005f;
 }
