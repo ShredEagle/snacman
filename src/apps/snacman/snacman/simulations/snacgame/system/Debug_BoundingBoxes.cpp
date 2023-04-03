@@ -1,5 +1,6 @@
 #include "Debug_BoundingBoxes.h"
 
+#include <snacman/DebugDrawing.h>
 #include <snacman/Profiling.h>
 
 
@@ -15,7 +16,7 @@ void Debug_BoundingBoxes::update()
     auto addBox = [this]
         (const component::GlobalPose & aGlobalPose, const component::VisualModel & aModel) 
         {
-            mGameContext->mDebugDrawer.addBox(
+            SEDBGDRAW(snac::gBoundingBoxDrawer)->addBox(
                 snac::DebugDrawer::Entry{
                     .mPosition = aGlobalPose.mPosition,
                     .mScaling = aGlobalPose.mInstanceScaling,
@@ -29,7 +30,7 @@ void Debug_BoundingBoxes::update()
     mPills.each(addBox);
 
     // Also add the world basis
-    mGameContext->mDebugDrawer.addBasis({});
+    SEDBGDRAW(snac::gWorldDrawer)->addBasis({});
 }
 
 

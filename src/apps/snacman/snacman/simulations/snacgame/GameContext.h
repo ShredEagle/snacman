@@ -15,6 +15,7 @@
 namespace ad {
 namespace snacgame {
 
+
 struct GameContext
 {
     snac::Resources mResources;
@@ -22,7 +23,6 @@ struct GameContext
     snac::RenderThread<Renderer> & mRenderThread;
     SimulationControl mSimulationControl;
     std::optional<ent::Handle<ent::Entity>> mLevel;
-    snac::DebugDrawer mDebugDrawer;
 };
 
 

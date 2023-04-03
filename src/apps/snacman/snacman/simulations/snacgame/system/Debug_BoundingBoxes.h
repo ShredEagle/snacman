@@ -7,8 +7,6 @@
 
 #include <snacman/simulations/snacgame/GameContext.h>
 
-#include <snac-renderer/DebugDrawer.h>
-
 #include <entity/Query.h>
 
 
@@ -22,8 +20,7 @@ class Debug_BoundingBoxes
 public:
     Debug_BoundingBoxes(GameContext & aGameContext) :
         mPlayers{aGameContext.mWorld},
-        mPills{aGameContext.mWorld},
-        mGameContext{&aGameContext}
+        mPills{aGameContext.mWorld}
     {}
 
     void update();
@@ -31,7 +28,6 @@ public:
 private:
     ent::Query<component::GlobalPose, component::PlayerMoveState, component::VisualModel> mPlayers;
     ent::Query<component::GlobalPose, component::Pill, component::VisualModel> mPills;
-    GameContext * mGameContext;
 };
 
 } // namespace system

@@ -1,3 +1,4 @@
+#include "DebugDrawing.h"
 #include "Input.h"
 #include "Logging.h"
 #include "LoopSettings.h"
@@ -96,6 +97,8 @@ void runApplication()
     resource::ResourceFinder finder = makeResourceFinder();
 
     auto scopeDebugDrawing = initializeDebugDrawing(snac::pass(snac::TechniqueLoader{finder}));
+    initializeDebugDrawers();
+
 
     //
     // Initialize rendering subsystem

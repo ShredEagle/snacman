@@ -47,6 +47,7 @@ struct ImguiDisplays
     bool mShowSimulationDelta = false;
     bool mShowImguiDemo = false;
     bool mShowLogLevel = false;
+    bool mShowDebugDrawers = false;
     bool mShowMainProfiler = false;
     bool mShowRenderProfiler = false;
     bool mSpeedControl = false;
@@ -61,6 +62,7 @@ struct ImguiDisplays
         ImGui::Checkbox("Mappings", &mShowMappings);
         ImGui::Checkbox("Simulation delta", &mShowSimulationDelta);
         ImGui::Checkbox("Log level", &mShowLogLevel);
+        ImGui::Checkbox("Debug drawers", &mShowDebugDrawers);
         ImGui::Checkbox("Main profiler",  &mShowMainProfiler);
         ImGui::Checkbox("Render profiler",  &mShowRenderProfiler);
         ImGui::Checkbox("Player info",  &mShowPlayerInfo);

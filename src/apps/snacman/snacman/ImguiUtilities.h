@@ -53,5 +53,18 @@ void imguiLogLevelSelection(bool * open = nullptr)
 }
 
 
+void imguiDebugDrawerLevelSection(bool * open = nullptr)
+{
+    ImGui::Begin("Debug drawing", open);
+    {
+        for(const auto & [name, drawer] : DebugDrawer::IterateDrawers{})
+        {
+            ImGui::Text("%s", name.c_str());
+        }
+    }
+    ImGui::End();
+}
+
+
 } // namespace snac
 } // namespace ad

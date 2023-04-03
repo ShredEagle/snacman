@@ -208,6 +208,10 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         {
             snac::imguiLogLevelSelection(&mImguiDisplays.mShowLogLevel);
         }
+        if (mImguiDisplays.mShowDebugDrawers)
+        {
+            snac::imguiDebugDrawerLevelSection(&mImguiDisplays.mShowDebugDrawers);
+        }
         if (mImguiDisplays.mShowMappings)
         {
             mMappingContext->drawUi(aInput, &mImguiDisplays.mShowMappings);
@@ -310,7 +314,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
 bool SnacGame::update(float aDelta, RawInput & aInput)
 {
-    mGameContext.mDebugDrawer.startFrame();
+    snac::DebugDrawer::StartFrame();
 
     mSystemOrbitalCamera->update(
         aInput,
@@ -406,7 +410,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
 
-    state->mDebugDrawList = mGameContext.mDebugDrawer.endFrame();
+    state->mDebugDrawList = snac::DebugDrawer::EndFrame();
 
     return state;
 }

@@ -2,53 +2,99 @@
 
 #include "Cube.h"
 #include "Instances.h"
+#include "Logging.h"
 #include "ResourceLoad.h"
 
 #include <math/Transformations.h>
+
+
+#define SELOG(severity) SELOG_LG(::ad::snac::gRenderLogger, severity)
 
 
 namespace ad {
 namespace snac {
 
 
-std::unique_ptr<DebugDrawer::SharedData> DebugDrawer::gSharedData;
+std::unique_ptr<DebugDrawer::SharedData> DebugDrawer::Registry::gSharedData;
 
 
 Guard initializeDebugDrawing(Load<Technique> & aTechniqueAccess)
 {
-    static DebugDrawer::SharedData sharedData;
-    DebugDrawer::gSharedData = std::make_unique<DebugDrawer::SharedData>();
+    DebugDrawer::Registry::gSharedData = std::make_unique<DebugDrawer::SharedData>();
+    std::unique_ptr<DebugDrawer::SharedData> & sharedData = DebugDrawer::Registry::gSharedData;
+
 
     auto effect = loadTrivialEffect(aTechniqueAccess.get("shaders/DebugDraw.prog"));
 
-    DebugDrawer::gSharedData->mCube = loadBox(
+    sharedData->mCube = loadBox(
         math::Box<float>::UnitCube(),
         effect,
         "debug_box");
 
-    DebugDrawer::gSharedData->mArrow = loadVertices(
+    sharedData->mArrow = loadVertices(
         makeArrow(),
         effect,
         "debug_arrow");
 
-    DebugDrawer::gSharedData->mInstances = initializeInstanceStream<PoseColor>();
+    sharedData->mInstances = initializeInstanceStream<PoseColor>();
 
     return Guard{[]()
     {
-        DebugDrawer::gSharedData = nullptr;
+        DebugDrawer::Registry::gSharedData = nullptr;
     }};
 }
 
 
-void DebugDrawer::startFrame()
+void DebugDrawer::Registry::startFrame()
 {
     mCommands = std::make_shared<Commands>();
+}
+    
+
+DebugDrawer::DrawList DebugDrawer::Registry::endFrame()
+{ 
+    return{
+        std::move(mCommands),
+        gSharedData.get()
+    };
+}
+
+
+std::shared_ptr<DebugDrawer> DebugDrawer::Registry::addDrawer(const std::string & aName)
+{
+    auto [drawer, didInsert] = mDrawers.emplace(aName, std::make_shared<DebugDrawer>(this));
+    if(!didInsert)
+    {
+        SELOG(warn)("DebugDrawer name '{}' already registered.", aName);
+    }
+    return drawer->second;
+}
+
+
+std::shared_ptr<DebugDrawer> DebugDrawer::Registry::get(const std::string & aName) const
+{
+    auto found = mDrawers.find(aName);
+    if(found == mDrawers.end())
+    {
+        SELOG(error)("No DebugDrawer named '{}'.", aName);
+        throw std::invalid_argument{"Requested DebugDrawer is not present."};
+    }
+    else
+    {
+        return found->second;
+    }
+}
+
+
+DebugDrawer::Commands & DebugDrawer::commands()
+{
+    return *mRegistry->mCommands;
 }
 
 
 void DebugDrawer::addBox(const Entry & aEntry)
 {
-    mCommands->mBoxes.push_back(aEntry);
+    commands().mBoxes.push_back(aEntry);
 }
 
 
@@ -67,7 +113,7 @@ void DebugDrawer::addBox(Entry aEntry, const math::Box<GLfloat> aBox)
 
 void DebugDrawer::addArrow(const Entry & aEntry)
 {
-    mCommands->mArrows.push_back(aEntry);
+    commands().mArrows.push_back(aEntry);
 }
 
 
@@ -75,21 +121,21 @@ void DebugDrawer::addBasis(Entry aEntry)
 {
     // Y
     aEntry.mColor = math::hdr::gGreen<GLfloat>;
-    mCommands->mArrows.push_back(aEntry);
+    commands().mArrows.push_back(aEntry);
     // X
     aEntry.mOrientation *= math::Quaternion<GLfloat>{
         math::UnitVec<3, GLfloat>{{0.f, 0.f, 1.f}},
         math::Degree<GLfloat>{-90.f}
     };
     aEntry.mColor = math::hdr::gRed<GLfloat>;
-    mCommands->mArrows.push_back(aEntry);
+    commands().mArrows.push_back(aEntry);
     // Z
     aEntry.mOrientation *= math::Quaternion<GLfloat>{
         math::UnitVec<3, GLfloat>{{1.f, 0.f, 0.f}},
         math::Degree<GLfloat>{90.f}
     };
     aEntry.mColor = math::hdr::gBlue<GLfloat>;
-    mCommands->mArrows.push_back(aEntry);
+    commands().mArrows.push_back(aEntry);
 }
 
 

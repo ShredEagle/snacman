@@ -5,7 +5,7 @@
 
 
 namespace ad {
-namespace snac{
+namespace snac {
 
 
 void recompilePrograms(Resources & aResources)
