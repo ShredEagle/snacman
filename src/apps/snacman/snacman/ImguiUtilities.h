@@ -2,6 +2,7 @@
 
 
 #include <imguiui/ImguiUi.h>
+#include <imguiui/Widgets-impl.h>
 
 #include <spdlog/spdlog.h>
 
@@ -59,7 +60,7 @@ void imguiDebugDrawerLevelSection(bool * open = nullptr)
     {
         for(const auto & [name, drawer] : DebugDrawer::IterateDrawers{})
         {
-            ImGui::Text("%s", name.c_str());
+            imguiui::addCombo(name.c_str(), drawer->getLevel(), std::span{DebugDrawer::gLevels});
         }
     }
     ImGui::End();

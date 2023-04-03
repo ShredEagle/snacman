@@ -13,10 +13,15 @@ void Debug_BoundingBoxes::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    auto addBox = [this]
+    using Level = snac::DebugDrawer::Level;
+
+    Level level = Level::off;
+
+    auto addBox = [this, &level]
         (const component::GlobalPose & aGlobalPose, const component::VisualModel & aModel) 
         {
             SEDBGDRAW(snac::gBoundingBoxDrawer)->addBox(
+                level,
                 snac::DebugDrawer::Entry{
                     .mPosition = aGlobalPose.mPosition,
                     .mScaling = aGlobalPose.mInstanceScaling,
@@ -26,11 +31,13 @@ void Debug_BoundingBoxes::update()
             );
         };
 
+    level = Level::info;
     mPlayers.each(addBox);
+    level = Level::debug;
     mPills.each(addBox);
 
     // Also add the world basis
-    SEDBGDRAW(snac::gWorldDrawer)->addBasis({});
+    SEDBGDRAW(snac::gWorldDrawer)->addBasis(Level::info, {});
 }
 
 

@@ -38,6 +38,35 @@ class DebugDrawer
     };
 
 public:
+    enum class Level
+    {
+        trace,
+        debug,
+        info,
+        warn,
+        error,
+        off,
+    };
+
+    static constexpr std::array<Level, 6> gLevels =
+    {
+        Level::trace,
+        Level::debug,
+        Level::info,
+        Level::warn,
+        Level::error,
+        Level::off,
+    };
+
+    inline static const std::array<std::string, 6> gLevelStrings{
+        "trace",
+        "debug",
+        "info",
+        "warn",
+        "error",
+        "off",
+    };
+
     struct Entry
     {
         math::Position<3, GLfloat> mPosition;
@@ -99,6 +128,8 @@ public:
 
         std::shared_ptr<DebugDrawer> get(const std::string & aName) const;
 
+        void setLevel(Level aLevel);
+
         static Registry & GetInstance()
         {
             static Registry gInstance;
@@ -106,6 +137,7 @@ public:
         }
 
         std::unordered_map<std::string/*logger name*/, std::shared_ptr<DebugDrawer>> mDrawers;
+        Level mLevel{Level::trace};
         std::shared_ptr<Commands> mCommands;
         static std::unique_ptr<SharedData> gSharedData;
     };
@@ -115,8 +147,9 @@ public:
 
 public:
     // Should be private, but we want to use it with make_shared 
-    DebugDrawer(Registry * aRegistry) :
-        mRegistry{aRegistry}
+    DebugDrawer(Registry * aRegistry, Level aLevel) :
+        mRegistry{aRegistry},
+        mLevel{aLevel}
     {}
 
     static void StartFrame()
@@ -137,29 +170,40 @@ public:
     static auto End()
     { return GetRegistry().mDrawers.end(); }
 
+    void SetGlobalLevel(Level aLevel)
+    { GetRegistry().setLevel(aLevel); }
+
+    auto & getLevel()
+    { return mLevel; }
+
     /// @brief Add a unit box (from [0, 0, 0] to [1, 1, 1] with pose defined by `aEntry`.
-    void addBox(const Entry & aEntry);
+    void addBox(Level aLevel, const Entry & aEntry);
 
     /// @brief Add a unit the box `aBox` with pose defined by `aEntry`.
-    void addBox(Entry aEntry, const math::Box<GLfloat> aBox);
+    void addBox(Level aLevel, Entry aEntry, const math::Box<GLfloat> aBox);
 
     /// @brief Add unit arrow along positive Y.
     /// @param aEntry 
-    void addArrow(const Entry & aEntry);
+    void addArrow(Level aLevel, const Entry & aEntry);
 
     /// @brief Add a frame-of-reference as 3 arrows along positive X(red), Y(green) and Z(blue).
     /// @note The color in `aEntry` will be ignored. 
-    void addBasis(Entry aEntry);
+    void addBasis(Level aLevel, Entry aEntry);
 
 private:
-    Commands & commands();
+    Commands & commands(Level aLevelSanityCheck);
+
+    bool passDrawFilter(Level aDrawLevel);
 
     static Registry & GetRegistry()
     { return Registry::GetInstance(); }
 
     Registry * mRegistry;
-    //Level mLevel{Level::Off};
+    Level mLevel;
 };
+
+
+const std::string & to_string(DebugDrawer::Level aLevel);
 
 
 struct DebugDrawer::IterateDrawers
