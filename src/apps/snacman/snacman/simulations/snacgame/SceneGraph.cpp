@@ -53,19 +53,18 @@ void insertEntityInScene(ent::Handle<ent::Entity> aHandle,
         parentEntity.get<component::SceneNode>();
     component::SceneNode & newNode = newChild.get<component::SceneNode>();
 
-    if (parentNode.aFirstChild)
+    if (parentNode.mFirstChild)
     {
-        EntHandle oldHandle = *parentNode.aFirstChild;
+        EntHandle oldHandle = *parentNode.mFirstChild;
         component::SceneNode & oldNode =
             oldHandle.get(graphPhase)->get<component::SceneNode>();
-        newNode.aNextChild = oldHandle;
-        oldNode.aPrevChild = aHandle;
+        newNode.mNextChild = oldHandle;
+        oldNode.mPrevChild = aHandle;
     }
 
-    newNode.aParent = aParent;
+    newNode.mParent = aParent;
 
-    parentNode.aFirstChild = aHandle;
-    parentNode.mChildCount += 1;
+    parentNode.mFirstChild = aHandle;
 }
 
 void removeEntityFromScene(ent::Handle<ent::Entity> aHandle)
@@ -73,27 +72,30 @@ void removeEntityFromScene(ent::Handle<ent::Entity> aHandle)
     ent::Phase graphPhase;
     Entity removedChild = *aHandle.get(graphPhase);
     component::SceneNode & removedNode = removedChild.get<component::SceneNode>();
-    assert(removedNode.aParent && "removed node does not have a parent");
-    Entity parentEntity = *removedNode.aParent->get(graphPhase);
+    assert(removedNode.mParent && "removed node does not have a parent");
+    Entity parentEntity = *removedNode.mParent->get(graphPhase);
     component::SceneNode & parentNode =
         parentEntity.get<component::SceneNode>();
 
-    if (parentNode.aFirstChild == aHandle)
+    if (parentNode.mFirstChild == aHandle)
     {
-        parentNode.aFirstChild = removedNode.aNextChild;
+        parentNode.mFirstChild = removedNode.mNextChild;
     }
 
-    if (removedNode.aNextChild)
+    if (removedNode.mNextChild)
     {
-        removedNode.aNextChild->get(graphPhase)->get<component::SceneNode>().aPrevChild = removedNode.aPrevChild;
+        removedNode.mNextChild->get(graphPhase)->get<component::SceneNode>().mPrevChild = removedNode.mPrevChild;
     }
 
-    if (removedNode.aPrevChild)
+    if (removedNode.mPrevChild)
     {
-        removedNode.aPrevChild->get(graphPhase)->get<component::SceneNode>().aNextChild = removedNode.aNextChild;
+        removedNode.mPrevChild->get(graphPhase)->get<component::SceneNode>().mNextChild = removedNode.mNextChild;
     }
 
-    parentNode.mChildCount -= 1;
+    removedNode.mParent = std::nullopt;
+    removedNode.mNextChild = std::nullopt;
+    removedNode.mPrevChild = std::nullopt;
+    removedNode.mFirstChild = std::nullopt;
 }
 } // namespace snacgame
 } // namespace ad

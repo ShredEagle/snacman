@@ -30,13 +30,16 @@ void Pathfinding::update()
     assert(level.isValid() && "Can't pathfind if there is no Level");
 
     ent::Phase pathfinding;
-    // TODO: (franz) we're starting to access mLevel in a lot of place
-    // we should think about putting in GameContext
     component::LevelData levelData = level.get(pathfinding)->get<component::LevelData>();
     const std::vector<component::Tile> & tiles = levelData.mTiles;
     int stride = levelData.mSize.height();
+    // TODO: (franz) mNodes should only be updated when dirty
+    // For the moment it is dirty if the level is regenerated
     mNodes.clear();
     mNodes.reserve(tiles.size());
+    // TODO: (franz) To resolve this mTiles in levelData should
+    // probably host all the pathfinding information necessary
+    // for this system
     for (size_t i = 0; i < tiles.size(); ++i)
     {
         mNodes.push_back({.mIndex = i,
@@ -154,6 +157,10 @@ void Pathfinding::update()
                     localNodes.at(static_cast<int>(current->mIndex) + x);
                 float distance = (visitedNode.mPos - current->mPos).getNorm();
                 float newCost = current->mCost + distance;
+
+                // the distance <= 1.f guarantees that the pathfinder 
+                // cannot cut corners because the next node in it's path cannot
+                // be more than 1 cell away
                 if (visitedNode.mPathable && newCost < visitedNode.mCost
                     && distance <= 1.f)
                 {

@@ -1,4 +1,5 @@
 #include "RoundMonitor.h"
+#include "snacman/simulations/snacgame/SceneGraph.h"
 #include "snacman/simulations/snacgame/component/LevelData.h"
 #include "../typedef.h"
 
@@ -23,10 +24,12 @@ void RoundMonitor::update()
         component::LevelData & levelData = level.get(destroyLevel)->get<component::LevelData>();
         levelData.mSeed++;
         levelData.mTiles.clear();
+        levelData.mFile = mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml";
         level.get(destroyLevel)->remove<component::LevelCreated>();
         level.get(destroyLevel)->add(component::LevelToCreate{});
-        mPlayers.each([](component::PlayerLifeCycle & lifeCycle) {
+        mPlayers.each([](EntHandle aHandle, component::PlayerLifeCycle & lifeCycle) {
                 lifeCycle.mIsAlive = false;
+                removeEntityFromScene(aHandle);
         });
     };
 }

@@ -6,6 +6,9 @@ namespace component {
 struct Pill
 {};
 
+struct PowerUp
+{};
+
 struct LevelEntity
 {};
 

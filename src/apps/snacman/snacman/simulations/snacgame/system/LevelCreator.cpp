@@ -78,6 +78,18 @@ void LevelCreator::update()
                         insertEntityInScene(pill, aLevelHandle);
                         break;
                     }
+                    case 'O':
+                    {
+                        tiles.push_back(component::Tile{
+                            .mType = component::TileType::Path});
+                        EntHandle path = createPathEntity(
+                            *mGameContext, math::Position<2, float>{xFloat, yFloat});
+                        insertEntityInScene(path, aLevelHandle);
+                        EntHandle powerup = createPowerUp(
+                            *mGameContext, math::Position<2, float>{xFloat, yFloat});
+                        insertEntityInScene(powerup, aLevelHandle);
+                        break;
+                    }
                     case 'K':
                     {
                         tiles.push_back(component::Tile{
@@ -90,7 +102,7 @@ void LevelCreator::update()
                         insertEntityInScene(portal, aLevelHandle);
                         break;
                     }
-                    case 'G':
+                    case 'F':
                     {
                         tiles.push_back(component::Tile{
                             .mType = component::TileType::Spawn});

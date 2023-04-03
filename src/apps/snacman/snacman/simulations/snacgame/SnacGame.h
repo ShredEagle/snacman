@@ -52,6 +52,7 @@ struct ImguiDisplays
     bool mShowPlayerInfo = false;
     bool mShowRenderControls = false;
     bool mPathfinding = false;
+    bool mGameControl = false;
 
     void display()
     {
@@ -65,6 +66,7 @@ struct ImguiDisplays
         ImGui::Checkbox("Player info",  &mShowPlayerInfo);
         ImGui::Checkbox("Render controls",  &mShowRenderControls);
         ImGui::Checkbox("Pathfinding", &mPathfinding);
+        ImGui::Checkbox("Game control", &mGameControl);
         ImGui::Checkbox("ImguiDemo", &mShowImguiDemo);
         ImGui::End();
     }

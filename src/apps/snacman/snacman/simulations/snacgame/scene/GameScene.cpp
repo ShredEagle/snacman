@@ -54,7 +54,7 @@ const char * const gMarkovRoot{"markov/"};
 
 namespace {
 
-EntHandle createLevel(GameContext & aContext)
+EntHandle createLevel(GameContext & aContext, const char * aLvlFile)
 {
     EntHandle level = aContext.mWorld.addEntity();
     {
@@ -62,7 +62,7 @@ EntHandle createLevel(GameContext & aContext)
         auto markovRoot = aContext.mResources.find(gMarkovRoot);
         ent::Entity levelEntity = *level.get(createLevel);
         levelEntity.add(component::LevelData(
-            aContext.mWorld, markovRoot.value(), "snaclvl.xml", {15, 15, 1}, 123123));
+            aContext.mWorld, markovRoot.value(), aLvlFile, {19, 19, 1}, 123123));
         levelEntity.add(component::LevelToCreate{});
         levelEntity.add(component::SceneNode{});
         levelEntity.add(component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
@@ -70,6 +70,22 @@ EntHandle createLevel(GameContext & aContext)
     }
     aContext.mLevel = level;
     return level;
+}
+
+void setupLevel(GameContext & aGameContext, ent::Phase & aPhase)
+{
+    aGameContext.mLevel->get(aPhase)->add(component::LevelToCreate{});
+    aGameContext.mLevel->get(aPhase)->add(component::SceneNode{});
+    aGameContext.mLevel->get(aPhase)->add(component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
+    aGameContext.mLevel->get(aPhase)->add(component::GlobalPose{});
+}
+
+void teardownLevel(GameContext & aGameContext, ent::Phase & aPhase)
+{
+    aGameContext.mLevel->get(aPhase)->remove<component::SceneNode>();
+    aGameContext.mLevel->get(aPhase)->remove<component::LevelCreated>();
+    aGameContext.mLevel->get(aPhase)->remove<component::Geometry>();
+    aGameContext.mLevel->get(aPhase)->remove<component::GlobalPose>();
 }
 
 }
@@ -84,7 +100,7 @@ GameScene::GameScene(const std::string & aName,
     mPlayers{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
-    createLevel(mGameContext);
+    createLevel(mGameContext, mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml");
 }
 
 void GameScene::setup(const Transition & aTransition,
@@ -92,6 +108,7 @@ void GameScene::setup(const Transition & aTransition,
 {
     {
         ent::Phase init;
+        setupLevel(mGameContext, init);
         mSystems.get(init)->add(system::SceneGraphResolver{mGameContext, mSceneRoot});
         mSystems.get(init)->add(system::PlayerSpawner{mGameContext});
         mSystems.get(init)->add(system::RoundMonitor{mGameContext});
@@ -115,13 +132,11 @@ void GameScene::teardown(RawInput & aInput)
 {
     ent::Phase destroy;
 
-    removeEntityFromScene(*mSceneRoot.get(destroy)->get<component::SceneNode>().aFirstChild);
+    teardownLevel(mGameContext, destroy);
 
     mSystems.get(destroy)->erase();
     mSystems = mGameContext.mWorld.addEntity();
 
-    mGameContext.mLevel->get(destroy)->erase();
-    mGameContext.mLevel = createLevel(mGameContext);
 
     mTiles.each([&destroy](EntHandle aHandle, const component::LevelEntity &) {
         aHandle.get(destroy)->erase();

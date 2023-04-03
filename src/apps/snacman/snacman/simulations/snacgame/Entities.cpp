@@ -97,7 +97,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
          gPillHeight},
         1.f, {1.6f, 1.6f, 1.6f},
         math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
-                                math::Degree<float>{25.f}});
+                                Turn_f{0.1f}});
     pill
         .add(component::Speed{
             .mRotation =
@@ -106,6 +106,31 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
         })
         .add(component::Pill{})
         .add(component::Collision{component::gPillHitbox})
+        .add(component::LevelEntity{});
+    return handle;
+}
+
+ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
+                                    const math::Position<2, float> & aGridPos)
+{
+    ent::Phase init;
+    auto handle = aContext.mWorld.addEntity();
+    Entity powerUp = *handle.get(init);
+    addMeshGeoNode(
+        init, aContext, powerUp, "models/burger/burger.gltf",
+        {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
+         gPillHeight},
+        1.f, {3.f, 3.f, 3.f},
+        Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                                Turn_f{0.25f}});
+    powerUp
+        .add(component::Speed{
+            .mRotation =
+                AxisAngle{.mAxis = math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+                          .mAngle = math::Degree<float>{180.f}},
+        })
+        .add(component::PowerUp{})
+        .add(component::Collision{component::gPowerUpHitbox})
         .add(component::LevelEntity{});
     return handle;
 }

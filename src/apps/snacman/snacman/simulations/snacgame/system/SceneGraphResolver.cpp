@@ -63,8 +63,8 @@ Quat_f getRotation(const TransformMatrix & aMatrix, float aScale)
         biggestIndex = 3;
     }
 
-    float biggestVal = std::sqrt(fourBiggestSquared + 1.f) / 2;
-    float mult = 1 / (4 * biggestVal);
+    float biggestVal = std::sqrt(fourBiggestSquared + 1.f) / 2.f;
+    float mult = 0.25f / biggestVal;
 
     float w, x, y, z;
     switch (biggestIndex)
@@ -133,20 +133,22 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
                        const TransformMatrix & aParentTransform,
                        ent::Phase & aPhase)
 {
-    if (aSceneNode.aFirstChild)
+    // Lots of cache miss here which is not suprising but
+    // It's it this load in particular that takes 10% of the run time of depthFirstResolve
+    if (aSceneNode.mFirstChild)
     {
         const component::SceneNode fakePrevNode{
-            .aNextChild = *aSceneNode.aFirstChild,
+            .mNextChild = *aSceneNode.mFirstChild,
         };
         const component::SceneNode * prevNode = &fakePrevNode;
 
         // TODO: (franz) use the optionalness of next child and prev child
-        for (std::size_t i = 0; i < aSceneNode.mChildCount; i++)
+        while (prevNode->mNextChild)
         {
-            ent::Handle<ent::Entity> current = *prevNode->aNextChild;
+            ent::Handle<ent::Entity> current = *prevNode->mNextChild;
             const component::SceneNode & node = 
                 current.get(aPhase)->get<component::SceneNode>();
-            const component::Geometry geo =
+            const component::Geometry & geo =
                 current.get(aPhase)->get<component::Geometry>();
             component::GlobalPose & gPose =
                 current.get(aPhase)->get<component::GlobalPose>();
