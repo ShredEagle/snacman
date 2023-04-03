@@ -49,6 +49,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/SceneNode.h
     simulations/snacgame/component/Spawner.h
     simulations/snacgame/component/Text.h
+    simulations/snacgame/component/VisualModel.h
 
     simulations/snacgame/scene/GameScene.h
     simulations/snacgame/scene/MenuScene.h

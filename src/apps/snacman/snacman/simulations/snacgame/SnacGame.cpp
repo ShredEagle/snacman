@@ -6,7 +6,7 @@
 #include "component/PlayerSlot.h"
 #include "component/PoseScreenSpace.h"
 #include "component/Text.h"
-#include "component/VisualMesh.h"
+#include "component/VisualModel.h"
 #include "component/GlobalPose.h"
 #include "GameContext.h"
 #include "GameParameters.h"

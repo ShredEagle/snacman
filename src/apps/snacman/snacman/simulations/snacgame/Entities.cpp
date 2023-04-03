@@ -14,7 +14,7 @@
 #include "component/Spawner.h"
 #include "component/Speed.h"
 #include "component/Text.h"
-#include "component/VisualMesh.h"
+#include "component/VisualModel.h"
 #include "GameContext.h"
 #include "scene/MenuScene.h"
 #include "snacman/simulations/snacgame/component/AllowedMovement.h"

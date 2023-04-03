@@ -12,7 +12,7 @@
 #include "../component/PoseScreenSpace.h"
 #include "../component/Speed.h"
 #include "../component/Text.h"
-#include "../component/VisualMesh.h"
+#include "../component/VisualModel.h"
 #include "../Entities.h"
 #include "../EntityWrap.h"  // for Entit...
 #include "../GameContext.h" // for GameC...
