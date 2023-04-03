@@ -58,6 +58,7 @@ set(${TARGET_NAME}_HEADERS
 
     simulations/snacgame/system/ConsolidateGridMovement.h
     simulations/snacgame/system/AllowMovement.h
+    simulations/snacgame/system/Debug_BoundingBoxes.h
     simulations/snacgame/system/EatPill.h
     simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/MovementIntegration.h
@@ -96,6 +97,7 @@ set(${TARGET_NAME}_SOURCES
 
     simulations/snacgame/system/ConsolidateGridMovement.cpp
     simulations/snacgame/system/AllowMovement.cpp
+    simulations/snacgame/system/Debug_BoundingBoxes.cpp
     simulations/snacgame/system/EatPill.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
     simulations/snacgame/system/MovementIntegration.cpp

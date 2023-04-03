@@ -49,7 +49,10 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
                                    Load<Technique> && aTechniqueAccess)
 { return loadEffect(aEffectFile, aTechniqueAccess); }
 
-Mesh loadCube(std::shared_ptr<Effect> aEffect, std::string_view aName = "procedural_cube");
+Mesh loadBox(math::Box<float> aBox, std::shared_ptr<Effect> aEffect, std::string_view aName = "procedural_box");
+
+inline Mesh loadCube(std::shared_ptr<Effect> aEffect, std::string_view aName = "procedural_cube")
+{ return loadBox({{-1.f, -1.f, -1.f}, {2.f, 2.f, 2.f}}, std::move(aEffect), aName); }
 
 Model loadModel(filesystem::path aGltf, std::shared_ptr<Effect> aEffect);
 

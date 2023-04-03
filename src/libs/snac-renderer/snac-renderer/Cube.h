@@ -57,6 +57,7 @@ constexpr float gCubeSize = 2.f;
 
 namespace cube {
 
+    // The cube from [-1, -1, -1] to [1, 1, 1]
     constexpr std::array<math::Position<3, float>, 8> gVertices{
         math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2, -gCubeSize / 2},
         math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2,  gCubeSize / 2},
@@ -107,6 +108,21 @@ namespace cube {
         math::Vec<3, float>{ 0.f, -1.f,  0.f},
     };
 
+    inline std::array<math::Position<3, float>, 8> getBoxVertices(math::Box<float> aBox)
+    {
+        return {
+            aBox.bottomLeftBack(),
+            aBox.bottomLeftFront(),
+            aBox.topLeftBack(),
+            aBox.topLeftFront(),
+
+            aBox.bottomRightBack(),
+            aBox.bottomRightFront(),
+            aBox.topRightBack(),
+            aBox.topRightFront(),
+        };
+    }
+
 } // namespace cube
 
 template <class T_vertex>
@@ -148,6 +164,23 @@ inline std::vector<PositionNormal> getExpandedCubeVertices()
     return result;
 }
 
+
+inline std::vector<PositionNormal> getExpandedVertices(math::Box<float> aBox)
+{
+    std::vector<PositionNormal> result;
+    result.reserve(36);
+    auto vertices = cube::getBoxVertices(aBox);
+    for (int i = 0; i < 36; i++) 
+    {
+        result.push_back(PositionNormal{
+            .position = vertices[cube::gIndices[i]],
+            .normal = cube::gNormals[i / 6]
+        });
+    }
+    return result;
+}
+
+
 //
 // Mesh aware methods
 //
@@ -166,7 +199,7 @@ inline graphics::VertexBufferObject loadVBO(std::span<T_vertex, N_extent> aVerti
 }
 
 
-inline VertexStream makeCube()
+inline VertexStream makeBox(math::Box<float> aBox)
 {
     VertexStream geometry{
         .mPrimitive = GL_TRIANGLES,
@@ -177,7 +210,7 @@ inline VertexStream makeCube()
     // Make a VBO and load the cube vertices into it
     // Save the index of the next VBO.
     auto index = geometry.mVertexBuffers.size();
-    auto vertices = getExpandedCubeVertices<PositionNormal>();
+    auto vertices = getExpandedVertices(aBox);
     geometry.mVertexBuffers.push_back({
         .mBuffer = loadVBO(std::span{vertices}),
         .mStride = sizeof(PositionNormal)
@@ -202,6 +235,12 @@ inline VertexStream makeCube()
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
     return geometry;
+}
+
+/// \deprecated
+inline VertexStream makeCube()
+{
+    return makeBox({{-1.f, -1.f, -1.f}, {2.f, 2.f, 2.f}});
 }
 
 

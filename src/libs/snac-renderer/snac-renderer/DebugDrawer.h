@@ -84,7 +84,11 @@ public:
     DrawList endFrame()
     { return {std::move(mCommands), gSharedData.get()}; }
 
+    /// @brief Adds a unit box (from [0, 0, 0] to [1, 1, 1] with pose defined by `aEntry`.
     void addBox(const Entry & aEntry);
+
+    /// @brief Adds a unit the box `aBox` with pose defined by `aEntry`.
+    void addBox(Entry aEntry, const math::Box<GLfloat> aBox);
 
 private:
     std::shared_ptr<Commands> mCommands;

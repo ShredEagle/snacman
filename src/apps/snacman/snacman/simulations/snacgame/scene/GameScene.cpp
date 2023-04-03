@@ -23,6 +23,7 @@
 #include "../SceneGraph.h"
 #include "../system/AllowMovement.h"
 #include "../system/ConsolidateGridMovement.h"
+#include "../system/Debug_BoundingBoxes.h"
 #include "../system/EatPill.h"
 #include "../system/Pathfinding.h"
 #include "../system/IntegratePlayerMovement.h"
@@ -104,6 +105,7 @@ void GameScene::setup(const Transition & aTransition,
         mSystems.get(init)->add(system::EatPill{mGameContext});
         mSystems.get(init)->add(system::PortalManagement{mGameContext});
         mSystems.get(init)->add(system::Pathfinding{mGameContext});
+        mSystems.get(init)->add(system::Debug_BoundingBoxes{mGameContext});
     }
 
     // Can't insert mLevel before the createLevel phase is over
@@ -231,6 +233,8 @@ GameScene::update(float aDelta, RawInput & aInput)
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
     mSystems.get(update)->get<system::EatPill>().update();
+
+    mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
 
     return std::nullopt;
 }

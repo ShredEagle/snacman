@@ -145,10 +145,10 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
 }
 
 
-Mesh loadCube(std::shared_ptr<Effect> aEffect, std::string_view aName)
+Mesh loadBox(math::Box<float> aBox, std::shared_ptr<Effect> aEffect, std::string_view aName)
 {
     snac::Mesh mesh{
-        .mStream = makeCube(),
+        .mStream = makeBox(aBox),
         .mMaterial = std::make_shared<snac::Material>(snac::Material{
             .mEffect = std::move(aEffect)
         }),

@@ -310,7 +310,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
 bool SnacGame::update(float aDelta, RawInput & aInput)
 {
-    mDebugDrawer.startFrame();
+    mGameContext.mDebugDrawer.startFrame();
 
     mSystemOrbitalCamera->update(
         aInput,
@@ -406,8 +406,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
 
-    mDebugDrawer.addBox({.mColor = math::hdr::gCyan<GLfloat>});
-    state->mDebugDrawList = mDebugDrawer.endFrame();
+    state->mDebugDrawList = mGameContext.mDebugDrawer.endFrame();
 
     return state;
 }

@@ -19,7 +19,8 @@ Guard initializeDebugDrawing(Load<Technique> & aTechniqueAccess)
     static DebugDrawer::SharedData sharedData;
     DebugDrawer::gSharedData = std::make_unique<DebugDrawer::SharedData>();
 
-    DebugDrawer::gSharedData->mCube = loadCube(
+    DebugDrawer::gSharedData->mCube = loadBox(
+        math::Box<float>::UnitCube(),
         loadTrivialEffect(aTechniqueAccess.get("shaders/DebugDraw.prog")),
         "debug_box");
 
@@ -41,6 +42,19 @@ void DebugDrawer::startFrame()
 void DebugDrawer::addBox(const Entry & aEntry)
 {
     mCommands->mBoxes.push_back(aEntry);
+}
+
+
+void DebugDrawer::addBox(Entry aEntry, const math::Box<GLfloat> aBox)
+{
+    // The translation transformation (from the instance position) will be applied last.
+    // It needs to take into account the scaling and rotation that will already be applied.
+    aEntry.mPosition += 
+        aEntry.mOrientation.rotate(
+            aBox.origin().cwMul(aEntry.mScaling.as<math::Position>()).as<math::Vec>());
+    aEntry.mScaling.cwMulAssign(aBox.dimension());
+
+    addBox(aEntry);
 }
 
 

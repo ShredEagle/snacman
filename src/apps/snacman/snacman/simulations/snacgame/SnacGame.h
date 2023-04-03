@@ -12,8 +12,6 @@
 
 #include <platform/Filesystem.h>
 
-#include <snac-renderer/DebugDrawer.h>
-
 #include <imgui.h>
 
 #include <cstdint>
@@ -137,8 +135,6 @@ private:
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;
-
-    snac::DebugDrawer mDebugDrawer;
 };
 
 } // namespace snacgame
