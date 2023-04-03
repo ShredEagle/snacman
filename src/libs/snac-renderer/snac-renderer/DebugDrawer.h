@@ -2,11 +2,11 @@
 
 
 #include "LoadInterface.h"
-#include "Mesh.h"
-#include "Render.h"
 
 #include <handy/Guard.h>
 
+#include <math/Box.h>
+#include <math/Color.h>
 #include <math/Quaternion.h>
 #include <math/Vector.h>
 
@@ -19,24 +19,12 @@ namespace snac {
 
 
 
-Guard initializeDebugDrawing(Load<Technique> & aTechniqueAccess);
-
-
 /// @note Several instance of DebugDrawers can live with an application.
 /// They will all write to the same shared list of commands,
 /// but allow for filtering on channels (i.e. names) and severity (i.e. levels).
+/// @warning **Not** thread safe at the moment.
 class DebugDrawer
 {
-    // TODO remove
-    friend Guard initializeDebugDrawing(Load<Technique> & aTechniqueAccess);
-
-    struct SharedData
-    {
-        Mesh mCube;
-        Mesh mArrow;
-        InstanceStream mInstances;
-    };
-
 public:
     enum class Level
     {
@@ -67,45 +55,37 @@ public:
         "off",
     };
 
+    /// @brief Controls the pose and color of the added debug drawing.
+    /// It is used as a parameter to the addXxx() methods in DebugDrawer. 
     struct Entry
     {
-        math::Position<3, GLfloat> mPosition;
-        math::Size<3, GLfloat> mScaling{1.f, 1.f, 1.f};
-        math::Quaternion<GLfloat> mOrientation = math::Quaternion<GLfloat>::Identity();
-        math::hdr::Rgba_f mColor = math::hdr::gMagenta<GLfloat>;
+        math::Position<3, float> mPosition;
+        math::Size<3, float> mScaling{1.f, 1.f, 1.f};
+        math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
+        math::hdr::Rgba_f mColor = math::hdr::gMagenta<float>;
     };
 
-    class Commands
+    struct Commands
     {
-    private:
-        friend class DebugDrawer;
-
         std::vector<Entry> mBoxes;
         std::vector<Entry> mArrows;
     };
 
-    class DrawList
+    struct DrawList
     {
-    public:
-        DrawList(std::shared_ptr<Commands> aCommands,
-                 SharedData * aSharedData) :
-            mCommands{std::move(aCommands)},
-            mSharedData{aSharedData}
+        DrawList(std::shared_ptr<Commands> aCommands) :
+            mCommands{std::move(aCommands)}
         {}
 
         // TODO remove
         static DrawList MakeEmpty()
         { return DrawList{}; };
 
-        void render(Renderer & aRenderer, ProgramSetup & aSetup) const;
+        std::shared_ptr<Commands> mCommands;
 
     private:
         // TODO remove
         DrawList();
-
-        std::shared_ptr<Commands> mCommands;
-        SharedData * mSharedData;
-        Pass mPass{"DebugDrawing"};
     };
 
 
@@ -113,13 +93,6 @@ public:
     class Registry
     {
         friend class DebugDrawer;
-        // TODO remove
-        friend Guard initializeDebugDrawing(Load<Technique> & aTechniqueAccess);
-
-        Registry()
-        {
-            assert(gSharedData != nullptr);
-        }
 
         void startFrame();
         DrawList endFrame();
@@ -138,8 +111,7 @@ public:
 
         std::unordered_map<std::string/*logger name*/, std::shared_ptr<DebugDrawer>> mDrawers;
         Level mLevel{Level::trace};
-        std::shared_ptr<Commands> mCommands;
-        static std::unique_ptr<SharedData> gSharedData;
+        std::shared_ptr<Commands> mFrameCommands;
     };
 
     /// @brief Default-constructed instance of this class allow to iterate all drawers in range-based for loops.
@@ -180,7 +152,7 @@ public:
     void addBox(Level aLevel, const Entry & aEntry);
 
     /// @brief Add a unit the box `aBox` with pose defined by `aEntry`.
-    void addBox(Level aLevel, Entry aEntry, const math::Box<GLfloat> aBox);
+    void addBox(Level aLevel, Entry aEntry, const math::Box<float> aBox);
 
     /// @brief Add unit arrow along positive Y.
     /// @param aEntry 

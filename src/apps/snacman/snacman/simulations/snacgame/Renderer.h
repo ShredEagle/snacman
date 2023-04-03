@@ -4,6 +4,7 @@
 #include "GraphicState.h"
 
 #include <snac-renderer/Camera.h>
+#include <snac-renderer/DebugRenderer.h>
 #include <snac-renderer/LoadInterface.h>
 #include <snac-renderer/Mesh.h>
 #include <snac-renderer/Render.h>
@@ -87,6 +88,7 @@ private:
     snac::Pass mTextPass{"text"};
     snac::CameraBuffer mCamera;
     TextRenderer mTextRenderer;
+    snac::DebugRenderer mDebugRenderer;
 };
 
 

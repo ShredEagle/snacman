@@ -4,6 +4,7 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Cube.h
     DebugDrawer.h
+    DebugRenderer.h
     Effect.h
     Instances.h
     IntrospectProgram.h
@@ -33,6 +34,7 @@ set(${TARGET_NAME}_HEADERS
 set(${TARGET_NAME}_SOURCES
     Camera.cpp
     DebugDrawer.cpp
+    DebugRenderer.cpp
     Effect.cpp
     IntrospectProgram.cpp
     Logging.cpp

@@ -69,6 +69,8 @@ void runApplication()
     ("Initial delta time {}ms.",
      std::chrono::duration_cast<ms>(gSimulationDelta).count());
 
+    initializeDebugDrawers();
+
     // TODO have this single work (currently return abherent values, even if we put a begin / end frame around the section)
     //BEGIN_SINGLE("App_initialization", appInitSingle);
 
@@ -95,10 +97,6 @@ void runApplication()
     arte::Freetype freetype;
 
     resource::ResourceFinder finder = makeResourceFinder();
-
-    auto scopeDebugDrawing = initializeDebugDrawing(snac::pass(snac::TechniqueLoader{finder}));
-    initializeDebugDrawers();
-
 
     //
     // Initialize rendering subsystem

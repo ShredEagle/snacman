@@ -1,9 +1,6 @@
 #include "DebugDrawer.h"
 
-#include "Cube.h"
-#include "Instances.h"
 #include "Logging.h"
-#include "ResourceLoad.h"
 
 #include <math/Transformations.h>
 
@@ -15,36 +12,6 @@ namespace ad {
 namespace snac {
 
 
-std::unique_ptr<DebugDrawer::SharedData> DebugDrawer::Registry::gSharedData;
-
-
-Guard initializeDebugDrawing(Load<Technique> & aTechniqueAccess)
-{
-    DebugDrawer::Registry::gSharedData = std::make_unique<DebugDrawer::SharedData>();
-    std::unique_ptr<DebugDrawer::SharedData> & sharedData = DebugDrawer::Registry::gSharedData;
-
-
-    auto effect = loadTrivialEffect(aTechniqueAccess.get("shaders/DebugDraw.prog"));
-
-    sharedData->mCube = loadBox(
-        math::Box<float>::UnitCube(),
-        effect,
-        "debug_box");
-
-    sharedData->mArrow = loadVertices(
-        makeArrow(),
-        effect,
-        "debug_arrow");
-
-    sharedData->mInstances = initializeInstanceStream<PoseColor>();
-
-    return Guard{[]()
-    {
-        DebugDrawer::Registry::gSharedData = nullptr;
-    }};
-}
-
-
 const std::string & to_string(DebugDrawer::Level aLevel)
 {
     return DebugDrawer::gLevelStrings[static_cast<std::size_t>(aLevel)];
@@ -53,16 +20,13 @@ const std::string & to_string(DebugDrawer::Level aLevel)
 
 void DebugDrawer::Registry::startFrame()
 {
-    mCommands = std::make_shared<Commands>();
+    mFrameCommands = std::make_shared<Commands>();
 }
     
 
 DebugDrawer::DrawList DebugDrawer::Registry::endFrame()
 { 
-    return{
-        std::move(mCommands),
-        gSharedData.get()
-    };
+    return{std::move(mFrameCommands)};
 }
 
 
@@ -108,7 +72,7 @@ DebugDrawer::Commands & DebugDrawer::commands(Level aLevelSanityCheck)
     // So we should never be here with a level not passing the filter.
     assert(passDrawFilter(aLevelSanityCheck));
 
-    return *mRegistry->mCommands;
+    return *mRegistry->mFrameCommands;
 }
 
 
@@ -128,7 +92,7 @@ void DebugDrawer::addBox(Level aLevel, const Entry & aEntry)
 }
 
 
-void DebugDrawer::addBox(Level aLevel, Entry aEntry, const math::Box<GLfloat> aBox)
+void DebugDrawer::addBox(Level aLevel, Entry aEntry, const math::Box<float> aBox)
 {
     // TODO this filter design is not satisfying. Here, passDrawFilter will be invoked 3 times.
     if(passDrawFilter(aLevel))
@@ -160,63 +124,29 @@ void DebugDrawer::addBasis(Level aLevel, Entry aEntry)
     {
         auto & cmds = commands(aLevel);
         // Y
-        aEntry.mColor = math::hdr::gGreen<GLfloat>;
+        aEntry.mColor = math::hdr::gGreen<float>;
         cmds.mArrows.push_back(aEntry);
         // X
-        aEntry.mOrientation *= math::Quaternion<GLfloat>{
-            math::UnitVec<3, GLfloat>{{0.f, 0.f, 1.f}},
-            math::Degree<GLfloat>{-90.f}
+        aEntry.mOrientation *= math::Quaternion<float>{
+            math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+            math::Degree<float>{-90.f}
         };
-        aEntry.mColor = math::hdr::gRed<GLfloat>;
+        aEntry.mColor = math::hdr::gRed<float>;
         cmds.mArrows.push_back(aEntry);
         // Z
-        aEntry.mOrientation *= math::Quaternion<GLfloat>{
-            math::UnitVec<3, GLfloat>{{1.f, 0.f, 0.f}},
-            math::Degree<GLfloat>{90.f}
+        aEntry.mOrientation *= math::Quaternion<float>{
+            math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+            math::Degree<float>{90.f}
         };
-        aEntry.mColor = math::hdr::gBlue<GLfloat>;
+        aEntry.mColor = math::hdr::gBlue<float>;
         cmds.mArrows.push_back(aEntry);
     }
 }
 
 
 DebugDrawer::DrawList::DrawList() :
-    mCommands{std::make_shared<Commands>()},
-    mSharedData{nullptr}
+    mCommands{std::make_shared<Commands>()}
 {}
-
-
-void DebugDrawer::DrawList::render(Renderer & aRenderer, ProgramSetup & aSetup) const
-{
-    auto scopeLineMode = graphics::scopePolygonMode(GL_LINE);
-
-    // TODO this could probably be optimized a lot:
-    // * Create complete instance buffer, and draw ranges per mesh
-    // * Single draw command glDraw*Indirect()
-    // Basically, at the moment we are limited by the API of our Renderer/Pass abstraction
-    auto draw = [&, this](std::span<Entry> aEntries, const Mesh & aMesh)
-    {
-        std::vector<PoseColor> instances;
-        instances.reserve(aEntries.size());
-
-        for(const Entry & instance : aEntries)
-        {
-            instances.push_back(PoseColor{
-                    .pose = math::trans3d::scale(instance.mScaling)
-                            * instance.mOrientation.toRotationMatrix()
-                            * math::trans3d::translate(
-                                instance.mPosition.as<math::Vec>()),
-                    .albedo = to_sdr(instance.mColor),
-                });
-        }
-        mSharedData->mInstances.respecifyData(std::span{instances});
-
-        mPass.draw(aMesh, mSharedData->mInstances, aRenderer, aSetup);
-    };
-
-    draw(mCommands->mBoxes, mSharedData->mCube);
-    draw(mCommands->mArrows, mSharedData->mArrow);
-}
 
 
 } // namespace snac

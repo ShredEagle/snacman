@@ -88,7 +88,8 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Tech
     mAppInterface{aAppInterface},
     mPipelineShadows{aAppInterface, aTechniqueAccess},
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
-            snac::Camera::gDefaults}
+            snac::Camera::gDefaults},
+    mDebugRenderer{aTechniqueAccess}
 {
     mPipelineShadows.getControls().mShadowBias = 0.0005f;
 }
@@ -241,7 +242,7 @@ void Renderer::render(const visu::GraphicState & aState)
     if (mControl.mRenderDebug)
     {
         TIME_RECURRING_GL("Draw_debug");
-        aState.mDebugDrawList.render(mRenderer, programSetup);
+        mDebugRenderer.render(aState.mDebugDrawList, mRenderer, programSetup);
     }
 }
 
