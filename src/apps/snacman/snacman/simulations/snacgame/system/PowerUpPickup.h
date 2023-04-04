@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "snacman/simulations/snacgame/component/Controller.h"
+#include "snacman/simulations/snacgame/component/PlayerPowerUp.h"
 #include "../GameContext.h"
 #include "../component/Geometry.h"
 #include "../component/LevelTags.h"
@@ -20,6 +22,7 @@ public:
     PowerUpPickup(GameContext & aGameContext) :
         mGameContext{&aGameContext},
         mPlayers{mGameContext->mWorld},
+        mPowUpPlayers{mGameContext->mWorld},
         mPowerups{mGameContext->mWorld}
     {}
 
@@ -28,6 +31,7 @@ public:
 private:
     GameContext * mGameContext;
     ent::Query<component::Geometry, component::PlayerSlot, component::Collision> mPlayers;
+    ent::Query<component::Geometry, component::PlayerSlot, component::PlayerPowerUp, component::Controller> mPowUpPlayers;
     ent::Query<component::Geometry, component::PowerUp, component::Collision, component::LevelEntity> mPowerups;
 };
 

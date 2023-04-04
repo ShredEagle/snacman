@@ -3,11 +3,13 @@
 #include "math/Angle.h"
 #include "math/Homogeneous.h"
 #include "math/Transformations.h"
+#include "snacman/simulations/snacgame/SceneGraph.h"
 
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
 #include "../component/SceneNode.h"
 #include "../GameParameters.h"
+#include "../SceneGraph.h"
 #include "../typedef.h"
 
 #include <cmath>
@@ -18,99 +20,6 @@ namespace snacgame {
 namespace system {
 
 namespace {
-
-Pos3 getTranslation(const TransformMatrix & aMatrix)
-{
-    return Pos3{aMatrix.at(3, 0), aMatrix.at(3, 1), aMatrix.at(3, 2)};
-}
-
-float getUniformScale(const TransformMatrix & aMatrix)
-{
-    // Scale is always uniform in the transform matrix passed down
-    // in the scene graph so we only need to compute one of the
-    // component of the scale
-    Vec3 scale = {aMatrix.at(0, 0), aMatrix.at(1, 0), aMatrix.at(2, 0)};
-    return scale.getNorm();
-}
-
-Quat_f getRotation(const TransformMatrix & aMatrix, float aScale)
-{
-    Matrix3 rot = aMatrix.getSubmatrix(3, 3) / aScale;
-    // From https://gamemath.com/book/orient.html#matrix_to_quaternion_values
-    // as reference in in GPU pro 360 15.2.4
-    // be careful mathematician index matrix from 1 to 3 not from 0 to 2
-    float fourWSquaredMinus1 = rot.trace();
-    float fourXSquaredMinus1 = rot.at(0, 0) - rot.at(1, 1) - rot.at(2, 2);
-    float fourYSquaredMinus1 = rot.at(1, 1) - rot.at(2, 2) - rot.at(0, 0);
-    float fourZSquaredMinus1 = rot.at(2, 2) - rot.at(0, 0) - rot.at(1, 1);
-
-    int biggestIndex = 0;
-    float fourBiggestSquared = fourWSquaredMinus1;
-
-    if (fourBiggestSquared < fourXSquaredMinus1)
-    {
-        fourBiggestSquared = fourXSquaredMinus1;
-        biggestIndex = 1;
-    }
-    if (fourBiggestSquared < fourYSquaredMinus1)
-    {
-        fourBiggestSquared = fourYSquaredMinus1;
-        biggestIndex = 2;
-    }
-    if (fourBiggestSquared < fourZSquaredMinus1)
-    {
-        fourBiggestSquared = fourZSquaredMinus1;
-        biggestIndex = 3;
-    }
-
-    float biggestVal = std::sqrt(fourBiggestSquared + 1.f) / 2.f;
-    float mult = 0.25f / biggestVal;
-
-    float w, x, y, z;
-    switch (biggestIndex)
-    {
-        case 0:
-            w = biggestVal;
-            x = (rot.at(1, 2) - rot.at(2, 1)) * mult;
-            y = (rot.at(2, 0) - rot.at(0, 2)) * mult;
-            z = (rot.at(0, 1) - rot.at(1, 0)) * mult;
-            break;
-        case 1:
-            x = biggestVal;
-            w = (rot.at(1, 2) - rot.at(2, 1)) * mult;
-            y = (rot.at(0, 1) + rot.at(1, 0)) * mult;
-            z = (rot.at(2, 0) + rot.at(0, 2)) * mult;
-            break;
-        case 2:
-            y = biggestVal;
-            w = (rot.at(2, 0) - rot.at(0, 2)) * mult;
-            x = (rot.at(0, 1) + rot.at(1, 0)) * mult;
-            z = (rot.at(1, 2) + rot.at(2, 1)) * mult;
-            break;
-        case 3:
-            z = biggestVal;
-            w = (rot.at(0, 1) - rot.at(1, 0)) * mult;
-            y = (rot.at(1, 2) + rot.at(2, 1)) * mult;
-            x = (rot.at(2, 0) + rot.at(0, 2)) * mult;
-            break;
-    }
-    return Quat_f(x, y, z, w);
-}
-
-void
-decomposeMatrix(const TransformMatrix & aDecomposableMatrix, component::GlobalPose & aGlobPose)
-{
-    // We only use uniform scaling for our heritable transform matrix
-    // So no skew in here
-    assert(aDecomposableMatrix.at(0, 3) == 0.f && "Can't decompose a transform matrix with skew");
-    assert(aDecomposableMatrix.at(1, 3) == 0.f && "Can't decompose a transform matrix with skew");
-    assert(aDecomposableMatrix.at(2, 3) == 0.f && "Can't decompose a transform matrix with skew");
-
-    aGlobPose.mPosition = getTranslation(aDecomposableMatrix);
-    aGlobPose.mScaling = getUniformScale(aDecomposableMatrix);
-    aGlobPose.mOrientation = getRotation(aDecomposableMatrix, aGlobPose.mScaling);
-}
-
 TransformMatrix resolveGlobalPos(const component::Geometry & aLocalGeo,
                                  const TransformMatrix & aParentTransform)
 {
