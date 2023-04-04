@@ -34,12 +34,7 @@ void EatPill::update()
             math::Position<4, float> transformedPos =  math::homogeneous::makePosition(pillHitbox.mPosition) * math::trans3d::translate(worldPos);
             pillHitbox.mPosition = transformedPos.xyz();
 
-            if (pillHitbox.xMin() <= playerHitbox.xMax()
-                && pillHitbox.xMax() >= playerHitbox.xMin()
-                && pillHitbox.yMin() <= playerHitbox.yMax()
-                && pillHitbox.yMax() >= playerHitbox.yMin()
-                && pillHitbox.zMin() <= playerHitbox.zMax()
-                && pillHitbox.zMax() >= playerHitbox.zMin())
+            if (component::collideWithSat(pillHitbox, playerHitbox))
             {
                 aHandle.get(eatPillUpdate)->erase();
                 aPlayerData.mPoints += 10;

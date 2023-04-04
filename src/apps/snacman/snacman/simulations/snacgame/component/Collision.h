@@ -1,4 +1,6 @@
-#include "math/Box.h"
+#pragma once
+
+#include <math/Box.h>
 
 namespace ad {
 namespace snacgame {
@@ -17,6 +19,16 @@ constexpr const math::Box<float> gPillHitbox{{-0.2f, -0.2f, 0.0f},
 
 constexpr const math::Box<float> gPowerUpHitbox{{-0.4f, -0.4f, 0.0f},
                                                {0.8f, 0.8f, 1.6f}};
+
+inline bool collideWithSat(const math::Box<float> & aLhs, const math::Box<float> & aRhs)
+{
+    return aLhs.xMin() <= aRhs.xMax()
+        && aLhs.xMax() >= aRhs.xMin()
+        && aLhs.yMin() <= aRhs.yMax()
+        && aLhs.yMax() >= aRhs.yMin()
+        && aLhs.zMin() <= aRhs.zMax()
+        && aLhs.zMax() >= aRhs.zMin();
+}
 } // namespace component
 } // namespace snacgame
 } // namespace ad

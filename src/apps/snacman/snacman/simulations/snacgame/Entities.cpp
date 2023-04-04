@@ -18,6 +18,7 @@
 #include "GameContext.h"
 #include "scene/MenuScene.h"
 #include "snacman/simulations/snacgame/component/AllowedMovement.h"
+#include "snacman/simulations/snacgame/component/PlayerPowerUp.h"
 #include "typedef.h"
 
 #include "../../QueryManipulation.h"
@@ -129,9 +130,21 @@ ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
                 AxisAngle{.mAxis = math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                           .mAngle = math::Degree<float>{180.f}},
         })
-        .add(component::PowerUp{})
+        .add(component::PowerUp{.mType = component::PowerUpType::Dog})
         .add(component::Collision{component::gPowerUpHitbox})
         .add(component::LevelEntity{});
+    return handle;
+}
+
+EntHandle createPlayerPowerUp(GameContext & aContext)
+{
+    ent::Phase init;
+    auto handle = aContext.mWorld.addEntity();
+    Entity powerUp = *handle.get(init);
+    addMeshGeoNode(
+        init, aContext, powerUp, "models/burger/burger.gltf",
+        {0.f, 3.f, 0.f},
+        1.f, {3.f, 3.f, 3.f});
     return handle;
 }
 
@@ -305,6 +318,11 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
     aHandle.get(aPhase)->remove<component::PoseScreenSpace>();
     aHandle.get(aPhase)->remove<component::SceneNode>();
     aHandle.get(aPhase)->remove<component::GlobalPose>();
+    if (aHandle.get(aPhase)->has<component::PlayerPowerUp>())
+    {
+        aHandle.get(aPhase)->get<component::PlayerPowerUp>().mPowerUp.get(aPhase)->erase();
+        aHandle.get(aPhase)->remove<component::PlayerPowerUp>();
+    }
 
     return aHandle;
 }

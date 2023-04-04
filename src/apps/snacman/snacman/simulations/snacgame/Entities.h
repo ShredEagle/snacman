@@ -49,6 +49,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
                                     const math::Position<2, float> & Pos);
 ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
                                     const math::Position<2, float> & Pos);
+ent::Handle<ent::Entity> createPlayerPowerUp(GameContext & aContext);
 ent::Handle<ent::Entity>
 createPathEntity(GameContext & aContext, const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>

@@ -1,4 +1,5 @@
 #include "GameScene.h"
+#include "snacman/simulations/snacgame/system/PowerUpPickup.h"
 
 #include "../component/Context.h"
 #include "../component/Controller.h"
@@ -120,6 +121,7 @@ void GameScene::setup(const Transition & aTransition,
         mSystems.get(init)->add(system::MovementIntegration{mGameContext});
         mSystems.get(init)->add(system::EatPill{mGameContext});
         mSystems.get(init)->add(system::PortalManagement{mGameContext});
+        mSystems.get(init)->add(system::PowerUpPickup{mGameContext});
         mSystems.get(init)->add(system::Pathfinding{mGameContext});
     }
 
@@ -242,10 +244,11 @@ GameScene::update(float aDelta, RawInput & aInput)
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
     mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
     mSystems.get(update)->get<system::Pathfinding>().update();
+    mSystems.get(update)->get<system::EatPill>().update();
+    mSystems.get(update)->get<system::PowerUpPickup>().update();
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
-    mSystems.get(update)->get<system::EatPill>().update();
 
     return std::nullopt;
 }
