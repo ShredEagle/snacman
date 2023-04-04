@@ -59,9 +59,9 @@ EntHandle createLevel(GameContext & aContext, const char * aLvlFile)
 {
     EntHandle level = aContext.mWorld.addEntity();
     {
-        ent::Phase createLevel;
+        Phase createLevel;
         auto markovRoot = aContext.mResources.find(gMarkovRoot);
-        ent::Entity levelEntity = *level.get(createLevel);
+        Entity levelEntity = *level.get(createLevel);
         levelEntity.add(component::LevelData(
             aContext.mWorld, markovRoot.value(), aLvlFile, {19, 19, 1}, 123123));
         levelEntity.add(component::LevelToCreate{});
@@ -73,7 +73,7 @@ EntHandle createLevel(GameContext & aContext, const char * aLvlFile)
     return level;
 }
 
-void setupLevel(GameContext & aGameContext, ent::Phase & aPhase)
+void setupLevel(GameContext & aGameContext, Phase & aPhase)
 {
     aGameContext.mLevel->get(aPhase)->add(component::LevelToCreate{});
     aGameContext.mLevel->get(aPhase)->add(component::SceneNode{});
@@ -81,7 +81,7 @@ void setupLevel(GameContext & aGameContext, ent::Phase & aPhase)
     aGameContext.mLevel->get(aPhase)->add(component::GlobalPose{});
 }
 
-void teardownLevel(GameContext & aGameContext, ent::Phase & aPhase)
+void teardownLevel(GameContext & aGameContext, Phase & aPhase)
 {
     aGameContext.mLevel->get(aPhase)->remove<component::SceneNode>();
     aGameContext.mLevel->get(aPhase)->remove<component::LevelCreated>();
@@ -108,7 +108,7 @@ void GameScene::setup(const Transition & aTransition,
                       RawInput & aInput)
 {
     {
-        ent::Phase init;
+        Phase init;
         setupLevel(mGameContext, init);
         Entity sysEntity = *mSystems.get(init);
         sysEntity.add(system::SceneGraphResolver{mGameContext, mSceneRoot});
@@ -133,7 +133,7 @@ void GameScene::setup(const Transition & aTransition,
 
 void GameScene::teardown(RawInput & aInput)
 {
-    ent::Phase destroy;
+    Phase destroy;
 
     teardownLevel(mGameContext, destroy);
 
@@ -161,7 +161,7 @@ GameScene::update(float aDelta, RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
 
-    ent::Phase update;
+    Phase update;
 
     bool quit = false;
 
@@ -189,7 +189,7 @@ GameScene::update(float aDelta, RawInput & aInput)
         quit |= static_cast<bool>(aController.mCommandQuery & gQuitCommand);
     });
 
-    ent::Phase bindPlayerPhase;
+    Phase bindPlayerPhase;
 
     // This works because gKeyboardControllerIndex is -1
     // So this is a bit janky but it unifies the player join code
