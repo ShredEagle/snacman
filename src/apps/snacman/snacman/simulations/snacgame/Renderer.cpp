@@ -48,9 +48,10 @@ void TextRenderer::render(Renderer & aRenderer,
     {
         // TODO should be cached once in the string
         math::Size<2, GLfloat> stringDimension_p =
-            graphics::detail::getStringDimension(
-                text.mString, text.mFont->mGlyphAtlas.mGlyphCache,
-                text.mFont->mGlyphAtlas.mFontFace);
+            graphics::getStringDimension(
+                text.mString,
+                text.mFont->mFontData.mGlyphMap,
+                text.mFont->mFontData.mFontFace);
 
         // TODO should be done outside of here (so static strings are not
         // recomputed each frame, for example)
@@ -68,7 +69,7 @@ void TextRenderer::render(Renderer & aRenderer,
 
         // TODO should be cached once in the string and forwarded here
         std::vector<snac::GlyphInstance> textBufferData =
-            text.mFont->mGlyphAtlas.populateInstances(
+            text.mFont->mFontData.populateInstances(
                 text.mString, to_sdr(text.mColor), localToScreen_pixel, scale);
 
         // TODO should be consolidated, a single call for all string of the same

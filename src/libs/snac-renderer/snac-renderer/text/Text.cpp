@@ -11,6 +11,9 @@ namespace ad {
 namespace snac {
 
 
+constexpr arte::CharCode gFirstCharCode = 20;
+constexpr arte::CharCode gLastCharCode = 126;
+
 InstanceStream initializeGlyphInstanceStream()
 {
     InstanceStream instances;
@@ -59,25 +62,53 @@ InstanceStream initializeGlyphInstanceStream()
 }
 
 
-GlyphAtlas::GlyphAtlas(arte::FontFace aFontFace) :
+const graphics::RenderedGlyph & GlyphMap::at(arte::CharCode aCharCode) const
+{
+    if (auto found = mCharCodeToGlyph.find(aCharCode); found != mCharCodeToGlyph.end())
+    {
+        return found->second;
+    }
+    else
+    {
+        return mCharCodeToGlyph.at(placeholder);
+    }
+}
+
+
+void GlyphMap::insert(arte::CharCode aCharCode, const graphics::RenderedGlyph & aGlyph)
+{
+    mCharCodeToGlyph.emplace(aCharCode, aGlyph);
+}
+
+
+using namespace std::placeholders;
+
+
+FontData::FontData(arte::FontFace aFontFace) :
     mFontFace{std::move(aFontFace)},
-    mGlyphCache{mFontFace, 20, 126}
+    mGlyphAtlas{
+        std::make_shared<graphics::Texture>(
+            graphics::makeTightGlyphAtlas(
+                mFontFace, 
+                gFirstCharCode, 
+                gLastCharCode,
+                std::bind(&GlyphMap::insert, std::ref(mGlyphMap), _1, _2)))
+    }
 {}
 
 
-std::vector<GlyphInstance> GlyphAtlas::populateInstances(const std::string & aString,
+std::vector<GlyphInstance> FontData::populateInstances(const std::string & aString,
                                                          math::sdr::Rgba aColor,
                                                          math::AffineMatrix<3, float> aLocalToScreen_p, math::AffineMatrix<3, float> aScale) const
 {
-
     std::vector<GlyphInstance> glyphInstances;
-    graphics::detail::forEachGlyph(
+
+    graphics::forEachGlyph(
         aString,
-        {0.f, 0.f},
-        mGlyphCache,
         mFontFace,
+        mGlyphMap,
         [&glyphInstances, aColor, aLocalToScreen_p]
-        (const graphics::detail::RenderedGlyph & aGlyph, math::Position<2, GLfloat> aGlyphPosition_p)
+        (const graphics::RenderedGlyph & aGlyph, math::Position<2, GLfloat> aGlyphPosition_p)
         {
              glyphInstances.push_back(GlyphInstance{
                 .glyphToScreen_p =
@@ -96,10 +127,10 @@ std::vector<GlyphInstance> GlyphAtlas::populateInstances(const std::string & aSt
 }
 
 
-Mesh makeGlyphMesh(GlyphAtlas & aGlyphAtlas, std::shared_ptr<Effect> aEffect)
+Mesh makeGlyphMesh(FontData & aFontData, std::shared_ptr<Effect> aEffect)
 {
     auto material = std::make_shared<Material>(Material{
-        .mTextures = {{Semantic::FontAtlas, &aGlyphAtlas.mGlyphCache.atlas}},
+        .mTextures = {{Semantic::FontAtlas, aFontData.mGlyphAtlas}},
         .mEffect = std::move(aEffect)
     });
 

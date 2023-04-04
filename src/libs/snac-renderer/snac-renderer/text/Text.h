@@ -5,7 +5,7 @@
 
 #include <arte/Freetype.h>
 
-#include <graphics/detail/GlyphUtilities_deprecated.h>
+#include <graphics/TextUtilities.h>
 
 #include <math/Homogeneous.h>
 
@@ -30,10 +30,23 @@ struct GlyphInstance
 
 InstanceStream initializeGlyphInstanceStream();
 
-/// @brief Groups all the data required to prepare a string for rendering (i.e. constructing the GlyphInstances)
-struct GlyphAtlas
+
+struct GlyphMap
 {
-    GlyphAtlas(arte::FontFace aFontFace);
+    const graphics::RenderedGlyph & at(arte::CharCode aCharCode) const;
+    // Useful as a GlyphCallback
+    void insert(arte::CharCode aCharCode, const graphics::RenderedGlyph & aGlyph);
+
+    std::unordered_map<arte::CharCode, graphics::RenderedGlyph> mCharCodeToGlyph;
+    static constexpr arte::CharCode placeholder = 0x3F; // '?'
+};
+
+
+// TODO #text could become the Font struct, and the mesh would be hosted by the text renderer directly?
+/// @brief Groups all the data required to prepare a string for rendering (i.e. constructing the GlyphInstances)
+struct FontData
+{
+    FontData(arte::FontFace aFontFace);
 
     // TODO #text
     // This is the most problematic point currently, because GlyphInstance mixes together data
@@ -49,11 +62,14 @@ struct GlyphAtlas
                                                  math::AffineMatrix<3, float> aLocalToScreen_p, math::AffineMatrix<3, float> aScale) const;
 
     arte::FontFace mFontFace;
-    graphics::detail::StaticGlyphCache mGlyphCache;
+    GlyphMap mGlyphMap;
+    // After the glyphmap, which will be written by the atlas initializer
+    std::shared_ptr<graphics::Texture> mGlyphAtlas;
 };
 
 
-Mesh makeGlyphMesh(GlyphAtlas & aGlyphAtlas, std::shared_ptr<Effect> aEffect);
+Mesh makeGlyphMesh(FontData & aFontData, std::shared_ptr<Effect> aEffect);
+
 
 /// @brief This high level structure is intended to be the resource representing a loaded font (at a given size).
 /// Its instances are intended to be shared between entities using this font.
@@ -62,15 +78,15 @@ struct Font
     Font(arte::FontFace aFontFace,
          unsigned int aFontPixelHeight,
          std::shared_ptr<Effect> aEffect) :
-        mGlyphAtlas{
+        mFontData{
             std::move(aFontFace
                         .setPixelHeight(aFontPixelHeight)
                         .inverseYAxis(true))
         },
-        mGlyphMesh{makeGlyphMesh(mGlyphAtlas, std::move(aEffect))}
+        mGlyphMesh{makeGlyphMesh(mFontData, std::move(aEffect))}
     {}
 
-    GlyphAtlas mGlyphAtlas;
+    FontData mFontData;
     Mesh mGlyphMesh;
 };
 

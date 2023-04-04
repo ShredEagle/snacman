@@ -67,7 +67,7 @@ using UniformRepository = StackRepository<Semantic, UniformParameter>;
 
 using UniformBlocks = StackRepository<BlockSemantic, const graphics::UniformBufferObject *>;
 
-// TODO We should get rid of the std::variant, but the Text system causes a complication here
+// TODO #text We should get rid of the std::variant, but the Text system causes a complication here
 using TextureRepository = StackRepository<Semantic,
                                           std::variant<std::shared_ptr<graphics::Texture>,
                                                        graphics::Texture *>>;
