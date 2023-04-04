@@ -99,7 +99,7 @@ FontData::FontData(arte::FontFace aFontFace) :
 
 std::vector<GlyphInstance> FontData::populateInstances(const std::string & aString,
                                                        math::sdr::Rgba aColor,
-                                                       math::AffineMatrix<3, float> aLocalToScreen_p, math::AffineMatrix<3, float> aScale) const
+                                                       math::AffineMatrix<3, float> aLocalToScreen_p) const
 {
     std::vector<GlyphInstance> glyphInstances;
 

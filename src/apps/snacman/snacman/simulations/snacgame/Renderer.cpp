@@ -69,8 +69,9 @@ void TextRenderer::render(Renderer & aRenderer,
 
         // TODO should be cached once in the string and forwarded here
         std::vector<snac::GlyphInstance> textBufferData =
-            text.mFont->mFontData.populateInstances(
-                text.mString, to_sdr(text.mColor), localToScreen_pixel, scale);
+            text.mFont->mFontData.populateInstances(text.mString,
+                                                    to_sdr(text.mColor),
+                                                    localToScreen_pixel);
 
         // TODO should be consolidated, a single call for all string of the same
         // font.
