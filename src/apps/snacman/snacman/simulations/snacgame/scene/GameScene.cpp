@@ -110,19 +110,20 @@ void GameScene::setup(const Transition & aTransition,
     {
         ent::Phase init;
         setupLevel(mGameContext, init);
-        mSystems.get(init)->add(system::SceneGraphResolver{mGameContext, mSceneRoot});
-        mSystems.get(init)->add(system::PlayerSpawner{mGameContext});
-        mSystems.get(init)->add(system::RoundMonitor{mGameContext});
-        mSystems.get(init)->add(system::PlayerInvulFrame{mGameContext});
-        mSystems.get(init)->add(system::AllowMovement{mGameContext});
-        mSystems.get(init)->add(system::ConsolidateGridMovement{mGameContext});
-        mSystems.get(init)->add(system::IntegratePlayerMovement{mGameContext});
-        mSystems.get(init)->add(system::LevelCreator{mGameContext});
-        mSystems.get(init)->add(system::MovementIntegration{mGameContext});
-        mSystems.get(init)->add(system::EatPill{mGameContext});
-        mSystems.get(init)->add(system::PortalManagement{mGameContext});
-        mSystems.get(init)->add(system::PowerUpPickup{mGameContext});
-        mSystems.get(init)->add(system::Pathfinding{mGameContext});
+        Entity sysEntity = *mSystems.get(init);
+        sysEntity.add(system::SceneGraphResolver{mGameContext, mSceneRoot});
+        sysEntity.add(system::PlayerSpawner{mGameContext});
+        sysEntity.add(system::RoundMonitor{mGameContext});
+        sysEntity.add(system::PlayerInvulFrame{mGameContext});
+        sysEntity.add(system::AllowMovement{mGameContext});
+        sysEntity.add(system::ConsolidateGridMovement{mGameContext});
+        sysEntity.add(system::IntegratePlayerMovement{mGameContext});
+        sysEntity.add(system::LevelCreator{mGameContext});
+        sysEntity.add(system::MovementIntegration{mGameContext});
+        sysEntity.add(system::EatPill{mGameContext});
+        sysEntity.add(system::PortalManagement{mGameContext});
+        sysEntity.add(system::PowerUpPickup{mGameContext});
+        sysEntity.add(system::Pathfinding{mGameContext});
     }
 
     // Can't insert mLevel before the createLevel phase is over
@@ -235,20 +236,22 @@ GameScene::update(float aDelta, RawInput & aInput)
         return Transition{.mTransitionName = "back"};
     }
 
-    mSystems.get(update)->get<system::LevelCreator>().update();
-    mSystems.get(update)->get<system::RoundMonitor>().update();
-    mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
-    mSystems.get(update)->get<system::PortalManagement>().update();
-    mSystems.get(update)->get<system::AllowMovement>().update();
-    mSystems.get(update)->get<system::ConsolidateGridMovement>().update(aDelta);
-    mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
-    mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
-    mSystems.get(update)->get<system::Pathfinding>().update();
-    mSystems.get(update)->get<system::EatPill>().update();
-    mSystems.get(update)->get<system::PowerUpPickup>().update();
+    Entity sysEntity = *mSystems.get(update);
 
-    mSystems.get(update)->get<system::SceneGraphResolver>().update();
-    mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
+    sysEntity.get<system::LevelCreator>().update();
+    sysEntity.get<system::RoundMonitor>().update();
+    sysEntity.get<system::PlayerInvulFrame>().update(aDelta);
+    sysEntity.get<system::PortalManagement>().update();
+    sysEntity.get<system::AllowMovement>().update();
+    sysEntity.get<system::ConsolidateGridMovement>().update(aDelta);
+    sysEntity.get<system::IntegratePlayerMovement>().update(aDelta);
+    sysEntity.get<system::MovementIntegration>().update(aDelta);
+    sysEntity.get<system::Pathfinding>().update();
+    sysEntity.get<system::EatPill>().update();
+    sysEntity.get<system::PowerUpPickup>().update();
+
+    sysEntity.get<system::SceneGraphResolver>().update();
+    sysEntity.get<system::PlayerSpawner>().update(aDelta);
 
     return std::nullopt;
 }
