@@ -5,7 +5,7 @@
 
 #include <arte/Freetype.h>
 
-#include <graphics/detail/GlyphUtilities.h>
+#include <graphics/detail/GlyphUtilities_deprecated.h>
 
 #include <math/Homogeneous.h>
 
