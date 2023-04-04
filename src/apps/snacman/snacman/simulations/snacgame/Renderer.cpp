@@ -29,62 +29,6 @@ namespace ad {
 namespace snacgame {
 
 
-TextRenderer::TextRenderer() :
-    mGlyphInstances{snac::initializeGlyphInstanceStream()}
-{}
-
-void TextRenderer::render(Renderer & aRenderer,
-                          const visu::GraphicState & aState,
-                          snac::ProgramSetup & aProgramSetup)
-{
-    TIME_RECURRING_CLASSFUNC_GL();
-
-    auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
-
-    // Note: this is pessimised code.
-    // Most of these expensive operations should be taken out and the results
-    // cached.
-    for (const visu::TextScreen & text : aState.mTextEntities)
-    {
-        // TODO should be cached once in the string
-        math::Size<2, GLfloat> stringDimension_p =
-            graphics::getStringDimension(
-                text.mString,
-                text.mFont->mFontData.mGlyphMap,
-                text.mFont->mFontData.mFontFace);
-
-        // TODO should be done outside of here (so static strings are not
-        // recomputed each frame, for example)
-        auto stringPos = text.mPosition_unitscreen.cwMul(
-            static_cast<math::Position<2, GLfloat>>(
-                aRenderer.mAppInterface.getFramebufferSize()));
-
-        auto scale = math::trans2d::scale(text.mScale);
-        auto localToScreen_pixel =
-            scale
-            * math::trans2d::translate(-stringDimension_p.as<math::Vec>() / 2.f)
-            * math::trans2d::rotate(text.mOrientation)
-            * math::trans2d::translate(stringDimension_p.as<math::Vec>() / 2.f)
-            * math::trans2d::translate(stringPos.as<math::Vec>());
-
-        // TODO should be cached once in the string and forwarded here
-        std::vector<snac::GlyphInstance> textBufferData =
-            text.mFont->mFontData.populateInstances(text.mString,
-                                                    to_sdr(text.mColor),
-                                                    localToScreen_pixel);
-
-        // TODO should be consolidated, a single call for all string of the same
-        // font.
-        mGlyphInstances.respecifyData(std::span{textBufferData});
-        BEGIN_RECURRING_GL("Draw string", drawStringProfile);
-        aRenderer.mTextPass.draw(text.mFont->mGlyphMesh,
-                                 mGlyphInstances,
-                                 aRenderer.mRenderer,
-                                 aProgramSetup);
-        END_RECURRING_GL(drawStringProfile);
-    }
-}
-
 
 Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Technique> & aTechniqueAccess) :
     mAppInterface{aAppInterface},
@@ -142,6 +86,51 @@ void Renderer::continueGui()
     if (mControl.mShowShadowControls)
     {
         mPipelineShadows.drawGui();
+    }
+}
+
+
+void Renderer::renderText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup)
+{
+    TIME_RECURRING_CLASSFUNC_GL();
+
+    // Note: this is pessimised code.
+    // Most of these expensive operations should be taken out and the results
+    // cached.
+    for (const visu::TextScreen & text : aState.mTextEntities)
+    {
+        // TODO should be cached once in the string
+        math::Size<2, GLfloat> stringDimension_p =
+            graphics::getStringDimension(
+                text.mString,
+                text.mFont->mFontData.mGlyphMap,
+                text.mFont->mFontData.mFontFace);
+
+        // TODO should be done outside of here (so static strings are not
+        // recomputed each frame, for example)
+        auto stringPos = text.mPosition_unitscreen.cwMul(
+            static_cast<math::Position<2, GLfloat>>(mAppInterface.getFramebufferSize()));
+
+        auto scale = math::trans2d::scale(text.mScale);
+        auto localToScreen_pixel =
+            scale
+            * math::trans2d::translate(-stringDimension_p.as<math::Vec>() / 2.f)
+            * math::trans2d::rotate(text.mOrientation)
+            * math::trans2d::translate(stringDimension_p.as<math::Vec>() / 2.f)
+            * math::trans2d::translate(stringPos.as<math::Vec>());
+
+        // TODO should be cached once in the string and forwarded here
+        std::vector<snac::GlyphInstance> textBufferData =
+            text.mFont->mFontData.populateInstances(text.mString,
+                                                    to_sdr(text.mColor),
+                                                    localToScreen_pixel);
+
+        // TODO should be consolidated, a single call for all string of the same
+        // font.
+        mTextRenderer.respecifyInstanceData(std::span{textBufferData});
+        BEGIN_RECURRING_GL("Draw string", drawStringProfile);
+        mTextRenderer.render(*text.mFont, mRenderer, aProgramSetup);
+        END_RECURRING_GL(drawStringProfile);
     }
 }
 
@@ -238,7 +227,7 @@ void Renderer::render(const visu::GraphicState & aState)
     //
     if (mControl.mRenderText)
     {
-        mTextRenderer.render(*this, aState, programSetup);
+        renderText(aState, programSetup);
     }
 
     if (mControl.mRenderDebug)

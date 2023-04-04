@@ -28,9 +28,6 @@ struct GlyphInstance
 };
 
 
-InstanceStream initializeGlyphInstanceStream();
-
-
 /// @brief Mapping character code point to their corresponding graphics::RenderedGlyph.
 struct GlyphMap
 {
@@ -44,6 +41,7 @@ struct GlyphMap
 
 
 // TODO #text could become the Font struct, and the mesh would be hosted by the text renderer directly?
+// The issue with that is that the mesh keeps the material, which keeps the texture. So we need 1 mesh / fontface atm.
 /// @brief Groups all the data required to prepare a string for rendering (i.e. constructing the GlyphInstances)
 struct FontData
 {

@@ -8,6 +8,7 @@
 #include <snac-renderer/LoadInterface.h>
 #include <snac-renderer/Mesh.h>
 #include <snac-renderer/Render.h>
+#include <snac-renderer/Text/TextRenderer.h>
 #include <snac-renderer/UniformParameters.h>
 
 #include <snac-renderer/pipelines/ForwardShadows.h>
@@ -28,19 +29,6 @@ namespace snac {
 
 namespace snacgame {
 
-class Renderer;
-
-// TODO #generic-render I would like the render code to be generic so we get rid of these specialized render classes.
-struct TextRenderer
-{
-    TextRenderer();
-
-    void render(Renderer & aRenderer, 
-                const visu::GraphicState & aState,
-                snac::ProgramSetup & aProgramSetup);
-
-    snac::InstanceStream mGlyphInstances;
-};
 
 class Renderer
 {
@@ -79,15 +67,16 @@ public:
     { mRenderer.resetRepositories(); }
 
 private:
+    void renderText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup);
+
     Control mControl;
     graphics::AppInterface & mAppInterface;
     snac::Renderer mRenderer;
     // TODO Is it the correct place to host the pipeline instance?
     // This notably force to instantiate it with the Renderer (before the Resources manager is available).
     snac::ForwardShadows mPipelineShadows;
-    snac::Pass mTextPass{"text"};
     snac::CameraBuffer mCamera;
-    TextRenderer mTextRenderer;
+    snac::TextRenderer mTextRenderer;
     snac::DebugRenderer mDebugRenderer;
 };
 
