@@ -40,9 +40,9 @@ Quat_f getRotation(const TransformMatrix & aMatrix, float aScale)
     // as reference in in GPU pro 360 15.2.4
     // be careful mathematician index matrix from 1 to 3 not from 0 to 2
     float fourWSquaredMinus1 = rot.trace();
-    float fourXSquaredMinus1 = aMatrix.at(0, 0) - aMatrix.at(1, 1) - aMatrix.at(2, 2);
-    float fourYSquaredMinus1 = aMatrix.at(1, 1) - aMatrix.at(2, 2) - aMatrix.at(0, 0);
-    float fourZSquaredMinus1 = aMatrix.at(2, 2) - aMatrix.at(0, 0) - aMatrix.at(1, 1);
+    float fourXSquaredMinus1 = rot.at(0, 0) - rot.at(1, 1) - rot.at(2, 2);
+    float fourYSquaredMinus1 = rot.at(1, 1) - rot.at(2, 2) - rot.at(0, 0);
+    float fourZSquaredMinus1 = rot.at(2, 2) - rot.at(0, 0) - rot.at(1, 1);
 
     int biggestIndex = 0;
     float fourBiggestSquared = fourWSquaredMinus1;
@@ -71,52 +71,51 @@ Quat_f getRotation(const TransformMatrix & aMatrix, float aScale)
     {
         case 0:
             w = biggestVal;
-            x = (aMatrix.at(1, 2) - aMatrix.at(2, 1)) * mult;
-            y = (aMatrix.at(2, 0) - aMatrix.at(0, 2)) * mult;
-            z = (aMatrix.at(0, 1) - aMatrix.at(1, 0)) * mult;
+            x = (rot.at(1, 2) - rot.at(2, 1)) * mult;
+            y = (rot.at(2, 0) - rot.at(0, 2)) * mult;
+            z = (rot.at(0, 1) - rot.at(1, 0)) * mult;
             break;
         case 1:
             x = biggestVal;
-            w = (aMatrix.at(1, 2) - aMatrix.at(2, 1)) * mult;
-            y = (aMatrix.at(0, 1) + aMatrix.at(1, 0)) * mult;
-            z = (aMatrix.at(2, 0) + aMatrix.at(0, 2)) * mult;
+            w = (rot.at(1, 2) - rot.at(2, 1)) * mult;
+            y = (rot.at(0, 1) + rot.at(1, 0)) * mult;
+            z = (rot.at(2, 0) + rot.at(0, 2)) * mult;
             break;
         case 2:
             y = biggestVal;
-            w = (aMatrix.at(2, 0) - aMatrix.at(0, 2)) * mult;
-            x = (aMatrix.at(0, 1) + aMatrix.at(1, 0)) * mult;
-            z = (aMatrix.at(1, 2) + aMatrix.at(2, 1)) * mult;
+            w = (rot.at(2, 0) - rot.at(0, 2)) * mult;
+            x = (rot.at(0, 1) + rot.at(1, 0)) * mult;
+            z = (rot.at(1, 2) + rot.at(2, 1)) * mult;
             break;
         case 3:
             z = biggestVal;
-            w = (aMatrix.at(0, 1) - aMatrix.at(1, 0)) * mult;
-            y = (aMatrix.at(1, 2) + aMatrix.at(2, 1)) * mult;
-            x = (aMatrix.at(2, 0) + aMatrix.at(0, 2)) * mult;
+            w = (rot.at(0, 1) - rot.at(1, 0)) * mult;
+            y = (rot.at(1, 2) + rot.at(2, 1)) * mult;
+            x = (rot.at(2, 0) + rot.at(0, 2)) * mult;
             break;
     }
     return Quat_f(x, y, z, w);
 }
 
-component::GlobalPose
-decomposeMatrix(const TransformMatrix & aDecomposableMatrix)
+void
+decomposeMatrix(const TransformMatrix & aDecomposableMatrix, component::GlobalPose & aGlobPose)
 {
     // We only use uniform scaling for our heritable transform matrix
     // So no skew in here
     assert(aDecomposableMatrix.at(0, 3) == 0.f && "Can't decompose a transform matrix with skew");
+    assert(aDecomposableMatrix.at(1, 3) == 0.f && "Can't decompose a transform matrix with skew");
+    assert(aDecomposableMatrix.at(2, 3) == 0.f && "Can't decompose a transform matrix with skew");
 
-    component::GlobalPose gPose;
-    gPose.mPosition = getTranslation(aDecomposableMatrix);
-    gPose.mScaling = getUniformScale(aDecomposableMatrix);
-    gPose.mOrientation = getRotation(aDecomposableMatrix, gPose.mScaling);
-    return gPose;
+    aGlobPose.mPosition = getTranslation(aDecomposableMatrix);
+    aGlobPose.mScaling = getUniformScale(aDecomposableMatrix);
+    aGlobPose.mOrientation = getRotation(aDecomposableMatrix, aGlobPose.mScaling);
 }
 
 TransformMatrix resolveGlobalPos(const component::Geometry & aLocalGeo,
                                  const TransformMatrix & aParentTransform)
 {
-    ScaleMatrix localScaling = math::trans3d::scale(
-        aLocalGeo.mScaling, aLocalGeo.mScaling, aLocalGeo.mScaling);
-    TransformMatrix localRotate = aLocalGeo.mOrientation.toRotationMatrix();
+    ScaleMatrix localScaling = math::trans3d::scaleUniform(aLocalGeo.mScaling);
+    RotationMatrix localRotate = aLocalGeo.mOrientation.toRotationMatrix();
 
     // We translate the child according to the instance scaling of it's parent
     // this allows for non uniform scaling of instance without
@@ -157,7 +156,7 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
 
             // Decomposed matrix are used for interpolation
             // in the render thread
-            gPose = decomposeMatrix(wTransform);
+            decomposeMatrix(wTransform, gPose);
             gPose.mColor = geo.mColor;
             gPose.mInstanceScaling = geo.mInstanceScaling;
  
