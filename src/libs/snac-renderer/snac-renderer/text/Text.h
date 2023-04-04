@@ -31,6 +31,7 @@ struct GlyphInstance
 InstanceStream initializeGlyphInstanceStream();
 
 
+/// @brief Mapping character code point to their corresponding graphics::RenderedGlyph.
 struct GlyphMap
 {
     const graphics::RenderedGlyph & at(arte::CharCode aCharCode) const;

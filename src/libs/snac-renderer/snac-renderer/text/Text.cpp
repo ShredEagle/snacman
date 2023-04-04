@@ -98,31 +98,33 @@ FontData::FontData(arte::FontFace aFontFace) :
 
 
 std::vector<GlyphInstance> FontData::populateInstances(const std::string & aString,
-                                                         math::sdr::Rgba aColor,
-                                                         math::AffineMatrix<3, float> aLocalToScreen_p, math::AffineMatrix<3, float> aScale) const
+                                                       math::sdr::Rgba aColor,
+                                                       math::AffineMatrix<3, float> aLocalToScreen_p, math::AffineMatrix<3, float> aScale) const
 {
     std::vector<GlyphInstance> glyphInstances;
 
-    graphics::forEachGlyph(
-        aString,
-        mFontFace,
-        mGlyphMap,
-        [&glyphInstances, aColor, aLocalToScreen_p]
-        (const graphics::RenderedGlyph & aGlyph, math::Position<2, GLfloat> aGlyphPosition_p)
-        {
-             glyphInstances.push_back(GlyphInstance{
-                .glyphToScreen_p =
-                    math::trans2d::translate(aGlyphPosition_p.as<math::Vec>())
-                    * aLocalToScreen_p
-                    ,
-                .albedo = aColor,
-                .offsetInTexture_p = aGlyph.offsetInTexture,
-                .boundingBox_p = aGlyph.controlBoxSize,
-                .bearing_p = aGlyph.bearing,
-             });
-        }
-    );
+    graphics::PenPosition penPosition;
+    for (std::string::const_iterator it = aString.begin();
+         it != aString.end();
+         /* in body */)
+    {
+        // Decode utf8 encoded string to individual Unicode code points,
+        // and advance the iterator accordingly.
+        arte::CharCode codePoint = utf8::next(it, aString.end());
+        const graphics::RenderedGlyph & glyph = mGlyphMap.at(codePoint);
 
+        glyphInstances.push_back(GlyphInstance{
+           .glyphToScreen_p =
+               math::trans2d::translate(penPosition.advance(glyph, mFontFace).as<math::Vec>())
+               * aLocalToScreen_p
+               ,
+           .albedo = aColor,
+           .offsetInTexture_p = glyph.offsetInTexture,
+           .boundingBox_p = glyph.controlBoxSize,
+           .bearing_p = glyph.bearing,
+        });
+    }
+        
     return glyphInstances;
 }
 
