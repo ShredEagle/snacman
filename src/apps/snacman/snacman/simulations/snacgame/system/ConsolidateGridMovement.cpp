@@ -43,10 +43,23 @@ void ConsolidateGridMovement::update(float aDelta)
 
                 if (direction.x() != 0.f || direction.y() != 0.f)
                 {
-                    direction = direction.normalize();
+                    float distSquared = direction.getNormSquared();
+                    Vec2 displacement = direction.normalize() * aDelta * gBaseDogSpeed;
 
-                    aGeometry.mPosition +=
-                        Vec3{direction.x(), direction.y(), 0.f} * aDelta * gBaseDogSpeed;
+                    if (displacement.getNormSquared() < distSquared)
+                    {
+                        aGeometry.mPosition +=
+                            Vec3{displacement.x(), displacement.y(), 0.f};
+                    }
+                    else
+                    {
+                        aGeometry.mPosition = {
+                            aPathfinder.mCurrentTarget.x(),
+                            aPathfinder.mCurrentTarget.y(),
+                            aGeometry.mPosition.z(),
+                        };
+                    }
+                    
                 }
             }
         });

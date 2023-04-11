@@ -22,7 +22,7 @@ void IntegratePlayerMovement::update(float aDelta)
 
     mPlayer.each([aDelta](component::Geometry & aGeometry,
                           const component::PlayerMoveState & aMoveState) {
-        Pos2_i intPos = getLevelPosition_i(aGeometry.mPosition);
+        Pos2_i intPos = getLevelPosition_i(aGeometry.mPosition.xy());
         if (aMoveState.mMoveState & gPlayerMoveFlagUp)
         {
             aGeometry.mPosition.y() += 1.f * gBasePlayerSpeed * aDelta;

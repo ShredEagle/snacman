@@ -1,5 +1,4 @@
 #include "GameScene.h"
-#include "snacman/simulations/snacgame/system/PowerUpPickup.h"
 
 #include "../component/Context.h"
 #include "../component/Controller.h"
@@ -32,6 +31,7 @@
 #include "../system/PlayerInvulFrame.h"
 #include "../system/PlayerSpawner.h"
 #include "../system/PortalManagement.h"
+#include "../system/PowerUpUsage.h"
 #include "../system/RoundMonitor.h"
 #include "../system/SceneGraphResolver.h"
 #include "../typedef.h"
@@ -121,7 +121,7 @@ void GameScene::setup(const Transition & aTransition,
             .add(system::MovementIntegration{mGameContext})
             .add(system::EatPill{mGameContext})
             .add(system::PortalManagement{mGameContext})
-            .add(system::PowerUpPickup{mGameContext})
+            .add(system::PowerUpUsage{mGameContext})
             .add(system::Pathfinding{mGameContext});
     }
 
@@ -141,10 +141,6 @@ void GameScene::teardown(RawInput & aInput)
 
 
     mTiles.each([&destroy](EntHandle aHandle, const component::LevelEntity &) {
-        aHandle.get(destroy)->erase();
-    });
-
-    mPathfinders.each([&destroy](EntHandle aHandle, const component::PathToOnGrid &) {
         aHandle.get(destroy)->erase();
     });
 
@@ -245,7 +241,7 @@ GameScene::update(float aDelta, RawInput & aInput)
     mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
     mSystems.get(update)->get<system::Pathfinding>().update();
     mSystems.get(update)->get<system::EatPill>().update();
-    mSystems.get(update)->get<system::PowerUpPickup>().update();
+    mSystems.get(update)->get<system::PowerUpUsage>().update();
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);

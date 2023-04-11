@@ -59,7 +59,10 @@ Quat_f getRotation(const TransformMatrix & aMatrix, float aScale)
     float biggestVal = std::sqrt(fourBiggestSquared + 1.f) / 2.f;
     float mult = 0.25f / biggestVal;
 
-    float w, x, y, z;
+    float w = 1;
+    float x = 0;
+    float y = 0;
+    float z= 0;
     switch (biggestIndex)
     {
         case 0:
@@ -212,7 +215,7 @@ void transferEntity(EntHandle aHandle, EntHandle aNewParent)
            && "Can't add a child to a parent if it does not have geometry");
     assert(parent.has<component::GlobalPose>()
            && "Can't add a child to a parent if it does not have global pose");
-    Entity child = *aNewParent.get(transfer);
+    Entity child = *aHandle.get(transfer);
     assert(child.has<component::SceneNode>()
            && "Can't add a entity to the scene graph if it does not have a "
               "scene node");

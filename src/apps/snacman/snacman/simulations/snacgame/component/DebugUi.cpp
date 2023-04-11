@@ -14,7 +14,7 @@ namespace snacgame {
 namespace component {
 void Geometry::drawUi() const
 {
-    Pos2_i intPos = getLevelPosition_i(mPosition);
+    Pos2_i intPos = getLevelPosition_i(mPosition.xy());
     float fracPosX = mPosition.x() - intPos.x();
     float fracPosY = mPosition.y() - intPos.y();
     ImGui::Text("Player pos: %f, %f", mPosition.x(),

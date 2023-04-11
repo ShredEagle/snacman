@@ -96,7 +96,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
         init, aContext, pill, "models/burger/burger.gltf",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gPillHeight},
-        1.6f, {1.f, 1.f, 1.f},
+        0.16f, {1.f, 1.f, 1.f},
         math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 Turn_f{0.1f}});
     pill
@@ -121,7 +121,7 @@ ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
         init, aContext, powerUp, "models/burger/burger.gltf",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gPillHeight},
-        1.f, {3.f, 3.f, 3.f},
+        0.3f, {1.f, 1.f, 1.f},
         Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 Turn_f{0.25f}});
     powerUp
@@ -143,8 +143,8 @@ EntHandle createPlayerPowerUp(GameContext & aContext)
     Entity powerUp = *handle.get(init);
     addMeshGeoNode(
         init, aContext, powerUp, "models/burger/burger.gltf",
-        {0.f, 3.f, 0.f},
-        1.f, {3.f, 3.f, 3.f});
+        {0.f, 1.5f, -1.f},
+        0.3f, {1.f, 1.f, 1.f});
     return handle;
 }
 

@@ -34,7 +34,7 @@ void AllowMovement::update()
                     component::AllowedMovement & aAllowedMovement) {
         int allowedMovementFlag = component::gAllowedMovementNone;
 
-        Pos2_i intPos = getLevelPosition_i(aGeo.mPosition);
+        Pos2_i intPos = getLevelPosition_i(aGeo.mPosition.xy());
         float fracPosX = aGeo.mPosition.x() - intPos.x();
         float fracPosY = aGeo.mPosition.y() - intPos.y();
 
