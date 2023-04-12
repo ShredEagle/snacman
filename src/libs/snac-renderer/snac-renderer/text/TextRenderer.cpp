@@ -27,28 +27,12 @@ namespace {
             instances.mAttributes.emplace(Semantic::Albedo, albedo);
         }
         {
-            graphics::ClientAttribute textureOffset{
+            graphics::ClientAttribute entryIndex{
                 .mDimension = 1,
-                .mOffset = offsetof(GlyphInstance, offsetInTexture_p),
-                .mComponentType = GL_INT,
+                .mOffset = offsetof(GlyphInstance, entryIndex),
+                .mComponentType = GL_UNSIGNED_INT,
             };
-            instances.mAttributes.emplace(Semantic::TextureOffset, textureOffset);
-        }
-        {
-            graphics::ClientAttribute boundingBox{
-                .mDimension = 2,
-                .mOffset = offsetof(GlyphInstance, boundingBox_p),
-                .mComponentType = GL_FLOAT,
-            };
-            instances.mAttributes.emplace(Semantic::BoundingBox, boundingBox);
-        }
-        {
-            graphics::ClientAttribute bearing{
-                .mDimension = 2,
-                .mOffset = offsetof(GlyphInstance, bearing_p),
-                .mComponentType = GL_FLOAT,
-            };
-            instances.mAttributes.emplace(Semantic::Bearing, bearing);
+            instances.mAttributes.emplace(Semantic::GlyphIndex, entryIndex);
         }
         instances.mInstanceBuffer.mStride = sizeof(GlyphInstance);
         return instances;
@@ -66,6 +50,7 @@ void TextRenderer::respecifyInstanceData(std::span<GlyphInstance> aInstances)
 {
     mGlyphInstances.respecifyData(aInstances);
 }
+
 
 void TextRenderer::render(const Font & aFont, Renderer & aRenderer, snac::ProgramSetup & aProgramSetup)
 {

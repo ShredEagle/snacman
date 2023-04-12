@@ -22,6 +22,7 @@ enum class Semantic
     TextureOffset,
     BoundingBox,
     Bearing,
+    GlyphIndex,
     // Usually uniform
     BaseColorFactor,
     BaseColorUVIndex,
@@ -59,6 +60,7 @@ enum class Semantic
 enum class BlockSemantic
 {
     Viewing, // camera pose and projection
+    GlyphMetrics, // metrics for the glyphs found in the glyph atlas
 };
 
 

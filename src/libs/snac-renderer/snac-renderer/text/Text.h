@@ -17,17 +17,28 @@ namespace ad {
 namespace snac {
 
 
-/// @brief  Data structure to populate the instances' vertex buffer.
-struct GlyphInstance
+/// @brief All the metrics required to render a single glyph in combination with a glyph atlas.
+/// Intended to be uploaded as an array (e.g. uniform block) to the GPU.
+struct GlyphMetrics
 {
-    math::AffineMatrix<3, GLfloat> glyphToScreen_p;
-    math::sdr::Rgba albedo;
-    GLint offsetInTexture_p; // horizontal offset to the glyph in its ribbon texture.
     math::Size<2, GLfloat> boundingBox_p; // glyph bounding box in texture pixel coordinates, including margins.
     math::Vec<2, GLfloat> bearing_p; // bearing, including  margins.
+    GLuint offsetInTexture_p; // horizontal offset to the glyph in its ribbon texture.
+    math::Vec<3, GLuint> _padding; // layout std140 imposes that array are 16 bytes aligned
 };
 
 
+/// @brief The per-instance data for instanced rendering of text.
+struct GlyphInstance
+{
+    // This transformation is at the string level (i.e. the same for all glyphs in a given string)
+    // but we do not have an abstraction of the whole string at the shader level for the moment.
+    math::AffineMatrix<3, GLfloat> glyphToScreen_p;
+    math::sdr::Rgba albedo;
+    GLuint entryIndex; // Index into an array of GlyphMetrics
+};
+
+    
 /// @brief Mapping character code point to their corresponding graphics::RenderedGlyph.
 struct GlyphMap
 {

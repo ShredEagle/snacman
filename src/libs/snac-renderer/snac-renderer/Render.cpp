@@ -96,6 +96,7 @@ void Pass::draw(const Mesh & aMesh, const InstanceStream & aInstances, Renderer 
     {
         // TODO Is there a better way to handle several source for uniform values
         auto scopeUniformPush = aSetup.mUniforms.push(aMesh.mMaterial->mUniforms);
+        auto scopeUniformBlocksPush = aSetup.mUniformBlocks.push(aMesh.mMaterial->mUniformBlocks);
         auto scopeTexturePush = aSetup.mTextures.push(aMesh.mMaterial->mTextures);
         aRenderer.setupProgram(mName, *program, aSetup);
 

@@ -2,6 +2,8 @@
 
 #include "../Cube.h"
 
+#include <renderer/BufferLoad.h>
+
 // TODO remove once not hardcoding a rotation anymore
 #include <math/Angle.h>
 #include <math/Transformations.h>
@@ -9,6 +11,10 @@
 
 namespace ad {
 namespace snac {
+
+
+static_assert(sizeof(GlyphMetrics) % 16 == 0,
+                     "GLSL layout std140 requires that array stride is a multiple of 16 bytes.");
 
 
 constexpr arte::CharCode gFirstCharCode = 20;
@@ -72,10 +78,10 @@ std::vector<GlyphInstance> FontData::populateInstances(const std::string & aStri
                * aLocalToScreen_p
                ,
            .albedo = aColor,
-           .offsetInTexture_p = glyph.offsetInTexture,
-           .boundingBox_p = glyph.controlBoxSize,
-           .bearing_p = glyph.bearing,
+           .entryIndex = codePoint - gFirstCharCode,
         });
+
+        assert(codePoint >= gFirstCharCode && codePoint < gLastCharCode);
     }
         
     return glyphInstances;
@@ -84,8 +90,24 @@ std::vector<GlyphInstance> FontData::populateInstances(const std::string & aStri
 
 Mesh makeGlyphMesh(FontData & aFontData, std::shared_ptr<Effect> aEffect)
 {
+    std::array<GlyphMetrics, gLastCharCode - gFirstCharCode> glyphMetrics;
+
+    for(arte::CharCode codePoint = gFirstCharCode; codePoint != gLastCharCode; ++codePoint)
+    {
+        const graphics::RenderedGlyph rendered = aFontData.mGlyphMap.at(codePoint);
+        glyphMetrics[codePoint - gFirstCharCode] = GlyphMetrics{
+            .boundingBox_p = rendered.controlBoxSize,
+            .bearing_p = rendered.bearing,
+            .offsetInTexture_p = rendered.offsetInTexture,
+        };
+    }
+
+    auto glyphMetricsBuffer = std::make_shared<graphics::UniformBufferObject>();
+    graphics::load(*glyphMetricsBuffer, std::span{glyphMetrics}, graphics::BufferHint::StaticRead);
+
     auto material = std::make_shared<Material>(Material{
         .mTextures = {{Semantic::FontAtlas, aFontData.mGlyphAtlas}},
+        .mUniformBlocks = {{BlockSemantic::GlyphMetrics, std::move(glyphMetricsBuffer)}},
         .mEffect = std::move(aEffect)
     });
 
