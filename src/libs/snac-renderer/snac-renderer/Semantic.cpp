@@ -28,6 +28,7 @@ std::string to_string(Semantic aSemantic)
         MAPPING(TextureOffset)
         MAPPING(BoundingBox)
         MAPPING(Bearing)
+        MAPPING(GlyphIndex)
         MAPPING(BaseColorFactor) 
         MAPPING(BaseColorUVIndex) 
         MAPPING(Gamma) 
@@ -87,6 +88,7 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(TextureOffset)
     MAPPING(BoundingBox)
     MAPPING(Bearing)
+    MAPPING(GlyphIndex)
     MAPPING(BaseColorFactor) 
     MAPPING(BaseColorUVIndex) 
     MAPPING(Gamma) 
@@ -135,6 +137,7 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::TextureOffset:
         case Semantic::BoundingBox:
         case Semantic::Bearing:
+        case Semantic::GlyphIndex:
         {
             return false;
         }
@@ -178,6 +181,7 @@ std::string to_string(BlockSemantic aBlockSemantic)
     switch(aBlockSemantic)
     {
         MAPPING(Viewing)
+        MAPPING(GlyphMetrics)
         default:
         {
             auto value = static_cast<std::underlying_type_t<Semantic>>(aBlockSemantic);
@@ -203,6 +207,7 @@ BlockSemantic to_blockSemantic(std::string_view aBlockName)
 #define MAPPING(name) else if(body == #name"Block") { return BlockSemantic::name; }
     if(false){}
     MAPPING(Viewing)
+    MAPPING(GlyphMetrics)
     else
     {
         if (aBlockName.ends_with(']'))

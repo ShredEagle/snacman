@@ -29,6 +29,7 @@ set(${TARGET_NAME}_HEADERS
     pipelines/ForwardShadows.h
 
     text/Text.h
+    text/TextRenderer.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -50,6 +51,7 @@ set(${TARGET_NAME}_SOURCES
     3rdparty/nvpro/Profiler_gl.cpp
 
     text/Text.cpp
+    text/TextRenderer.cpp
 
     gltf/GltfLoad.cpp
     gltf/LoadBuffer.cpp

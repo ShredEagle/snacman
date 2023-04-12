@@ -123,7 +123,7 @@ namespace {
         const graphics::Program * mProgram;
         GLenum mProgramInterface;
         GLint mCurrentId{0};
-        // It seems we must store the value, because operator() has to return true references.
+        // It seems we must store the value, because operator*() has to return true references.
         // see: https://stackoverflow.com/a/52856349/1027706
         mutable value_type mValue; // needs to be written to by operator*() const.
     };
@@ -264,7 +264,10 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
                 }
                 else
                 {
-                    found->mUniforms.push_back(makeResource(*it));
+                    // Note: Do not store the uniforms found inside an uniform block
+                    // as uniform resources in the IntrospectProgram.
+                    // I do not know if it could have a use case?
+                    //found->mUniforms.push_back(makeResource(*it));
                 }
             }
         }

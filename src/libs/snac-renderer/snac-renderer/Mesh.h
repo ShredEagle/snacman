@@ -46,6 +46,7 @@ struct Material
 {
     TextureRepository mTextures;
     UniformRepository mUniforms;
+    UniformBlocks mUniformBlocks;
     std::shared_ptr<Effect> mEffect;
 };
 

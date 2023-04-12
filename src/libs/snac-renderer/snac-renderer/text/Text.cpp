@@ -2,6 +2,8 @@
 
 #include "../Cube.h"
 
+#include <renderer/BufferLoad.h>
+
 // TODO remove once not hardcoding a rotation anymore
 #include <math/Angle.h>
 #include <math/Transformations.h>
@@ -11,95 +13,101 @@ namespace ad {
 namespace snac {
 
 
-InstanceStream initializeGlyphInstanceStream()
+static_assert(sizeof(GlyphMetrics) % 16 == 0,
+                     "GLSL layout std140 requires that array stride is a multiple of 16 bytes.");
+
+
+constexpr arte::CharCode gFirstCharCode = 20;
+constexpr arte::CharCode gLastCharCode = 126;
+
+
+const graphics::RenderedGlyph & GlyphMap::at(arte::CharCode aCharCode) const
 {
-    InstanceStream instances;
+    if (auto found = mCharCodeToGlyph.find(aCharCode); found != mCharCodeToGlyph.end())
     {
-        graphics::ClientAttribute localToWorld{
-            .mDimension = {3, 3},
-            .mOffset = offsetof(GlyphInstance, glyphToScreen_p),
-            .mComponentType = GL_FLOAT,
-        };
-        instances.mAttributes.emplace(Semantic::LocalToWorld, localToWorld);
+        return found->second;
     }
+    else
     {
-        graphics::ClientAttribute albedo{
-            .mDimension = 4,
-            .mOffset = offsetof(GlyphInstance, albedo),
-            .mComponentType = GL_UNSIGNED_BYTE,
-        };
-        instances.mAttributes.emplace(Semantic::Albedo, albedo);
+        return mCharCodeToGlyph.at(placeholder);
     }
-    {
-        graphics::ClientAttribute textureOffset{
-            .mDimension = 1,
-            .mOffset = offsetof(GlyphInstance, offsetInTexture_p),
-            .mComponentType = GL_INT,
-        };
-        instances.mAttributes.emplace(Semantic::TextureOffset, textureOffset);
-    }
-    {
-        graphics::ClientAttribute boundingBox{
-            .mDimension = 2,
-            .mOffset = offsetof(GlyphInstance, boundingBox_p),
-            .mComponentType = GL_FLOAT,
-        };
-        instances.mAttributes.emplace(Semantic::BoundingBox, boundingBox);
-    }
-    {
-        graphics::ClientAttribute bearing{
-            .mDimension = 2,
-            .mOffset = offsetof(GlyphInstance, bearing_p),
-            .mComponentType = GL_FLOAT,
-        };
-        instances.mAttributes.emplace(Semantic::Bearing, bearing);
-    }
-    instances.mInstanceBuffer.mStride = sizeof(GlyphInstance);
-    return instances;
 }
 
 
-GlyphAtlas::GlyphAtlas(arte::FontFace aFontFace) :
+void GlyphMap::insert(arte::CharCode aCharCode, const graphics::RenderedGlyph & aGlyph)
+{
+    mCharCodeToGlyph.emplace(aCharCode, aGlyph);
+}
+
+
+using namespace std::placeholders;
+
+
+FontData::FontData(arte::FontFace aFontFace) :
     mFontFace{std::move(aFontFace)},
-    mGlyphCache{mFontFace, 20, 126}
+    mGlyphAtlas{
+        std::make_shared<graphics::Texture>(
+            graphics::makeTightGlyphAtlas(
+                mFontFace, 
+                gFirstCharCode, 
+                gLastCharCode,
+                std::bind(&GlyphMap::insert, std::ref(mGlyphMap), _1, _2)))
+    }
 {}
 
 
-std::vector<GlyphInstance> GlyphAtlas::populateInstances(const std::string & aString,
-                                                         math::sdr::Rgba aColor,
-                                                         math::AffineMatrix<3, float> aLocalToScreen_p, math::AffineMatrix<3, float> aScale) const
+std::vector<GlyphInstance> FontData::populateInstances(const std::string & aString,
+                                                       math::sdr::Rgba aColor,
+                                                       math::AffineMatrix<3, float> aStringLocalToScreen_p) const
 {
-
     std::vector<GlyphInstance> glyphInstances;
-    graphics::detail::forEachGlyph(
-        aString,
-        {0.f, 0.f},
-        mGlyphCache,
-        mFontFace,
-        [&glyphInstances, aColor, aLocalToScreen_p]
-        (const graphics::detail::RenderedGlyph & aGlyph, math::Position<2, GLfloat> aGlyphPosition_p)
-        {
-             glyphInstances.push_back(GlyphInstance{
-                .glyphToScreen_p =
-                    math::trans2d::translate(aGlyphPosition_p.as<math::Vec>())
-                    * aLocalToScreen_p
-                    ,
-                .albedo = aColor,
-                .offsetInTexture_p = aGlyph.offsetInTexture,
-                .boundingBox_p = aGlyph.controlBoxSize,
-                .bearing_p = aGlyph.bearing,
-             });
-        }
-    );
 
+    graphics::PenPosition penPosition;
+    for (std::string::const_iterator it = aString.begin();
+         it != aString.end();
+         /* in body */)
+    {
+        // Decode utf8 encoded string to individual Unicode code points,
+        // and advance the iterator accordingly.
+        arte::CharCode codePoint = utf8::next(it, aString.end());
+        const graphics::RenderedGlyph & glyph = mGlyphMap.at(codePoint);
+
+        glyphInstances.push_back(GlyphInstance{
+           .glyphToScreen_p =
+               math::trans2d::translate(penPosition.advance(glyph, mFontFace).as<math::Vec>())
+               * aStringLocalToScreen_p
+               ,
+           .albedo = aColor,
+           .entryIndex = codePoint - gFirstCharCode,
+        });
+
+        assert(codePoint >= gFirstCharCode && codePoint < gLastCharCode);
+    }
+        
     return glyphInstances;
 }
 
 
-Mesh makeGlyphMesh(GlyphAtlas & aGlyphAtlas, std::shared_ptr<Effect> aEffect)
+Mesh makeGlyphMesh(FontData & aFontData, std::shared_ptr<Effect> aEffect)
 {
+    std::array<GlyphMetrics, gLastCharCode - gFirstCharCode> glyphMetrics;
+
+    for(arte::CharCode codePoint = gFirstCharCode; codePoint != gLastCharCode; ++codePoint)
+    {
+        const graphics::RenderedGlyph rendered = aFontData.mGlyphMap.at(codePoint);
+        glyphMetrics[codePoint - gFirstCharCode] = GlyphMetrics{
+            .boundingBox_p = rendered.controlBoxSize,
+            .bearing_p = rendered.bearing,
+            .offsetInTexture_p = rendered.offsetInTexture,
+        };
+    }
+
+    auto glyphMetricsBuffer = std::make_shared<graphics::UniformBufferObject>();
+    graphics::load(*glyphMetricsBuffer, std::span{glyphMetrics}, graphics::BufferHint::StaticRead);
+
     auto material = std::make_shared<Material>(Material{
-        .mTextures = {{Semantic::FontAtlas, &aGlyphAtlas.mGlyphCache.atlas}},
+        .mTextures = {{Semantic::FontAtlas, aFontData.mGlyphAtlas}},
+        .mUniformBlocks = {{BlockSemantic::GlyphMetrics, std::move(glyphMetricsBuffer)}},
         .mEffect = std::move(aEffect)
     });
 
