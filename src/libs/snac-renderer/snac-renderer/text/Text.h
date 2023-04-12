@@ -47,6 +47,7 @@ struct GlyphMap
     // Useful as a GlyphCallback
     void insert(arte::CharCode aCharCode, const graphics::RenderedGlyph & aGlyph);
 
+    // TODO does not need to store the RenderedGlyph entirely, only the metrics required to populateInstance().
     std::unordered_map<arte::CharCode, graphics::RenderedGlyph> mCharCodeToGlyph;
     static constexpr arte::CharCode placeholder = 0x3F; // '?'
 };
