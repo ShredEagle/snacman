@@ -94,42 +94,41 @@ void Renderer::renderText(const visu::GraphicState & aState, snac::ProgramSetup 
 {
     TIME_RECURRING_CLASSFUNC_GL();
 
+
     // Note: this is pessimised code.
     // Most of these expensive operations should be taken out and the results
     // cached.
     for (const visu::TextScreen & text : aState.mTextEntities)
     {
         // TODO should be cached once in the string
-        math::Size<2, GLfloat> stringDimension_p =
+        math::Size<2, GLfloat> stringDimension_pix =
             graphics::getStringDimension(
                 text.mString,
                 text.mFont->mFontData.mGlyphMap,
                 text.mFont->mFontData.mFontFace);
 
-        // TODO should be done outside of here (so static strings are not
-        // recomputed each frame, for example)
-        auto stringPos = text.mPosition_unitscreen.cwMul(
+        auto stringPos_screenPix = text.mPosition_unitscreen.cwMul(
             static_cast<math::Position<2, GLfloat>>(mAppInterface.getFramebufferSize()));
 
         auto scale = math::trans2d::scale(text.mScale);
-        auto localToScreen_pixel =
+        auto localPixToScreenPix =
             scale
-            * math::trans2d::translate(-stringDimension_p.as<math::Vec>() / 2.f)
+            * math::trans2d::translate(-stringDimension_pix.as<math::Vec>() / 2.f)
             * math::trans2d::rotate(text.mOrientation)
-            * math::trans2d::translate(stringDimension_p.as<math::Vec>() / 2.f)
-            * math::trans2d::translate(stringPos.as<math::Vec>());
+            * math::trans2d::translate(stringDimension_pix.as<math::Vec>() / 2.f)
+            * math::trans2d::translate(stringPos_screenPix.as<math::Vec>());
 
         // TODO should be cached once in the string and forwarded here
         std::vector<snac::GlyphInstance> textBufferData =
             text.mFont->mFontData.populateInstances(text.mString,
                                                     to_sdr(text.mColor),
-                                                    localToScreen_pixel);
+                                                    localPixToScreenPix);
 
         // TODO should be consolidated, a single call for all string of the same
         // font.
-        mTextRenderer.respecifyInstanceData(std::span{textBufferData});
+        mDynamicStrings.respecifyData(std::span{textBufferData});
         BEGIN_RECURRING_GL("Draw string", drawStringProfile);
-        mTextRenderer.render(*text.mFont, mRenderer, aProgramSetup);
+        mTextRenderer.render(mDynamicStrings, *text.mFont, mRenderer, aProgramSetup);
         END_RECURRING_GL(drawStringProfile);
     }
 }

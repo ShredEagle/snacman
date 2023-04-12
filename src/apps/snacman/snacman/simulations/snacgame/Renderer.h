@@ -77,6 +77,7 @@ private:
     snac::ForwardShadows mPipelineShadows;
     snac::CameraBuffer mCamera;
     snac::TextRenderer mTextRenderer;
+    snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;
 };
 

@@ -41,23 +41,20 @@ namespace {
 } // anonymous namespace
 
 
-TextRenderer::TextRenderer() :
-    mGlyphInstances{initializeGlyphInstanceStream()}
+GlyphInstanceStream::GlyphInstanceStream() :
+    InstanceStream{initializeGlyphInstanceStream()}
 {}
 
 
-void TextRenderer::respecifyInstanceData(std::span<GlyphInstance> aInstances)
-{
-    mGlyphInstances.respecifyData(aInstances);
-}
-
-
-void TextRenderer::render(const Font & aFont, Renderer & aRenderer, snac::ProgramSetup & aProgramSetup)
+void TextRenderer::render(const GlyphInstanceStream & aGlyphs,
+                          const Font & aFont,
+                          Renderer & aRenderer,
+                          snac::ProgramSetup & aProgramSetup)
 {
     auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
 
     mTextPass.draw(aFont.mGlyphMesh,
-                   mGlyphInstances,
+                   aGlyphs,
                    aRenderer,
                    aProgramSetup);
 }

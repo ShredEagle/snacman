@@ -12,18 +12,22 @@ namespace ad {
 namespace snac {
 
 
+struct GlyphInstanceStream : InstanceStream
+{
+    GlyphInstanceStream();
+};
+
+
 class TextRenderer
 {
 public:
-    TextRenderer();
-
-    void respecifyInstanceData(std::span<GlyphInstance> aInstances);
-
-    void render(const Font & aFont, Renderer & aRenderer, snac::ProgramSetup & aProgramSetup);
+    void render(const GlyphInstanceStream & aGlyphs,
+                const Font & aFont,
+                Renderer & aRenderer,
+                snac::ProgramSetup & aProgramSetup);
 
 private:
     snac::Pass mTextPass{"text"};
-    snac::InstanceStream mGlyphInstances;
 };
 
 

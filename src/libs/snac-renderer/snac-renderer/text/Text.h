@@ -28,11 +28,12 @@ struct GlyphMetrics
 };
 
 
+// TODO Ideally, the string's transformation matrix would not be stored, only a bidimensionnal local pen advance.
 /// @brief The per-instance data for instanced rendering of text.
 struct GlyphInstance
 {
-    // This transformation is at the string level (i.e. the same for all glyphs in a given string)
-    // but we do not have an abstraction of the whole string at the shader level for the moment.
+    // This transformation is composed of the pen advance plus the whole string transformation (i.e. the same for all glyphs in a given string).
+    // We do not have an abstraction of the whole string at the shader level for the moment.
     math::AffineMatrix<3, GLfloat> glyphToScreen_p;
     math::sdr::Rgba albedo;
     GLuint entryIndex; // Index into an array of GlyphMetrics
@@ -67,9 +68,10 @@ struct FontData
     // Then, dynamic data could be somehow added. This data is likely per string i.e.:
     // * string pose 
     // * string color
+    /// @param aStringLocalToScreen_p Transformation from the string local space **in pixel** to screen space, also in pixel.
     std::vector<GlyphInstance> populateInstances(const std::string & aString,
                                                  math::sdr::Rgba aColor,
-                                                 math::AffineMatrix<3, float> aLocalToScreen_p) const;
+                                                 math::AffineMatrix<3, float> aStringLocalToScreen_p) const;
 
     arte::FontFace mFontFace;
     GlyphMap mGlyphMap;
