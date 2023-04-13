@@ -62,6 +62,15 @@ resource::ResourceFinder makeResourceFinder()
 }
 
 
+void showDiagnostics()
+{
+    SELOG(info)("Max uniform block size: {} bytes. Max vertex uniform blocks: {}.",
+                graphics::getInt(GL_MAX_UNIFORM_BLOCK_SIZE),
+                graphics::getInt(GL_MAX_VERTEX_UNIFORM_BLOCKS) // the limit of uniform buffer binding locations.
+    );
+}
+
+
 void runApplication()
 {
     SELOG(info)("I'm a snac man.");
@@ -83,6 +92,8 @@ void runApplication()
     // Ensures the messages are sent synchronously with the event triggering them
     // This makes debug stepping much more feasible.
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+
+    showDiagnostics();
 
     imguiui::ImguiUi imguiUi(glfwApp);
 
