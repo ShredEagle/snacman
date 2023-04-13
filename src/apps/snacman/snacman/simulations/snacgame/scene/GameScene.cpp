@@ -24,10 +24,10 @@
 #include "../system/AllowMovement.h"
 #include "../system/ConsolidateGridMovement.h"
 #include "../system/EatPill.h"
-#include "../system/Pathfinding.h"
 #include "../system/IntegratePlayerMovement.h"
 #include "../system/LevelCreator.h"
 #include "../system/MovementIntegration.h"
+#include "../system/Pathfinding.h"
 #include "../system/PlayerInvulFrame.h"
 #include "../system/PlayerSpawner.h"
 #include "../system/PortalManagement.h"
@@ -62,8 +62,9 @@ EntHandle createLevel(GameContext & aContext, const char * aLvlFile)
         Phase createLevel;
         auto markovRoot = aContext.mResources.find(gMarkovRoot);
         Entity levelEntity = *level.get(createLevel);
-        levelEntity.add(component::LevelData(
-            aContext.mWorld, markovRoot.value(), aLvlFile, {19, 19, 1}, 123123));
+        levelEntity.add(component::LevelData(aContext.mWorld,
+                                             markovRoot.value(), aLvlFile,
+                                             {15, 15, 1}, 123123));
         levelEntity.add(component::LevelToCreate{});
         levelEntity.add(component::SceneNode{});
         levelEntity.add(component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
@@ -77,7 +78,8 @@ void setupLevel(GameContext & aGameContext, Phase & aPhase)
 {
     aGameContext.mLevel->get(aPhase)->add(component::LevelToCreate{});
     aGameContext.mLevel->get(aPhase)->add(component::SceneNode{});
-    aGameContext.mLevel->get(aPhase)->add(component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
+    aGameContext.mLevel->get(aPhase)->add(
+        component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
     aGameContext.mLevel->get(aPhase)->add(component::GlobalPose{});
 }
 
@@ -89,7 +91,7 @@ void teardownLevel(GameContext & aGameContext, Phase & aPhase)
     aGameContext.mLevel->get(aPhase)->remove<component::GlobalPose>();
 }
 
-}
+} // namespace
 
 GameScene::GameScene(const std::string & aName,
                      GameContext & aGameContext,
@@ -101,16 +103,17 @@ GameScene::GameScene(const std::string & aName,
     mPlayers{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
-    createLevel(mGameContext, mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml");
+    createLevel(mGameContext,
+                mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml");
 }
 
-void GameScene::setup(const Transition & aTransition,
-                      RawInput & aInput)
+void GameScene::setup(const Transition & aTransition, RawInput & aInput)
 {
     {
         Phase init;
         setupLevel(mGameContext, init);
-        mSystems.get(init)->add(system::SceneGraphResolver{mGameContext, mSceneRoot})
+        mSystems.get(init)
+            ->add(system::SceneGraphResolver{mGameContext, mSceneRoot})
             .add(system::PlayerSpawner{mGameContext})
             .add(system::RoundMonitor{mGameContext})
             .add(system::PlayerInvulFrame{mGameContext})
@@ -132,27 +135,36 @@ void GameScene::setup(const Transition & aTransition,
 
 void GameScene::teardown(RawInput & aInput)
 {
-    Phase destroy;
+    {
+        Phase destroy;
 
-    teardownLevel(mGameContext, destroy);
+        teardownLevel(mGameContext, destroy);
 
-    mSystems.get(destroy)->erase();
-    mSystems = mGameContext.mWorld.addEntity();
+        mSystems.get(destroy)->erase();
+        mSystems = mGameContext.mWorld.addEntity();
 
+        mTiles.each(
+            [&destroy](EntHandle aHandle, const component::LevelEntity &) {
+                aHandle.get(destroy)->erase();
+            });
 
-    mTiles.each([&destroy](EntHandle aHandle, const component::LevelEntity &) {
-        aHandle.get(destroy)->erase();
-    });
-
-    mPlayers.each([&destroy](EntHandle aHandle, component::PlayerSlot & aSlot,
-                             component::Controller & aController) {
-
-        removePlayerFromGame(destroy, aHandle);
-    });
+        mPlayers.each([&destroy](EntHandle aHandle,
+                                 component::PlayerSlot & aSlot,
+                                 component::Controller & aController) {
+            removePlayerFromGame(destroy, aHandle);
+        });
+    }
+    {
+        // TODO: (franz) remove this at some point
+        Phase debugDestroy;
+        mPathfinders.each([&debugDestroy](EntHandle aHandle,
+                                          const component::PathToOnGrid &) {
+            aHandle.get(debugDestroy)->erase();
+        });
+    }
 }
 
-std::optional<Transition>
-GameScene::update(float aDelta, RawInput & aInput)
+std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
 
@@ -185,24 +197,23 @@ GameScene::update(float aDelta, RawInput & aInput)
     });
 
     Phase bindPlayerPhase;
-
     // This works because gKeyboardControllerIndex is -1
     // So this is a bit janky but it unifies the player join code
-    for (std::size_t controlIndex = gKeyboardControllerIndex;
-         controlIndex < aInput.mGamepads.size(); ++controlIndex)
+    for (int controlIndex = gKeyboardControllerIndex;
+         controlIndex < (int) aInput.mGamepads.size(); ++controlIndex)
     {
         if (std::find(boundControllers.begin(), boundControllers.end(),
-                      gKeyboardControllerIndex)
+                      controlIndex)
             == boundControllers.end())
         {
             int command = gNoCommand;
             const bool controllerIsKeyboard =
-                (int)controlIndex == gKeyboardControllerIndex;
+                (int) controlIndex == gKeyboardControllerIndex;
 
             if (controllerIsKeyboard)
             {
-                convertKeyboardInput("unbound", aInput.mKeyboard,
-                                     mContext->mKeyboardMapping);
+                command = convertKeyboardInput("unbound", aInput.mKeyboard,
+                                               mContext->mKeyboardMapping);
             }
             else
             {
@@ -213,15 +224,10 @@ GameScene::update(float aDelta, RawInput & aInput)
 
             if (command & gJoin)
             {
-                OptEntHandle player = findSlotAndBind(
-                    mGameContext, bindPlayerPhase, mSlots,
-                    controllerIsKeyboard ? ControllerType::Keyboard
-                                         : ControllerType::Gamepad,
-                    static_cast<int>(controlIndex));
-                if (player)
-                {
-                    insertEntityInScene(*player, *mGameContext.mLevel);
-                }
+                findSlotAndBind(mGameContext, bindPlayerPhase, mSlots,
+                                controllerIsKeyboard ? ControllerType::Keyboard
+                                                     : ControllerType::Gamepad,
+                                static_cast<int>(controlIndex));
             }
         }
     }

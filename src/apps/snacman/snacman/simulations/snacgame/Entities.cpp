@@ -46,7 +46,7 @@
 namespace ad {
 namespace snacgame {
 
-constexpr Size3 lLevelElementScaling = {0.5f, 0.5f, 0.1f};
+constexpr Size3 lLevelElementScaling = {1.f, 1.f, 1.f};
 
 void addMeshGeoNode(Phase & aPhase,
                     GameContext & aContext,
@@ -78,10 +78,11 @@ void createLevelElement(Phase & aPhase,
                         HdrColor_f aColor)
 {
     Entity path = *aHandle.get(aPhase);
-    addMeshGeoNode(aPhase, aContext, path, "CUBE",
+    addMeshGeoNode(aPhase, aContext, path, "models/floor/floor.gltf",
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gLevelHeight},
-                   1.f, lLevelElementScaling, Quat_f::Identity(), aColor);
+                   0.5f, lLevelElementScaling, math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                                math::Turn<float>{0.25f}}, aColor);
     path.add(component::LevelEntity{});
 }
 } // namespace
@@ -208,15 +209,16 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
         aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120);
 
     Entity player = *aSlot.get(aInit);
-    const component::PlayerSlot & playerSlot =
+    component::PlayerSlot & playerSlot =
         player.get<component::PlayerSlot>();
+    playerSlot.mFilled = true;
 
     std::ostringstream playerText;
     playerText << "P" << playerSlot.mIndex + 1 << " 0";
 
     addMeshGeoNode(
-        aInit, aContext, player, "models/avocado/Avocado.gltf",
-        {0.f, 0.f, gPlayerHeight}, 1.f, {50.f, 50.f, 50.f},
+        aInit, aContext, player, "models/donut/DONUT.gltf",
+        {0.f, 0.f, gPlayerHeight}, 1.f, {1.f, 1.f, 1.f},
         math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 math::Turn<float>{0.25f}},
         playerSlot.mColor);

@@ -3,6 +3,7 @@
 #include "snacman/Input.h"
 #include "snacman/simulations/snacgame/GameContext.h"
 #include "snacman/simulations/snacgame/component/PathToOnGrid.h"
+#include "snacman/simulations/snacgame/component/PlayerLifeCycle.h"
 #include "../component/PlayerMoveState.h"
 
 #include "../component/Controller.h"
@@ -28,7 +29,7 @@ public:
     void update(float aDelta);
 
 private:
-    ent::Query<component::AllowedMovement, component::Controller, component::PlayerMoveState>
+    ent::Query<component::AllowedMovement, component::Controller, component::PlayerMoveState, component::PlayerLifeCycle>
         mPlayer;
     ent::Query<component::AllowedMovement, component::Geometry, component::PathToOnGrid>
         mPathfinder;

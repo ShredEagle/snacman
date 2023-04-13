@@ -2,6 +2,7 @@
 
 #include "snacman/Logging.h"
 #include "snacman/Profiling.h"
+#include "snacman/simulations/snacgame/component/PlayerLifeCycle.h"
 
 #include "../typedef.h"
 
@@ -15,7 +16,8 @@ void ConsolidateGridMovement::update(float aDelta)
     TIME_RECURRING_CLASSFUNC(Main);
     mPlayer.each([](const component::AllowedMovement & aAllowedMovement,
                     component::Controller & aController,
-                    component::PlayerMoveState & aMoveState) {
+                    component::PlayerMoveState & aMoveState,
+                    const component::PlayerLifeCycle & aLifeCycle ) {
         int oldMoveState = aMoveState.mMoveState;
         int inputMoveFlag = gPlayerMoveFlagNone;
 
@@ -23,7 +25,13 @@ void ConsolidateGridMovement::update(float aDelta)
 
         inputMoveFlag &= aAllowedMovement.mAllowedMovement;
 
-        if (inputMoveFlag == gPlayerMoveFlagNone)
+        bool canMove = aLifeCycle.mHitStun <= 0.f;
+
+        if (!canMove)
+        {
+            inputMoveFlag = gPlayerMoveFlagNone;
+        }
+        else if (inputMoveFlag == gPlayerMoveFlagNone)
         {
             inputMoveFlag = oldMoveState & aAllowedMovement.mAllowedMovement;
         }

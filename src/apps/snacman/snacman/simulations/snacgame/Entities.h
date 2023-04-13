@@ -32,7 +32,7 @@ struct Transition;
 struct GameContext;
 
 constexpr float gPillHeight = 6 * gCellSize * 0.1f;
-constexpr float gPlayerHeight = 2 * gCellSize * 0.1f;
+constexpr float gPlayerHeight = -4 * gCellSize * 0.1f;
 constexpr float gLevelHeight = 0 * gCellSize * 0.1f;
 
 void addMeshGeoNode(ent::Phase & aPhase,

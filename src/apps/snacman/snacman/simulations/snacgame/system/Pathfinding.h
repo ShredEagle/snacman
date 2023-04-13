@@ -117,7 +117,7 @@ pathfind(const math::Position<2, float> & aSource,
         openedNode.pop();
         current->mOpened = false;
 
-        if (current->mPos == aTarget)
+        if (current->mPos.equalsWithinTolerance(aTarget, 0.51f))
         {
             closestNode = current;
             break;

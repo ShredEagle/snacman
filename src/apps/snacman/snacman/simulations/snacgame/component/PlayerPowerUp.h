@@ -13,6 +13,12 @@ struct PlayerPowerUp
     PowerUpType mType;
 };
 
+struct InGamePowerup
+{
+    ent::Handle<ent::Entity> mOwner;
+    PowerUpType mType;
+};
+
 } // namespace component
 } // namespace snacgame
 } // namespace ad

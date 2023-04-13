@@ -1,7 +1,7 @@
-
 #pragma once
 
 #include "snacman/simulations/snacgame/component/Controller.h"
+#include "snacman/simulations/snacgame/component/PlayerLifeCycle.h"
 #include "snacman/simulations/snacgame/component/PlayerPowerUp.h"
 #include "../GameContext.h"
 #include "../component/Geometry.h"
@@ -26,7 +26,8 @@ public:
         mGameContext{&aGameContext},
         mPlayers{mGameContext->mWorld},
         mPowUpPlayers{mGameContext->mWorld},
-        mPowerups{mGameContext->mWorld}
+        mPowerups{mGameContext->mWorld},
+        mInGamePowerups(mGameContext->mWorld)
     {}
 
     void update();
@@ -35,9 +36,10 @@ public:
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::Geometry, component::PlayerSlot, component::Collision> mPlayers;
+    ent::Query<component::Geometry, component::PlayerSlot, component::Collision, component::PlayerLifeCycle> mPlayers;
     ent::Query<component::Geometry, component::PlayerSlot, component::PlayerPowerUp, component::Controller> mPowUpPlayers;
     ent::Query<component::Geometry, component::PowerUp, component::Collision, component::LevelEntity> mPowerups;
+    ent::Query<component::Geometry, component::InGamePowerup, component::Collision, component::LevelEntity> mInGamePowerups;
 };
 
 } // namespace system
