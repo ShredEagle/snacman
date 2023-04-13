@@ -9,7 +9,6 @@
 #include <future>                                   // for future
 #include <string>                                   // for operator==, string
 
-
 namespace ad {
 namespace snac {
 

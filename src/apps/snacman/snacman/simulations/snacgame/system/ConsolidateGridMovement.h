@@ -1,16 +1,17 @@
 #pragma once
 
-#include "snacman/Input.h"
-#include "snacman/simulations/snacgame/GameContext.h"
-#include "snacman/simulations/snacgame/component/PathToOnGrid.h"
-#include "snacman/simulations/snacgame/component/PlayerLifeCycle.h"
-#include "../component/PlayerMoveState.h"
+#include "../GameContext.h"
 
+#include "../component/PathToOnGrid.h"
+#include "../component/PlayerLifeCycle.h"
+#include "../component/PlayerMoveState.h"
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
 #include "../component/AllowedMovement.h"
 #include "../InputCommandConverter.h"
+
+#include <snacman/Input.h>
 
 #include <entity/EntityManager.h>
 #include <entity/Query.h>

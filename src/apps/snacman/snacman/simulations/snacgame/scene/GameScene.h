@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Scene.h"
-#include "snacman/simulations/snacgame/component/PathToOnGrid.h"
 
 #include "../component/Controller.h"
 #include "../component/LevelTags.h"
+#include "../component/PathToOnGrid.h"
 #include "../component/PlayerSlot.h"
 
 #include <entity/EntityManager.h>

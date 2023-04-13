@@ -17,31 +17,29 @@
 #include "component/VisualMesh.h"
 #include "GameContext.h"
 #include "scene/MenuScene.h"
-#include "snacman/simulations/snacgame/component/AllowedMovement.h"
-#include "snacman/simulations/snacgame/component/PlayerPowerUp.h"
+#include "component/AllowedMovement.h"
+#include "component/PlayerPowerUp.h"
 #include "typedef.h"
 
 #include "../../QueryManipulation.h"
 #include "../../Resources.h"
 
-#include <algorithm> // for max
-#include <entity/Archetype.h>
-#include <entity/detail/HandledStore.h>
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
-#include <entity/QueryStore.h>
-#include <map> // for opera...
 #include <math/Angle.h>
 #include <math/Color.h>
 #include <math/Quaternion.h>
 #include <math/Vector.h>
-#include <optional> // for optional
-#include <ostream>  // for opera...
-#include <tuple>    // for get
+
+#include <algorithm>
+#include <map>
+#include <optional>
+#include <ostream>
+#include <tuple>
 #include <unordered_map>
-#include <utility> // for move
-#include <vector>  // for vector
+#include <utility>
+#include <vector>
 
 namespace ad {
 namespace snacgame {

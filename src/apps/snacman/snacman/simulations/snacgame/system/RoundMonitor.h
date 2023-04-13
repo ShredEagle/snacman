@@ -1,9 +1,10 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/GameContext.h"
-#include "snacman/simulations/snacgame/component/LevelData.h"
-#include "snacman/simulations/snacgame/component/PlayerLifeCycle.h"
-#include "snacman/simulations/snacgame/component/PlayerPowerUp.h"
+#include "../GameContext.h"
+#include "../component/LevelData.h"
+#include "../component/PlayerLifeCycle.h"
+#include "../component/PlayerPowerUp.h"
+
 #include <entity/EntityManager.h>
 
 namespace ad {

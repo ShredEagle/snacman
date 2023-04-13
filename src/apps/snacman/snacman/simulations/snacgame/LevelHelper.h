@@ -1,6 +1,6 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/GameParameters.h"
+#include "GameParameters.h"
 #include "typedef.h"
 
 namespace ad {

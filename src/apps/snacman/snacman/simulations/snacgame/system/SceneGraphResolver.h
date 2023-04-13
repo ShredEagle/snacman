@@ -1,9 +1,10 @@
 #pragma once
 
 
-#include "snacman/simulations/snacgame/GameContext.h"
-#include <snacman/Logging.h>
+#include "../GameContext.h"
 #include "../SceneGraph.h"
+
+#include <snacman/Logging.h>
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>

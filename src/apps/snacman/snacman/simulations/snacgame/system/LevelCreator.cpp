@@ -1,10 +1,11 @@
 #include "LevelCreator.h"
 
-#include "../component/LevelData.h"
-#include "../component/SceneNode.h"
 #include "../Entities.h"
 #include "../SceneGraph.h"
 #include "../typedef.h"
+
+#include "../component/LevelData.h"
+#include "../component/SceneNode.h"
 
 #include <entity/Entity.h>
 #include <markovjunior/Interpreter.h>

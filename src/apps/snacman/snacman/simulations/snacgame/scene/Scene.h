@@ -1,13 +1,15 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/component/SceneNode.h"
 #include "../EntityWrap.h"
 #include "../GameContext.h"
+
+#include "../component/SceneNode.h"
+
+#include <markovjunior/Grid.h>
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
 #include <map>
-#include <markovjunior/Grid.h>
 #include <optional>
 #include <string>
 

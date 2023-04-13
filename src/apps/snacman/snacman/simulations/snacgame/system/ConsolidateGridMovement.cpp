@@ -1,10 +1,11 @@
 #include "ConsolidateGridMovement.h"
 
-#include "snacman/Logging.h"
-#include "snacman/Profiling.h"
-#include "snacman/simulations/snacgame/component/PlayerLifeCycle.h"
-
 #include "../typedef.h"
+
+#include "../component/PlayerLifeCycle.h"
+
+#include <snacman/Logging.h>
+#include <snacman/Profiling.h>
 
 namespace ad {
 namespace snacgame {

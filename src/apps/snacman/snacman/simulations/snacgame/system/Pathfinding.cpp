@@ -1,11 +1,12 @@
 #include "Pathfinding.h"
 
-#include "snacman/Profiling.h"
-#include "snacman/simulations/snacgame/component/LevelData.h"
-
-#include "../../../Logging.h"
 #include "../typedef.h"
 #include "../LevelHelper.h"
+
+#include "../component/LevelData.h"
+
+#include <snacman/Logging.h>
+#include <snacman/Profiling.h>
 
 #include <cmath>
 #include <cstdlib>

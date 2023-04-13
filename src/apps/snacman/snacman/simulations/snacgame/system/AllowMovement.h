@@ -1,13 +1,14 @@
 #pragma once
 
-#include "snacman/Input.h"
-#include "snacman/simulations/snacgame/GameContext.h"
+#include "../GameContext.h"
+#include "../InputCommandConverter.h"
 
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
 #include "../component/AllowedMovement.h"
-#include "../InputCommandConverter.h"
+
+#include <snacman/Input.h>
 
 #include <entity/EntityManager.h>
 #include <entity/Query.h>

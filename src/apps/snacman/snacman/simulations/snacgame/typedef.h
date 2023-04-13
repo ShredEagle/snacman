@@ -1,10 +1,10 @@
-#include "entity/Entity.h"
-#include "math/Angle.h"
-#include "math/Box.h"
-#include "math/Color.h"
-#include "math/Homogeneous.h"
-#include "math/LinearMatrix.h"
-#include "math/Quaternion.h"
+#include <entity/Entity.h>
+#include <math/Angle.h>
+#include <math/Box.h>
+#include <math/Color.h>
+#include <math/Homogeneous.h>
+#include <math/LinearMatrix.h>
+#include <math/Quaternion.h>
 
 namespace ad {
 namespace snacgame {

@@ -1,19 +1,20 @@
 #include "SceneGraphResolver.h"
 
-#include "math/Angle.h"
-#include "math/Homogeneous.h"
-#include "math/Transformations.h"
-#include "snacman/simulations/snacgame/SceneGraph.h"
-
-#include "../component/Geometry.h"
-#include "../component/GlobalPose.h"
-#include "../component/SceneNode.h"
+#include "../SceneGraph.h"
 #include "../GameParameters.h"
 #include "../SceneGraph.h"
 #include "../typedef.h"
 
-#include <cmath>
+#include "../component/Geometry.h"
+#include "../component/GlobalPose.h"
+#include "../component/SceneNode.h"
+
 #include <snacman/Profiling.h>
+
+#include <math/Angle.h>
+#include <math/Homogeneous.h>
+#include <math/Transformations.h>
+#include <cmath>
 
 namespace ad {
 namespace snacgame {

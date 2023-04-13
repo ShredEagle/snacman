@@ -1,7 +1,7 @@
 #pragma once
 
 #include "InputConstants.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
+#include "component/Controller.h"
 
 #include <platform/Filesystem.h>
 

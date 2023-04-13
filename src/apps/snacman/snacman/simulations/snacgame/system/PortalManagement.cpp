@@ -1,9 +1,9 @@
 #include "PortalManagement.h"
 
-#include "../../../Profiling.h"
-
 #include "../typedef.h"
 #include "../LevelHelper.h"
+
+#include <snacman/Profiling.h>
 
 namespace ad {
 namespace snacgame {

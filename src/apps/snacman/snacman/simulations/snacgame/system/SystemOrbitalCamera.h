@@ -1,9 +1,10 @@
 #pragma once
 
-#include "../../../Input.h"
 #include "../component/Geometry.h"
 #include "../EntityWrap.h"
 #include "../GraphicState.h"
+
+#include <snacman/Input.h>
 
 #include <entity/Query.h>
 #include <math/Constants.h>

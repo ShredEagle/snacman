@@ -1,6 +1,6 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/GameContext.h"
+#include "../GameContext.h"
 #include "../component/LevelTags.h"
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"

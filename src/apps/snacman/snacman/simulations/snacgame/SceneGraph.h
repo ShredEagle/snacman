@@ -1,11 +1,12 @@
 #pragma once
 
 #include "component/Geometry.h"
-#include "math/Homogeneous.h"
-#include "math/Quaternion.h"
 
-#include <concepts>
+#include <math/Homogeneous.h>
+#include <math/Quaternion.h>
+
 #include <entity/Entity.h>
+#include <concepts>
 
 namespace ad {
 namespace snacgame {

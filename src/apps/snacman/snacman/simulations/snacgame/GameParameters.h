@@ -1,9 +1,9 @@
 #pragma once
 
-// TODO: before commit change this
-#include "math/Angle.h"
-#include "math/Quaternion.h"
-#include "math/Vector.h"
+#include <math/Angle.h>
+#include <math/Quaternion.h>
+#include <math/Vector.h>
+
 namespace ad {
 namespace snacgame {
 

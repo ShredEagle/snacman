@@ -1,8 +1,9 @@
 #include "PlayerSpawner.h"
 
-#include "../component/Spawner.h"
 #include "../SceneGraph.h"
 #include "../typedef.h"
+
+#include "../component/Spawner.h"
 
 #include <snacman/Profiling.h>
 

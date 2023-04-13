@@ -1,13 +1,14 @@
 #pragma once
 
 #include "Scene.h"
-#include "math/Color.h"
-#include "snacman/Input.h"
-#include "snacman/simulations/snacgame/component/Text.h"
 
 #include "../component/MenuItem.h"
 #include "../component/PlayerSlot.h"
+#include "../component/Text.h"
 
+#include <snacman/Input.h>
+
+#include <math/Color.h>
 #include <entity/Query.h>
 #include <string>
 

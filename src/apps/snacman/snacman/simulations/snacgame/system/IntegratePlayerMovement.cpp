@@ -1,12 +1,13 @@
 #include "IntegratePlayerMovement.h"
 
-#include "snac-renderer/Cube.h"
-#include "snacman/simulations/snacgame/LevelHelper.h"
-
-#include "../component/LevelData.h"
+#include "../LevelHelper.h"
 #include "../GameParameters.h"
 
+#include "../component/LevelData.h"
+
 #include <snacman/Profiling.h>
+
+#include <snac-renderer/Cube.h>
 
 namespace ad {
 namespace snacgame {

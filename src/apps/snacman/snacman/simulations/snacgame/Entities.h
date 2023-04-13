@@ -2,9 +2,9 @@
 
 #include "GameParameters.h"
 
-#include "math/Quaternion.h"
 #include <entity/Entity.h>
 #include <entity/Query.h>
+#include <math/Quaternion.h>
 #include <math/Color.h>
 #include <math/Vector.h>
 #include <memory>

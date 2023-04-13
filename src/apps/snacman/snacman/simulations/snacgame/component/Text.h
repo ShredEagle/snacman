@@ -6,7 +6,6 @@
 
 #include <string>
 
-
 namespace ad {
 namespace snacgame {
 namespace component {

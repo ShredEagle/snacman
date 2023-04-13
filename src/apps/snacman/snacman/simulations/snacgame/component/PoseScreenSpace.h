@@ -1,9 +1,7 @@
 #pragma once
 
-
 #include <math/Angle.h>
 #include <math/Vector.h>
-
 
 namespace ad {
 namespace snacgame {

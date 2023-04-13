@@ -1,8 +1,6 @@
 #pragma once
 
-
 #include <math/Angle.h>
-
 
 namespace ad {
 namespace snacgame {

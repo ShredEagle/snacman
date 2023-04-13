@@ -1,7 +1,8 @@
 #pragma once
 
-#include "entity/Entity.h"
-#include "snacman/simulations/snacgame/component/LevelTags.h"
+#include "LevelTags.h"
+
+#include <entity/Entity.h>
 
 namespace ad {
 namespace snacgame {

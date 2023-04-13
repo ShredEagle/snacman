@@ -1,9 +1,9 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/component/Controller.h"
-#include "snacman/simulations/snacgame/component/PlayerLifeCycle.h"
-#include "snacman/simulations/snacgame/component/PlayerPowerUp.h"
 #include "../GameContext.h"
+#include "../component/Controller.h"
+#include "../component/PlayerLifeCycle.h"
+#include "../component/PlayerPowerUp.h"
 #include "../component/Geometry.h"
 #include "../component/LevelTags.h"
 #include "../component/PlayerSlot.h"

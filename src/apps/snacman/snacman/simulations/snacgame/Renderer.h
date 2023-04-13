@@ -11,10 +11,9 @@
 
 #include <snac-renderer/pipelines/ForwardShadows.h>
 
+#include <filesystem>
+#include <memory>
 
-#include <filesystem>                         // for path
-#include <memory>                             // for shared_ptr
-                                              //
 namespace ad {
 namespace arte { class FontFace; }
 namespace graphics { class AppInterface; }

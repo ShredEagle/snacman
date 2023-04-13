@@ -36,14 +36,15 @@
 #include "../system/SceneGraphResolver.h"
 #include "../typedef.h"
 
-#include <algorithm>
-#include <array>   // for array
-#include <cstddef> // for size_t
-#include <map>     // for opera...
 #include <snacman/Input.h>
 #include <snacman/Profiling.h>
 #include <snacman/QueryManipulation.h>
 #include <snacman/Resources.h>
+
+#include <algorithm>
+#include <array>   // for array
+#include <cstddef> // for size_t
+#include <map>     // for opera...
 #include <tuple>  // for get
 #include <vector> // for vector
 

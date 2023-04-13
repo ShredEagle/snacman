@@ -1,5 +1,16 @@
 #include "SnacGame.h"
 
+#include "Entities.h"
+#include "GameContext.h"
+#include "GameParameters.h"
+#include "InputConstants.h"
+#include "scene/Scene.h"
+#include "SimulationControl.h"
+#include "SceneGraph.h"
+#include "system/SceneStateMachine.h"
+#include "system/SystemOrbitalCamera.h"
+#include "typedef.h"
+
 #include "component/Context.h"
 #include "component/Geometry.h"
 #include "component/GlobalPose.h"
@@ -8,21 +19,16 @@
 #include "component/PoseScreenSpace.h"
 #include "component/Text.h"
 #include "component/VisualMesh.h"
-#include "Entities.h"
-#include "GameContext.h"
-#include "GameParameters.h"
-#include "InputConstants.h"
-#include "scene/Scene.h"
-#include "SimulationControl.h"
-#include "snacman/simulations/snacgame/component/AllowedMovement.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
-#include "snacman/simulations/snacgame/component/LevelTags.h"
-#include "snacman/simulations/snacgame/component/PathToOnGrid.h"
-#include "snacman/simulations/snacgame/component/SceneNode.h"
-#include "snacman/simulations/snacgame/SceneGraph.h"
-#include "system/SceneStateMachine.h"
-#include "system/SystemOrbitalCamera.h"
-#include "typedef.h"
+#include "component/AllowedMovement.h"
+#include "component/Controller.h"
+#include "component/LevelTags.h"
+#include "component/PathToOnGrid.h"
+#include "component/SceneNode.h"
+
+#include <snacman/ImguiUtilities.h>
+#include <snacman/LoopSettings.h>
+#include <snacman/Profiling.h>
+#include <snacman/QueryManipulation.h>
 
 #include <algorithm>
 #include <array>
@@ -36,10 +42,6 @@
 #include <math/Color.h>
 #include <mutex>
 #include <optional>
-#include <snacman/ImguiUtilities.h>
-#include <snacman/LoopSettings.h>
-#include <snacman/Profiling.h>
-#include <snacman/QueryManipulation.h>
 #include <string>
 #include <tuple>
 #include <utility>

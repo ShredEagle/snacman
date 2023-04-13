@@ -1,10 +1,8 @@
 #pragma once
 
-
 #include <math/Color.h>
 #include <math/Quaternion.h>
 #include <math/Vector.h>
-
 
 namespace ad {
 namespace snacgame {

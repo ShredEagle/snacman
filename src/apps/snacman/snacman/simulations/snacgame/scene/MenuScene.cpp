@@ -1,20 +1,19 @@
 #include "MenuScene.h"
 
-#include "snacman/Input.h"
-#include "snacman/Logging.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
-#include "snacman/simulations/snacgame/InputCommandConverter.h"
-
-#include "../../../Input.h"
-#include "../component/Controller.h"
-#include "../component/Context.h"
-#include "../component/PlayerSlot.h"
 #include "../Entities.h"
 #include "../InputCommandConverter.h"
 #include "../SnacGame.h"
 
-#include <optional>
+#include "../component/Controller.h"
+#include "../component/Context.h"
+#include "../component/PlayerSlot.h"
+
+
+#include <snacman/Input.h>
+#include <snacman/Logging.h>
 #include <snacman/Profiling.h>
+
+#include <optional>
 
 namespace ad {
 namespace snacgame {

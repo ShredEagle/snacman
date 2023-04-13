@@ -1,13 +1,14 @@
 #include "Geometry.h"
 #include "GlobalPose.h"
-#include "../InputConstants.h"
+#include "AllowedMovement.h"
+#include "Controller.h"
 #include "PlayerMoveState.h"
-#include "../typedef.h"
 
-#include "imgui.h"
-#include "snacman/simulations/snacgame/LevelHelper.h"
-#include "snacman/simulations/snacgame/component/AllowedMovement.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
+#include "../typedef.h"
+#include "../InputConstants.h"
+#include "../LevelHelper.h"
+
+#include <imgui.h>
 
 namespace ad {
 namespace snacgame {

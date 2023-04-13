@@ -1,12 +1,14 @@
 #include "EatPill.h"
+
 #include "../GameParameters.h"
 #include "../typedef.h"
 
-#include "entity/Entity.h"
-#include "math/Homogeneous.h"
-#include "snacman/Profiling.h"
-#include "snacman/simulations/snacgame/component/SceneNode.h"
+#include "../component/SceneNode.h"
 
+#include <snacman/Profiling.h>
+
+#include <entity/Entity.h>
+#include <math/Homogeneous.h>
 #include <math/Transformations.h>
 
 namespace ad {

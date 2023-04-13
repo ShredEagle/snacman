@@ -12,10 +12,10 @@
 
 #include "../typedef.h"
 
-#include <limits>
 #include <math/Box.h>
 #include <math/Transformations.h>
 #include <utility>
+#include <limits>
 
 namespace ad {
 namespace snacgame {

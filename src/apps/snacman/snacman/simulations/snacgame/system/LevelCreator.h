@@ -1,8 +1,9 @@
 #pragma once
 
+#include "../GameContext.h"
+
 #include "../component/LevelData.h"
 #include "../component/SceneNode.h"
-#include "../GameContext.h"
 
 #include <entity/Query.h>
 
