@@ -51,7 +51,6 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
         };
         const component::SceneNode * prevNode = &fakePrevNode;
 
-        // TODO: (franz) use the optionalness of next child and prev child
         while (prevNode->mNextChild)
         {
             ent::Handle<ent::Entity> current = *prevNode->mNextChild;
