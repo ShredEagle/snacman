@@ -142,7 +142,7 @@ PowerUpUsage::getPowerupPlacementTile(EntHandle aHandle,
                     pathfind(aGeo.mPosition.xy(), aOtherGeo.mPosition.xy(),
                              localNodes, stride);
 
-                int newDepth = 0;
+                unsigned int newDepth = 0;
 
                 while (targetNode->mPrev != nullptr
                        && targetNode->mPrev->mPrev != nullptr

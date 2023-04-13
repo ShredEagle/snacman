@@ -1,7 +1,8 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/GameContext.h"
-#include "snacman/simulations/snacgame/LevelHelper.h"
+#include "../GameContext.h"
+#include "../GameParameters.h"
+#include "../LevelHelper.h"
 
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
@@ -40,7 +41,7 @@ inline component::PathfindNode *
 pathfind(const math::Position<2, float> & aSource,
          const math::Position<2, float> & aTarget,
          std::vector<component::PathfindNode> & aNodes,
-         int stride)
+         size_t stride)
 {
     // Comparator is basically greater on the reduced cost
     // this make the priority queue store the lowest cost
@@ -117,7 +118,7 @@ pathfind(const math::Position<2, float> & aSource,
         openedNode.pop();
         current->mOpened = false;
 
-        if (current->mPos.equalsWithinTolerance(aTarget, 0.51f))
+        if (current->mPos.equalsWithinTolerance(aTarget, gCellSize / 2))
         {
             closestNode = current;
             break;
@@ -128,8 +129,8 @@ pathfind(const math::Position<2, float> & aSource,
         for (Pos2 offset : direction)
         {
             component::PathfindNode & visitedNode = aNodes.at(
-                static_cast<int>(current->mIndex) + static_cast<int>(offset.x())
-                + static_cast<int>(offset.y()) * stride);
+                current->mIndex + static_cast<size_t>(offset.x())
+                + static_cast<size_t>(offset.y()) * stride);
             float distance = (visitedNode.mPos - current->mPos).getNorm();
             float newCost = current->mCost + distance;
 
