@@ -1,8 +1,6 @@
 #include "RenderThread.h"
 
-
 #include "Resources.h"
-
 
 namespace ad {
 namespace snac{

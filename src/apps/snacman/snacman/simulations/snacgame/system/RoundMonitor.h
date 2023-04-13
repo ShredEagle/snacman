@@ -1,8 +1,10 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/GameContext.h"
-#include "snacman/simulations/snacgame/component/LevelData.h"
-#include "snacman/simulations/snacgame/component/PlayerLifeCycle.h"
+#include "../GameContext.h"
+#include "../component/LevelData.h"
+#include "../component/PlayerLifeCycle.h"
+#include "../component/PlayerPowerUp.h"
+
 #include <entity/EntityManager.h>
 
 namespace ad {
@@ -22,7 +24,7 @@ public:
     void update();
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerLifeCycle> mPlayers;
+    ent::Query<component::PlayerLifeCycle, component::PlayerPowerUp> mPlayers;
     ent::Query<component::Pill>
         mPills;
     ent::Query<component::LevelEntity> mLevelEntities;

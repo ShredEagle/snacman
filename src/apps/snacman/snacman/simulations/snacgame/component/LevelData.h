@@ -35,6 +35,17 @@ struct Tile
     int mAllowedMove = gAllowedMovementNone;
 };
 
+struct PathfindNode
+{
+    float mReducedCost = std::numeric_limits<float>::max();
+    float mCost = std::numeric_limits<float>::max();
+    PathfindNode * mPrev = nullptr;
+    size_t mIndex = 0;
+    math::Position<2, float> mPos;
+    bool mPathable = false;
+    bool mOpened = false;
+};
+
 struct LevelData
 {
     // Level grid stored as
@@ -57,6 +68,8 @@ struct LevelData
     int mSeed;
 
     std::vector<Tile> mTiles;
+    std::vector<PathfindNode> mNodes;
+
     std::vector<int> mPortalIndex;
     float mCellSize = 1.f;
 };

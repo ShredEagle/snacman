@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "math/Vector.h"
 
 namespace ad {

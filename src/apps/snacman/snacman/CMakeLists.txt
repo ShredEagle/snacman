@@ -46,6 +46,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerMoveState.h
     simulations/snacgame/component/PlayerSlot.h
+    simulations/snacgame/component/PlayerPowerUp.h
     simulations/snacgame/component/SceneNode.h
     simulations/snacgame/component/Spawner.h
     simulations/snacgame/component/Text.h
@@ -65,6 +66,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/PlayerSpawner.h
     simulations/snacgame/system/PlayerInvulFrame.h
     simulations/snacgame/system/PortalManagement.h
+    simulations/snacgame/system/PowerUpUsage.h
     simulations/snacgame/system/RoundMonitor.h
     simulations/snacgame/system/SystemOrbitalCamera.h
     simulations/snacgame/system/SceneGraphResolver.h
@@ -104,6 +106,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/PlayerSpawner.cpp
     simulations/snacgame/system/PlayerInvulFrame.cpp
     simulations/snacgame/system/PortalManagement.cpp
+    simulations/snacgame/system/PowerUpUsage.cpp
     simulations/snacgame/system/RoundMonitor.cpp
     simulations/snacgame/system/SceneGraphResolver.cpp
     simulations/snacgame/system/SceneStateMachine.cpp

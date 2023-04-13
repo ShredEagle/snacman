@@ -1,15 +1,17 @@
 #pragma once
 
-#include "snacman/Input.h"
-#include "snacman/simulations/snacgame/GameContext.h"
-#include "snacman/simulations/snacgame/component/PathToOnGrid.h"
-#include "../component/PlayerMoveState.h"
+#include "../GameContext.h"
 
+#include "../component/PathToOnGrid.h"
+#include "../component/PlayerLifeCycle.h"
+#include "../component/PlayerMoveState.h"
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
 #include "../component/AllowedMovement.h"
 #include "../InputCommandConverter.h"
+
+#include <snacman/Input.h>
 
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
@@ -28,7 +30,7 @@ public:
     void update(float aDelta);
 
 private:
-    ent::Query<component::AllowedMovement, component::Controller, component::PlayerMoveState>
+    ent::Query<component::AllowedMovement, component::Controller, component::PlayerMoveState, component::PlayerLifeCycle>
         mPlayer;
     ent::Query<component::AllowedMovement, component::Geometry, component::PathToOnGrid>
         mPathfinder;

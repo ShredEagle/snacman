@@ -1,10 +1,11 @@
 #include "LevelCreator.h"
 
-#include "../component/LevelData.h"
-#include "../component/SceneNode.h"
 #include "../Entities.h"
 #include "../SceneGraph.h"
 #include "../typedef.h"
+
+#include "../component/LevelData.h"
+#include "../component/SceneNode.h"
 
 #include <entity/Entity.h>
 #include <markovjunior/Interpreter.h>
@@ -50,9 +51,12 @@ void LevelCreator::update()
         aLevelData.mTiles.reserve(aLevelData.mSize.width()
                                   * aLevelData.mSize.height());
         std::vector<component::Tile> & tiles = aLevelData.mTiles;
+        std::vector<component::PathfindNode> & nodes = aLevelData.mNodes;
         std::vector<int> & portals = aLevelData.mPortalIndex;
         int rowCount = aLevelData.mSize.width();
         int colCount = aLevelData.mSize.height();
+        tiles.reserve(rowCount * colCount);
+        nodes.reserve(rowCount * colCount);
 
         for (int z = 0; z < aGrid.mSize.depth(); z++)
         {
@@ -62,8 +66,15 @@ void LevelCreator::update()
                 {
                     float xFloat = static_cast<float>(x);
                     float yFloat = static_cast<float>(y);
-                    unsigned char value = aGrid.mCharacters.at(
-                        aGrid.mState.at(aGrid.getFlatGridIndex({x, y, z})));
+                    size_t flatIndex = aGrid.getFlatGridIndex({x, y, z});
+                    unsigned char value =
+                        aGrid.mCharacters.at(aGrid.mState.at(flatIndex));
+                    nodes.push_back({
+                        .mIndex = flatIndex,
+                        .mPos = math::Position<2, float>{static_cast<float>(x),
+                                                         static_cast<float>(y)},
+                        .mPathable = value != 'B',
+                    });
                     switch (value)
                     {
                     case 'W':
@@ -71,11 +82,27 @@ void LevelCreator::update()
                         tiles.push_back(component::Tile{
                             .mType = component::TileType::Path});
                         EntHandle path = createPathEntity(
-                            *mGameContext, math::Position<2, float>{xFloat, yFloat});
+                            *mGameContext,
+                            math::Position<2, float>{xFloat, yFloat});
                         insertEntityInScene(path, aLevelHandle);
                         EntHandle pill = createPill(
-                            *mGameContext, math::Position<2, float>{xFloat, yFloat});
+                            *mGameContext,
+                            math::Position<2, float>{xFloat, yFloat});
                         insertEntityInScene(pill, aLevelHandle);
+                        break;
+                    }
+                    case 'O':
+                    {
+                        tiles.push_back(component::Tile{
+                            .mType = component::TileType::Path});
+                        EntHandle path = createPathEntity(
+                            *mGameContext,
+                            math::Position<2, float>{xFloat, yFloat});
+                        insertEntityInScene(path, aLevelHandle);
+                        EntHandle powerup = createPowerUp(
+                            *mGameContext,
+                            math::Position<2, float>{xFloat, yFloat});
+                        insertEntityInScene(powerup, aLevelHandle);
                         break;
                     }
                     case 'K':
@@ -85,17 +112,19 @@ void LevelCreator::update()
                         int portalIndex = static_cast<int>(tiles.size() - 1);
                         portals.push_back(portalIndex);
                         EntHandle portal = createPortalEntity(
-                            *mGameContext, math::Position<2, float>{xFloat, yFloat},
+                            *mGameContext,
+                            math::Position<2, float>{xFloat, yFloat},
                             portalIndex);
                         insertEntityInScene(portal, aLevelHandle);
                         break;
                     }
-                    case 'G':
+                    case 'F':
                     {
                         tiles.push_back(component::Tile{
                             .mType = component::TileType::Spawn});
                         EntHandle spawn = createPlayerSpawnEntity(
-                            *mGameContext, math::Position<2, float>{xFloat, yFloat});
+                            *mGameContext,
+                            math::Position<2, float>{xFloat, yFloat});
                         insertEntityInScene(spawn, aLevelHandle);
                         break;
                     }

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/GameContext.h"
+#include "../GameContext.h"
+
 #include "../component/Geometry.h"
 #include "../component/MovementScreenSpace.h"
 #include "../component/PoseScreenSpace.h"

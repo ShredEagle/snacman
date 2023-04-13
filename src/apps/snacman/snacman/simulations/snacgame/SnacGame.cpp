@@ -1,48 +1,41 @@
 #include "SnacGame.h"
 
-#include "component/Context.h"
-#include "component/Geometry.h"
-#include "component/PlayerMoveState.h"
-#include "component/PlayerSlot.h"
-#include "component/PoseScreenSpace.h"
-#include "component/Text.h"
-#include "component/VisualMesh.h"
-#include "component/GlobalPose.h"
+#include "Entities.h"
 #include "GameContext.h"
 #include "GameParameters.h"
 #include "InputConstants.h"
 #include "scene/Scene.h"
 #include "SimulationControl.h"
-#include "Entities.h"
-#include "snacman/simulations/snacgame/SceneGraph.h"
-#include "snacman/simulations/snacgame/component/AllowedMovement.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
-#include "snacman/simulations/snacgame/component/PathToOnGrid.h"
-#include "snacman/simulations/snacgame/component/SceneNode.h"
-#include "typedef.h"
+#include "SceneGraph.h"
 #include "system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
+#include "typedef.h"
 
-#include <snacman/Profiling.h>
-#include <snacman/QueryManipulation.h>
+#include "component/Context.h"
+#include "component/Geometry.h"
+#include "component/GlobalPose.h"
+#include "component/PlayerMoveState.h"
+#include "component/PlayerSlot.h"
+#include "component/PoseScreenSpace.h"
+#include "component/Text.h"
+#include "component/VisualMesh.h"
+#include "component/AllowedMovement.h"
+#include "component/Controller.h"
+#include "component/LevelTags.h"
+#include "component/PathToOnGrid.h"
+#include "component/SceneNode.h"
+
 #include <snacman/ImguiUtilities.h>
 #include <snacman/LoopSettings.h>
 #include <snacman/Profiling.h>
+#include <snacman/QueryManipulation.h>
 
-#include <handy/Guard.h>
-
-#include <imguiui/ImguiUi.h>
-#include <math/Color.h>
-
-#include <imgui.h>
-
-#include <string>
-#include <optional>
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdio>
 #include <filesystem>
+#include <handy/Guard.h>
 #include <imgui.h>
 #include <imguiui/ImguiUi.h>
 #include <map>
@@ -78,8 +71,8 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    RawInput & aInput) :
     mAppInterface{&aAppInterface},
     mGameContext{
-        .mResources = 
-            snac::Resources{std::move(aResourceFinder), aFreetype, aRenderThread},
+        .mResources = snac::Resources{std::move(aResourceFinder), aFreetype,
+                                      aRenderThread},
         .mRenderThread = aRenderThread,
     },
     mMappingContext{mGameContext.mWorld, mGameContext.mResources},
@@ -119,19 +112,18 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         std::lock_guard lock{mImguiUi.mFrameMutex};
         mImguiUi.newFrame();
         // We must make sure to match each newFrame() to a render(),
-        // otherwise we might get access violation in the RenderThread, when calling ImguiUi::renderBackend()
-        Guard renderGuard{[this]()
-        {
-            this->mImguiUi.render();
-        }};
+        // otherwise we might get access violation in the RenderThread, when
+        // calling ImguiUi::renderBackend()
+        Guard renderGuard{[this]() { this->mImguiUi.render(); }};
 
         // NewFrame() updates the io catpure flag: consume them ASAP
-        // see: https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
+        // see:
+        // https://pixtur.github.io/mkdocs-for-imgui/site/FAQ/#qa-integration
         aInhibiter.resetCapture(static_cast<ImguiInhibiter::WantCapture>(
             (mImguiUi.isCapturingMouse() ? ImguiInhibiter::Mouse
-                                        : ImguiInhibiter::Null)
+                                         : ImguiInhibiter::Null)
             | (mImguiUi.isCapturingKeyboard() ? ImguiInhibiter::Keyboard
-                                            : ImguiInhibiter::Null)));
+                                              : ImguiInhibiter::Null)));
 
         mImguiDisplays.display();
 
@@ -140,40 +132,61 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             ent::Phase update;
             static ent::Query<component::PlayerSlot> playerSlotQuery{
                 mGameContext.mWorld};
-            static ent::Query<component::Controller> controllerQuery{mGameContext.mWorld};
+            static ent::Query<component::Controller> controllerQuery{
+                mGameContext.mWorld};
             ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
-            playerSlotQuery.each([&](EntHandle aPlayer, const component::PlayerSlot & aPlayerSlot) {
+            playerSlotQuery.each([&](EntHandle aPlayer,
+                                     const component::PlayerSlot &
+                                         aPlayerSlot) {
                 ImGui::PushID(aPlayerSlot.mIndex);
                 char playerHeader[64];
-                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader), "Player %d", aPlayerSlot.mIndex + 1);
-                if(ImGui::CollapsingHeader(playerHeader))
+                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader),
+                              "Player %d", aPlayerSlot.mIndex + 1);
+                if (ImGui::CollapsingHeader(playerHeader))
                 {
                     // This is an assumption but currently player that have
                     // a geometry should have a globalPose and a PlayerMoveState
                     if (aPlayer.get(update)->has<component::Geometry>())
                     {
                         Entity player = *aPlayer.get(update);
-                        const component::Geometry & geo = player.get<component::Geometry>();
-                        const component::Controller & controller = player.get<component::Controller>();
-                        const component::GlobalPose & pose = player.get<component::GlobalPose>();
-                        const component::PlayerMoveState & moveState = player.get<component::PlayerMoveState>();
+                        const component::Geometry & geo =
+                            player.get<component::Geometry>();
+                        const component::Controller & controller =
+                            player.get<component::Controller>();
+                        const component::GlobalPose & pose =
+                            player.get<component::GlobalPose>();
+                        const component::PlayerMoveState & moveState =
+                            player.get<component::PlayerMoveState>();
 
                         ImGui::BeginChild("Action", ImVec2(200.f, 0.f), true);
                         if (controller.mType == ControllerType::Dummy)
                         {
                             if (ImGui::Button("Bind to keyboard"))
                             {
-                                OptEntHandle oldController = snac::getFirstHandle(controllerQuery, [](const component::Controller & aController ) {
-                                    return aController.mType == ControllerType::Keyboard;
-                                });
+                                OptEntHandle oldController =
+                                    snac::getFirstHandle(
+                                        controllerQuery,
+                                        [](const component::Controller &
+                                               aController) {
+                                            return aController.mType
+                                                   == ControllerType::Keyboard;
+                                        });
 
                                 if (oldController)
                                 {
-                                    oldController->get(update)->get<component::Controller>().mType = ControllerType::Dummy;
-                                    oldController->get(update)->get<component::Controller>().mControllerId = gDummyControllerIndex;
+                                    oldController->get(update)
+                                        ->get<component::Controller>()
+                                        .mType = ControllerType::Dummy;
+                                    oldController->get(update)
+                                        ->get<component::Controller>()
+                                        .mControllerId = gDummyControllerIndex;
                                 }
-                                aPlayer.get(update)->get<component::Controller>().mType = ControllerType::Keyboard;
-                                aPlayer.get(update)->get<component::Controller>().mControllerId = gKeyboardControllerIndex;
+                                aPlayer.get(update)
+                                    ->get<component::Controller>()
+                                    .mType = ControllerType::Keyboard;
+                                aPlayer.get(update)
+                                    ->get<component::Controller>()
+                                    .mControllerId = gKeyboardControllerIndex;
                             }
 
                             if (ImGui::Button("Remove player"))
@@ -190,12 +203,15 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                         controller.drawUi();
                         ImGui::EndChild();
                     }
-                    else {
-                        if(ImGui::Button("Create dummy player"))
+                    else
+                    {
+                        if (ImGui::Button("Create dummy player"))
                         {
                             {
                                 ent::Phase hello;
-                                fillSlotWithPlayer(mGameContext, hello, ControllerType::Dummy, aPlayer, gDummyControllerIndex);
+                                fillSlotWithPlayer(
+                                    mGameContext, hello, ControllerType::Dummy,
+                                    aPlayer, gDummyControllerIndex);
                             }
                         }
                     }
@@ -218,27 +234,31 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         }
         if (mImguiDisplays.mSpeedControl)
         {
-            mGameContext.mSimulationControl.drawSimulationUi(mGameContext.mWorld, &mImguiDisplays.mSpeedControl);
+            mGameContext.mSimulationControl.drawSimulationUi(
+                mGameContext.mWorld, &mImguiDisplays.mSpeedControl);
         }
         if (mImguiDisplays.mShowSimulationDelta)
         {
-            ImGui::Begin("Gameloop");
-            int simulationDelta = (int) duration_cast<std::chrono::milliseconds>(
-                                    aSettings.mSimulationDelta)
-                                    .count();
+            ImGui::Begin("Gameloop", &mImguiDisplays.mShowSimulationDelta);
+            int simulationDelta =
+                (int) duration_cast<std::chrono::milliseconds>(
+                    aSettings.mSimulationDelta)
+                    .count();
             if (ImGui::InputInt("Simulation period (ms)", &simulationDelta))
             {
                 simulationDelta = std::clamp(simulationDelta, 1, 200);
             }
-            aSettings.mSimulationDelta = std::chrono::milliseconds{simulationDelta};
+            aSettings.mSimulationDelta =
+                std::chrono::milliseconds{simulationDelta};
             int updateDuration = (int) duration_cast<std::chrono::milliseconds>(
-                                    aSettings.mUpdateDuration)
-                                    .count();
+                                     aSettings.mUpdateDuration)
+                                     .count();
             if (ImGui::InputInt("Update duration (ms)", &updateDuration))
             {
                 updateDuration = std::clamp(updateDuration, 1, 500);
             }
-            aSettings.mUpdateDuration = std::chrono::milliseconds{updateDuration};
+            aSettings.mUpdateDuration =
+                std::chrono::milliseconds{updateDuration};
 
             bool interpolate = aSettings.mInterpolate;
             ImGui::Checkbox("State interpolation", &interpolate);
@@ -256,45 +276,57 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         }
         if (mImguiDisplays.mShowRenderProfiler)
         {
-            ImGui::Begin("Render profiler", &mImguiDisplays.mShowRenderProfiler);
-            ImGui::TextUnformatted(snac::getRenderProfilerPrint().get().c_str());
+            ImGui::Begin("Render profiler",
+                         &mImguiDisplays.mShowRenderProfiler);
+            ImGui::TextUnformatted(
+                snac::getRenderProfilerPrint().get().c_str());
             ImGui::End();
         }
         if (mImguiDisplays.mShowRenderControls)
         {
             // TODO This should be an easier raii object
-            ImGui::Begin("Render controls");
-            Guard endGuard{[](){
-                ImGui::End();
-            }};
+            ImGui::Begin("Render controls", &mImguiDisplays.mShowRenderControls);
+            Guard endGuard{[]() { ImGui::End(); }};
             recompileShaders = ImGui::Button("Recompile shaders");
 
             mGameContext.mRenderThread.continueGui();
         }
+        if (mImguiDisplays.mGameControl)
+        {
+            ImGui::Begin("Game control", &mImguiDisplays.mGameControl);
+            if (ImGui::Button("End round"))
+            {
+                Phase destroy;
+                ent::Query<component::Pill>{mGameContext.mWorld}.each([&destroy](EntHandle aHandle, const component::Pill &){
+                    aHandle.get(destroy)->erase();
+                });
+
+            }
+            ImGui::End();
+        }
         if (mImguiDisplays.mPathfinding)
         {
-            ImGui::Begin("Debug function");
+            ImGui::Begin("Debug function", &mImguiDisplays.mPathfinding);
             if (ImGui::Button("Create pathfinder"))
             {
                 EntHandle pathfinder = mGameContext.mWorld.addEntity();
-                EntHandle player = *snac::getFirstHandle(ent::Query<component::PlayerSlot, component::Geometry>{mGameContext.mWorld});
+                EntHandle player = *snac::getFirstHandle(
+                    ent::Query<component::PlayerSlot, component::Geometry>{
+                        mGameContext.mWorld});
                 {
                     Phase pathfinding;
                     Entity pEntity = *pathfinder.get(pathfinding);
-                    addMeshGeoNode(pathfinding,
-                            mGameContext,
-                            pEntity,
-                            "CUBE",
-                            {7.f, 7.f, gPillHeight},
-                            1.f,
-                            {0.5f, 0.5f, 0.5f}
-                        );
-                    pEntity.add(component::AllowedMovement{.mWindow = gOtherTurningZoneHalfWidth});
+                    addMeshGeoNode(pathfinding, mGameContext, pEntity, "CUBE",
+                                   {7.f, 7.f, gPillHeight}, 1.f,
+                                   {0.5f, 0.5f, 0.5f});
+                    pEntity.add(component::AllowedMovement{
+                        .mWindow = gOtherTurningZoneHalfWidth});
                     pEntity.add(component::PathToOnGrid{player});
                 }
                 EntHandle root = mStateMachine->getCurrentScene()->mSceneRoot;
                 Phase phase;
-                EntHandle level = *root.get(phase)->get<component::SceneNode>().aFirstChild;
+                EntHandle level =
+                    *root.get(phase)->get<component::SceneNode>().mFirstChild;
                 insertEntityInScene(pathfinder, level);
             }
             ImGui::End();
@@ -326,8 +358,7 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
     std::optional<scene::Transition> transition =
-        mStateMachine->getCurrentScene()->update(updateDelta,
-                                                 aInput);
+        mStateMachine->getCurrentScene()->update(updateDelta, aInput);
 
     if (transition)
     {

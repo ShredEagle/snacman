@@ -1,12 +1,13 @@
 #include "IntegratePlayerMovement.h"
 
-#include "snac-renderer/Cube.h"
-#include "snacman/simulations/snacgame/LevelHelper.h"
-
-#include "../component/LevelData.h"
+#include "../LevelHelper.h"
 #include "../GameParameters.h"
 
+#include "../component/LevelData.h"
+
 #include <snacman/Profiling.h>
+
+#include <snac-renderer/Cube.h>
 
 namespace ad {
 namespace snacgame {
@@ -22,7 +23,7 @@ void IntegratePlayerMovement::update(float aDelta)
 
     mPlayer.each([aDelta](component::Geometry & aGeometry,
                           const component::PlayerMoveState & aMoveState) {
-        Pos2_i intPos = getLevelPosition_i(aGeometry.mPosition);
+        Pos2_i intPos = getLevelPosition_i(aGeometry.mPosition.xy());
         if (aMoveState.mMoveState & gPlayerMoveFlagUp)
         {
             aGeometry.mPosition.y() += 1.f * gBasePlayerSpeed * aDelta;

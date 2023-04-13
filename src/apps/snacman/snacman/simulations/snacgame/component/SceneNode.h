@@ -7,13 +7,10 @@ namespace component {
 
 struct SceneNode
 {
-    std::optional<ent::Handle<ent::Entity>> aFirstChild;
-    std::optional<ent::Handle<ent::Entity>> aNextChild;
-    std::optional<ent::Handle<ent::Entity>> aPrevChild;
-    std::optional<ent::Handle<ent::Entity>> aParent;
-    // HACK: (franz) this is necessary because we do not have a way to
-    // compare to a non initialized handle
-    std::size_t mChildCount = 0;
+    std::optional<ent::Handle<ent::Entity>> mFirstChild;
+    std::optional<ent::Handle<ent::Entity>> mNextChild;
+    std::optional<ent::Handle<ent::Entity>> mPrevChild;
+    std::optional<ent::Handle<ent::Entity>> mParent;
 };
 
 }

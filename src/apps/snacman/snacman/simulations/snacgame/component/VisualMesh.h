@@ -1,6 +1,4 @@
-
 #pragma once
-
 
 #include <snac-renderer/Mesh.h>
 

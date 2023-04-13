@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "snacman/Input.h"
 
 namespace ad {

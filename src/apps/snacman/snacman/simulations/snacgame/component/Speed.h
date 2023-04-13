@@ -1,8 +1,6 @@
 #pragma once
 
-
 #include <math/Quaternion.h>
-
 
 namespace ad {
 namespace snacgame {

@@ -24,25 +24,27 @@
 #include "../system/AllowMovement.h"
 #include "../system/ConsolidateGridMovement.h"
 #include "../system/EatPill.h"
-#include "../system/Pathfinding.h"
 #include "../system/IntegratePlayerMovement.h"
 #include "../system/LevelCreator.h"
 #include "../system/MovementIntegration.h"
+#include "../system/Pathfinding.h"
 #include "../system/PlayerInvulFrame.h"
 #include "../system/PlayerSpawner.h"
 #include "../system/PortalManagement.h"
+#include "../system/PowerUpUsage.h"
 #include "../system/RoundMonitor.h"
 #include "../system/SceneGraphResolver.h"
 #include "../typedef.h"
+
+#include <snacman/Input.h>
+#include <snacman/Profiling.h>
+#include <snacman/QueryManipulation.h>
+#include <snacman/Resources.h>
 
 #include <algorithm>
 #include <array>   // for array
 #include <cstddef> // for size_t
 #include <map>     // for opera...
-#include <snacman/Input.h>
-#include <snacman/Profiling.h>
-#include <snacman/QueryManipulation.h>
-#include <snacman/Resources.h>
 #include <tuple>  // for get
 #include <vector> // for vector
 
@@ -54,15 +56,16 @@ const char * const gMarkovRoot{"markov/"};
 
 namespace {
 
-EntHandle createLevel(GameContext & aContext)
+EntHandle createLevel(GameContext & aContext, const char * aLvlFile)
 {
     EntHandle level = aContext.mWorld.addEntity();
     {
-        ent::Phase createLevel;
+        Phase createLevel;
         auto markovRoot = aContext.mResources.find(gMarkovRoot);
-        ent::Entity levelEntity = *level.get(createLevel);
-        levelEntity.add(component::LevelData(
-            aContext.mWorld, markovRoot.value(), "snaclvl.xml", {15, 15, 1}, 123123));
+        Entity levelEntity = *level.get(createLevel);
+        levelEntity.add(component::LevelData(aContext.mWorld,
+                                             markovRoot.value(), aLvlFile,
+                                             {15, 15, 1}, 123123));
         levelEntity.add(component::LevelToCreate{});
         levelEntity.add(component::SceneNode{});
         levelEntity.add(component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
@@ -72,7 +75,24 @@ EntHandle createLevel(GameContext & aContext)
     return level;
 }
 
+void setupLevel(GameContext & aGameContext, Phase & aPhase)
+{
+    aGameContext.mLevel->get(aPhase)->add(component::LevelToCreate{});
+    aGameContext.mLevel->get(aPhase)->add(component::SceneNode{});
+    aGameContext.mLevel->get(aPhase)->add(
+        component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
+    aGameContext.mLevel->get(aPhase)->add(component::GlobalPose{});
 }
+
+void teardownLevel(GameContext & aGameContext, Phase & aPhase)
+{
+    aGameContext.mLevel->get(aPhase)->remove<component::SceneNode>();
+    aGameContext.mLevel->get(aPhase)->remove<component::LevelCreated>();
+    aGameContext.mLevel->get(aPhase)->remove<component::Geometry>();
+    aGameContext.mLevel->get(aPhase)->remove<component::GlobalPose>();
+}
+
+} // namespace
 
 GameScene::GameScene(const std::string & aName,
                      GameContext & aGameContext,
@@ -84,26 +104,29 @@ GameScene::GameScene(const std::string & aName,
     mPlayers{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
-    createLevel(mGameContext);
+    createLevel(mGameContext,
+                mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml");
 }
 
-void GameScene::setup(const Transition & aTransition,
-                      RawInput & aInput)
+void GameScene::setup(const Transition & aTransition, RawInput & aInput)
 {
     {
-        ent::Phase init;
-        mSystems.get(init)->add(system::SceneGraphResolver{mGameContext, mSceneRoot});
-        mSystems.get(init)->add(system::PlayerSpawner{mGameContext});
-        mSystems.get(init)->add(system::RoundMonitor{mGameContext});
-        mSystems.get(init)->add(system::PlayerInvulFrame{mGameContext});
-        mSystems.get(init)->add(system::AllowMovement{mGameContext});
-        mSystems.get(init)->add(system::ConsolidateGridMovement{mGameContext});
-        mSystems.get(init)->add(system::IntegratePlayerMovement{mGameContext});
-        mSystems.get(init)->add(system::LevelCreator{mGameContext});
-        mSystems.get(init)->add(system::MovementIntegration{mGameContext});
-        mSystems.get(init)->add(system::EatPill{mGameContext});
-        mSystems.get(init)->add(system::PortalManagement{mGameContext});
-        mSystems.get(init)->add(system::Pathfinding{mGameContext});
+        Phase init;
+        setupLevel(mGameContext, init);
+        mSystems.get(init)
+            ->add(system::SceneGraphResolver{mGameContext, mSceneRoot})
+            .add(system::PlayerSpawner{mGameContext})
+            .add(system::RoundMonitor{mGameContext})
+            .add(system::PlayerInvulFrame{mGameContext})
+            .add(system::AllowMovement{mGameContext})
+            .add(system::ConsolidateGridMovement{mGameContext})
+            .add(system::IntegratePlayerMovement{mGameContext})
+            .add(system::LevelCreator{mGameContext})
+            .add(system::MovementIntegration{mGameContext})
+            .add(system::EatPill{mGameContext})
+            .add(system::PortalManagement{mGameContext})
+            .add(system::PowerUpUsage{mGameContext})
+            .add(system::Pathfinding{mGameContext});
     }
 
     // Can't insert mLevel before the createLevel phase is over
@@ -113,37 +136,40 @@ void GameScene::setup(const Transition & aTransition,
 
 void GameScene::teardown(RawInput & aInput)
 {
-    ent::Phase destroy;
+    {
+        Phase destroy;
 
-    removeEntityFromScene(*mSceneRoot.get(destroy)->get<component::SceneNode>().aFirstChild);
+        teardownLevel(mGameContext, destroy);
 
-    mSystems.get(destroy)->erase();
-    mSystems = mGameContext.mWorld.addEntity();
+        mSystems.get(destroy)->erase();
+        mSystems = mGameContext.mWorld.addEntity();
 
-    mGameContext.mLevel->get(destroy)->erase();
-    mGameContext.mLevel = createLevel(mGameContext);
+        mTiles.each(
+            [&destroy](EntHandle aHandle, const component::LevelEntity &) {
+                aHandle.get(destroy)->erase();
+            });
 
-    mTiles.each([&destroy](EntHandle aHandle, const component::LevelEntity &) {
-        aHandle.get(destroy)->erase();
-    });
-
-    mPathfinders.each([&destroy](EntHandle aHandle, const component::PathToOnGrid &) {
-        aHandle.get(destroy)->erase();
-    });
-
-    mPlayers.each([&destroy](EntHandle aHandle, component::PlayerSlot & aSlot,
-                             component::Controller & aController) {
-
-        removePlayerFromGame(destroy, aHandle);
-    });
+        mPlayers.each([&destroy](EntHandle aHandle,
+                                 component::PlayerSlot & aSlot,
+                                 component::Controller & aController) {
+            removePlayerFromGame(destroy, aHandle);
+        });
+    }
+    {
+        // TODO: (franz) remove this at some point
+        Phase debugDestroy;
+        mPathfinders.each([&debugDestroy](EntHandle aHandle,
+                                          const component::PathToOnGrid &) {
+            aHandle.get(debugDestroy)->erase();
+        });
+    }
 }
 
-std::optional<Transition>
-GameScene::update(float aDelta, RawInput & aInput)
+std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
 
-    ent::Phase update;
+    Phase update;
 
     bool quit = false;
 
@@ -171,25 +197,24 @@ GameScene::update(float aDelta, RawInput & aInput)
         quit |= static_cast<bool>(aController.mCommandQuery & gQuitCommand);
     });
 
-    ent::Phase bindPlayerPhase;
-
+    Phase bindPlayerPhase;
     // This works because gKeyboardControllerIndex is -1
     // So this is a bit janky but it unifies the player join code
-    for (std::size_t controlIndex = gKeyboardControllerIndex;
-         controlIndex < aInput.mGamepads.size(); ++controlIndex)
+    for (int controlIndex = gKeyboardControllerIndex;
+         controlIndex < (int) aInput.mGamepads.size(); ++controlIndex)
     {
         if (std::find(boundControllers.begin(), boundControllers.end(),
-                      gKeyboardControllerIndex)
+                      controlIndex)
             == boundControllers.end())
         {
             int command = gNoCommand;
             const bool controllerIsKeyboard =
-                (int)controlIndex == gKeyboardControllerIndex;
+                (int) controlIndex == gKeyboardControllerIndex;
 
             if (controllerIsKeyboard)
             {
-                convertKeyboardInput("unbound", aInput.mKeyboard,
-                                     mContext->mKeyboardMapping);
+                command = convertKeyboardInput("unbound", aInput.mKeyboard,
+                                               mContext->mKeyboardMapping);
             }
             else
             {
@@ -200,15 +225,10 @@ GameScene::update(float aDelta, RawInput & aInput)
 
             if (command & gJoin)
             {
-                OptEntHandle player = findSlotAndBind(
-                    mGameContext, bindPlayerPhase, mSlots,
-                    controllerIsKeyboard ? ControllerType::Keyboard
-                                         : ControllerType::Gamepad,
-                    static_cast<int>(controlIndex));
-                if (player)
-                {
-                    insertEntityInScene(*player, *mGameContext.mLevel);
-                }
+                findSlotAndBind(mGameContext, bindPlayerPhase, mSlots,
+                                controllerIsKeyboard ? ControllerType::Keyboard
+                                                     : ControllerType::Gamepad,
+                                static_cast<int>(controlIndex));
             }
         }
     }
@@ -227,10 +247,11 @@ GameScene::update(float aDelta, RawInput & aInput)
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
     mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
     mSystems.get(update)->get<system::Pathfinding>().update();
+    mSystems.get(update)->get<system::EatPill>().update();
+    mSystems.get(update)->get<system::PowerUpUsage>().update();
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
-    mSystems.get(update)->get<system::EatPill>().update();
 
     return std::nullopt;
 }

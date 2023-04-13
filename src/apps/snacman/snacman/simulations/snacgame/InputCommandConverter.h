@@ -1,7 +1,7 @@
 #pragma once
 
 #include "InputConstants.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
+#include "component/Controller.h"
 
 #include <platform/Filesystem.h>
 
@@ -81,6 +81,7 @@ const inline BidirectionalMap<std::string, int> gCommandFlags{
     {"gPlayerMoveFlagDown", gPlayerMoveFlagDown},
     {"gPlayerMoveFlagLeft", gPlayerMoveFlagLeft},
     {"gPlayerMoveFlagRight", gPlayerMoveFlagRight},
+    {"gPlayerUsePowerup", gPlayerUsePowerup | gPositiveEdge},
 
     {"gJoin", gJoin | gPositiveEdge},
 
@@ -125,6 +126,7 @@ const inline BidirectionalMap<std::string, int> gKeyboardMappingDictionnary{
     {"esc", GLFW_KEY_ESCAPE},
     {"up", GLFW_KEY_UP},
     {"down", GLFW_KEY_DOWN},
+    {"space", GLFW_KEY_SPACE},
     {"left", GLFW_KEY_LEFT},
     {"right", GLFW_KEY_RIGHT},
     {"enter", GLFW_KEY_ENTER},

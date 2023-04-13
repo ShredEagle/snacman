@@ -11,16 +11,17 @@ constexpr int gPlayerMoveFlagUp = 1 << 1;
 constexpr int gPlayerMoveFlagDown = 1 << 2;
 constexpr int gPlayerMoveFlagLeft = 1 << 3;
 constexpr int gPlayerMoveFlagRight = 1 << 4;
+constexpr int gPlayerUsePowerup = 1 << 5;
 
-constexpr int gJoin = 1 << 5;
+constexpr int gJoin = 1 << 10;
 
-constexpr int gSelectItem = 1 << 6;
-constexpr int gBack = 1 << 7;
-constexpr int gGoUp = 1 << 8;
-constexpr int gGoDown = 1 << 9;
-constexpr int gGoLeft = 1 << 10;
-constexpr int gGoRight = 1 << 11;
+constexpr int gSelectItem = 1 << 16;
+constexpr int gBack = 1 << 17;
+constexpr int gGoUp = 1 << 18;
+constexpr int gGoDown = 1 << 19;
+constexpr int gGoLeft = 1 << 20;
+constexpr int gGoRight = 1 << 21;
 
-constexpr int gQuitCommand = 1 << 12;
+constexpr int gQuitCommand = 1 << 22;
 }
 }

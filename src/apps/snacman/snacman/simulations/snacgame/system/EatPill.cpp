@@ -1,11 +1,14 @@
 #include "EatPill.h"
+
 #include "../GameParameters.h"
+#include "../typedef.h"
 
-#include "entity/Entity.h"
-#include "math/Homogeneous.h"
-#include "snacman/Profiling.h"
-#include "snacman/simulations/snacgame/component/SceneNode.h"
+#include "../component/SceneNode.h"
 
+#include <snacman/Profiling.h>
+
+#include <entity/Entity.h>
+#include <math/Homogeneous.h>
 #include <math/Transformations.h>
 
 namespace ad {
@@ -14,35 +17,24 @@ namespace system {
 void EatPill::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    ent::Phase eatPillUpdate;
-    mPlayers.each([&](component::Geometry & aPlayerGeo,
+    mPlayers.each([this](component::Geometry & aPlayerGeo,
                       const component::PlayerSlot & aSlot,
                       component::Collision aPlayerCol,
                       component::PlayerLifeCycle & aPlayerData,
                       component::Text & aText) {
 
-        const math::Vec<3,float> & worldPos = aPlayerGeo.mPosition.as<math::Vec>();
-        auto playerHitbox = aPlayerCol.mHitbox;
-        math::Position<4, float> transformedPos =  math::homogeneous::makePosition(playerHitbox.mPosition) * math::trans3d::translate(worldPos);
-        playerHitbox.mPosition = transformedPos.xyz();
+        ent::Phase eatPillUpdate;
+        Box_f playerHitbox = component::transformHitbox(aPlayerGeo.mPosition, aPlayerCol.mHitbox);
         
-        mPills.each([&](ent::Handle<ent::Entity> aHandle,
+        mPills.each([&eatPillUpdate, &playerHitbox, &aPlayerData, &aSlot, &aText](ent::Handle<ent::Entity> aHandle,
                         const component::Geometry & aPillGeo,
                         const component::Collision & aPillCol) {
-            const math::Vec<3,float> & worldPos = aPillGeo.mPosition.as<math::Vec>();
-            auto pillHitbox = aPillCol.mHitbox;
-            math::Position<4, float> transformedPos =  math::homogeneous::makePosition(pillHitbox.mPosition) * math::trans3d::translate(worldPos);
-            pillHitbox.mPosition = transformedPos.xyz();
+            Box_f pillHitbox = component::transformHitbox(aPillGeo.mPosition, aPillCol.mHitbox);
 
-            if (pillHitbox.xMin() <= playerHitbox.xMax()
-                && pillHitbox.xMax() >= playerHitbox.xMin()
-                && pillHitbox.yMin() <= playerHitbox.yMax()
-                && pillHitbox.yMax() >= playerHitbox.yMin()
-                && pillHitbox.zMin() <= playerHitbox.zMax()
-                && pillHitbox.zMax() >= playerHitbox.zMin())
+            if (component::collideWithSat(pillHitbox, playerHitbox))
             {
                 aHandle.get(eatPillUpdate)->erase();
-                aPlayerData.mPoints += 10;
+                aPlayerData.mPoints += gPointPerPill;
                 std::ostringstream playerText;
                 playerText << "P" << aSlot.mIndex + 1 << " "
                            << aPlayerData.mPoints;

@@ -1,8 +1,6 @@
 #pragma once
 
-
 #include <entity/EntityManager.h>
-
 
 namespace ad {
 namespace snacgame {

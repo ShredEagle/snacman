@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "snacman/simulations/snacgame/GameParameters.h"
+#include "../GameParameters.h"
 #include "../InputCommandConverter.h"
 namespace ad {
 namespace snacgame {

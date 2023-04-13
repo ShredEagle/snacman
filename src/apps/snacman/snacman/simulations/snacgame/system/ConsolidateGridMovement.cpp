@@ -1,9 +1,11 @@
 #include "ConsolidateGridMovement.h"
 
-#include "snacman/Logging.h"
-#include "snacman/Profiling.h"
-
 #include "../typedef.h"
+
+#include "../component/PlayerLifeCycle.h"
+
+#include <snacman/Logging.h>
+#include <snacman/Profiling.h>
 
 namespace ad {
 namespace snacgame {
@@ -15,7 +17,8 @@ void ConsolidateGridMovement::update(float aDelta)
     TIME_RECURRING_CLASSFUNC(Main);
     mPlayer.each([](const component::AllowedMovement & aAllowedMovement,
                     component::Controller & aController,
-                    component::PlayerMoveState & aMoveState) {
+                    component::PlayerMoveState & aMoveState,
+                    const component::PlayerLifeCycle & aLifeCycle ) {
         int oldMoveState = aMoveState.mMoveState;
         int inputMoveFlag = gPlayerMoveFlagNone;
 
@@ -23,7 +26,13 @@ void ConsolidateGridMovement::update(float aDelta)
 
         inputMoveFlag &= aAllowedMovement.mAllowedMovement;
 
-        if (inputMoveFlag == gPlayerMoveFlagNone)
+        bool canMove = aLifeCycle.mHitStun <= 0.f;
+
+        if (!canMove)
+        {
+            inputMoveFlag = gPlayerMoveFlagNone;
+        }
+        else if (inputMoveFlag == gPlayerMoveFlagNone)
         {
             inputMoveFlag = oldMoveState & aAllowedMovement.mAllowedMovement;
         }
@@ -43,10 +52,23 @@ void ConsolidateGridMovement::update(float aDelta)
 
                 if (direction.x() != 0.f || direction.y() != 0.f)
                 {
-                    direction = direction.normalize();
+                    float distSquared = direction.getNormSquared();
+                    Vec2 displacement = direction.normalize() * aDelta * gBaseDogSpeed;
 
-                    aGeometry.mPosition +=
-                        Vec3{direction.x(), direction.y(), 0.f} * aDelta * gBaseDogSpeed;
+                    if (displacement.getNormSquared() < distSquared)
+                    {
+                        aGeometry.mPosition +=
+                            Vec3{displacement.x(), displacement.y(), 0.f};
+                    }
+                    else
+                    {
+                        aGeometry.mPosition = {
+                            aPathfinder.mCurrentTarget.x(),
+                            aPathfinder.mCurrentTarget.y(),
+                            aGeometry.mPosition.z(),
+                        };
+                    }
+                    
                 }
             }
         });

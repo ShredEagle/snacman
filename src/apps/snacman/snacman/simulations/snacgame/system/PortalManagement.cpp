@@ -1,9 +1,9 @@
 #include "PortalManagement.h"
 
-#include "../../../Profiling.h"
-
 #include "../typedef.h"
 #include "../LevelHelper.h"
+
+#include <snacman/Profiling.h>
 
 namespace ad {
 namespace snacgame {
@@ -23,7 +23,7 @@ void PortalManagement::update()
         mPlayer.each([&](component::Geometry & aPlayerGeo,
                          component::PlayerMoveState & aMoveState) {
             math::Position<3, float> & playerPos = aPlayerGeo.mPosition;
-            const Pos2_i intPlayerPos = getLevelPosition_i(playerPos);
+            const Pos2_i intPlayerPos = getLevelPosition_i(playerPos.xy());
 
             if (aMoveState.mCurrentPortal != -1 && aMoveState.mDestinationPortal != -1)
             {

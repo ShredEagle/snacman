@@ -1,11 +1,11 @@
 #pragma once
 
-#include "entity/Entity.h"
-#include "snacman/simulations/snacgame/GameContext.h"
+#include "../GameContext.h"
 #include "../component/PlayerLifeCycle.h"
 #include "../component/Spawner.h"
 #include "../component/Geometry.h"
 
+#include <entity/Entity.h>
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
 

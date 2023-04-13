@@ -2,9 +2,9 @@
 
 #include "GameParameters.h"
 
-#include "math/Quaternion.h"
 #include <entity/Entity.h>
 #include <entity/Query.h>
+#include <math/Quaternion.h>
 #include <math/Color.h>
 #include <math/Vector.h>
 #include <memory>
@@ -32,7 +32,7 @@ struct Transition;
 struct GameContext;
 
 constexpr float gPillHeight = 6 * gCellSize * 0.1f;
-constexpr float gPlayerHeight = 2 * gCellSize * 0.1f;
+constexpr float gPlayerHeight = -4 * gCellSize * 0.1f;
 constexpr float gLevelHeight = 0 * gCellSize * 0.1f;
 
 void addMeshGeoNode(ent::Phase & aPhase,
@@ -47,6 +47,9 @@ void addMeshGeoNode(ent::Phase & aPhase,
 
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
                                     const math::Position<2, float> & Pos);
+ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
+                                    const math::Position<2, float> & Pos);
+ent::Handle<ent::Entity> createPlayerPowerUp(GameContext & aContext);
 ent::Handle<ent::Entity>
 createPathEntity(GameContext & aContext, const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>

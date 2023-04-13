@@ -1,17 +1,19 @@
 #include "AllowMovement.h"
 
-#include "math/Color.h"
-#include "snacman/Input.h"
-#include "snacman/Logging.h"
-#include "snacman/simulations/snacgame/LevelHelper.h"
 
+#include "../LevelHelper.h"
 #include "../typedef.h"
 
 #include "../component/AllowedMovement.h"
 #include "../component/LevelData.h"
 
-#include <cmath>
+#include <snacman/Input.h>
+#include <snacman/Logging.h>
 #include <snacman/Profiling.h>
+
+#include <math/Color.h>
+
+#include <cmath>
 
 namespace ad {
 namespace snacgame {
@@ -34,7 +36,7 @@ void AllowMovement::update()
                     component::AllowedMovement & aAllowedMovement) {
         int allowedMovementFlag = component::gAllowedMovementNone;
 
-        Pos2_i intPos = getLevelPosition_i(aGeo.mPosition);
+        Pos2_i intPos = getLevelPosition_i(aGeo.mPosition.xy());
         float fracPosX = aGeo.mPosition.x() - intPos.x();
         float fracPosY = aGeo.mPosition.y() - intPos.y();
 

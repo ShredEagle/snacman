@@ -1,16 +1,17 @@
 #pragma once
 
-// TODO: before commit change this
-#include "math/Angle.h"
-#include "math/Quaternion.h"
-#include "math/Vector.h"
+#include <math/Angle.h>
+#include <math/Quaternion.h>
+#include <math/Vector.h>
+
 namespace ad {
 namespace snacgame {
 
 constexpr int gGridSize = 29;
 constexpr float gCellSize = 1.f;
-constexpr float gPlayerTurningZoneHalfWidth = 0.2f;
+constexpr float gPlayerTurningZoneHalfWidth = 0.4f;
 constexpr float gOtherTurningZoneHalfWidth = 0.05f;
+constexpr int gPointPerPill = 10;
 
 
 static const math::Quaternion<float> gWorldCoordTo3dCoordQuat = math::Quaternion<float>{
