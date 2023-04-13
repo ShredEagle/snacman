@@ -47,7 +47,7 @@ void addMeshGeoNode(ent::Phase & aPhase,
                     float aScale = 1.f,
                     math::Size<3, float> aInstanceScale = {1.f, 1.f, 1.f},
                     math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
-                    math::hdr::Rgba_f aColor = math::hdr::gBlack<float>);
+                    math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
 
 ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
                                          std::string aText,

@@ -6,12 +6,11 @@ layout(location=2) in vec4 ve_Tangent_l;
 #ifdef TEXTURES
 layout(location=3) in vec2 ve_TextureCoords0;
 layout(location=4) in vec2 ve_TextureCoords1;
-#else
+#endif
 // Not enabled in the texture case for the moment (could be taken from COLOR_0 I suppose)
 // because we need a default value of [1, 1, 1, 1], not [0, 0, 0, 1]
 // Could be addressed via: https://www.khronos.org/opengl/wiki/Vertex_Specification#Non-array_attribute_values
 layout(location=5) in vec4 in_Albedo;
-#endif
 
 layout(location=6) in mat4 in_LocalToWorld;
 // Will be required to support non-uniform scaling.
@@ -36,9 +35,8 @@ out vec4 ex_Tangent_c;
 out vec4 ex_ColorFactor;
 #ifdef TEXTURES
 out vec2[2] ex_TextureCoords;
-#else
-out vec4 ex_Albedo;
 #endif
+out vec4 ex_Albedo;
 #ifdef SHADOW
 out vec4 ex_Position_lightClip;
 #endif
@@ -58,9 +56,8 @@ void main(void)
     ex_ColorFactor  = u_BaseColorFactor /* TODO multiply by vertex color, when enabled */;
 #ifdef TEXTURES
     ex_TextureCoords = vec2[](ve_TextureCoords0, ve_TextureCoords1);
-#else
-    ex_Albedo = in_Albedo;
 #endif
+    ex_Albedo = in_Albedo;
 
 #ifdef SHADOW
     ex_Position_lightClip = u_LightViewingMatrix * in_LocalToWorld * vec4(ve_Position_l, 1.f);

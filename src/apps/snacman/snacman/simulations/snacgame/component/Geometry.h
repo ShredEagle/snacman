@@ -21,7 +21,7 @@ struct Geometry
     // And thus can be non uniform
     math::Size<3, float> mInstanceScaling = math::Size<3, float>{1.f, 1.f, 1.f};
     math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
-    math::hdr::Rgba_f mColor = math::hdr::gBlack<float>;
+    math::hdr::Rgba_f mColor = math::hdr::gWhite<float>;
 
     void drawUi() const;
 };
