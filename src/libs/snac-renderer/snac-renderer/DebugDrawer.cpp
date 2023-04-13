@@ -144,6 +144,15 @@ void DebugDrawer::addBasis(Level aLevel, Entry aEntry)
 }
 
 
+void DebugDrawer::addText(Level aLevel, Text aText)
+{
+    if(passDrawFilter(aLevel))
+    {
+        commands(aLevel).mTexts.push_back(std::move(aText));
+    }
+}
+
+
 DebugDrawer::DrawList::DrawList() :
     mCommands{std::make_shared<Commands>()}
 {}

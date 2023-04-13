@@ -58,7 +58,7 @@ FontData::FontData(arte::FontFace aFontFace) :
 
 std::vector<GlyphInstance> FontData::populateInstances(const std::string & aString,
                                                        math::sdr::Rgba aColor,
-                                                       math::AffineMatrix<3, float> aStringLocalToScreen_p) const
+                                                       math::AffineMatrix<4, float> aStringLocalToWorld) const
 {
     std::vector<GlyphInstance> glyphInstances;
 
@@ -73,10 +73,8 @@ std::vector<GlyphInstance> FontData::populateInstances(const std::string & aStri
         const graphics::RenderedGlyph & glyph = mGlyphMap.at(codePoint);
 
         glyphInstances.push_back(GlyphInstance{
-           .glyphToScreen_p =
-               math::trans2d::translate(penPosition.advance(glyph, mFontFace).as<math::Vec>())
-               * aStringLocalToScreen_p
-               ,
+           .glyphToString_p = penPosition.advance(glyph, mFontFace).as<math::Vec>(),
+           .stringToWorld = aStringLocalToWorld,
            .albedo = aColor,
            .entryIndex = codePoint - gFirstCharCode,
         });

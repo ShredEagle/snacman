@@ -36,6 +36,19 @@ void Debug_BoundingBoxes::update()
     level = Level::debug;
     mPills.each(addBox);
 
+    mPlayers.each(
+        [](const component::GlobalPose & aGlobalPose)
+        {
+            SEDBGDRAW(snac::gBoundingBoxDrawer)->addText(
+                Level::info,
+                snac::DebugDrawer::Text{
+                    .mPosition = aGlobalPose.mPosition,
+                    .mMessage = "Player",
+                }
+            );
+        });
+
+
     // Also add the world basis
     SEDBGDRAW(snac::gWorldDrawer)->addBasis(Level::info, {});
 }

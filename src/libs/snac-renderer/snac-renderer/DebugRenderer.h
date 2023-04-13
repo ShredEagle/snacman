@@ -4,6 +4,8 @@
 #include "DebugDrawer.h"
 #include "Mesh.h"
 #include "Render.h"
+#include "text/Text.h"
+#include "text/TextRenderer.h"
 
 
 namespace ad {
@@ -15,15 +17,20 @@ namespace snac {
 class DebugRenderer
 {
 public:
-    DebugRenderer(Load<Technique> & aTechniqueAccess);
+    DebugRenderer(Load<Technique> & aTechniqueAccess, arte::FontFace aFontFace);
 
     void render(DebugDrawer::DrawList aDrawList, Renderer & aRenderer, ProgramSetup & aSetup);
 
 private:
+    void drawText(std::span<DebugDrawer::Text> aTexts, Renderer & aRenderer, ProgramSetup & aSetup);
+
     Mesh mCube;
     Mesh mArrow;
     Pass mPass{"DebugDrawing"};
     InstanceStream mInstances;
+    Font mFont;
+    snac::TextRenderer mTextRenderer;
+    snac::GlyphInstanceStream mStrings;
 };
 
 

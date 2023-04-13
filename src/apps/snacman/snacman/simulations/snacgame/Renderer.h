@@ -47,7 +47,9 @@ class Renderer
 public:
     using GraphicState_t = visu::GraphicState;
 
-    Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Technique> & aTechniqueAccess);
+    Renderer(graphics::AppInterface & aAppInterface,
+             snac::Load<snac::Technique> & aTechniqueAccess,
+             arte::FontFace aDebugFontFace);
 
     //void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 

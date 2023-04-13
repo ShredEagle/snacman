@@ -32,9 +32,10 @@ struct GlyphMetrics
 /// @brief The per-instance data for instanced rendering of text.
 struct GlyphInstance
 {
-    // This transformation is composed of the pen advance plus the whole string transformation (i.e. the same for all glyphs in a given string).
-    // We do not have an abstraction of the whole string at the shader level for the moment.
-    math::AffineMatrix<3, GLfloat> glyphToScreen_p;
+    math::Vec<2, GLfloat> glyphToString_p;
+    // This transformation is the whole string transformation (i.e. the same for all glyphs in a given string).
+    // We do not have an abstraction of the whole string at the shader level for the moment, so it is repeated per glyph.
+    math::AffineMatrix<4, GLfloat> stringToWorld;
     math::sdr::Rgba albedo;
     GLuint entryIndex; // Index into an array of GlyphMetrics
 };
@@ -69,10 +70,11 @@ struct FontData
     // Then, dynamic data could be somehow added. This data is likely per string i.e.:
     // * string pose 
     // * string color
-    /// @param aStringLocalToScreen_p Transformation from the string local space **in pixel** to screen space, also in pixel.
+    /// @param aStringLocalToWorld Transformation from the string local space **in pixel** to world space 
+    // (the world might be the same as clip space, used with an identity viewing matrix for screen space text)
     std::vector<GlyphInstance> populateInstances(const std::string & aString,
                                                  math::sdr::Rgba aColor,
-                                                 math::AffineMatrix<3, float> aStringLocalToScreen_p) const;
+                                                 math::AffineMatrix<4, float> aStringLocalToWorld) const;
 
     arte::FontFace mFontFace;
     GlyphMap mGlyphMap;

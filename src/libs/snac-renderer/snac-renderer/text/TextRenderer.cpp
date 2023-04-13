@@ -11,9 +11,17 @@ namespace {
     {
         InstanceStream instances;
         {
+            graphics::ClientAttribute instancePosition{
+                .mDimension = 2,
+                .mOffset = offsetof(GlyphInstance, glyphToString_p),
+                .mComponentType = GL_FLOAT,
+            };
+            instances.mAttributes.emplace(Semantic::InstancePosition, instancePosition);
+        }
+        {
             graphics::ClientAttribute localToWorld{
-                .mDimension = {3, 3},
-                .mOffset = offsetof(GlyphInstance, glyphToScreen_p),
+                .mDimension = {4, 4},
+                .mOffset = offsetof(GlyphInstance, stringToWorld),
                 .mComponentType = GL_FLOAT,
             };
             instances.mAttributes.emplace(Semantic::LocalToWorld, localToWorld);

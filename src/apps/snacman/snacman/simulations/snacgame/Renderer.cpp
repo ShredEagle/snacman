@@ -30,12 +30,14 @@ namespace snacgame {
 
 
 
-Renderer::Renderer(graphics::AppInterface & aAppInterface, snac::Load<snac::Technique> & aTechniqueAccess) :
+Renderer::Renderer(graphics::AppInterface & aAppInterface,
+                   snac::Load<snac::Technique> & aTechniqueAccess,
+                   arte::FontFace aDebugFontFace) :
     mAppInterface{aAppInterface},
     mPipelineShadows{aAppInterface, aTechniqueAccess},
     mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
             snac::Camera::gDefaults},
-    mDebugRenderer{aTechniqueAccess}
+    mDebugRenderer{aTechniqueAccess, std::move(aDebugFontFace)}
 {
     mPipelineShadows.getControls().mShadowBias = 0.0005f;
 }
@@ -110,13 +112,15 @@ void Renderer::renderText(const visu::GraphicState & aState, snac::ProgramSetup 
         auto stringPos_screenPix = text.mPosition_unitscreen.cwMul(
             static_cast<math::Position<2, GLfloat>>(mAppInterface.getFramebufferSize()));
 
-        auto scale = math::trans2d::scale(text.mScale);
-        auto localPixToScreenPix =
-            scale
-            * math::trans2d::translate(-stringDimension_pix.as<math::Vec>() / 2.f)
-            * math::trans2d::rotate(text.mOrientation)
-            * math::trans2d::translate(stringDimension_pix.as<math::Vec>() / 2.f)
-            * math::trans2d::translate(stringPos_screenPix.as<math::Vec>());
+        auto scale = math::trans3d::scale(math::Size<3, GLfloat>{text.mScale, 1.f});
+        //auto localPixToScreenPix =
+        //    scale
+        //    * math::trans2d::translate(-stringDimension_pix.as<math::Vec>() / 2.f)
+        //    * math::trans2d::rotate(text.mOrientation)
+        //    * math::trans2d::translate(stringDimension_pix.as<math::Vec>() / 2.f)
+        //    * math::trans2d::translate(stringPos_screenPix.as<math::Vec>());
+        auto localPixToScreenPix = scale
+            * math::trans3d::translate(math::Vec<3, GLfloat>{stringPos_screenPix.as<math::Vec>(), 0.f});
 
         // TODO should be cached once in the string and forwarded here
         std::vector<snac::GlyphInstance> textBufferData =
@@ -224,9 +228,13 @@ void Renderer::render(const visu::GraphicState & aState)
     //
     // Text
     //
-    if (mControl.mRenderText)
     {
-        renderText(aState, programSetup);
+        auto scope = programSetup.mUniforms.push(snac::Semantic::ViewingMatrix,
+                                                 math::Matrix<4, 4, GLfloat>::Identity());
+        if (mControl.mRenderText)
+        {
+            renderText(aState, programSetup);
+        }
     }
 
     if (mControl.mRenderDebug)

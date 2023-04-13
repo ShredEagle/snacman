@@ -65,10 +65,18 @@ public:
         math::hdr::Rgba_f mColor = math::hdr::gMagenta<float>;
     };
 
+    struct Text
+    {
+        math::Position<3, float> mPosition;
+        std::string mMessage;
+        math::hdr::Rgba_f mColor = math::hdr::gWhite<float>;
+    };
+
     struct Commands
     {
         std::vector<Entry> mBoxes;
         std::vector<Entry> mArrows;
+        std::vector<Text>  mTexts;
     };
 
     struct DrawList
@@ -161,6 +169,8 @@ public:
     /// @brief Add a frame-of-reference as 3 arrows along positive X(red), Y(green) and Z(blue).
     /// @note The color in `aEntry` will be ignored. 
     void addBasis(Level aLevel, Entry aEntry);
+
+    void addText(Level aLevel, Text aText);
 
 private:
     Commands & commands(Level aLevelSanityCheck);
