@@ -203,6 +203,7 @@ public:
     std::future<std::shared_ptr<snac::Font>> loadFont(
         arte::FontFace aFontFace,
         unsigned int aPixelHeight,
+        filesystem::path aEffect,
         Resources & aResources)
     {
         assert(std::this_thread::get_id() != mThread.get_id());
@@ -214,12 +215,16 @@ public:
         // TODO the Text system has to be deeply refactored. It is tightly coupled to the texture creation
         // making it hard to properly load asynchronously, and leading to horrors such as this move into shared_ptr
         auto sharedFontFace = std::make_shared<arte::FontFace>(std::move(aFontFace));
-        push([promise = std::move(promise), fontFace = std::move(sharedFontFace), aPixelHeight, &aResources]
+        push([promise = std::move(promise),
+              fontFace = std::move(sharedFontFace),
+              aPixelHeight,
+              effect = std::move(aEffect),
+              &aResources]
              (T_renderer & aRenderer) mutable
              {
                 try
                 {
-                    promise->set_value(aRenderer.loadFont(std::move(*fontFace), aPixelHeight, aResources));
+                    promise->set_value(aRenderer.loadFont(std::move(*fontFace), aPixelHeight, effect, aResources));
                 }
                 catch(...)
                 {

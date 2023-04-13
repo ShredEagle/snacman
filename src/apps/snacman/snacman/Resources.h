@@ -43,7 +43,9 @@ public:
 
     std::shared_ptr<Model> getModel(filesystem::path aModel);
 
-    std::shared_ptr<Font> getFont(filesystem::path aFont, unsigned int aPixelHeight = gDefaultPixelHeight);
+    std::shared_ptr<Font> getFont(filesystem::path aFont,
+                                  unsigned int aPixelHeight = gDefaultPixelHeight,
+                                  filesystem::path aEffect = "effects/Text.sefx");
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
     std::shared_ptr<Effect> getShaderEffect(filesystem::path aEffect);
@@ -64,6 +66,7 @@ private:
     static std::shared_ptr<Font> FontLoader(
         filesystem::path aFont, 
         unsigned int aPixelHeight,
+        filesystem::path aEffect,
         RenderThread<snacgame::Renderer> & aRenderThread,
         Resources & aResources);
 

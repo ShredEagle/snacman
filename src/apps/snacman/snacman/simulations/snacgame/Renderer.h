@@ -56,6 +56,7 @@ public:
 
     std::shared_ptr<snac::Font> loadFont(arte::FontFace aFontFace,
                                          unsigned int aPixelHeight,
+                                         filesystem::path aEffect,
                                          snac::Resources & aResources);
 
     void continueGui();

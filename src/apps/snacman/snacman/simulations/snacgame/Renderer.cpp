@@ -64,12 +64,13 @@ std::shared_ptr<snac::Model> Renderer::LoadModel(filesystem::path aModel,
 
 std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
                                                unsigned int aPixelHeight,
+                                               filesystem::path aEffect,
                                                snac::Resources & aResources)
 {
     return std::make_shared<snac::Font>(
         std::move(aFontFace),
         aPixelHeight,
-        aResources.getShaderEffect("effects/Text.sefx")
+        aResources.getShaderEffect(aEffect)
     );
 }
 
@@ -93,7 +94,6 @@ void Renderer::continueGui()
 void Renderer::renderText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup)
 {
     TIME_RECURRING_CLASSFUNC_GL();
-
 
     // Note: this is pessimised code.
     // Most of these expensive operations should be taken out and the results
