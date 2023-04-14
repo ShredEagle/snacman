@@ -43,7 +43,18 @@ IntrospectProgram loadProgram(const filesystem::path & aProgram)
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 
-    Json program = Json::parse(std::ifstream{aProgram});
+    // TODO factorize and make more robust (e.g. test file existence)
+    Json program;
+    try 
+    {
+        program = Json::parse(std::ifstream{aProgram});
+    }
+    catch (Json::parse_error &)
+    {
+        SELOG(critical)("Rethrowing exception from attempt to parse Json from '{}'.", aProgram.string());
+        throw;
+    }
+
     graphics::FileLookup lookup{aProgram};
 
     std::vector<std::string> defines;
