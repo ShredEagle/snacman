@@ -128,9 +128,10 @@ private:
     EntityWrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
     EntityWrap<system::SceneStateMachine> mStateMachine;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
-    EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
 
-    EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
+    EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
+    EntityWrap<ent::Query<component::Text, component::GlobalPose>> mQueryTextWorld;
+    EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};

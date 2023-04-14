@@ -89,7 +89,8 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         mMappingContext, mGameContext},
     mSystemOrbitalCamera{mGameContext.mWorld, mGameContext.mWorld},
     mQueryRenderable{mGameContext.mWorld, mGameContext.mWorld},
-    mQueryText{mGameContext.mWorld, mGameContext.mWorld},
+    mQueryTextWorld{mGameContext.mWorld, mGameContext.mWorld},
+    mQueryTextScreen{mGameContext.mWorld, mGameContext.mWorld},
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
@@ -390,22 +391,47 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         });
 
     //
-    // Text
+    // Worldspace Text
     //
-    mQueryText.get(nomutation)
+    mQueryTextWorld.get(nomutation)
         .each([&state](ent::Handle<ent::Entity> aHandle,
                        component::Text & aText,
-                       component::PoseScreenSpace & aPose) {
+                       component::GlobalPose & aGlobPose) 
+        {
             state->mTextEntities.insert(
-                aHandle.id(), visu::TextScreen{
-                                  // TODO
-                                  .mPosition_unitscreen = aPose.mPosition_u,
-                                  .mScale = aPose.mScale,
-                                  .mOrientation = aPose.mRotationCCW,
-                                  .mString = aText.mString,
-                                  .mFont = aText.mFont,
-                                  .mColor = aText.mColor,
-                              });
+                aHandle.id(),
+                visu::Text{
+                    .mPosition_world = aGlobPose.mPosition,
+                    .mScaling = math::Size<3, float>{aGlobPose.mScaling,
+                                                     aGlobPose.mScaling,
+                                                     aGlobPose.mScaling}
+                                    .cwMul(aGlobPose.mInstanceScaling),
+                    .mOrientation = aGlobPose.mOrientation,
+                    .mString = aText.mString,
+                    .mFont = aText.mFont,
+                    .mColor = aText.mColor,
+                });
+        });
+
+    //
+    // Screenspace Text
+    //
+    mQueryTextScreen.get(nomutation)
+        .each([&state](ent::Handle<ent::Entity> aHandle,
+                       component::Text & aText,
+                       component::PoseScreenSpace & aPose) 
+        {
+            state->mTextScreenEntities.insert(
+                aHandle.id(),
+                visu::TextScreen{
+                    // TODO
+                    .mPosition_unitscreen = aPose.mPosition_u,
+                    .mScale = aPose.mScale,
+                    .mOrientation = aPose.mRotationCCW,
+                    .mString = aText.mString,
+                    .mFont = aText.mFont,
+                    .mColor = aText.mColor,
+                });
         });
 
     state->mCamera = mSystemOrbitalCamera->getCamera();

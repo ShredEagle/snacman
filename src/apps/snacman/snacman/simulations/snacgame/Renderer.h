@@ -70,6 +70,7 @@ public:
     { mRenderer.resetRepositories(); }
 
 private:
+    void renderWorldText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup);
     void renderText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup);
 
     Control mControl;

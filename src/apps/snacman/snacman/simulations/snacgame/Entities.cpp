@@ -3,7 +3,6 @@
 #include "component/Collision.h"
 #include "component/Controller.h"
 #include "component/Geometry.h"
-#include "component/GlobalPose.h"
 #include "component/LevelTags.h"
 #include "component/MenuItem.h"
 #include "component/PlayerLifeCycle.h"
@@ -85,6 +84,28 @@ void createLevelElement(Phase & aPhase,
 }
 } // namespace
 
+
+ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
+                                         std::string aText,
+                                         component::GlobalPose aPose)
+{
+    ent::Phase init;
+    auto handle = aContext.mWorld.addEntity();
+    Entity text = *handle.get(init);
+
+    auto font = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120);
+
+    text.add(component::Text{
+            .mString{std::move(aText)},
+            .mFont = std::move(font),
+            .mColor = math::hdr::gYellow<float>,
+        })
+        .add(aPose);
+
+    return handle;
+}
+
+
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
                                     const math::Position<2, float> & aGridPos)
 {
@@ -159,6 +180,7 @@ createPlayerSpawnEntity(GameContext & aContext,
 
     return spawner;
 }
+
 
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
                                             ent::Phase & aInit,

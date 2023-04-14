@@ -43,6 +43,29 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
     };
 }
 
+struct Text
+{
+    math::Position<3, float> mPosition_world;
+    math::Size<3, float> mScaling; // TODO were is it used?
+    math::Quaternion<float> mOrientation;
+    std::string mString;
+    std::shared_ptr<snac::Font> mFont;
+    math::hdr::Rgba_f mColor;
+};
+
+inline Text interpolate(const Text & aLeftEntity, const Text & aRightEntity, float aInterpolant)
+{
+    return Text{
+        .mPosition_world = math::lerp(aLeftEntity.mPosition_world,
+                                      aRightEntity.mPosition_world,
+                                      aInterpolant),
+        .mScaling = math::lerp(aLeftEntity.mScaling, aRightEntity.mScaling, aInterpolant),
+        .mOrientation = math::slerp(aLeftEntity.mOrientation, aRightEntity.mOrientation, aInterpolant),
+        .mString = aLeftEntity.mString,
+        .mFont = aLeftEntity.mFont,
+        .mColor = math::lerp(aLeftEntity.mColor, aRightEntity.mColor, aInterpolant),
+    };
+}
 
 // TODO #generic-render We should watch out for the proliferation of specialized graphics state entities,
 // which is by definition the opposite of genericity.
@@ -88,9 +111,10 @@ struct GraphicState
     static constexpr std::size_t MaxEntityId{2048};
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
+    snac::SparseSet<Text, MaxEntityId> mTextEntities;
     Camera mCamera; 
 
-    snac::SparseSet<TextScreen, MaxEntityId> mTextEntities;
+    snac::SparseSet<TextScreen, MaxEntityId> mTextScreenEntities;
 
     snac::DebugDrawer::DrawList mDebugDrawList = snac::DebugDrawer::DrawList::MakeEmpty();
 };
@@ -127,6 +151,7 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
 
     interpolateEach(aInterpolant, aLeft.mTextEntities, aRight.mTextEntities, state.mTextEntities);
 
+    interpolateEach(aInterpolant, aLeft.mTextScreenEntities, aRight.mTextScreenEntities, state.mTextScreenEntities);
 
     return state;
 }

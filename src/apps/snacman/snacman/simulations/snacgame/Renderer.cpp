@@ -93,6 +93,38 @@ void Renderer::continueGui()
 }
 
 
+void Renderer::renderWorldText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup)
+{
+    TIME_RECURRING_CLASSFUNC_GL();
+
+    // Note: this is pessimised code.
+    // Most of these expensive operations should be taken out and the results
+    // cached.
+    for (const visu::Text & text : aState.mTextEntities)
+    {
+        auto localToWorld = 
+            // TODO remove the hardcoded value of 100
+            // Note hardcoded 100 scale down. I'd like a value of 1 the the scale of the component to still mean "about visible"
+            math::trans3d::scale(text.mScaling / 100.f)
+            * text.mOrientation.toRotationMatrix()
+            * math::trans3d::translate(text.mPosition_world.as<math::Vec>());
+
+        // TODO should be cached once in the string and forwarded here
+        std::vector<snac::GlyphInstance> textBufferData =
+            text.mFont->mFontData.populateInstances(text.mString,
+                                                    to_sdr(text.mColor),
+                                                    localToWorld);
+
+        // TODO should be consolidated, a single call for all string of the same
+        // font.
+        mDynamicStrings.respecifyData(std::span{textBufferData});
+        BEGIN_RECURRING_GL("Draw string", drawStringProfile);
+        mTextRenderer.render(mDynamicStrings, *text.mFont, mRenderer, aProgramSetup);
+        END_RECURRING_GL(drawStringProfile);
+    }
+}
+
+
 void Renderer::renderText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup)
 {
     TIME_RECURRING_CLASSFUNC_GL();
@@ -100,7 +132,7 @@ void Renderer::renderText(const visu::GraphicState & aState, snac::ProgramSetup 
     // Note: this is pessimised code.
     // Most of these expensive operations should be taken out and the results
     // cached.
-    for (const visu::TextScreen & text : aState.mTextEntities)
+    for (const visu::TextScreen & text : aState.mTextScreenEntities)
     {
         // TODO should be cached once in the string
         math::Size<2, GLfloat> stringDimension_pix =
@@ -110,7 +142,7 @@ void Renderer::renderText(const visu::GraphicState & aState, snac::ProgramSetup 
                 text.mFont->mFontData.mFontFace);
 
         auto stringPos_screenPix = text.mPosition_unitscreen.cwMul(
-            static_cast<math::Position<2, GLfloat>>(mAppInterface.getFramebufferSize()));
+            static_cast<math::Position<2, GLfloat>>(mAppInterface.getFramebufferSize())/2.f);
 
         auto scale = math::trans3d::scale(math::Size<3, GLfloat>{text.mScale, 1.f});
         //auto localPixToScreenPix =
@@ -179,13 +211,14 @@ void Renderer::render(const visu::GraphicState & aState)
     math::hdr::Rgb_f lightColor = to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
 
+    const math::Size<2, int> framebufferSize = mAppInterface.getFramebufferSize();
 
     snac::ProgramSetup programSetup{
         .mUniforms{
             {snac::Semantic::LightColor, snac::UniformParameter{lightColor}},
             {snac::Semantic::LightPosition, {lightPosition_cam}},
             {snac::Semantic::AmbientColor, {ambientColor}},
-            {snac::Semantic::FramebufferResolution, mAppInterface.getFramebufferSize()},
+            {snac::Semantic::FramebufferResolution, framebufferSize},
             {snac::Semantic::ViewingMatrix, cam.assembleViewMatrix()}
         },
         .mUniformBlocks{
@@ -229,8 +262,23 @@ void Renderer::render(const visu::GraphicState & aState)
     // Text
     //
     {
-        auto scope = programSetup.mUniforms.push(snac::Semantic::ViewingMatrix,
-                                                 math::Matrix<4, 4, GLfloat>::Identity());
+        if (mControl.mRenderText)
+        {
+            renderWorldText(aState, programSetup);
+        }
+
+        // For the screen space text, the viewing transform is composed as follows:
+        // The world-to-camera is identity
+        // The projection is orthographic, mapping framebuffer resolution (with origin at screen center) to NDC.
+        auto scope = programSetup.mUniforms.push(
+            snac::Semantic::ViewingMatrix,
+            math::trans3d::orthographicProjection(
+                math::Box<float>{
+                    {-static_cast<math::Position<2, float>>(framebufferSize) / 2, -1.f},
+                    {static_cast<math::Size<2, float>>(framebufferSize), 2.f}
+                })
+        );
+
         if (mControl.mRenderText)
         {
             renderText(aState, programSetup);
