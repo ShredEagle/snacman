@@ -70,8 +70,8 @@ public:
     { mRenderer.resetRepositories(); }
 
 private:
-    void renderWorldText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup);
-    void renderText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup);
+    template <class T_range>
+    void renderText(const T_range & aTexts, snac::ProgramSetup & aProgramSetup);
 
     Control mControl;
     graphics::AppInterface & mAppInterface;

@@ -93,19 +93,16 @@ void Renderer::continueGui()
 }
 
 
-void Renderer::renderWorldText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup)
+template <class T_range>
+void Renderer::renderText(const T_range & aTexts, snac::ProgramSetup & aProgramSetup)
 {
-    TIME_RECURRING_CLASSFUNC_GL();
-
     // Note: this is pessimised code.
     // Most of these expensive operations should be taken out and the results
     // cached.
-    for (const visu::Text & text : aState.mTextEntities)
+    for (const visu::Text & text : aTexts)
     {
         auto localToWorld = 
-            // TODO remove the hardcoded value of 100
-            // Note hardcoded 100 scale down. I'd like a value of 1 the the scale of the component to still mean "about visible"
-            math::trans3d::scale(text.mScaling / 100.f)
+            math::trans3d::scale(text.mScaling)
             * text.mOrientation.toRotationMatrix()
             * math::trans3d::translate(text.mPosition_world.as<math::Vec>());
 
@@ -114,51 +111,6 @@ void Renderer::renderWorldText(const visu::GraphicState & aState, snac::ProgramS
             text.mFont->mFontData.populateInstances(text.mString,
                                                     to_sdr(text.mColor),
                                                     localToWorld);
-
-        // TODO should be consolidated, a single call for all string of the same
-        // font.
-        mDynamicStrings.respecifyData(std::span{textBufferData});
-        BEGIN_RECURRING_GL("Draw string", drawStringProfile);
-        mTextRenderer.render(mDynamicStrings, *text.mFont, mRenderer, aProgramSetup);
-        END_RECURRING_GL(drawStringProfile);
-    }
-}
-
-
-void Renderer::renderText(const visu::GraphicState & aState, snac::ProgramSetup & aProgramSetup)
-{
-    TIME_RECURRING_CLASSFUNC_GL();
-
-    // Note: this is pessimised code.
-    // Most of these expensive operations should be taken out and the results
-    // cached.
-    for (const visu::TextScreen & text : aState.mTextScreenEntities)
-    {
-        // TODO should be cached once in the string
-        math::Size<2, GLfloat> stringDimension_pix =
-            graphics::getStringDimension(
-                text.mString,
-                text.mFont->mFontData.mGlyphMap,
-                text.mFont->mFontData.mFontFace);
-
-        auto stringPos_screenPix = text.mPosition_unitscreen.cwMul(
-            static_cast<math::Position<2, GLfloat>>(mAppInterface.getFramebufferSize())/2.f);
-
-        auto scale = math::trans3d::scale(math::Size<3, GLfloat>{text.mScale, 1.f});
-        //auto localPixToScreenPix =
-        //    scale
-        //    * math::trans2d::translate(-stringDimension_pix.as<math::Vec>() / 2.f)
-        //    * math::trans2d::rotate(text.mOrientation)
-        //    * math::trans2d::translate(stringDimension_pix.as<math::Vec>() / 2.f)
-        //    * math::trans2d::translate(stringPos_screenPix.as<math::Vec>());
-        auto localPixToScreenPix = scale
-            * math::trans3d::translate(math::Vec<3, GLfloat>{stringPos_screenPix.as<math::Vec>(), 0.f});
-
-        // TODO should be cached once in the string and forwarded here
-        std::vector<snac::GlyphInstance> textBufferData =
-            text.mFont->mFontData.populateInstances(text.mString,
-                                                    to_sdr(text.mColor),
-                                                    localPixToScreenPix);
 
         // TODO should be consolidated, a single call for all string of the same
         // font.
@@ -262,9 +214,11 @@ void Renderer::render(const visu::GraphicState & aState)
     // Text
     //
     {
+        TIME_RECURRING_GL("Draw_texts");
+
         if (mControl.mRenderText)
         {
-            renderWorldText(aState, programSetup);
+            renderText(aState.mTextWorldEntities, programSetup);
         }
 
         // For the screen space text, the viewing transform is composed as follows:
@@ -281,7 +235,7 @@ void Renderer::render(const visu::GraphicState & aState)
 
         if (mControl.mRenderText)
         {
-            renderText(aState, programSetup);
+            renderText(aState.mTextScreenEntities, programSetup);
         }
     }
 

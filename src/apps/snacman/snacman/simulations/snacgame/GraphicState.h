@@ -67,33 +67,6 @@ inline Text interpolate(const Text & aLeftEntity, const Text & aRightEntity, flo
     };
 }
 
-// TODO #generic-render We should watch out for the proliferation of specialized graphics state entities,
-// which is by definition the opposite of genericity.
-struct TextScreen
-{
-    math::Position<2, float> mPosition_unitscreen;
-    math::Size<2, float> mScale;
-    math::Radian<float> mOrientation;
-    std::string mString;
-    std::shared_ptr<snac::Font> mFont;
-    math::hdr::Rgba_f mColor;
-};
-
-
-inline TextScreen interpolate(const TextScreen & aLeftEntity, const TextScreen & aRightEntity, float aInterpolant)
-{
-    return TextScreen{
-        .mPosition_unitscreen = math::lerp(aLeftEntity.mPosition_unitscreen,
-                                           aRightEntity.mPosition_unitscreen,
-                                           aInterpolant),
-        .mScale = math::lerp(aLeftEntity.mScale, aRightEntity.mScale, aInterpolant),
-        .mOrientation = math::lerp(aLeftEntity.mOrientation, aRightEntity.mOrientation, aInterpolant),
-        .mString = aLeftEntity.mString,
-        .mFont = aLeftEntity.mFont,
-        .mColor = math::lerp(aLeftEntity.mColor, aRightEntity.mColor, aInterpolant),
-    };
-}
-
 
 // TODO #camera can we use a complete snac::Camera instead?
 //      This way the Renderer gets the complete camera each frame.
@@ -111,10 +84,10 @@ struct GraphicState
     static constexpr std::size_t MaxEntityId{2048};
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
-    snac::SparseSet<Text, MaxEntityId> mTextEntities;
+    snac::SparseSet<Text, MaxEntityId> mTextWorldEntities;
     Camera mCamera; 
 
-    snac::SparseSet<TextScreen, MaxEntityId> mTextScreenEntities;
+    snac::SparseSet<Text, MaxEntityId> mTextScreenEntities;
 
     snac::DebugDrawer::DrawList mDebugDrawList = snac::DebugDrawer::DrawList::MakeEmpty();
 };
@@ -149,7 +122,7 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
 
     interpolateEach(aInterpolant, aLeft.mEntities, aRight.mEntities, state.mEntities);
 
-    interpolateEach(aInterpolant, aLeft.mTextEntities, aRight.mTextEntities, state.mTextEntities);
+    interpolateEach(aInterpolant, aLeft.mTextWorldEntities, aRight.mTextWorldEntities, state.mTextWorldEntities);
 
     interpolateEach(aInterpolant, aLeft.mTextScreenEntities, aRight.mTextScreenEntities, state.mTextScreenEntities);
 

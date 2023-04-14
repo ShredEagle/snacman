@@ -71,7 +71,7 @@ struct FontData
     // * string pose 
     // * string color
     /// @param aStringLocalToWorld Transformation from the string local space **in pixel** to world space 
-    // (the world might be the same as clip space, used with an identity viewing matrix for screen space text)
+    // (the world might be the same as clip space, then used with an appropriate viewing matrix for screen space text)
     std::vector<GlyphInstance> populateInstances(const std::string & aString,
                                                  math::sdr::Rgba aColor,
                                                  math::AffineMatrix<4, float> aStringLocalToWorld) const;

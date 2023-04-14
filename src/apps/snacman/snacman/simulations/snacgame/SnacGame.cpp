@@ -398,14 +398,15 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                        component::Text & aText,
                        component::GlobalPose & aGlobPose) 
         {
-            state->mTextEntities.insert(
+            state->mTextWorldEntities.insert(
                 aHandle.id(),
                 visu::Text{
                     .mPosition_world = aGlobPose.mPosition,
-                    .mScaling = math::Size<3, float>{aGlobPose.mScaling,
-                                                     aGlobPose.mScaling,
-                                                     aGlobPose.mScaling}
-                                    .cwMul(aGlobPose.mInstanceScaling),
+                    // TODO remove the hardcoded value of 100
+                    // Note hardcoded 100 scale down. Because I'd like a value of 1 for the scale of the component
+                    // to still mean "about visible".
+                    .mScaling = aGlobPose.mInstanceScaling 
+                                * aGlobPose.mScaling / 100.f,
                     .mOrientation = aGlobPose.mOrientation,
                     .mString = aText.mString,
                     .mFont = aText.mFont,
@@ -417,17 +418,28 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     // Screenspace Text
     //
     mQueryTextScreen.get(nomutation)
-        .each([&state](ent::Handle<ent::Entity> aHandle,
+        .each([&state, this](ent::Handle<ent::Entity> aHandle,
                        component::Text & aText,
                        component::PoseScreenSpace & aPose) 
         {
+
+            math::Position<3, float> position_screenPix{
+                aPose.mPosition_u.cwMul(
+                    // TODO this multiplication should be done once and cached
+                    // but it should be refreshed on framebuffer resizing.
+                    static_cast<math::Position<2, GLfloat>>(this->mAppInterface->getFramebufferSize())/2.f),
+                    0.f
+            };
+
             state->mTextScreenEntities.insert(
                 aHandle.id(),
-                visu::TextScreen{
-                    // TODO
-                    .mPosition_unitscreen = aPose.mPosition_u,
-                    .mScale = aPose.mScale,
-                    .mOrientation = aPose.mRotationCCW,
+                visu::Text{
+                    .mPosition_world = position_screenPix,
+                    .mScaling = math::Size<3, float>{aPose.mScale, 1.f}, 
+                    .mOrientation = math::Quaternion{
+                                                math::UnitVec<3, float>::MakeFromUnitLength({0.f, 0.f, 1.f}),
+                                                aPose.mRotationCCW
+                                            },
                     .mString = aText.mString,
                     .mFont = aText.mFont,
                     .mColor = aText.mColor,
