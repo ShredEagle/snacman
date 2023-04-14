@@ -53,7 +53,7 @@ void main(void)
     stringOrigin_clip /= stringOrigin_clip.w;
     gl_Position = 
         vec4(
-            stringOrigin_clip.xy + (vertexPositionInString_pix / u_FramebufferResolution_p),
+            stringOrigin_clip.xy + (vertexPositionInString_pix / (u_FramebufferResolution_p/2)),
             stringOrigin_clip.z,
             1.
         );
@@ -61,7 +61,7 @@ void main(void)
     gl_Position = 
         u_ViewingMatrix
         * vec4(
-            (in_LocalToWorld_pixToWorldUnit * vec4(vertexPositionInString_pix, 0., 1.)).xy / u_FramebufferResolution_p,
+            (in_LocalToWorld_pixToWorldUnit * vec4(vertexPositionInString_pix, 0., 1.)).xy / (u_FramebufferResolution_p/2),
             0.,
             1.
         );

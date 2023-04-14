@@ -14,9 +14,13 @@ namespace ad {
 namespace snac {
 
 
+constexpr unsigned int gFontPixelHeight = 50;
+
+
 struct Scene
 {
     Scene(graphics::ApplicationGlfw & aGlfwApp,
+          Font aFont,
           DebugRenderer aDebugRenderer,
           const resource::ResourceFinder & aFinder);
 
@@ -32,6 +36,10 @@ struct Scene
     const resource::ResourceFinder & mFinder;
     std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListening;
     snac::DebugRenderer mDebugRenderer;
+
+    Font mFont;
+    GlyphInstanceStream mGlyphs;
+    TextRenderer mTextRenderer;
 };
 
 

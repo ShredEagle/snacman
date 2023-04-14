@@ -67,6 +67,9 @@ void runApplication()
 
     Scene scene{
         glfwApp,
+        Font{freetype.load(finder.pathFor("fonts/FredokaOne-Regular.ttf")), 
+                           gFontPixelHeight,
+                           loadTrivialEffect(finder.pathFor("shaders/Text.prog"))},
         DebugRenderer{pass(TechniqueLoader{finder}),
                       freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))},
         finder,
