@@ -123,7 +123,8 @@ void Scene::render(Renderer & aRenderer)
             math::Vec<3, GLfloat> textScreenPosition_ndc{-0.8f, 0.75f, 0.f};
 
             math::AffineMatrix<4, GLfloat> stringToScreen = 
-                math::trans3d::translate(textScreenPosition_ndc)
+                math::trans3d::rotateZ(math::Degree<float>{90.f})
+                * math::trans3d::translate(textScreenPosition_ndc)
                 ;
 
             mGlyphs.respecifyData(
