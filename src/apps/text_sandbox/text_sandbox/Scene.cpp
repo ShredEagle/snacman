@@ -102,7 +102,7 @@ void Scene::render(Renderer & aRenderer)
 
     // World space text
     {
-        math::AffineMatrix<4, GLfloat> arbitraryScale = math::trans3d::scaleUniform(2.5f);
+        math::AffineMatrix<4, GLfloat> arbitraryScale = math::trans3d::scaleUniform(1.f/150.f);
 
         mGlyphs.respecifyData(
             std::span{
@@ -113,18 +113,30 @@ void Scene::render(Renderer & aRenderer)
 
     // View space text
     {
+        math::Matrix<4, 4, float> viewingMatrix = 
+            /* worldToCamera * */
+            math::trans3d::orthographicProjection(
+                math::Box<float>{
+                    {-static_cast<math::Position<2, float>>(FbSize) / 2, -1.f},
+                    {static_cast<math::Size<2, float>>(FbSize), 2.f}
+                })
+            ;
+
         auto setupScope = setup.mUniforms.push({
-            {snac::Semantic::ViewingMatrix, identity},
+            {snac::Semantic::ViewingMatrix, viewingMatrix},
         });
+
+        math::Size<3, GLfloat> ratioFbNdc = math::Size<3, GLfloat>{FbSize.width()/2.f, FbSize.height()/2.f, 1.f};
+
 
         // Text size fixed in absolute numbers of pixels (i.e. independent of Window size)
         // This is good for rasterized text, where the glyph screen coverage should not change with framebuffer size.
         {
-            math::Vec<3, GLfloat> textScreenPosition_ndc{-0.8f, 0.75f, 0.f};
+            math::Vec<3, GLfloat> textScreenPosition_ndc{-0.8f, -0.9f, 0.f};
 
             math::AffineMatrix<4, GLfloat> stringToScreen = 
                 math::trans3d::rotateZ(math::Degree<float>{90.f})
-                * math::trans3d::translate(textScreenPosition_ndc)
+                * math::trans3d::translate(textScreenPosition_ndc.cwMul(ratioFbNdc.as<math::Vec>()))
                 ;
 
             mGlyphs.respecifyData(
@@ -136,7 +148,7 @@ void Scene::render(Renderer & aRenderer)
 
         // Text size fixed in proportion to the window height
         {
-            math::Vec<3, GLfloat> textScreenPosition_ndc{-0.8f, 0.60f, 0.f};
+            math::Vec<3, GLfloat> textScreenPosition_ndc{-0.7f, -0.60f, 0.f};
 
             // 600 is the supposed initial Framebuffer height
             // the ratio we apply is the current height to initial height
@@ -144,7 +156,7 @@ void Scene::render(Renderer & aRenderer)
 
              math::AffineMatrix<4, GLfloat> stringPixelToScreenNdc = 
                 math::trans3d::scale(math::Size<3, GLfloat>{ratio, ratio, 1.f})
-                * math::trans3d::translate(textScreenPosition_ndc)
+                * math::trans3d::translate(textScreenPosition_ndc.cwMul(ratioFbNdc.as<math::Vec>()))
                 ;
 
             mGlyphs.respecifyData(

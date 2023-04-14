@@ -63,19 +63,15 @@ void main(void)
 #else
     gl_Position = 
         u_ViewingMatrix
-        * vec4(
-            (in_LocalToWorld * vec4(vertexPositionInString_pix / (u_FramebufferResolution_p/2), 0., 1.)).xy ,
-            0.,
-            1.
-        );
+        * in_LocalToWorld 
+        * vec4(vertexPositionInString_pix, 0., 1.);
 #endif
 
     // TODO: Franz, please add some comments regarding how this is computed and why this is required : )
     ex_Scale = 
         2 // The division by FB resolution was fixed by introducing a division by 2, the glyphs since appear twice bigger.
         // Take into account the scaling on the summed "modelling" transform
-        * 
-        sqrt(  in_LocalToWorld[0][0] * in_LocalToWorld[0][0]
+        * sqrt(  in_LocalToWorld[0][0] * in_LocalToWorld[0][0]
                 + in_LocalToWorld[0][1] * in_LocalToWorld[0][1])
         // Take into account the scaling on the viewing
         * sqrt(  u_ViewingMatrix[0][0] * u_ViewingMatrix[0][0]
@@ -83,6 +79,12 @@ void main(void)
         // Take into account the effect of the perspective on the scale
         / gl_Position.w;
         ;
+
+    mat4 m = u_ViewingMatrix * in_LocalToWorld;
+    ex_Scale = length(vec3(length(m[0].xyz), length(m[1].xyz), length(m[2].xyz))) / gl_Position.w;
+
+    ex_Scale = 2.;
+
     ex_AtlasCoords = textureOffset + (ve_TextureCoords0_u * boundingBox);
     ex_Albedo = in_Albedo;
 }
