@@ -31,14 +31,14 @@ void MenuScene::setup(const Transition & Transition,
         {
             {gGoDown, "quit"},
         },
-        scene::Transition{.mTransitionName = "start"}, true, {3.f, 3.f});
+        scene::Transition{.mTransitionName = "start"}, true, {1.5f, 1.5f});
     auto quitHandle = createMenuItem(
         mGameContext, init, "quit", font, math::Position<2, float>{-0.55f, -0.3f},
         {
             {gGoUp, "Start"},
         },
         scene::Transition{.mTransitionName = gQuitTransitionName}, false,
-        {3.f, 3.f});
+        {1.5f, 1.5f});
 
     mOwnedEntities.push_back(startHandle);
     mOwnedEntities.push_back(quitHandle);
