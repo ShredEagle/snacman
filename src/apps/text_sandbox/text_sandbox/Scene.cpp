@@ -102,11 +102,13 @@ void Scene::render(Renderer & aRenderer)
 
     // World space text
     {
+        math::AffineMatrix<4, GLfloat> arbitraryScale = math::trans3d::scaleUniform(2.5f);
+
         mGlyphs.respecifyData(
             std::span{
-                pass(mFont.mFontData.populateInstances("|worldspace", math::sdr::gWhite, identity))
+                pass(mFont.mFontData.populateInstances("|worldspace", math::sdr::gWhite, arbitraryScale))
             });
-        //mTextRenderer.render(mGlyphs, mFont, aRenderer, setup);
+        mTextRenderer.render(mGlyphs, mFont, aRenderer, setup);
     }
 
     // View space text
@@ -131,16 +133,13 @@ void Scene::render(Renderer & aRenderer)
             mTextRenderer.render(mGlyphs, mFont, aRenderer, setup);
         }
 
+        // Text size fixed in proportion to the window height
         {
             math::Vec<3, GLfloat> textScreenPosition_ndc{-0.8f, 0.60f, 0.f};
 
             // 600 is the supposed initial Framebuffer height
             // the ratio we apply is the current height to initial height
             const float ratio = FbSize.height() / (float)600;
-
-            // This can be arbitrary for SDF rendering
-            // For opacity-raster rendering, it is better to always match the raster grid to the framebuffer grid.
-            float fontHeight_ndc = gFontPixelHeight / (600.f/2); // 600 is the supposed initial window height
 
              math::AffineMatrix<4, GLfloat> stringPixelToScreenNdc = 
                 math::trans3d::scale(math::Size<3, GLfloat>{ratio, ratio, 1.f})

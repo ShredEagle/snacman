@@ -73,8 +73,16 @@ void main(void)
     // TODO: Franz, please add some comments regarding how this is computed and why this is required : )
     ex_Scale = 
         2 // The division by FB resolution was fixed by introducing a division by 2, the glyphs since appear twice bigger.
-        * sqrt(  in_LocalToWorld[0][0] * in_LocalToWorld[0][0]
-               + in_LocalToWorld[0][1] * in_LocalToWorld[0][1]);
+        // Take into account the scaling on the summed "modelling" transform
+        * 
+        sqrt(  in_LocalToWorld[0][0] * in_LocalToWorld[0][0]
+                + in_LocalToWorld[0][1] * in_LocalToWorld[0][1])
+        // Take into account the scaling on the viewing
+        * sqrt(  u_ViewingMatrix[0][0] * u_ViewingMatrix[0][0]
+                + u_ViewingMatrix[0][1] * u_ViewingMatrix[0][1])
+        // Take into account the effect of the perspective on the scale
+        / gl_Position.w;
+        ;
     ex_AtlasCoords = textureOffset + (ve_TextureCoords0_u * boundingBox);
     ex_Albedo = in_Albedo;
 }
