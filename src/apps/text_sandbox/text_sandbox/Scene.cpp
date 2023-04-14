@@ -119,20 +119,39 @@ void Scene::render(Renderer & aRenderer)
         // This is good for rasterized text, where the glyph screen coverage should not change with framebuffer size.
         {
             math::Vec<3, GLfloat> textScreenPosition_ndc{-0.8f, 0.75f, 0.f};
-            // This is in pixels, with origin at the center of the frame buffer
-            // (i.e. going from -half_resolution to + half_resolution)
-            math::Vec<3, GLfloat> textScreenPosition_pix = 
-                textScreenPosition_ndc.cwMul(math::Vec<3, GLfloat>{
-                    static_cast<math::Vec<2, GLfloat>>(FbSize)/2.f,
-                    1.f});
 
-            math::AffineMatrix<4, GLfloat> stringPixelToScreenPixel = 
-                math::trans3d::translate(textScreenPosition_pix)
+            math::AffineMatrix<4, GLfloat> stringToScreen = 
+                math::trans3d::translate(textScreenPosition_ndc)
                 ;
 
             mGlyphs.respecifyData(
                 std::span{
-                    pass(mFont.mFontData.populateInstances("viewspace: fixed-pixel", math::sdr::gWhite, stringPixelToScreenPixel))
+                    pass(mFont.mFontData.populateInstances("|viewspace: fixed-pixel", math::sdr::gWhite, stringToScreen))
+                });
+            mTextRenderer.render(mGlyphs, mFont, aRenderer, setup);
+        }
+
+        {
+            math::Vec<3, GLfloat> textScreenPosition_ndc{-0.8f, 0.60f, 0.f};
+
+            // 600 is the supposed initial Framebuffer height
+            // the ratio we apply is the current height to initial height
+            const float ratio = FbSize.height() / (float)600;
+
+            // This can be arbitrary for SDF rendering
+            // For opacity-raster rendering, it is better to always match the raster grid to the framebuffer grid.
+            float fontHeight_ndc = gFontPixelHeight / (600.f/2); // 600 is the supposed initial window height
+
+             math::AffineMatrix<4, GLfloat> stringPixelToScreenNdc = 
+                math::trans3d::scale(math::Size<3, GLfloat>{ratio, ratio, 1.f})
+                * math::trans3d::translate(textScreenPosition_ndc)
+                ;
+
+            mGlyphs.respecifyData(
+                std::span{
+                    pass(mFont.mFontData.populateInstances("|viewspace: fixed-ndc",
+                                                            math::sdr::gWhite,
+                                                            stringPixelToScreenNdc))
                 });
             mTextRenderer.render(mGlyphs, mFont, aRenderer, setup);
         }
