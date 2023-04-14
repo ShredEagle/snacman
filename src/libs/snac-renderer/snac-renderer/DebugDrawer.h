@@ -132,6 +132,9 @@ public:
         mLevel{aLevel}
     {}
 
+    static std::shared_ptr<DebugDrawer> AddDrawer(const std::string & aName)
+    { return GetRegistry().addDrawer(aName); }
+
     static void StartFrame()
     { GetRegistry().startFrame(); }
 
@@ -140,9 +143,6 @@ public:
 
     static std::shared_ptr<DebugDrawer> Get(const std::string & aName)
     { return GetRegistry().get(aName); }
-
-    static std::shared_ptr<DebugDrawer> AddDrawer(const std::string & aName)
-    { return GetRegistry().addDrawer(aName); }
 
     static auto Begin()
     { return GetRegistry().mDrawers.begin(); }
