@@ -216,8 +216,13 @@ void Renderer::render(const visu::GraphicState & aState)
     {
         TIME_RECURRING_GL("Draw_texts");
 
+        // 3D world text
         if (mControl.mRenderText)
         {
+            // This text should be occluded by geometry in front of it.
+            // WARNING: (smelly) the text rendering disable depth writes,
+            //          so it must be drawn last to occlude other visuals in the 3D world.
+            auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
             renderText(aState.mTextWorldEntities, programSetup);
         }
 

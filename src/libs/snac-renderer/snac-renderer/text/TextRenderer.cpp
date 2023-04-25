@@ -59,7 +59,7 @@ void TextRenderer::render(const GlyphInstanceStream & aGlyphs,
                           Renderer & aRenderer,
                           snac::ProgramSetup & aProgramSetup)
 {
-    auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, false);
+    auto depthWriteScope = graphics::scopeDepthMask(false);
 
     mTextPass.draw(aFont.mGlyphMesh,
                    aGlyphs,
