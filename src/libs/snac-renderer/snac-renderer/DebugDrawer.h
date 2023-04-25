@@ -88,19 +88,15 @@ public:
 
     struct DrawList
     {
+        /// @brief Initialize an empty draw list.
+        DrawList();
+
         DrawList(std::shared_ptr<Commands> aCommands) :
             mCommands{std::move(aCommands)}
         {}
 
-        // TODO remove
-        static DrawList MakeEmpty()
-        { return DrawList{}; };
-
         std::shared_ptr<Commands> mCommands;
 
-    private:
-        // TODO remove
-        DrawList();
     };
 
 

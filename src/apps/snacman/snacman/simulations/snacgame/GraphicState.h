@@ -89,7 +89,7 @@ struct GraphicState
 
     snac::SparseSet<Text, MaxEntityId> mTextScreenEntities;
 
-    snac::DebugDrawer::DrawList mDebugDrawList = snac::DebugDrawer::DrawList::MakeEmpty();
+    snac::DebugDrawer::DrawList mDebugDrawList;
 };
 
 
