@@ -11,16 +11,55 @@ namespace ad {
 namespace snac {
 
 
+namespace {
+
+    snac::VertexStream prepareLineVertexStream()
+    {
+        using LineVertex = DebugDrawer::LineVertex;
+
+        snac::VertexStream stream{
+            .mPrimitive = GL_LINES,
+        };
+
+        stream.mVertexBuffers.push_back(BufferView{.mStride = sizeof(LineVertex)});
+
+        {
+            graphics::ClientAttribute vertexPosition{
+                .mDimension = 3,
+                .mOffset = offsetof(LineVertex, mPosition),
+                .mComponentType = GL_FLOAT,
+            };
+
+            stream.mAttributes.emplace(Semantic::Position, AttributeAccessor{0, vertexPosition});
+        }
+
+        {
+            graphics::ClientAttribute color{
+                .mDimension = 4,
+                .mOffset = offsetof(LineVertex, mColor),
+                .mComponentType = GL_FLOAT,
+            };
+
+            stream.mAttributes.emplace(Semantic::Albedo, AttributeAccessor{0, color});
+        }
+
+        return stream;
+    }
+
+} // unnamed
+
 // TODO I do not like that it needs to get the font instead of using a Load<> interface
 // Yet the font loading needs to take the effect file as a second argument,
 // and the load interface does not support extra parameters.
 DebugRenderer::DebugRenderer(Load<Technique> & aTechniqueAccess, arte::FontFace aFontFace) :
+    mLineStream{prepareLineVertexStream()},
+    mLineProgram{std::move(aTechniqueAccess.get("shaders/DebugDraw.prog").mProgram)},
     mFont{
         std::move(aFontFace),
         48,
         loadTrivialEffect(aTechniqueAccess.get("shaders/BillboardText.prog"))}
 {
-    auto effect = loadTrivialEffect(aTechniqueAccess.get("shaders/DebugDraw.prog"));
+    auto effect = loadTrivialEffect(aTechniqueAccess.get("shaders/DebugDrawModelTransform.prog"));
 
     mCube = loadBox(
         math::Box<float>::UnitCube(),
@@ -69,7 +108,19 @@ void DebugRenderer::render(DebugDrawer::DrawList aDrawList, Renderer & aRenderer
         draw(aDrawList.mCommands->mArrows, mArrow);
     }
 
+    drawLines(aDrawList.mCommands->mLineVertices, aRenderer, aSetup);
+
     drawText(aDrawList.mCommands->mTexts, aRenderer, aSetup);
+}
+
+
+void DebugRenderer::drawLines(std::span<DebugDrawer::LineVertex> aLines, Renderer & aRenderer, ProgramSetup & aSetup)
+{
+    assert(mLineStream.mVertexBuffers.size() == 1);
+    mLineStream.respecifyData(0, aLines);
+
+    aRenderer.setupProgram(mPass.getName(), mLineProgram, aSetup);
+    aRenderer.draw(mLineStream, snac::gNotInstanced, mLineProgram);
 }
 
 

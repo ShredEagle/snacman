@@ -90,12 +90,15 @@ struct IndicesAccessor
 
 struct VertexStream
 {
+    template <class T_value, std::size_t N_spanExtent>
+    void respecifyData(std::size_t aBufferViewIndex, std::span<T_value, N_spanExtent> aData);
+
     std::vector<BufferView> mVertexBuffers;
     std::map<Semantic, AttributeAccessor> mAttributes;
     std::optional<IndicesAccessor> mIndices;
     GLsizei mVertexCount{0}; // i.e. the number of elements stored in each VBO
     GLenum mPrimitive;
-    math::Box<GLfloat> mBoundingBox;
+    math::Box<GLfloat> mBoundingBox; // TODO move out of here (or at least make optional)
 };
 
 
@@ -137,6 +140,19 @@ const InstanceStream gNotInstanced{
     },
     .mInstanceCount = 1,
 };
+
+
+template <class T_value, std::size_t N_spanExtent>
+void VertexStream::respecifyData(std::size_t aBufferViewIndex, std::span<T_value, N_spanExtent> aData)
+{
+    // Assert the buffer view index is in range.
+    assert(aBufferViewIndex < mVertexBuffers.size());
+    // Assert that it is the only buffer, or the data has the size of other buffers.
+    assert(mVertexBuffers.size() == 1 || mVertexCount == aData.size());
+
+    respecifyBuffer(mVertexBuffers[aBufferViewIndex].mBuffer, aData, graphics::BufferHint::StreamDraw);
+    mVertexCount = (GLsizei)aData.size();
+}
 
 
 template <class T_value, std::size_t N_spanExtent>

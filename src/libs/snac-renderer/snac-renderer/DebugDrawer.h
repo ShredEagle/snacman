@@ -65,6 +65,12 @@ public:
         math::hdr::Rgba_f mColor = math::hdr::gMagenta<float>;
     };
 
+    struct LineVertex
+    {
+        math::Position<3, float> mPosition;
+        math::hdr::Rgba_f mColor = math::hdr::gMagenta<float>;
+    };
+
     struct Text
     {
         math::Position<3, float> mPosition;
@@ -76,6 +82,7 @@ public:
     {
         std::vector<Entry> mBoxes;
         std::vector<Entry> mArrows;
+        std::vector<LineVertex> mLineVertices;
         std::vector<Text>  mTexts;
     };
 
@@ -171,6 +178,24 @@ public:
     void addBasis(Level aLevel, Entry aEntry);
 
     void addText(Level aLevel, Text aText);
+
+    void addLine(Level aLevel, const LineVertex & aP1, const LineVertex & aP2);
+
+    void addLine(Level aLevel, math::Position<3, float> aP1, math::Position<3, float> aP2,
+                 math::hdr::Rgba_f aColor = math::hdr::gMagenta<float>)
+    {
+        addLine(aLevel,
+                LineVertex{.mPosition = aP1, .mColor = aColor}, 
+                LineVertex{.mPosition = aP2, .mColor = aColor});
+    }
+        
+    void addPlane(Level aLevel,
+                  math::Position<3, float> aOrigin,
+                  math::Vec<3, float> aDir1, math::Vec<3, float> aDir2,
+                  int aSubdiv1, int aSubdiv2,
+                  float aSize1, float aSize2,
+                  math::hdr::Rgba_f aOutlineColor = math::hdr::gMagenta<float>,
+                  math::hdr::Rgba_f aSubdivColor = math::hdr::gWhite<float> * 0.4f);
 
 private:
     Commands & commands(Level aLevelSanityCheck);

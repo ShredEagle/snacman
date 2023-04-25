@@ -94,7 +94,7 @@ void Pass::draw(const Mesh & aMesh, const InstanceStream & aInstances, Renderer 
     if(const IntrospectProgram * program = findTechnique(*aMesh.mMaterial, mFilter);
         program != nullptr)
     {
-        // TODO Is there a better way to handle several source for uniform values
+        // TODO Is there a better way to handle several sources for uniform values
         auto scopeUniformPush = aSetup.mUniforms.push(aMesh.mMaterial->mUniforms);
         auto scopeUniformBlocksPush = aSetup.mUniformBlocks.push(aMesh.mMaterial->mUniformBlocks);
         auto scopeTexturePush = aSetup.mTextures.push(aMesh.mMaterial->mTextures);

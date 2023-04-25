@@ -153,6 +153,67 @@ void DebugDrawer::addText(Level aLevel, Text aText)
 }
 
 
+void DebugDrawer::addLine(Level aLevel, const LineVertex & aP1, const LineVertex & aP2)
+{
+    if(passDrawFilter(aLevel))
+    {
+        commands(aLevel).mLineVertices.push_back(std::move(aP1));
+        commands(aLevel).mLineVertices.push_back(std::move(aP2));
+    }
+}
+
+
+void DebugDrawer::addPlane(Level aLevel,
+                           math::Position<3, float> aOrigin,
+                           math::Vec<3, float> aDir1, math::Vec<3, float> aDir2,
+                           int aSubdiv1, int aSubdiv2,
+                           float aSize1, float aSize2,
+                           math::hdr::Rgba_f aOutlineColor,
+                           math::hdr::Rgba_f aSubdivColor)
+{
+    // Implementation from 3DRC (1st) Ch4
+    // Draw the outlines
+    addLine(aLevel,
+            aOrigin - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+            aOrigin - aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
+            aOutlineColor);
+    addLine(aLevel,
+            aOrigin + aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+            aOrigin + aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
+            aOutlineColor);
+    addLine(aLevel,
+            aOrigin - aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
+            aOrigin + aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
+            aOutlineColor);
+    addLine(aLevel,
+            aOrigin - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+            aOrigin + aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+            aOutlineColor);
+
+
+    // Draw internal subdivisions
+    for(int i = 1 ; i < aSubdiv1 ; i++) 
+    {
+        const float t = ((float)i - (float)aSubdiv1 / 2.0f) * aSize1 / (float)aSubdiv1;
+        const auto o1 = aOrigin + t * aDir1;
+        addLine(aLevel,
+                o1 - aSize2 / 2.0f * aDir2,
+                o1 + aSize2 / 2.0f * aDir2,
+                aSubdivColor);
+    }
+
+    for(int i = 1 ; i < aSubdiv2 ; i++)
+    {
+        const float t = ((float)i - (float)aSubdiv2 / 2.0f) * aSize2 / (float)aSubdiv2;
+        const auto o2 = aOrigin + t * aDir2;
+        addLine(aLevel,
+                o2 - aSize1 / 2.0f * aDir1,
+                o2 + aSize1 / 2.0f * aDir1,
+                aSubdivColor);
+    }
+}
+
+
 DebugDrawer::DrawList::DrawList() :
     mCommands{std::make_shared<Commands>()}
 {}

@@ -49,6 +49,13 @@ void Debug_BoundingBoxes::update()
         });
 
 
+    SEDBGDRAW(snac::gWorldDrawer)->addLine(Level::info, {0.f, 0.f, 0.f}, {0.f, 10.f, 0.f});
+    SEDBGDRAW(snac::gWorldDrawer)->addPlane(Level::info,
+        {0.f, 0.f, -15.f},
+        {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f},
+        40, 10,
+        20.f, 5.f);
+
     // Also add the world basis
     SEDBGDRAW(snac::gWorldDrawer)->addBasis(Level::info, {});
 }

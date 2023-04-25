@@ -22,6 +22,8 @@ public:
     void render(DebugDrawer::DrawList aDrawList, Renderer & aRenderer, ProgramSetup & aSetup);
 
 private:
+    void drawLines(std::span<DebugDrawer::LineVertex> aLines, Renderer & aRenderer, ProgramSetup & aSetup);
+
     void drawText(std::span<DebugDrawer::Text> aTexts, Renderer & aRenderer, ProgramSetup & aSetup);
 
     Mesh mCube;
@@ -29,6 +31,8 @@ private:
     Pass mPass{"DebugDrawing"};
     InstanceStream mInstances;
     Font mFont;
+    snac::IntrospectProgram mLineProgram;
+    snac::VertexStream mLineStream;
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mStrings;
 };
