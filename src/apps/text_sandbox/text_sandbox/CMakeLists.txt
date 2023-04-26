@@ -50,7 +50,7 @@ file(GENERATE
 ## Dependencies
 ##
 
-find_package(Graphics CONFIG REQUIRED graphics)
+find_package(Graphics CONFIG REQUIRED graphics imguiui)
 
 find_package(Handy CONFIG REQUIRED platform resource)
 
