@@ -62,7 +62,7 @@ DebugRenderer::DebugRenderer(Load<Technique> & aTechniqueAccess, arte::FontFace 
     auto effect = loadTrivialEffect(aTechniqueAccess.get("shaders/DebugDrawModelTransform.prog"));
 
     mCube = loadBox(
-        math::Box<float>::UnitCube(),
+        math::Box<float>{{0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}},
         effect,
         "debug_box");
 
