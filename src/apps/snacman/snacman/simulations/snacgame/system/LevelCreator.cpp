@@ -45,7 +45,7 @@ void LevelCreator::update()
 
         TIME_SINGLE(Main, "Level_instantiation");
 
-        EntHandle title = createWorldText(*mGameContext,
+        createWorldText(*mGameContext,
                         "SNACMAN",
                         {
                             .mPosition = math::Position<3, GLfloat>{-10.f, 0.f, -6.f},

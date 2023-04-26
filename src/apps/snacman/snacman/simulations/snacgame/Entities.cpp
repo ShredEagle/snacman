@@ -100,7 +100,9 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
             .mFont = std::move(font),
             .mColor = math::hdr::gYellow<float>,
         })
-        .add(aPose);
+        .add(aPose)
+        .add(component::LevelEntity{})
+        ;
 
     return handle;
 }
