@@ -1,4 +1,6 @@
 #include "MenuScene.h"
+#include "snacman/simulations/snacgame/SceneGraph.h"
+#include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 
 #include "../Entities.h"
 #include "../InputCommandConverter.h"
@@ -7,6 +9,10 @@
 #include "../component/Controller.h"
 #include "../component/Context.h"
 #include "../component/PlayerSlot.h"
+#include "../component/Geometry.h"
+#include "../component/GlobalPose.h"
+#include "../component/SceneNode.h"
+
 
 
 #include <snacman/Input.h>
@@ -41,6 +47,12 @@ void MenuScene::setup(const Transition & Transition,
 
     mOwnedEntities.push_back(startHandle);
     mOwnedEntities.push_back(quitHandle);
+    mSystems.get(init)
+        ->add(system::SceneGraphResolver{mGameContext, mSceneRoot});
+
+    ent::Handle<ent::Entity> background = createStageDecor(mGameContext);
+    mOwnedEntities.push_back(background);
+    insertEntityInScene(background, mSceneRoot);
 }
 
 void MenuScene::teardown(RawInput & aInput)
@@ -53,6 +65,8 @@ void MenuScene::teardown(RawInput & aInput)
     }
 
     mOwnedEntities.clear();
+    mSystems.get(destroy)->erase();
+    mSystems = mGameContext.mWorld.addEntity();
 }
 
 std::optional<Transition>
@@ -67,8 +81,6 @@ MenuScene::update(float aDelta, RawInput & aInput)
     };
 
     int accumulatedCommand = keyboardCommand.mCommand;
-
-    ent::Phase bindPlayerPhase;
 
     std::vector<ControllerCommand> controllerCommandList;
 
@@ -97,7 +109,7 @@ MenuScene::update(float aDelta, RawInput & aInput)
 
     std::optional<Transition> menuTransition = std::nullopt;
 
-    mItems.each([this, &menuTransition, accumulatedCommand, &bindPlayerPhase,
+    mItems.each([this, &menuTransition, accumulatedCommand,
                  keyboardCommand, &controllerCommandList,
                  filteredForMenuCommand, &newItem](component::MenuItem & aItem,
                                                    component::Text & aText) {
@@ -113,7 +125,7 @@ MenuScene::update(float aDelta, RawInput & aInput)
             {
                 if (keyboardCommand.mCommand & gSelectItem)
                 {
-                    findSlotAndBind(mGameContext, bindPlayerPhase, mSlots,
+                    findSlotAndBind(mGameContext, mSlots,
                                     keyboardCommand.mControllerType,
                                     keyboardCommand.mId);
                     menuTransition = aItem.mTransition;
@@ -122,7 +134,7 @@ MenuScene::update(float aDelta, RawInput & aInput)
                 {
                     if (command.mCommand & gSelectItem)
                     {
-                        findSlotAndBind(mGameContext, bindPlayerPhase, mSlots,
+                        findSlotAndBind(mGameContext, mSlots,
                                         command.mControllerType, command.mId);
                         menuTransition = aItem.mTransition;
                     }
@@ -154,6 +166,9 @@ MenuScene::update(float aDelta, RawInput & aInput)
         SELOG(error)
         ("Could not find item {} in menu (Check the case)", newItem);
     }
+
+    ent::Phase update;
+    mSystems.get(update)->get<system::SceneGraphResolver>().update();
 
     return menuTransition;
 }

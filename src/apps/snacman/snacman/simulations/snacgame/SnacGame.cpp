@@ -209,9 +209,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                         if (ImGui::Button("Create dummy player"))
                         {
                             {
-                                ent::Phase hello;
                                 fillSlotWithPlayer(
-                                    mGameContext, hello, ControllerType::Dummy,
+                                    mGameContext, ControllerType::Dummy,
                                     aPlayer, gDummyControllerIndex);
                             }
                         }

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../GameContext.h"
-
+#include "snacman/simulations/snacgame/component/Geometry.h"
 #include "../component/LevelData.h"
 #include "../component/SceneNode.h"
+#include "../GameContext.h"
 
 #include <entity/Query.h>
 
@@ -15,7 +15,10 @@ class LevelCreator
 {
 public:
     LevelCreator(GameContext & aGameContext) :
-        mGameContext{&aGameContext}, mCreatable{mGameContext->mWorld}
+        mGameContext{&aGameContext},
+        mCreatable{mGameContext->mWorld},
+        mEntities{mGameContext->mWorld},
+        mPortals{mGameContext->mWorld}
     {}
 
     void update();
@@ -26,6 +29,8 @@ private:
                component::LevelToCreate,
                component::SceneNode>
         mCreatable;
+    ent::Query<component::LevelEntity, component::SceneNode> mEntities;
+    ent::Query<component::Portal, component::Geometry> mPortals;
 };
 
 } // namespace system

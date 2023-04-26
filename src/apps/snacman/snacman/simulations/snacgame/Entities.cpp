@@ -18,6 +18,9 @@
 #include "scene/MenuScene.h"
 #include "component/AllowedMovement.h"
 #include "component/PlayerPowerUp.h"
+#include "snacman/simulations/snacgame/SceneGraph.h"
+#include "snacman/simulations/snacgame/component/PlayerModel.h"
+#include "snacman/simulations/snacgame/component/PlayerPortalData.h"
 #include "typedef.h"
 
 #include "../../QueryManipulation.h"
@@ -44,6 +47,24 @@ namespace ad {
 namespace snacgame {
 
 constexpr Size3 lLevelElementScaling = {1.f, 1.f, 1.f};
+
+void addGeoNode(Phase & aPhase,
+                    GameContext & aContext,
+                    Entity & aEnt,
+                    Pos3 aPos,
+                    float aScale,
+                    Size3 aInstanceScale,
+                    Quat_f aOrientation,
+                    HdrColor_f aColor)
+{
+    aEnt.add(component::Geometry{.mPosition = aPos,
+                                 .mScaling = aScale,
+                                 .mInstanceScaling = aInstanceScale,
+                                 .mOrientation = aOrientation,
+                                 .mColor = aColor})
+        .add(component::SceneNode{})
+        .add(component::GlobalPose{});
+}
 
 void addMeshGeoNode(Phase & aPhase,
                     GameContext & aContext,
@@ -75,10 +96,10 @@ void createLevelElement(Phase & aPhase,
                         HdrColor_f aColor)
 {
     Entity path = *aHandle.get(aPhase);
-    addMeshGeoNode(aPhase, aContext, path, "models/floor/floor.gltf",
+    addMeshGeoNode(aPhase, aContext, path, "models/square_biscuit/square_biscuit.gltf",
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gLevelHeight},
-                   0.5f, lLevelElementScaling, math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                   0.45f, lLevelElementScaling, math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 math::Turn<float>{0.25f}}, aColor);
     path.add(component::LevelEntity{});
 }
@@ -109,13 +130,13 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
 
 
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
+        Phase & aPhase,
                                     const math::Position<2, float> & aGridPos)
 {
-    ent::Phase init;
     auto handle = aContext.mWorld.addEntity();
-    Entity pill = *handle.get(init);
+    Entity pill = *handle.get(aPhase);
     addMeshGeoNode(
-        init, aContext, pill, "models/burger/burger.gltf",
+        aPhase, aContext, pill, "models/burger/burger.gltf",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gPillHeight},
         0.16f, {1.f, 1.f, 1.f},
@@ -134,13 +155,13 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
 }
 
 ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
+        Phase & aPhase,
                                     const math::Position<2, float> & aGridPos)
 {
-    ent::Phase init;
     auto handle = aContext.mWorld.addEntity();
-    Entity powerUp = *handle.get(init);
+    Entity powerUp = *handle.get(aPhase);
     addMeshGeoNode(
-        init, aContext, powerUp, "models/burger/burger.gltf",
+        aPhase, aContext, powerUp, "models/collar/collar.gltf",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gPillHeight},
         0.3f, {1.f, 1.f, 1.f},
@@ -164,65 +185,66 @@ EntHandle createPlayerPowerUp(GameContext & aContext)
     auto handle = aContext.mWorld.addEntity();
     Entity powerUp = *handle.get(init);
     addMeshGeoNode(
-        init, aContext, powerUp, "models/burger/burger.gltf",
-        {0.f, 1.5f, -1.f},
+        init, aContext, powerUp, "models/collar/collar.gltf",
+        {0.f, -1.f, 1.5f},
         0.3f, {1.f, 1.f, 1.f});
     return handle;
 }
 
-ent::Handle<ent::Entity>
+EntHandle
 createPathEntity(GameContext & aContext,
+                 Phase & aPhase,
                  const math::Position<2, float> & aGridPos)
 {
-    ent::Phase init;
     auto handle = aContext.mWorld.addEntity();
-    createLevelElement(init, handle, aContext, aGridPos,
+    createLevelElement(aPhase, handle, aContext, aGridPos,
                        math::hdr::gWhite<float>);
     return handle;
 }
 
 ent::Handle<ent::Entity>
 createPortalEntity(GameContext & aContext,
+                   Phase & aPhase,
                    const math::Position<2, float> & aGridPos, int aPortalIndex)
 {
-    ent::Phase init;
     auto handle = aContext.mWorld.addEntity();
-    createLevelElement(init, handle, aContext, aGridPos,
+    createLevelElement(aPhase, handle, aContext, aGridPos,
                        math::hdr::gRed<float>);
-    handle.get(init)->add(component::Portal{aPortalIndex});
+    Entity portal = *handle.get(aPhase);
+    portal.add(component::Portal{aPortalIndex});
+    portal.add(component::Collision{component::gPortalHitbox});
     return handle;
 }
 
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
+                   Phase & aPhase,
                    const math::Position<2, float> & aGridPos)
 {
-    ent::Phase init;
     auto handle = aContext.mWorld.addEntity();
-    createLevelElement(init, handle, aContext, aGridPos,
+    createLevelElement(aPhase, handle, aContext, aGridPos,
                        math::hdr::gYellow<float>);
     return handle;
 }
 
 ent::Handle<ent::Entity>
 createPlayerSpawnEntity(GameContext & aContext,
+                   Phase & aPhase,
                         const math::Position<2, float> & aGridPos)
 {
-    ent::Phase init;
     math::Position<3, float> spawnPos = {static_cast<float>(aGridPos.x()),
                                          static_cast<float>(aGridPos.y()),
                                          gPlayerHeight};
     auto spawner = aContext.mWorld.addEntity();
-    createLevelElement(init, spawner, aContext, aGridPos,
+    createLevelElement(aPhase, spawner, aContext, aGridPos,
                        math::hdr::gCyan<float>);
-    spawner.get(init)->add(component::Spawner{.mSpawnPosition = spawnPos});
+    spawner.get(aPhase)->add(component::Spawner{.mSpawnPosition = spawnPos});
 
     return spawner;
 }
 
 
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
-                                            ent::Phase & aInit,
                                             ControllerType aControllerType,
                                             ent::Handle<ent::Entity> aSlot,
                                             int aControllerId)
@@ -230,42 +252,64 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
     auto font =
         aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120);
 
-    Entity player = *aSlot.get(aInit);
-    component::PlayerSlot & playerSlot =
-        player.get<component::PlayerSlot>();
-    playerSlot.mFilled = true;
+    EntHandle playerModel = aContext.mWorld.addEntity();
 
-    std::ostringstream playerText;
-    playerText << "P" << playerSlot.mIndex + 1 << " 0";
+    {
+        Phase sceneInit;
+        Entity player = *aSlot.get(sceneInit);
 
-    addMeshGeoNode(
-        aInit, aContext, player, "models/donut/DONUT.gltf",
-        {0.f, 0.f, gPlayerHeight}, 1.f, {1.f, 1.f, 1.f},
-        math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
-                                math::Turn<float>{0.25f}},
-        playerSlot.mColor);
+        component::PlayerSlot & playerSlot =
+            player.get<component::PlayerSlot>();
 
-    player
-        .add(component::PlayerLifeCycle{.mIsAlive = false})
-        .add(component::PlayerMoveState{})
-        .add(component::AllowedMovement{})
-        .add(component::Controller{.mType = aControllerType,
-                                   .mControllerId = aControllerId})
-        .add(component::Text{
-            .mString{playerText.str()},
-            .mFont = std::move(font),
-            .mColor = playerSlot.mColor,
-        })
-        .add(component::PoseScreenSpace{
-            .mPosition_u = {-0.9f + 0.2f * static_cast<float>(playerSlot.mIndex), 0.8f}})
-        .add(component::Collision{component::gPlayerHitbox});
+        Entity model = *playerModel.get(sceneInit);
 
+        addGeoNode(
+            sceneInit, aContext, player,
+            {0.f, 0.f, gPlayerHeight});
+        addMeshGeoNode(
+            sceneInit, aContext, model, "models/donut/donut.gltf",
+            {0.f, 0.f, 0.f}, 0.2f, {1.f, 1.f, 1.f},
+            Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+                                    math::Turn<float>{0.25f}} * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                                    math::Turn<float>{0.25f}},
+            playerSlot.mColor);
+    }
+
+    insertEntityInScene(playerModel, aSlot);
+
+    {
+        Phase createPlayer;
+        Entity player = *aSlot.get(createPlayer);
+
+        component::PlayerSlot & playerSlot =
+            player.get<component::PlayerSlot>();
+        playerSlot.mFilled = true;
+        std::ostringstream playerText;
+        playerText << "P" << playerSlot.mIndex + 1 << " 0";
+
+        player
+            .add(component::PlayerModel{.mModel = playerModel})
+            .add(component::PlayerLifeCycle{.mIsAlive = false})
+            .add(component::PlayerMoveState{})
+            .add(component::AllowedMovement{})
+            .add(component::Controller{.mType = aControllerType,
+                                       .mControllerId = aControllerId})
+            .add(component::Text{
+                .mString{playerText.str()},
+                .mFont = std::move(font),
+                .mColor = playerSlot.mColor,
+            })
+            .add(component::PoseScreenSpace{
+                .mPosition_u = {-0.9f + 0.2f * static_cast<float>(playerSlot.mIndex), 0.8f}})
+            .add(component::Collision{component::gPlayerHitbox})
+            .add(component::PlayerPortalData{});
+
+    }
     return aSlot;
 }
 
 std::optional<ent::Handle<ent::Entity>>
 findSlotAndBind(GameContext & aContext,
-                ent::Phase & aBindPhase,
                 ent::Query<component::PlayerSlot> & aSlots,
                 ControllerType aType,
                 int aIndex)
@@ -275,7 +319,7 @@ findSlotAndBind(GameContext & aContext,
 
     if (freeSlot)
     {
-        return fillSlotWithPlayer(aContext, aBindPhase, aType, *freeSlot,
+        return fillSlotWithPlayer(aContext, aType, *freeSlot,
                                   aIndex);
     }
 
@@ -348,7 +392,34 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
         aHandle.get(aPhase)->remove<component::PlayerPowerUp>();
     }
 
+    if (aHandle.get(aPhase)->get<component::PlayerPortalData>().mPortalImage)
+    {
+        aHandle.get(aPhase)->get<component::PlayerPortalData>().mPortalImage->get(aPhase)->erase();
+        aHandle.get(aPhase)->remove<component::PlayerPortalData>();
+    }
+
+    aHandle.get(aPhase)->get<component::PlayerModel>().mModel.get(aPhase)->erase();
+    aHandle.get(aPhase)->remove<component::PlayerModel>();
+
+
     return aHandle;
+}
+
+EntHandle createStageDecor(GameContext & aContext)
+{
+    EntHandle result = aContext.mWorld.addEntity();
+    {
+        Phase createStage;
+        Entity stageEntity = *result.get(createStage);
+
+        addMeshGeoNode(createStage, aContext, stageEntity, "models/stage/stage.gltf",
+                {7.f, 7.f, -0.4f}, 1.f, {1.f, 1.f, 1.f},
+                Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+                                        math::Turn<float>{0.25f}} * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                                        math::Turn<float>{0.25f}}
+                );
+    }
+    return result;
 }
 
 } // namespace snacgame

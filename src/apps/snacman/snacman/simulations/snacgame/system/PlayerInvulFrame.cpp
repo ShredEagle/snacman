@@ -1,6 +1,6 @@
 #include "PlayerInvulFrame.h"
 
-#include "../component/VisualMesh.h"
+#include "../component/VisualModel.h"
 
 #include <snac-renderer/Mesh.h>
 #include <memory>

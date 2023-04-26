@@ -18,6 +18,8 @@
 #include "../system/RoundMonitor.h"
 #include "../system/SceneGraphResolver.h"
 
+#include "../typedef.h"
+
 
 namespace ad {
 namespace snacgame {

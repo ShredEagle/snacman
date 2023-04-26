@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../component/PlayerLifeCycle.h"
-#include "../component/VisualMesh.h"
+#include "../component/VisualModel.h"
 #include "../GameContext.h"
 
 #include <entity/EntityManager.h>

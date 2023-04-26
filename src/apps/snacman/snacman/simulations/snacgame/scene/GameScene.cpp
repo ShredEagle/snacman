@@ -169,7 +169,6 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
         quit |= static_cast<bool>(aController.mCommandQuery & gQuitCommand);
     });
 
-    Phase bindPlayerPhase;
     // This works because gKeyboardControllerIndex is -1
     // So this is a bit janky but it unifies the player join code
     for (int controlIndex = gKeyboardControllerIndex;
@@ -197,7 +196,7 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
 
             if (command & gJoin)
             {
-                findSlotAndBind(mGameContext, bindPlayerPhase, mSlots,
+                findSlotAndBind(mGameContext, mSlots,
                                 controllerIsKeyboard ? ControllerType::Keyboard
                                                      : ControllerType::Gamepad,
                                 static_cast<int>(controlIndex));

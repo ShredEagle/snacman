@@ -2,6 +2,7 @@
 
 #include "../LevelHelper.h"
 #include "../GameParameters.h"
+#include "../typedef.h"
 
 #include "../component/LevelData.h"
 
@@ -19,17 +20,21 @@ void IntegratePlayerMovement::update(float aDelta)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    mPlayer.each([aDelta](component::Geometry & aGeometry,
-                          const component::PlayerMoveState & aMoveState) {
+    ent::Phase updateOrientation;
+
+    mPlayer.each([aDelta, &updateOrientation](component::Geometry & aGeometry,
+                          const component::PlayerMoveState & aMoveState,
+                          component::PlayerModel & aModel) {
         Pos2_i intPos = getLevelPosition_i(aGeometry.mPosition.xy());
+        Quat_f & orientation = aModel.mModel.get(updateOrientation)->get<component::Geometry>().mOrientation;
         if (aMoveState.mMoveState & gPlayerMoveFlagUp)
         {
             aGeometry.mPosition.y() += 1.f * gBasePlayerSpeed * aDelta;
             aGeometry.mPosition.x() = static_cast<float>(intPos.x());
-            aGeometry.mOrientation =
+            orientation =
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
-                    math::Turn<float>{0.f}} *
+                    math::Turn<float>{0.25f}} *
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                     math::Turn<float>{0.25f}};
@@ -38,10 +43,10 @@ void IntegratePlayerMovement::update(float aDelta)
         {
             aGeometry.mPosition.y() += -1.f * gBasePlayerSpeed * aDelta;
             aGeometry.mPosition.x() = static_cast<float>(intPos.x());
-            aGeometry.mOrientation =
+            orientation =
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
-                    math::Turn<float>{0.5f}} *
+                    math::Turn<float>{0.75f}} *
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                     math::Turn<float>{0.25f}};
@@ -50,10 +55,10 @@ void IntegratePlayerMovement::update(float aDelta)
         {
             aGeometry.mPosition.x() += -1.f * gBasePlayerSpeed * aDelta;
             aGeometry.mPosition.y() = static_cast<float>(intPos.y());
-            aGeometry.mOrientation =
+            orientation =
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
-                    math::Turn<float>{0.25f}} *
+                    math::Turn<float>{0.5f}} *
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                     math::Turn<float>{0.25f}};
@@ -62,10 +67,10 @@ void IntegratePlayerMovement::update(float aDelta)
         {
             aGeometry.mPosition.x() += 1.f * gBasePlayerSpeed * aDelta;
             aGeometry.mPosition.y() = static_cast<float>(intPos.y());
-            aGeometry.mOrientation =
+            orientation =
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
-                    math::Turn<float>{0.75f}} *
+                    math::Turn<float>{0.f}} *
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                     math::Turn<float>{0.25f}};

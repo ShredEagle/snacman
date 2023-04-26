@@ -1,4 +1,5 @@
 #include "LevelCreator.h"
+#include "snacman/simulations/snacgame/LevelHelper.h"
 
 #include "../Entities.h"
 #include "../SceneGraph.h"
@@ -65,10 +66,10 @@ void LevelCreator::update()
         std::vector<component::Tile> & tiles = aLevelData.mTiles;
         std::vector<component::PathfindNode> & nodes = aLevelData.mNodes;
         std::vector<int> & portals = aLevelData.mPortalIndex;
-        int rowCount = aLevelData.mSize.width();
-        int colCount = aLevelData.mSize.height();
-        tiles.reserve(rowCount * colCount);
-        nodes.reserve(rowCount * colCount);
+        int stride = aLevelData.mSize.width();
+        int height = aLevelData.mSize.height();
+        tiles.reserve(stride * height);
+        nodes.reserve(stride * height);
 
         for (int z = 0; z < aGrid.mSize.depth(); z++)
         {
@@ -87,116 +88,138 @@ void LevelCreator::update()
                                                          static_cast<float>(y)},
                         .mPathable = value != 'B',
                     });
+                    component::TileType type = component::TileType::Void;
+
                     switch (value)
                     {
                     case 'W':
                     {
-                        tiles.push_back(component::Tile{
-                            .mType = component::TileType::Path});
-                        EntHandle path = createPathEntity(
-                            *mGameContext,
-                            math::Position<2, float>{xFloat, yFloat});
-                        insertEntityInScene(path, aLevelHandle);
-                        EntHandle pill = createPill(
-                            *mGameContext,
-                            math::Position<2, float>{xFloat, yFloat});
-                        insertEntityInScene(pill, aLevelHandle);
+                        type = component::TileType::Path;
                         break;
                     }
                     case 'O':
                     {
-                        tiles.push_back(component::Tile{
-                            .mType = component::TileType::Path});
-                        EntHandle path = createPathEntity(
-                            *mGameContext,
-                            math::Position<2, float>{xFloat, yFloat});
-                        insertEntityInScene(path, aLevelHandle);
-                        EntHandle powerup = createPowerUp(
-                            *mGameContext,
-                            math::Position<2, float>{xFloat, yFloat});
-                        insertEntityInScene(powerup, aLevelHandle);
+                        type = component::TileType::Powerup;
                         break;
                     }
                     case 'K':
                     {
-                        tiles.push_back(component::Tile{
-                            .mType = component::TileType::Portal});
-                        int portalIndex = static_cast<int>(tiles.size() - 1);
-                        portals.push_back(portalIndex);
-                        EntHandle portal = createPortalEntity(
-                            *mGameContext,
-                            math::Position<2, float>{xFloat, yFloat},
-                            portalIndex);
-                        insertEntityInScene(portal, aLevelHandle);
+                        type = component::TileType::Portal;
                         break;
                     }
                     case 'F':
                     {
-                        tiles.push_back(component::Tile{
-                            .mType = component::TileType::Spawn});
-                        EntHandle spawn = createPlayerSpawnEntity(
-                            *mGameContext,
-                            math::Position<2, float>{xFloat, yFloat});
-                        insertEntityInScene(spawn, aLevelHandle);
+                        type = component::TileType::Spawn;
                         break;
                     }
                     default:
-                        tiles.push_back(component::Tile{
-                            .mType = component::TileType::Void});
                         break;
                     }
+
+                    tiles.push_back(component::Tile{
+                        .mType = type,
+                        .mPos = Pos2{xFloat, yFloat},
+                        });
                 }
             }
         }
 
-        for (int i = 1; i < colCount - 1; ++i)
+        // This takes a lot of time
+        // Presumable because there is a lot of allocation and moving
+        // of archetypes
+        // However this needs a way to instantiate null handle
+        // so that we can pre instantiate component containing handles
+        // Or we need a custom allocator for the whole entity manager
+        // Right now it's 15 ms in release for 225 entity that's 66us per
+        // instantiation
         {
-            for (int j = 1; j < rowCount - 1; ++j)
+        Phase createLevel;
+        for (int i = 1; i < height - 1; ++i)
+        {
+            for (int j = 1; j < stride - 1; ++j)
             {
-                component::Tile & tile = tiles.at(i + j * colCount);
+                component::Tile & tile = tiles.at(i + j * stride);
 
-                if (tiles.at(i + (j + 1) * colCount).mType
-                    != component::TileType::Void)
+                switch (tile.mType)
                 {
-                    tile.mAllowedMove |= component::gAllowedMovementUp;
-                    if (tile.mType == component::TileType::Portal)
+                    case component::TileType::Path:
                     {
-                        tile.mAllowedMove |= component::gAllowedMovementDown;
+                        createPathEntity(
+                            *mGameContext,
+                            createLevel,
+                            tile.mPos);
+                        createPill(
+                            *mGameContext,
+                            createLevel,
+                            tile.mPos);
+                        break;
                     }
-                }
-                if (tiles.at(i + (j - 1) * colCount).mType
-                    != component::TileType::Void)
-                {
-                    tile.mAllowedMove |= component::gAllowedMovementDown;
-                    if (tile.mType == component::TileType::Portal)
+                    case component::TileType::Powerup:
                     {
-                        tile.mAllowedMove |= component::gAllowedMovementUp;
+                        createPathEntity(
+                            *mGameContext,
+                            createLevel,
+                            tile.mPos);
+                        createPowerUp(
+                            *mGameContext,
+                            createLevel,
+                            tile.mPos);
+                        break;
                     }
-                }
-                if (tiles.at((i + 1) + j * colCount).mType
-                    != component::TileType::Void)
-                {
-                    tile.mAllowedMove |= component::gAllowedMovementRight;
-                    if (tile.mType == component::TileType::Portal)
+                    case component::TileType::Portal:
                     {
-                        tile.mAllowedMove |= component::gAllowedMovementLeft;
+                        int portalIndex = static_cast<int>(i + j * stride);
+                        portals.push_back(portalIndex);
+                        createPortalEntity(
+                            *mGameContext,
+                            createLevel,
+                            tile.mPos,
+                            portalIndex);
+                        break;
                     }
-                }
-                if (tiles.at((i - 1) + j * colCount).mType
-                    != component::TileType::Void)
-                {
-                    tile.mAllowedMove |= component::gAllowedMovementLeft;
-                    if (tile.mType == component::TileType::Portal)
+                    case component::TileType::Spawn:
                     {
-                        tile.mAllowedMove |= component::gAllowedMovementRight;
+                        createPlayerSpawnEntity(
+                            *mGameContext,
+                            createLevel,
+                            tile.mPos);
+                        break;
+                    }
+                    case component::TileType::Void:
+                    default:
+                        break;
+                }
+
+                for (int moveIndex = 0; moveIndex < gDirections.size(); ++moveIndex)
+                {
+                    const Pos2_i dir = gDirections.at(moveIndex);
+                    const int move = gAllowedMovement.at(moveIndex);
+                    if (tiles.at(i + dir.x() + (j + dir.y()) * stride).mType != component::TileType::Void)
+                    {
+                        tile.mAllowedMove |= move;
+                        if (tile.mType == component::TileType::Portal)
+                        {
+                            tile.mAllowedMove |= gAllowedMovement.at(moveIndex ^ 0b01);
+                        }
                     }
                 }
             }
         }
+        } // end createLevel phase
 
-        ent::Phase createLevelPhase;
-        aLevelHandle.get(createLevelPhase)->remove<component::LevelToCreate>();
-        aLevelHandle.get(createLevelPhase)->add(component::LevelCreated{});
+        mEntities.each([&aLevelHandle](EntHandle aHandle, const component::LevelEntity &) {
+            insertEntityInScene(aHandle, aLevelHandle);
+        });
+
+        mPortals.each([](EntHandle aHandle, component::Portal & aPortal, const component::Geometry & aGeo) {
+                Pos2_i pos = {(int)aGeo.mPosition.x(), (int)aGeo.mPosition.y()};
+        });
+
+        {
+        ent::Phase tagLevelCreation;
+        aLevelHandle.get(tagLevelCreation)->remove<component::LevelToCreate>();
+        aLevelHandle.get(tagLevelCreation)->add(component::LevelCreated{});
+        }
     });
 }
 

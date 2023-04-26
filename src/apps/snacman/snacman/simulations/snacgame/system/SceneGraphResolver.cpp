@@ -78,6 +78,18 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
 
 } // namespace
 
+SceneGraphResolver::SceneGraphResolver(GameContext & aGameContext,
+                   ent::Handle<ent::Entity> aSceneRoot) :
+    mSceneRoot{aSceneRoot}, mNodes{aGameContext.mWorld}
+{
+    mNodes.onRemoveEntity([](ent::Handle<ent::Entity> aHandle,
+                              component::SceneNode & aNode,
+                              const component::Geometry &,
+                              const component::GlobalPose &) {
+        removeEntityFromScene(aHandle);
+    });
+}
+
 void SceneGraphResolver::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);

@@ -1,6 +1,5 @@
 #include "AllowMovement.h"
 
-
 #include "../LevelHelper.h"
 #include "../typedef.h"
 
@@ -34,7 +33,7 @@ void AllowMovement::update()
     int colCount = aLevelData.mSize.height();
     mMover.each([&](component::Geometry & aGeo,
                     component::AllowedMovement & aAllowedMovement) {
-        int allowedMovementFlag = component::gAllowedMovementNone;
+        int allowedMovementFlag = gAllowedMovementNone;
 
         Pos2_i intPos = getLevelPosition_i(aGeo.mPosition.xy());
         float fracPosX = aGeo.mPosition.x() - intPos.x();
@@ -45,35 +44,35 @@ void AllowMovement::update()
 
         if (fracPosY < 0.f
             || (pathUnderPlayerAllowedMove.mAllowedMove
-                    & component::gAllowedMovementUp
+                    & gAllowedMovementUp
                 && fracPosX > -aAllowedMovement.mWindow
                 && fracPosX < aAllowedMovement.mWindow))
         {
-            allowedMovementFlag |= component::gAllowedMovementUp;
+            allowedMovementFlag |= gAllowedMovementUp;
         }
         if (fracPosY > 0.f
             || (pathUnderPlayerAllowedMove.mAllowedMove
-                    & component::gAllowedMovementDown
+                    & gAllowedMovementDown
                 && fracPosX > -aAllowedMovement.mWindow
                 && fracPosX < aAllowedMovement.mWindow))
         {
-            allowedMovementFlag |= component::gAllowedMovementDown;
+            allowedMovementFlag |= gAllowedMovementDown;
         }
         if (fracPosX > 0.f
             || (pathUnderPlayerAllowedMove.mAllowedMove
-                    & component::gAllowedMovementLeft
+                    & gAllowedMovementLeft
                 && fracPosY > -aAllowedMovement.mWindow
                 && fracPosY < aAllowedMovement.mWindow))
         {
-            allowedMovementFlag |= component::gAllowedMovementLeft;
+            allowedMovementFlag |= gAllowedMovementLeft;
         }
         if (fracPosX < 0.f
             || (pathUnderPlayerAllowedMove.mAllowedMove
-                    & component::gAllowedMovementRight
+                    & gAllowedMovementRight
                 && fracPosY > -aAllowedMovement.mWindow
                 && fracPosY < aAllowedMovement.mWindow))
         {
-            allowedMovementFlag |= component::gAllowedMovementRight;
+            allowedMovementFlag |= gAllowedMovementRight;
         }
         aAllowedMovement.mAllowedMovement = allowedMovementFlag;
     });

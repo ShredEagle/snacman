@@ -16,8 +16,8 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-inline const math::hdr::Rgba_f gColorItemUnselected = math::hdr::gYellow<float>;
-inline const math::hdr::Rgba_f gColorItemSelected = math::hdr::gGreen<float>;
+inline const math::hdr::Rgba_f gColorItemUnselected = math::hdr::gBlack<float>;
+inline const math::hdr::Rgba_f gColorItemSelected = math::hdr::gCyan<float>;
 
 class MenuScene : public Scene
 {

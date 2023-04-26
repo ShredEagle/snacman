@@ -36,36 +36,50 @@ struct Transition;
 struct GameContext;
 
 constexpr float gPillHeight = 6 * gCellSize * 0.1f;
-constexpr float gPlayerHeight = -4 * gCellSize * 0.1f;
+constexpr float gPlayerHeight = 0 * gCellSize * 0.1f;
 constexpr float gLevelHeight = 0 * gCellSize * 0.1f;
 
-void addMeshGeoNode(ent::Phase & aPhase,
-                    GameContext & aContext,
-                    ent::Entity & aEnt,
-                    const char * aModelPath,
-                    math::Position<3, float> aPos = math::Position<3, float>::Zero(),
-                    float aScale = 1.f,
-                    math::Size<3, float> aInstanceScale = {1.f, 1.f, 1.f},
-                    math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
-                    math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
+void addGeoNode(
+    ent::Phase & aPhase,
+    GameContext & aContext,
+    ent::Entity & aEnt,
+    math::Position<3, float> aPos = math::Position<3, float>::Zero(),
+    float aScale = 1.f,
+    math::Size<3, float> aInstanceScale = {1.f, 1.f, 1.f},
+    math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
+    math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
+
+void addMeshGeoNode(
+    ent::Phase & aPhase,
+    GameContext & aContext,
+    ent::Entity & aEnt,
+    const char * aModelPath,
+    math::Position<3, float> aPos = math::Position<3, float>::Zero(),
+    float aScale = 1.f,
+    math::Size<3, float> aInstanceScale = {1.f, 1.f, 1.f},
+    math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
+    math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
 
 ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
                                          std::string aText,
                                          component::GlobalPose aPose);
 
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
+                                    ent::Phase & aPhase,
                                     const math::Position<2, float> & Pos);
 
 ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
-                                    const math::Position<2, float> & Pos);
-
+                                       ent::Phase & aPhase,
+                                       const math::Position<2, float> & Pos);
 ent::Handle<ent::Entity> createPlayerPowerUp(GameContext & aContext);
 
 ent::Handle<ent::Entity>
-createPathEntity(GameContext & aContext, const math::Position<2, float> & aPos);
-
+createPathEntity(GameContext & aContext,
+                 ent::Phase & aPhase,
+                 const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>
 createPortalEntity(GameContext & aContext,
+                   ent::Phase & aPhase,
                    const math::Position<2, float> & aPos,
                    int aPortalIndex);
 ent::Handle<ent::Entity>
@@ -73,13 +87,15 @@ createCopPenEntity(GameContext & aContext,
                    const math::Position<2, float> & aPos);
 ent::Handle<ent::Entity>
 createPlayerSpawnEntity(GameContext & aContext,
+                        ent::Phase & aPhase,
                         const math::Position<2, float> & aPos);
 
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
-                                            ent::Phase & aInit,
                                             ControllerType aControllerType,
                                             ent::Handle<ent::Entity> aSlot,
                                             int aControllerId = 0);
+
+ent::Handle<ent::Entity> createStageDecor(GameContext & aContext);
 
 ent::Handle<ent::Entity>
 makeText(GameContext & aContext,
@@ -103,12 +119,12 @@ createMenuItem(GameContext & aContext,
 
 std::optional<ent::Handle<ent::Entity>>
 findSlotAndBind(GameContext & aContext,
-                ent::Phase & aBindPhase,
                 ent::Query<component::PlayerSlot> & aSlots,
                 ControllerType aType,
                 int aIndex);
 
-ent::Handle<ent::Entity> removePlayerFromGame(ent::Phase & aPhase, ent::Handle<ent::Entity> aHandle);
+ent::Handle<ent::Entity> removePlayerFromGame(ent::Phase & aPhase,
+                                              ent::Handle<ent::Entity> aHandle);
 
 } // namespace snacgame
 } // namespace ad

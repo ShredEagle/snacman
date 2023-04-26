@@ -1,12 +1,11 @@
 #pragma once
 
-#include "../GameContext.h"
-#include "../GameParameters.h"
-#include "../LevelHelper.h"
-
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
 #include "../component/PathToOnGrid.h"
+#include "../GameContext.h"
+#include "../GameParameters.h"
+#include "../LevelHelper.h"
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
@@ -30,12 +29,6 @@ private:
     GameContext * mGameContext;
     ent::Query<component::PathToOnGrid, component::Geometry> mPathfinder;
 };
-
-inline float manhattan(const math::Position<2, float> & aA,
-                       const math::Position<2, float> & aB)
-{
-    return std::abs(aA.x() - aB.x()) + std::abs(aA.y() - aB.y());
-}
 
 inline component::PathfindNode *
 pathfind(const math::Position<2, float> & aSource,
@@ -124,13 +117,11 @@ pathfind(const math::Position<2, float> & aSource,
             break;
         }
 
-        constexpr std::array<Pos2, 4> direction{
-            Pos2{1.f, 0.f}, Pos2{-1.f, 0.f}, Pos2{0.f, 1.f}, Pos2{0.f, -1.f}};
-        for (Pos2 offset : direction)
+        for (math::Position<2, int> offset : gDirections)
         {
-            component::PathfindNode & visitedNode = aNodes.at(
-                current->mIndex + static_cast<size_t>(offset.x())
-                + static_cast<size_t>(offset.y()) * stride);
+            component::PathfindNode & visitedNode =
+                aNodes.at(static_cast<size_t>((int)current->mIndex + offset.x()
+                                              + offset.y() * (int)stride));
             float distance = (visitedNode.mPos - current->mPos).getNorm();
             float newCost = current->mCost + distance;
 
