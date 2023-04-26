@@ -26,6 +26,7 @@ struct Camera
         float zFar;
     };
 
+    // TODO #camera redesign to take a POD Initializer with everything
     Camera(float aAspectRatio, Parameters aParameters);
 
     void setPose(math::AffineMatrix<4, GLfloat> aWorldToCamera)

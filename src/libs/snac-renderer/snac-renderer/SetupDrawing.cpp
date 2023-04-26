@@ -256,9 +256,14 @@ void setBlocks(const UniformBlocks & aUniformBlocks, const IntrospectProgram & a
         if(auto found = aUniformBlocks.find(shaderBlock.mSemantic);
            found != aUniformBlocks.end())
         {
+            const graphics::UniformBufferObject & uniformBuffer = std::visit(
+                [](auto && ubo) -> const graphics::UniformBufferObject &
+                {
+                    return *ubo;
+                },
+                found->second);
             // Currently, checking if the uniform block is an array is conducted
             // when getting its semantic.
-            const graphics::UniformBufferObject & uniformBuffer = *(found->second);
             bind(uniformBuffer, shaderBlock.mBindingIndex);
         }
         else

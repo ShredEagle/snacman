@@ -19,8 +19,6 @@ void IntegratePlayerMovement::update(float aDelta)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    ent::Phase nomutation;
-
     mPlayer.each([aDelta](component::Geometry & aGeometry,
                           const component::PlayerMoveState & aMoveState) {
         Pos2_i intPos = getLevelPosition_i(aGeometry.mPosition.xy());

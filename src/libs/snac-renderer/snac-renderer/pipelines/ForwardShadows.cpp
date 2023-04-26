@@ -6,6 +6,8 @@
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 
+#include <imguiui/Widgets.h>
+#include <imguiui/Widgets-impl.h>
 
 
 namespace ad {
@@ -17,49 +19,6 @@ handy::StringId gDepthSid{"depth"};
 handy::StringId gForwardShadowSid{"forward_shadow"};
 
 
-void addCheckbox(const char * aLabel, MovableAtomic<bool> & aValue)
-{
-    bool value = aValue;
-    ImGui::Checkbox(aLabel, &value);
-    aValue = value;
-}
-
-
-template <class T_enumeration, std::size_t N_spanExtent>
-void addCombo(const char * aLabel,
-              MovableAtomic<T_enumeration> & aValue,
-              const std::span<const T_enumeration, N_spanExtent> & aAvailableValues)
-{
-    using graphics::to_string;
-
-    static const ImGuiComboFlags flags = 0;
-    const T_enumeration value = aValue.load();
-    // Pass in the preview value visible before opening the combo (it could be anything)
-    const std::string combo_preview_value = to_string(value);
-    if (ImGui::BeginCombo(aLabel, combo_preview_value.c_str(), flags))
-    {
-        Guard scopeCombo([]()
-        {
-            ImGui::EndCombo();
-        });
-
-        for (unsigned int n = 0; n < std::size(aAvailableValues); n++)
-        {
-            T_enumeration candidate = aAvailableValues[n];
-            const bool isSelected = (value == candidate);
-            if (ImGui::Selectable(to_string(candidate).c_str(), isSelected))
-            {
-                aValue = candidate;
-            }
-
-            // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-            if (isSelected)
-            {
-                ImGui::SetItemDefaultFocus();
-            }
-        }
-    }
-}
 
 ForwardShadows::ForwardShadows(const graphics::AppInterface & aAppInterface,
                                Load<Technique> & aTechniqueLoader) :
@@ -91,6 +50,8 @@ ForwardShadows::ForwardShadows(const graphics::AppInterface & aAppInterface,
 
 void ForwardShadows::Controls::drawGui()
 {
+    using namespace imguiui;
+
     ImGui::Begin("ForwardShadow");
     Guard scopeWindow([]()
     {
@@ -102,9 +63,7 @@ void ForwardShadows::Controls::drawGui()
     mShadowBias = bias;
     
     addCombo("Depth filtering", mDetphMapFilter, std::span{gAvailableFilters});
-
     addCombo("Culled faces", mCullFaceMode, std::span{gCullFaceModes});
-
     addCheckbox("Show depthmap", mShowDepthMap);
 }
 

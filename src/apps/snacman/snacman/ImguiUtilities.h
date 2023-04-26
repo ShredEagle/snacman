@@ -2,6 +2,7 @@
 
 
 #include <imguiui/ImguiUi.h>
+#include <imguiui/Widgets-impl.h>
 
 #include <spdlog/spdlog.h>
 
@@ -48,6 +49,19 @@ void imguiLogLevelSelection(bool * open = nullptr)
                     ImGui::EndCombo();
                 }
             });
+    }
+    ImGui::End();
+}
+
+
+void imguiDebugDrawerLevelSection(bool * open = nullptr)
+{
+    ImGui::Begin("Debug drawing", open);
+    {
+        for(const auto & [name, drawer] : DebugDrawer::IterateDrawers{})
+        {
+            imguiui::addCombo(name.c_str(), drawer->getLevel(), std::span{DebugDrawer::gLevels});
+        }
     }
     ImGui::End();
 }

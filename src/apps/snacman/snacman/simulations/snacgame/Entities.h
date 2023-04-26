@@ -2,11 +2,15 @@
 
 #include "GameParameters.h"
 
+#include "component/GlobalPose.h"
+
 #include <entity/Entity.h>
 #include <entity/Query.h>
-#include <math/Quaternion.h>
+
 #include <math/Color.h>
+#include <math/Quaternion.h>
 #include <math/Vector.h>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -45,13 +49,21 @@ void addMeshGeoNode(ent::Phase & aPhase,
                     math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
                     math::hdr::Rgba_f aColor = math::hdr::gBlack<float>);
 
+ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
+                                         std::string aText,
+                                         component::GlobalPose aPose);
+
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
                                     const math::Position<2, float> & Pos);
+
 ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
                                     const math::Position<2, float> & Pos);
+
 ent::Handle<ent::Entity> createPlayerPowerUp(GameContext & aContext);
+
 ent::Handle<ent::Entity>
 createPathEntity(GameContext & aContext, const math::Position<2, float> & aPos);
+
 ent::Handle<ent::Entity>
 createPortalEntity(GameContext & aContext,
                    const math::Position<2, float> & aPos,

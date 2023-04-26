@@ -9,9 +9,12 @@
 #include <entity/EntityManager.h>
 #include <resource/ResourceFinder.h>
 
+#include <snac-renderer/DebugDrawer.h>
+
 
 namespace ad {
 namespace snacgame {
+
 
 struct GameContext
 {

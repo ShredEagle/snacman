@@ -3,7 +3,7 @@
 #include "Resources.h"
 
 namespace ad {
-namespace snac{
+namespace snac {
 
 
 void recompilePrograms(Resources & aResources)

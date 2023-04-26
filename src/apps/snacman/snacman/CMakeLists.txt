@@ -6,6 +6,7 @@ set(REPO_FOLDER ${PROJECT_SOURCE_DIR})
 configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
+    DebugDrawing.h
     GraphicState.h
     ImguiUtilities.h
     Input.h
@@ -50,6 +51,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/SceneNode.h
     simulations/snacgame/component/Spawner.h
     simulations/snacgame/component/Text.h
+    simulations/snacgame/component/VisualModel.h
 
     simulations/snacgame/scene/GameScene.h
     simulations/snacgame/scene/MenuScene.h
@@ -58,6 +60,7 @@ set(${TARGET_NAME}_HEADERS
 
     simulations/snacgame/system/ConsolidateGridMovement.h
     simulations/snacgame/system/AllowMovement.h
+    simulations/snacgame/system/Debug_BoundingBoxes.h
     simulations/snacgame/system/EatPill.h
     simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/MovementIntegration.h
@@ -78,6 +81,7 @@ set(${TARGET_NAME}_HEADERS
 set(${TARGET_NAME}_SOURCES
     main.cpp
 
+    DebugDrawing.cpp
     Input.cpp
     RenderThread.cpp
     Resources.cpp
@@ -92,11 +96,13 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/component/DebugUi.cpp
 
     simulations/snacgame/scene/GameScene.cpp
+    simulations/snacgame/scene/GameScene-setup.cpp
     simulations/snacgame/scene/MenuScene.cpp
     simulations/snacgame/scene/SettingsScene.cpp
 
     simulations/snacgame/system/ConsolidateGridMovement.cpp
     simulations/snacgame/system/AllowMovement.cpp
+    simulations/snacgame/system/Debug_BoundingBoxes.cpp
     simulations/snacgame/system/EatPill.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
     simulations/snacgame/system/MovementIntegration.cpp

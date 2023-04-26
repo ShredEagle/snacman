@@ -1,3 +1,6 @@
+// Splitted between two-files because there was an error on Windows:
+// fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj
+
 #include "GameScene.h"
 
 #include "../component/Context.h"
@@ -12,17 +15,11 @@
 #include "../component/PoseScreenSpace.h"
 #include "../component/Speed.h"
 #include "../component/Text.h"
-#include "../component/VisualMesh.h"
-#include "../Entities.h"
-#include "../EntityWrap.h"  // for Entit...
-#include "../GameContext.h" // for GameC...
-#include "../GameParameters.h"
-#include "../InputCommandConverter.h"
-#include "../InputConstants.h" // for gJoin
-#include "../scene/Scene.h"    // for Trans...
-#include "../SceneGraph.h"
+#include "../component/VisualModel.h"
+
 #include "../system/AllowMovement.h"
 #include "../system/ConsolidateGridMovement.h"
+#include "../system/Debug_BoundingBoxes.h"
 #include "../system/EatPill.h"
 #include "../system/IntegratePlayerMovement.h"
 #include "../system/LevelCreator.h"
@@ -34,6 +31,15 @@
 #include "../system/PowerUpUsage.h"
 #include "../system/RoundMonitor.h"
 #include "../system/SceneGraphResolver.h"
+
+#include "../Entities.h"
+#include "../EntityWrap.h"  // for Entit...
+#include "../GameContext.h" // for GameC...
+#include "../GameParameters.h"
+#include "../InputCommandConverter.h"
+#include "../InputConstants.h" // for gJoin
+#include "../scene/Scene.h"    // for Trans...
+#include "../SceneGraph.h"
 #include "../typedef.h"
 
 #include <snacman/Input.h>
@@ -75,15 +81,6 @@ EntHandle createLevel(GameContext & aContext, const char * aLvlFile)
     return level;
 }
 
-void setupLevel(GameContext & aGameContext, Phase & aPhase)
-{
-    aGameContext.mLevel->get(aPhase)->add(component::LevelToCreate{});
-    aGameContext.mLevel->get(aPhase)->add(component::SceneNode{});
-    aGameContext.mLevel->get(aPhase)->add(
-        component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
-    aGameContext.mLevel->get(aPhase)->add(component::GlobalPose{});
-}
-
 void teardownLevel(GameContext & aGameContext, Phase & aPhase)
 {
     aGameContext.mLevel->get(aPhase)->remove<component::SceneNode>();
@@ -92,7 +89,7 @@ void teardownLevel(GameContext & aGameContext, Phase & aPhase)
     aGameContext.mLevel->get(aPhase)->remove<component::GlobalPose>();
 }
 
-} // namespace
+} // unnamed namespace
 
 GameScene::GameScene(const std::string & aName,
                      GameContext & aGameContext,
@@ -108,31 +105,6 @@ GameScene::GameScene(const std::string & aName,
                 mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml");
 }
 
-void GameScene::setup(const Transition & aTransition, RawInput & aInput)
-{
-    {
-        Phase init;
-        setupLevel(mGameContext, init);
-        mSystems.get(init)
-            ->add(system::SceneGraphResolver{mGameContext, mSceneRoot})
-            .add(system::PlayerSpawner{mGameContext})
-            .add(system::RoundMonitor{mGameContext})
-            .add(system::PlayerInvulFrame{mGameContext})
-            .add(system::AllowMovement{mGameContext})
-            .add(system::ConsolidateGridMovement{mGameContext})
-            .add(system::IntegratePlayerMovement{mGameContext})
-            .add(system::LevelCreator{mGameContext})
-            .add(system::MovementIntegration{mGameContext})
-            .add(system::EatPill{mGameContext})
-            .add(system::PortalManagement{mGameContext})
-            .add(system::PowerUpUsage{mGameContext})
-            .add(system::Pathfinding{mGameContext});
-    }
-
-    // Can't insert mLevel before the createLevel phase is over
-    // otherwise mLevel does not have the correct component
-    insertEntityInScene(*mGameContext.mLevel, mSceneRoot);
-}
 
 void GameScene::teardown(RawInput & aInput)
 {
@@ -252,6 +224,8 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
     mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
+
+    mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
 
     return std::nullopt;
 }

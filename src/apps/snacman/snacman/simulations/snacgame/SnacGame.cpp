@@ -11,19 +11,19 @@
 #include "system/SystemOrbitalCamera.h"
 #include "typedef.h"
 
+#include "component/AllowedMovement.h"
 #include "component/Context.h"
+#include "component/Controller.h"
 #include "component/Geometry.h"
 #include "component/GlobalPose.h"
+#include "component/LevelTags.h"
 #include "component/PlayerMoveState.h"
 #include "component/PlayerSlot.h"
-#include "component/PoseScreenSpace.h"
-#include "component/Text.h"
-#include "component/VisualMesh.h"
-#include "component/AllowedMovement.h"
-#include "component/Controller.h"
-#include "component/LevelTags.h"
 #include "component/PathToOnGrid.h"
+#include "component/PoseScreenSpace.h"
 #include "component/SceneNode.h"
+#include "component/Text.h"
+#include "component/VisualModel.h"
 
 #include <snacman/ImguiUtilities.h>
 #include <snacman/LoopSettings.h>
@@ -82,7 +82,8 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         mMappingContext, mGameContext},
     mSystemOrbitalCamera{mGameContext.mWorld, mGameContext.mWorld},
     mQueryRenderable{mGameContext.mWorld, mGameContext.mWorld},
-    mQueryText{mGameContext.mWorld, mGameContext.mWorld},
+    mQueryTextWorld{mGameContext.mWorld, mGameContext.mWorld},
+    mQueryTextScreen{mGameContext.mWorld, mGameContext.mWorld},
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
@@ -224,6 +225,10 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         {
             snac::imguiLogLevelSelection(&mImguiDisplays.mShowLogLevel);
         }
+        if (mImguiDisplays.mShowDebugDrawers)
+        {
+            snac::imguiDebugDrawerLevelSection(&mImguiDisplays.mShowDebugDrawers);
+        }
         if (mImguiDisplays.mShowMappings)
         {
             mMappingContext->drawUi(aInput, &mImguiDisplays.mShowMappings);
@@ -342,6 +347,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
 bool SnacGame::update(float aDelta, RawInput & aInput)
 {
+    snac::DebugDrawer::StartFrame();
+
     mSystemOrbitalCamera->update(
         aInput,
         snac::Camera::gDefaults.vFov, // TODO Should be dynamic
@@ -415,25 +422,65 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         });
 
     //
-    // Text
+    // Worldspace Text
     //
-    mQueryText.get(nomutation)
+    mQueryTextWorld.get(nomutation)
         .each([&state](ent::Handle<ent::Entity> aHandle,
                        component::Text & aText,
-                       component::PoseScreenSpace & aPose) {
-            state->mTextEntities.insert(
-                aHandle.id(), visu::TextScreen{
-                                  // TODO
-                                  .mPosition_unitscreen = aPose.mPosition_u,
-                                  .mScale = aPose.mScale,
-                                  .mOrientation = aPose.mRotationCCW,
-                                  .mString = aText.mString,
-                                  .mFont = aText.mFont,
-                                  .mColor = aText.mColor,
-                              });
+                       component::GlobalPose & aGlobPose) 
+        {
+            state->mTextWorldEntities.insert(
+                aHandle.id(),
+                visu::Text{
+                    .mPosition_world = aGlobPose.mPosition,
+                    // TODO remove the hardcoded value of 100
+                    // Note hardcoded 100 scale down. Because I'd like a value of 1 for the scale of the component
+                    // to still mean "about visible".
+                    .mScaling = aGlobPose.mInstanceScaling 
+                                * aGlobPose.mScaling / 100.f,
+                    .mOrientation = aGlobPose.mOrientation,
+                    .mString = aText.mString,
+                    .mFont = aText.mFont,
+                    .mColor = aText.mColor,
+                });
+        });
+
+    //
+    // Screenspace Text
+    //
+    mQueryTextScreen.get(nomutation)
+        .each([&state, this](ent::Handle<ent::Entity> aHandle,
+                       component::Text & aText,
+                       component::PoseScreenSpace & aPose) 
+        {
+
+            math::Position<3, float> position_screenPix{
+                aPose.mPosition_u.cwMul(
+                    // TODO this multiplication should be done once and cached
+                    // but it should be refreshed on framebuffer resizing.
+                    static_cast<math::Position<2, GLfloat>>(this->mAppInterface->getFramebufferSize())/2.f),
+                    0.f
+            };
+
+            state->mTextScreenEntities.insert(
+                aHandle.id(),
+                visu::Text{
+                    .mPosition_world = position_screenPix,
+                    .mScaling = math::Size<3, float>{aPose.mScale, 1.f}, 
+                    .mOrientation = math::Quaternion{
+                                                math::UnitVec<3, float>::MakeFromUnitLength({0.f, 0.f, 1.f}),
+                                                aPose.mRotationCCW
+                                            },
+                    .mString = aText.mString,
+                    .mFont = aText.mFont,
+                    .mColor = aText.mColor,
+                });
         });
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
+
+    state->mDebugDrawList = snac::DebugDrawer::EndFrame();
+
     return state;
 }
 

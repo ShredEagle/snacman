@@ -43,7 +43,18 @@ IntrospectProgram loadProgram(const filesystem::path & aProgram)
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 
-    Json program = Json::parse(std::ifstream{aProgram});
+    // TODO factorize and make more robust (e.g. test file existence)
+    Json program;
+    try 
+    {
+        program = Json::parse(std::ifstream{aProgram});
+    }
+    catch (Json::parse_error &)
+    {
+        SELOG(critical)("Rethrowing exception from attempt to parse Json from '{}'.", aProgram.string());
+        throw;
+    }
+
     graphics::FileLookup lookup{aProgram};
 
     std::vector<std::string> defines;
@@ -107,13 +118,13 @@ Technique loadTechnique(filesystem::path aProgram)
 }
 
 
-std::shared_ptr<Effect> loadTrivialEffect(filesystem::path aProgram)
+std::shared_ptr<Effect> loadTrivialEffect(Technique aTechnique)
 {
 
     // It is not possible to list initialize a vector of move-only types.
     // see: https://stackoverflow.com/a/8468817/1027706
     auto result = std::make_shared<Effect>();
-    result->mTechniques.push_back(loadTechnique(std::move(aProgram)));
+    result->mTechniques.push_back(std::move(aTechnique));
     return result;
 }
 
@@ -145,17 +156,23 @@ std::shared_ptr<Effect> loadEffect(filesystem::path aEffectFile,
 }
 
 
-Mesh loadCube(std::shared_ptr<Effect> aEffect)
+Mesh loadVertices(VertexStream aVertices, std::shared_ptr<Effect> aEffect, std::string_view aName)
 {
     snac::Mesh mesh{
-        .mStream = makeCube(),
+        .mStream = std::move(aVertices),
         .mMaterial = std::make_shared<snac::Material>(snac::Material{
             .mEffect = std::move(aEffect)
         }),
-        .mName = "procedural_cube",
+        .mName = std::string{aName},
     }; 
 
     return mesh;
+}
+
+
+Mesh loadBox(math::Box<float> aBox, std::shared_ptr<Effect> aEffect, std::string_view aName)
+{
+    return loadVertices(makeBox(aBox), std::move(aEffect), aName);
 }
 
 

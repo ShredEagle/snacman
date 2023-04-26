@@ -4,6 +4,7 @@
 #include "../LoadInterface.h"
 #include "../Render.h"
 
+#include <handy/MovableAtomic.h>
 #include <handy/StringId.h>
 
 #include <math/Vector.h>
@@ -20,22 +21,6 @@
 
 namespace ad {
 namespace snac {
-
-
-// Hackish class, to allow to use atomic with movable types.
-// Note that this is dangerous, if a thread is using the moved from atomic
-// to synchronise with a thread already using the moved to atomic (i.e. sync is lost)
-// Yet this is useful if the move is only part of the initialization process.
-template <class T>
-struct MovableAtomic : public std::atomic<T>
-{
-    using std::atomic<T>::atomic;
-    using std::atomic<T>::operator=;
-
-    MovableAtomic(MovableAtomic && aOther) :
-        std::atomic<T>{aOther.load()}
-    {};
-};
 
 
 class ForwardShadows

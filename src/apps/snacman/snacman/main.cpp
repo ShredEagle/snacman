@@ -1,3 +1,4 @@
+#include "DebugDrawing.h"
 #include "Input.h"
 #include "Logging.h"
 #include "LoopSettings.h"
@@ -61,12 +62,23 @@ resource::ResourceFinder makeResourceFinder()
 }
 
 
+void showDiagnostics()
+{
+    SELOG(info)("Max uniform block size: {} bytes. Max vertex uniform blocks: {}.",
+                graphics::getInt(GL_MAX_UNIFORM_BLOCK_SIZE),
+                graphics::getInt(GL_MAX_VERTEX_UNIFORM_BLOCKS) // the limit of uniform buffer binding locations.
+    );
+}
+
+
 void runApplication()
 {
     SELOG(info)("I'm a snac man.");
     SELOG(debug)
     ("Initial delta time {}ms.",
      std::chrono::duration_cast<ms>(gSimulationDelta).count());
+
+    initializeDebugDrawers();
 
     // TODO have this single work (currently return abherent values, even if we put a begin / end frame around the section)
     //BEGIN_SINGLE("App_initialization", appInitSingle);
@@ -80,6 +92,8 @@ void runApplication()
     // Ensures the messages are sent synchronously with the event triggering them
     // This makes debug stepping much more feasible.
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+
+    showDiagnostics();
 
     imguiui::ImguiUi imguiUi(glfwApp);
 
@@ -103,7 +117,11 @@ void runApplication()
     // TODO we provide a Load<Technique> so the shadow pipeline can use it to load the effects for its cube.
     // this complicates the interface a lot, and since it does not use the ResourceManager those effects are not hot-recompilable.
     snac::TechniqueLoader techniqueLoader{finder};
-    snacgame::Renderer renderer{*glfwApp.getAppInterface(), techniqueLoader};
+    snacgame::Renderer renderer{
+        *glfwApp.getAppInterface(),
+         techniqueLoader,
+         freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))
+    };
 
     // Context must be removed from this thread before it can be made current on
     // the render thread.

@@ -3,7 +3,10 @@ set(TARGET_NAME snac-renderer)
 set(${TARGET_NAME}_HEADERS
     Camera.h
     Cube.h
+    DebugDrawer.h
+    DebugRenderer.h
     Effect.h
+    Instances.h
     IntrospectProgram.h
     LoadInterface.h
     Logging.h
@@ -26,10 +29,13 @@ set(${TARGET_NAME}_HEADERS
     pipelines/ForwardShadows.h
 
     text/Text.h
+    text/TextRenderer.h
 )
 
 set(${TARGET_NAME}_SOURCES
     Camera.cpp
+    DebugDrawer.cpp
+    DebugRenderer.cpp
     Effect.cpp
     IntrospectProgram.cpp
     Logging.cpp
@@ -45,6 +51,7 @@ set(${TARGET_NAME}_SOURCES
     3rdparty/nvpro/Profiler_gl.cpp
 
     text/Text.cpp
+    text/TextRenderer.cpp
 
     gltf/GltfLoad.cpp
     gltf/LoadBuffer.cpp

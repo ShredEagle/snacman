@@ -10,6 +10,7 @@
 #include <math/Interpolation/Interpolation.h>
 #include <math/Interpolation/QuaternionInterpolation.h>
 
+#include <snac-renderer/DebugDrawer.h>
 #include <snac-renderer/text/Text.h>
 
 #include <functional>
@@ -42,28 +43,24 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
     };
 }
 
-
-// TODO #generic-render We should watch out for the proliferation of specialized graphics state entities,
-// which is by definition the opposite of genericity.
-struct TextScreen
+struct Text
 {
-    math::Position<2, float> mPosition_unitscreen;
-    math::Size<2, float> mScale;
-    math::Radian<float> mOrientation;
+    math::Position<3, float> mPosition_world;
+    math::Size<3, float> mScaling; // TODO were is it used?
+    math::Quaternion<float> mOrientation;
     std::string mString;
     std::shared_ptr<snac::Font> mFont;
     math::hdr::Rgba_f mColor;
 };
 
-
-inline TextScreen interpolate(const TextScreen & aLeftEntity, const TextScreen & aRightEntity, float aInterpolant)
+inline Text interpolate(const Text & aLeftEntity, const Text & aRightEntity, float aInterpolant)
 {
-    return TextScreen{
-        .mPosition_unitscreen = math::lerp(aLeftEntity.mPosition_unitscreen,
-                                           aRightEntity.mPosition_unitscreen,
-                                           aInterpolant),
-        .mScale = math::lerp(aLeftEntity.mScale, aRightEntity.mScale, aInterpolant),
-        .mOrientation = math::lerp(aLeftEntity.mOrientation, aRightEntity.mOrientation, aInterpolant),
+    return Text{
+        .mPosition_world = math::lerp(aLeftEntity.mPosition_world,
+                                      aRightEntity.mPosition_world,
+                                      aInterpolant),
+        .mScaling = math::lerp(aLeftEntity.mScaling, aRightEntity.mScaling, aInterpolant),
+        .mOrientation = math::slerp(aLeftEntity.mOrientation, aRightEntity.mOrientation, aInterpolant),
         .mString = aLeftEntity.mString,
         .mFont = aLeftEntity.mFont,
         .mColor = math::lerp(aLeftEntity.mColor, aRightEntity.mColor, aInterpolant),
@@ -71,6 +68,8 @@ inline TextScreen interpolate(const TextScreen & aLeftEntity, const TextScreen &
 }
 
 
+// TODO #camera can we use a complete snac::Camera instead?
+//      This way the Renderer gets the complete camera each frame.
 struct Camera
 {
     // TODO #pose replace with position and orientation
@@ -85,9 +84,12 @@ struct GraphicState
     static constexpr std::size_t MaxEntityId{2048};
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
+    snac::SparseSet<Text, MaxEntityId> mTextWorldEntities;
     Camera mCamera; 
 
-    snac::SparseSet<TextScreen, MaxEntityId> mTextEntities;
+    snac::SparseSet<Text, MaxEntityId> mTextScreenEntities;
+
+    snac::DebugDrawer::DrawList mDebugDrawList;
 };
 
 
@@ -114,12 +116,15 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         // TODO #pose
         //.mCamera = math::lerp(aLeft.mCamera.mPosition_world, aRight.mCamera.mPosition_world, aInterpolant),
         .mCamera{aRight.mCamera},
+        // Note: For the moment, we do not interpolate the debug drawings, both for simplicity and performance
+        .mDebugDrawList{aRight.mDebugDrawList},
     };
 
     interpolateEach(aInterpolant, aLeft.mEntities, aRight.mEntities, state.mEntities);
 
-    interpolateEach(aInterpolant, aLeft.mTextEntities, aRight.mTextEntities, state.mTextEntities);
+    interpolateEach(aInterpolant, aLeft.mTextWorldEntities, aRight.mTextWorldEntities, state.mTextWorldEntities);
 
+    interpolateEach(aInterpolant, aLeft.mTextScreenEntities, aRight.mTextScreenEntities, state.mTextScreenEntities);
 
     return state;
 }

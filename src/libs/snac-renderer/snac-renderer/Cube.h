@@ -57,6 +57,7 @@ constexpr float gCubeSize = 2.f;
 
 namespace cube {
 
+    // The cube from [-1, -1, -1] to [1, 1, 1]
     constexpr std::array<math::Position<3, float>, 8> gVertices{
         math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2, -gCubeSize / 2},
         math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2,  gCubeSize / 2},
@@ -107,6 +108,21 @@ namespace cube {
         math::Vec<3, float>{ 0.f, -1.f,  0.f},
     };
 
+    inline std::array<math::Position<3, float>, 8> getBoxVertices(math::Box<float> aBox)
+    {
+        return {
+            aBox.bottomLeftBack(),
+            aBox.bottomLeftFront(),
+            aBox.topLeftBack(),
+            aBox.topLeftFront(),
+
+            aBox.bottomRightBack(),
+            aBox.bottomRightFront(),
+            aBox.topRightBack(),
+            aBox.topRightFront(),
+        };
+    }
+
 } // namespace cube
 
 template <class T_vertex>
@@ -123,6 +139,29 @@ inline std::vector<math::Position<3, float>> getExpandedCubeVertices()
         result.push_back(cube::gVertices[cube::gIndices[i]]);
     }
     return result;
+}
+
+inline const std::array<math::Position<3, float>, 10> & getArrowVertices()
+{
+    using Pos = math::Position<3, float>;
+    static std::array<Pos, 10> gVertices{
+        // Tail
+        Pos{0.f, 0.f, 0.f},
+        Pos{0.f, 1.f, 0.f},
+        // Heads
+        Pos{0.f, 1.f, 0.f},
+        Pos{0.f, 0.75f, 0.15f},
+
+        Pos{0.f, 1.f, 0.f},
+        Pos{0.f, 0.75f, -0.15f},
+
+        Pos{0.f, 1.f, 0.f},
+        Pos{0.15f, 0.75f, 0.f},
+
+        Pos{0.f, 1.f, 0.f},
+        Pos{-0.15f, 0.75f, 0.f},
+    };
+    return gVertices;
 }
 
 
@@ -148,6 +187,23 @@ inline std::vector<PositionNormal> getExpandedCubeVertices()
     return result;
 }
 
+
+inline std::vector<PositionNormal> getExpandedVertices(math::Box<float> aBox)
+{
+    std::vector<PositionNormal> result;
+    result.reserve(36);
+    auto vertices = cube::getBoxVertices(aBox);
+    for (int i = 0; i < 36; i++) 
+    {
+        result.push_back(PositionNormal{
+            .position = vertices[cube::gIndices[i]],
+            .normal = cube::gNormals[i / 6]
+        });
+    }
+    return result;
+}
+
+
 //
 // Mesh aware methods
 //
@@ -166,16 +222,18 @@ inline graphics::VertexBufferObject loadVBO(std::span<T_vertex, N_extent> aVerti
 }
 
 
-inline VertexStream makeCube()
+inline VertexStream makeBox(math::Box<float> aBox)
 {
     VertexStream geometry{
         .mPrimitive = GL_TRIANGLES,
+        .mBoundingBox = math::Box<GLfloat>{ {-1.f, -1.f, -1.f}, {2.f, 2.f, 2.f}}
     };
+
     // Note: Binding the VAO is not required for loading vertex buffers
     // Make a VBO and load the cube vertices into it
     // Save the index of the next VBO.
     auto index = geometry.mVertexBuffers.size();
-    auto vertices = getExpandedCubeVertices<PositionNormal>();
+    auto vertices = getExpandedVertices(aBox);
     geometry.mVertexBuffers.push_back({
         .mBuffer = loadVBO(std::span{vertices}),
         .mStride = sizeof(PositionNormal)
@@ -197,6 +255,41 @@ inline VertexStream makeCube()
         };
         geometry.mAttributes.emplace(Semantic::Normal, AttributeAccessor{index, normal});
     }
+    geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
+
+    return geometry;
+}
+
+/// \deprecated
+inline VertexStream makeCube()
+{
+    return makeBox({{-1.f, -1.f, -1.f}, {2.f, 2.f, 2.f}});
+}
+
+
+inline VertexStream makeArrow()
+{
+    VertexStream geometry{
+        .mPrimitive = GL_LINES,
+        .mBoundingBox = math::Box<GLfloat>{ {-.15f, 0.f, -0.15f}, {0.3f, 1.f, 0.3f}}
+    };
+
+    auto index = geometry.mVertexBuffers.size();
+    const auto & vertices = getArrowVertices();
+    geometry.mVertexBuffers.push_back({
+        .mBuffer = loadVBO(std::span{vertices}),
+        .mStride = sizeof(std::remove_cvref_t<decltype(vertices)>::value_type),
+    });
+
+    {
+        graphics::ClientAttribute position{
+            .mDimension = 3,
+            .mOffset = 0,
+            .mComponentType = GL_FLOAT
+        };
+        geometry.mAttributes.emplace(Semantic::Position, AttributeAccessor{index, position});
+    }
+    
     geometry.mVertexCount = static_cast<GLsizei>(vertices.size());
 
     return geometry;

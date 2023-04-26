@@ -9,6 +9,7 @@
 #include <entity/Query.h>
 
 #include <resource/ResourceFinder.h>
+
 #include <platform/Filesystem.h>
 
 #include <imgui.h>
@@ -46,6 +47,7 @@ struct ImguiDisplays
     bool mShowSimulationDelta = false;
     bool mShowImguiDemo = false;
     bool mShowLogLevel = false;
+    bool mShowDebugDrawers = false;
     bool mShowMainProfiler = false;
     bool mShowRenderProfiler = false;
     bool mSpeedControl = false;
@@ -61,6 +63,7 @@ struct ImguiDisplays
         ImGui::Checkbox("Mappings", &mShowMappings);
         ImGui::Checkbox("Simulation delta", &mShowSimulationDelta);
         ImGui::Checkbox("Log level", &mShowLogLevel);
+        ImGui::Checkbox("Debug drawers", &mShowDebugDrawers);
         ImGui::Checkbox("Main profiler",  &mShowMainProfiler);
         ImGui::Checkbox("Render profiler",  &mShowRenderProfiler);
         ImGui::Checkbox("Player info",  &mShowPlayerInfo);
@@ -127,9 +130,10 @@ private:
     EntityWrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
     EntityWrap<system::SceneStateMachine> mStateMachine;
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
-    EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
 
-    EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryText;
+    EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
+    EntityWrap<ent::Query<component::Text, component::GlobalPose>> mQueryTextWorld;
+    EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};

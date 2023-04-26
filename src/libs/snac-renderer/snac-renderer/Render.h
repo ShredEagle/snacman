@@ -93,6 +93,9 @@ public:
         draw(aMesh, gNotInstanced, aRenderer, aSetup);
     }
 
+    const std::string & getName() const
+    { return mName; }
+
 private:
     std::string mName;
     std::vector<Technique::Annotation> mFilter;

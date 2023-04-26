@@ -41,9 +41,11 @@ std::shared_ptr<Model> Resources::getModel(filesystem::path aModel)
 }
 
 
-std::shared_ptr<Font> Resources::getFont(filesystem::path aFont, unsigned int aPixelHeight)
+std::shared_ptr<Font> Resources::getFont(filesystem::path aFont,
+                                         unsigned int aPixelHeight,
+                                         filesystem::path aEffect)
 {
-    return mFonts.load(aFont, mFinder, aPixelHeight, mRenderThread, *this);
+    return mFonts.load(aFont, mFinder, aPixelHeight, aEffect, mRenderThread, *this);
 }
 
 
@@ -65,10 +67,11 @@ std::shared_ptr<Effect> Resources::EffectLoader(
 std::shared_ptr<Font> Resources::FontLoader(
     filesystem::path aFont, 
     unsigned int aPixelHeight,
+    filesystem::path aEffect,
     RenderThread<snacgame::Renderer> & aRenderThread,
     Resources & aResources)
 {
-    return aRenderThread.loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aResources)
+    return aRenderThread.loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aEffect, aResources)
         .get(); // synchronize call
 }
 
