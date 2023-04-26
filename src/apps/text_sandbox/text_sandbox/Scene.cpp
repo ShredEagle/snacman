@@ -69,8 +69,6 @@ Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
 
 void Scene::update()
 {
-    using Level = DebugDrawer::Level;
-
     DebugDrawer::StartFrame();
     mCamera.setPose(mCameraControl.getParentToLocal());
     mCameraBuffer.setWorldToCamera(mCameraControl.getParentToLocal());
@@ -95,8 +93,6 @@ void Scene::render(Renderer & aRenderer)
         //    {BlockSemantic::Viewing, &mCameraBuffer.mViewing},
         //},
     };
-
-    const auto identity = math::AffineMatrix<4, GLfloat>::Identity();
 
     // World space text
     {

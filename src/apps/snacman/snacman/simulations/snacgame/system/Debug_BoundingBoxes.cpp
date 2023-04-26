@@ -17,7 +17,7 @@ void Debug_BoundingBoxes::update()
 
     Level level = Level::off;
 
-    auto addBox = [this, &level]
+    auto addBox = [&level]
         (const component::GlobalPose & aGlobalPose, const component::VisualModel & aModel) 
         {
             DBGDRAW(snac::gBoundingBoxDrawer, level).addBox(

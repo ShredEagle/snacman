@@ -8,7 +8,7 @@
 #include <snac-renderer/LoadInterface.h>
 #include <snac-renderer/Mesh.h>
 #include <snac-renderer/Render.h>
-#include <snac-renderer/Text/TextRenderer.h>
+#include <snac-renderer/text/TextRenderer.h>
 #include <snac-renderer/UniformParameters.h>
 
 #include <snac-renderer/pipelines/ForwardShadows.h>
