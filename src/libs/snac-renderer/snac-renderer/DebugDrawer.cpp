@@ -66,105 +66,80 @@ void DebugDrawer::Registry::setLevel(Level aLevel)
 }
 
 
-DebugDrawer::Commands & DebugDrawer::commands(Level aLevelSanityCheck)
+DebugDrawer::Commands & DebugDrawer::commands()
 {
-    // Ideally, the filter is checked first thing in each "drawing" method
-    // So we should never be here with a level not passing the filter.
-    assert(passDrawFilter(aLevelSanityCheck));
-
     return *mRegistry->mFrameCommands;
 }
 
 
-bool DebugDrawer::passDrawFilter(Level aDrawLevel)
+bool DebugDrawer::shouldDraw(Level aLevel) const
 {
-    assert(static_cast<int>(aDrawLevel) >= 0 && aDrawLevel < Level::off);
-    return aDrawLevel >= mLevel;
+    return getLevel() <= aLevel;
 }
 
 
-void DebugDrawer::addBox(Level aLevel, const Entry & aEntry)
+void DebugDrawer::addBox(const Entry & aEntry)
 {
-    if(passDrawFilter(aLevel))
-    {
-        commands(aLevel).mBoxes.push_back(aEntry);
-    }
+    commands().mBoxes.push_back(aEntry);
 }
 
 
-void DebugDrawer::addBox(Level aLevel, Entry aEntry, const math::Box<float> aBox)
+void DebugDrawer::addBox(Entry aEntry, const math::Box<float> aBox)
 {
-    // TODO this filter design is not satisfying. Here, passDrawFilter will be invoked 3 times.
-    if(passDrawFilter(aLevel))
-    {
-        // The translation transformation (from the instance position) will be applied last.
-        // It needs to take into account the scaling and rotation that will already be applied.
-        aEntry.mPosition += 
-            aEntry.mOrientation.rotate(
-                aBox.origin().cwMul(aEntry.mScaling.as<math::Position>()).as<math::Vec>());
-        aEntry.mScaling.cwMulAssign(aBox.dimension());
+    // The translation transformation (from the instance position) will be applied last.
+    // It needs to take into account the scaling and rotation that will already be applied.
+    aEntry.mPosition += 
+        aEntry.mOrientation.rotate(
+            aBox.origin().cwMul(aEntry.mScaling.as<math::Position>()).as<math::Vec>());
+    aEntry.mScaling.cwMulAssign(aBox.dimension());
 
-        addBox(aLevel, aEntry);
-    }
+    addBox(aEntry);
 }
 
 
-void DebugDrawer::addArrow(Level aLevel, const Entry & aEntry)
+void DebugDrawer::addArrow(const Entry & aEntry)
 {
-    if(passDrawFilter(aLevel))
-    {
-        commands(aLevel).mArrows.push_back(aEntry);
-    }
+    commands().mArrows.push_back(aEntry);
 }
 
 
-void DebugDrawer::addBasis(Level aLevel, Entry aEntry)
+void DebugDrawer::addBasis(Entry aEntry)
 {
-    if(passDrawFilter(aLevel))
-    {
-        auto & cmds = commands(aLevel);
-        // Y
-        aEntry.mColor = math::hdr::gGreen<float>;
-        cmds.mArrows.push_back(aEntry);
-        // X
-        aEntry.mOrientation *= math::Quaternion<float>{
-            math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
-            math::Degree<float>{-90.f}
-        };
-        aEntry.mColor = math::hdr::gRed<float>;
-        cmds.mArrows.push_back(aEntry);
-        // Z
-        aEntry.mOrientation *= math::Quaternion<float>{
-            math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
-            math::Degree<float>{90.f}
-        };
-        aEntry.mColor = math::hdr::gBlue<float>;
-        cmds.mArrows.push_back(aEntry);
-    }
+    auto & cmds = commands();
+    // Y
+    aEntry.mColor = math::hdr::gGreen<float>;
+    cmds.mArrows.push_back(aEntry);
+    // X
+    aEntry.mOrientation *= math::Quaternion<float>{
+        math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+        math::Degree<float>{-90.f}
+    };
+    aEntry.mColor = math::hdr::gRed<float>;
+    cmds.mArrows.push_back(aEntry);
+    // Z
+    aEntry.mOrientation *= math::Quaternion<float>{
+        math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+        math::Degree<float>{90.f}
+    };
+    aEntry.mColor = math::hdr::gBlue<float>;
+    cmds.mArrows.push_back(aEntry);
 }
 
 
-void DebugDrawer::addText(Level aLevel, Text aText)
+void DebugDrawer::addText(Text aText)
 {
-    if(passDrawFilter(aLevel))
-    {
-        commands(aLevel).mTexts.push_back(std::move(aText));
-    }
+    commands().mTexts.push_back(std::move(aText));
 }
 
 
-void DebugDrawer::addLine(Level aLevel, const LineVertex & aP1, const LineVertex & aP2)
+void DebugDrawer::addLine(const LineVertex & aP1, const LineVertex & aP2)
 {
-    if(passDrawFilter(aLevel))
-    {
-        commands(aLevel).mLineVertices.push_back(std::move(aP1));
-        commands(aLevel).mLineVertices.push_back(std::move(aP2));
-    }
+    commands().mLineVertices.push_back(std::move(aP1));
+    commands().mLineVertices.push_back(std::move(aP2));
 }
 
 
-void DebugDrawer::addPlane(Level aLevel,
-                           math::Position<3, float> aOrigin,
+void DebugDrawer::addPlane(math::Position<3, float> aOrigin,
                            math::Vec<3, float> aDir1, math::Vec<3, float> aDir2,
                            int aSubdiv1, int aSubdiv2,
                            float aSize1, float aSize2,
@@ -173,20 +148,16 @@ void DebugDrawer::addPlane(Level aLevel,
 {
     // Implementation from 3DRC (1st) Ch4
     // Draw the outlines
-    addLine(aLevel,
-            aOrigin - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+    addLine(aOrigin - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
             aOrigin - aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
             aOutlineColor);
-    addLine(aLevel,
-            aOrigin + aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+    addLine(aOrigin + aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
             aOrigin + aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
             aOutlineColor);
-    addLine(aLevel,
-            aOrigin - aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
+    addLine(aOrigin - aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
             aOrigin + aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
             aOutlineColor);
-    addLine(aLevel,
-            aOrigin - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+    addLine(aOrigin - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
             aOrigin + aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
             aOutlineColor);
 
@@ -196,8 +167,7 @@ void DebugDrawer::addPlane(Level aLevel,
     {
         const float t = ((float)i - (float)aSubdiv1 / 2.0f) * aSize1 / (float)aSubdiv1;
         const auto o1 = aOrigin + t * aDir1;
-        addLine(aLevel,
-                o1 - aSize2 / 2.0f * aDir2,
+        addLine(o1 - aSize2 / 2.0f * aDir2,
                 o1 + aSize2 / 2.0f * aDir2,
                 aSubdivColor);
     }
@@ -206,8 +176,7 @@ void DebugDrawer::addPlane(Level aLevel,
     {
         const float t = ((float)i - (float)aSubdiv2 / 2.0f) * aSize2 / (float)aSubdiv2;
         const auto o2 = aOrigin + t * aDir2;
-        addLine(aLevel,
-                o2 - aSize1 / 2.0f * aDir1,
+        addLine(o2 - aSize1 / 2.0f * aDir1,
                 o2 + aSize1 / 2.0f * aDir1,
                 aSubdivColor);
     }

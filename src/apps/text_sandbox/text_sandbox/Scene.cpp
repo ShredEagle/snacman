@@ -14,8 +14,6 @@ namespace snac {
 
 const std::string gDebugDrawer = "textdebugdrawer";
 
-#define SEDRAW(drawer) ::ad::snac::DebugDrawer::Get(drawer)
-
 
 Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
              Font aFont,
@@ -76,7 +74,7 @@ void Scene::update()
     DebugDrawer::StartFrame();
     mCamera.setPose(mCameraControl.getParentToLocal());
     mCameraBuffer.setWorldToCamera(mCameraControl.getParentToLocal());
-    SEDRAW(gDebugDrawer)->addBasis(Level::info, {});
+    DBGDRAW_INFO(gDebugDrawer).addBasis({});
 }
 
 

@@ -20,8 +20,7 @@ void Debug_BoundingBoxes::update()
     auto addBox = [this, &level]
         (const component::GlobalPose & aGlobalPose, const component::VisualModel & aModel) 
         {
-            SEDBGDRAW(snac::gBoundingBoxDrawer)->addBox(
-                level,
+            DBGDRAW(snac::gBoundingBoxDrawer, level).addBox(
                 snac::DebugDrawer::Entry{
                     .mPosition = aGlobalPose.mPosition,
                     .mScaling = aGlobalPose.mInstanceScaling,
@@ -33,14 +32,13 @@ void Debug_BoundingBoxes::update()
 
     level = Level::info;
     mPlayers.each(addBox);
-    level = Level::debug;
+    level = Level::trace;
     mPills.each(addBox);
 
     mPlayers.each(
         [](const component::GlobalPose & aGlobalPose)
         {
-            SEDBGDRAW(snac::gBoundingBoxDrawer)->addText(
-                Level::info,
+            DBGDRAW_INFO(snac::gBoundingBoxDrawer).addText(
                 snac::DebugDrawer::Text{
                     .mPosition = aGlobalPose.mPosition,
                     .mMessage = "Player",
@@ -49,15 +47,15 @@ void Debug_BoundingBoxes::update()
         });
 
 
-    SEDBGDRAW(snac::gWorldDrawer)->addLine(Level::info, {0.f, 0.f, 0.f}, {0.f, 10.f, 0.f});
-    SEDBGDRAW(snac::gWorldDrawer)->addPlane(Level::info,
+    DBGDRAW_INFO(snac::gWorldDrawer).addLine({0.f, 0.f, 0.f}, {0.f, 10.f, 0.f});
+    DBGDRAW_DEBUG(snac::gWorldDrawer).addPlane(
         {0.f, 0.f, -15.f},
         {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f},
         40, 10,
         20.f, 5.f);
 
     // Also add the world basis
-    SEDBGDRAW(snac::gWorldDrawer)->addBasis(Level::info, {});
+    DBGDRAW_INFO(snac::gWorldDrawer).addBasis({});
 }
 
 

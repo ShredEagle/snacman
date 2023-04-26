@@ -14,6 +14,43 @@
 #include <vector>
 
 
+#if not defined(DBGDRAW_ACTIVE_LEVEL)
+#define DBGDRAW_ACTIVE_LEVEL ::ad::snac::DebugDrawer::Level::trace
+#endif
+
+
+#define DBGDRAW(drawer_name, level)                                             \
+    if constexpr(DBGDRAW_ACTIVE_LEVEL != ::ad::snac::DebugDrawer::Level::off)   \
+        if(auto drawer = *::ad::snac::DebugDrawer::Get(drawer_name);            \
+           drawer.shouldDraw(level))                                            \
+            drawer
+
+
+#define DBGDRAW_TRACE(drawer_name) \
+    if constexpr(DBGDRAW_ACTIVE_LEVEL <= ::ad::snac::DebugDrawer::Level::trace) \
+        DBGDRAW(drawer_name, ::ad::snac::DebugDrawer::Level::trace)
+
+
+#define DBGDRAW_DEBUG(drawer_name) \
+    if constexpr(DBGDRAW_ACTIVE_LEVEL <= ::ad::snac::DebugDrawer::Level::debug) \
+        DBGDRAW(drawer_name, ::ad::snac::DebugDrawer::Level::debug)
+
+
+#define DBGDRAW_INFO(drawer_name) \
+    if constexpr(DBGDRAW_ACTIVE_LEVEL <= ::ad::snac::DebugDrawer::Level::info) \
+        DBGDRAW(drawer_name, ::ad::snac::DebugDrawer::Level::info)
+
+
+#define DBGDRAW_WARN(drawer_name) \
+    if constexpr(DBGDRAW_ACTIVE_LEVEL <= ::ad::snac::DebugDrawer::Level::warn) \
+        DBGDRAW(drawer_name, ::ad::snac::DebugDrawer::Level::warn)
+
+
+#define DBGDRAW_ERROR(drawer_name) \
+    if constexpr(DBGDRAW_ACTIVE_LEVEL <= ::ad::snac::DebugDrawer::Level::error) \
+        DBGDRAW(drawer_name, ::ad::snac::DebugDrawer::Level::error)
+
+
 namespace ad {
 namespace snac {
 
@@ -156,37 +193,40 @@ public:
     void SetGlobalLevel(Level aLevel)
     { GetRegistry().setLevel(aLevel); }
 
-    auto & getLevel()
+    Level & getLevel()
     { return mLevel; }
 
+    Level getLevel() const
+    { return mLevel; }
+
+    bool shouldDraw(Level aLevel) const;
+
     /// @brief Add a unit box (from [0, 0, 0] to [1, 1, 1] with pose defined by `aEntry`.
-    void addBox(Level aLevel, const Entry & aEntry);
+    void addBox(const Entry & aEntry);
 
     /// @brief Add a unit the box `aBox` with pose defined by `aEntry`.
-    void addBox(Level aLevel, Entry aEntry, const math::Box<float> aBox);
+    void addBox(Entry aEntry, const math::Box<float> aBox);
 
     /// @brief Add unit arrow along positive Y.
     /// @param aEntry 
-    void addArrow(Level aLevel, const Entry & aEntry);
+    void addArrow(const Entry & aEntry);
 
     /// @brief Add a frame-of-reference as 3 arrows along positive X(red), Y(green) and Z(blue).
     /// @note The color in `aEntry` will be ignored. 
-    void addBasis(Level aLevel, Entry aEntry);
+    void addBasis(Entry aEntry);
 
-    void addText(Level aLevel, Text aText);
+    void addText(Text aText);
 
-    void addLine(Level aLevel, const LineVertex & aP1, const LineVertex & aP2);
+    void addLine(const LineVertex & aP1, const LineVertex & aP2);
 
-    void addLine(Level aLevel, math::Position<3, float> aP1, math::Position<3, float> aP2,
+    void addLine(math::Position<3, float> aP1, math::Position<3, float> aP2,
                  math::hdr::Rgba_f aColor = math::hdr::gMagenta<float>)
     {
-        addLine(aLevel,
-                LineVertex{.mPosition = aP1, .mColor = aColor}, 
+        addLine(LineVertex{.mPosition = aP1, .mColor = aColor}, 
                 LineVertex{.mPosition = aP2, .mColor = aColor});
     }
         
-    void addPlane(Level aLevel,
-                  math::Position<3, float> aOrigin,
+    void addPlane(math::Position<3, float> aOrigin,
                   math::Vec<3, float> aDir1, math::Vec<3, float> aDir2,
                   int aSubdiv1, int aSubdiv2,
                   float aSize1, float aSize2,
@@ -194,9 +234,7 @@ public:
                   math::hdr::Rgba_f aSubdivColor = math::hdr::gWhite<float> * 0.4f);
 
 private:
-    Commands & commands(Level aLevelSanityCheck);
-
-    bool passDrawFilter(Level aDrawLevel);
+    Commands & commands();
 
     static Registry & GetRegistry()
     { return Registry::GetInstance(); }
