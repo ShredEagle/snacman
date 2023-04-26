@@ -1,5 +1,7 @@
 #include "DebugDrawing.h"
 
+#include <mutex> // for once_flag
+
 
 namespace ad {
 namespace snac {

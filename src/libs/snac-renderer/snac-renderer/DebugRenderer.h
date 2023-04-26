@@ -30,9 +30,9 @@ private:
     Mesh mArrow;
     Pass mPass{"DebugDrawing"};
     InstanceStream mInstances;
-    Font mFont;
-    snac::IntrospectProgram mLineProgram;
     snac::VertexStream mLineStream;
+    snac::IntrospectProgram mLineProgram;
+    Font mFont;
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mStrings;
 };
