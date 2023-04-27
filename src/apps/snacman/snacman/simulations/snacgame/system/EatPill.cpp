@@ -26,7 +26,7 @@ void EatPill::update()
         Box_f playerHitbox = component::transformHitbox(aPlayerGeo.mPosition,
                                                         aPlayerCol.mHitbox);
 
-        DBGDRAW(snac::gHitboxDrawer, snac::DebugDrawer::Level::off).addBox(
+        DBGDRAW(snac::gHitboxDrawer, snac::DebugDrawer::Level::debug).addBox(
             snac::DebugDrawer::Entry{
                 .mPosition = {0.f, 0.f, 0.f},
                 .mColor = math::hdr::gBlue<float>,
@@ -56,7 +56,7 @@ void EatPill::update()
     mPills.each([](const component::GlobalPose & aPillPose, const component::Collision & aPillCol) {
         Box_f pillHitbox = component::transformHitbox(aPillPose.mPosition,
                                                       aPillCol.mHitbox);
-        DBGDRAW(snac::gHitboxDrawer, snac::DebugDrawer::Level::off)
+        DBGDRAW(snac::gHitboxDrawer, snac::DebugDrawer::Level::debug)
             .addBox(
                 snac::DebugDrawer::Entry{
                     .mPosition = {0.f, 0.f, 0.f},

@@ -41,7 +41,7 @@ void PortalManagement::update()
                 Box_f portalHitbox = component::transformHitbox(
                     aPortalPose.mPosition, aPortal.mEnterHitbox);
 
-                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::off)
+                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::debug)
                     .addBox(
                         snac::DebugDrawer::Entry{
                             .mPosition = {0.f, 0.f, 0.f},
@@ -52,7 +52,7 @@ void PortalManagement::update()
                 Box_f portalExitHitbox = component::transformHitbox(
                     aPortalPose.mPosition, aPortal.mExitHitbox);
 
-                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::off)
+                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::debug)
                     .addBox(
                         snac::DebugDrawer::Entry{
                             .mPosition = {0.f, 0.f, 0.f},

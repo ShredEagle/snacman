@@ -39,7 +39,7 @@ void PowerUpUsage::update()
                 const Box_f powerupHitbox = component::transformHitbox(
                     aPowerupGeo.mPosition, aPowerupCol.mHitbox);
 
-                DBGDRAW(snac::gHitboxDrawer, snac::DebugDrawer::Level::off).addBox(
+                DBGDRAW(snac::gHitboxDrawer, snac::DebugDrawer::Level::debug).addBox(
                     snac::DebugDrawer::Entry{
                         .mPosition = {0.f, 0.f, 0.f},
                         .mColor = math::hdr::gBlue<float>,
