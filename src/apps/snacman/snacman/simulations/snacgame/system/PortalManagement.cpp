@@ -21,44 +21,21 @@ void PortalManagement::update()
         ent::Phase portalPhase;
         const component::LevelData & levelData =
             level.get(portalPhase)->get<component::LevelData>();
-        const std::vector<component::Tile> & tiles = levelData.mTiles;
-        int colCount = levelData.mSize.height();
 
-        mPlayer.each([&tiles, &colCount, &levelData, this](
+        mPlayer.each([&levelData, this](
                          EntHandle aPlayerHandle,
                          component::GlobalPose & aPlayerPose,
                          component::PlayerMoveState & aMoveState,
                          const component::Collision & aPlayerCol,
-                         const component::Geometry & aPlayerGeo,
+                         component::Geometry & aPlayerGeo,
                          component::PlayerPortalData & aPortalData) {
-            math::Position<3, float> & playerPos = aPlayerPose.mPosition;
-            const Pos2_i intPlayerPos = getLevelPosition_i(playerPos.xy());
-
-            // Player is on a portal
-            if (aMoveState.mCurrentPortal != -1
-                && aMoveState.mDestinationPortal != -1)
-            {
-                const component::Tile & currentTile =
-                    tiles.at(intPlayerPos.x() + intPlayerPos.y() * colCount);
-                // If the player step on a void path (meaning he is out of the
-                // portal) we teleport him
-                if (currentTile.mType == component::TileType::Void)
-                {
-                    int destFlatPosition = aMoveState.mDestinationPortal;
-                    playerPos.x() =
-                        static_cast<float>(destFlatPosition % colCount);
-                    playerPos.y() =
-                        static_cast<float>(destFlatPosition / colCount);
-                }
-            }
-
             aMoveState.mCurrentPortal = -1;
             aMoveState.mDestinationPortal = -1;
 
             Box_f playerHitbox = component::transformHitbox(
                 aPlayerPose.mPosition, aPlayerCol.mHitbox);
 
-            mPortals.each([&playerHitbox, &levelData, &aMoveState, &aPortalData](
+            mPortals.each([&playerHitbox, &levelData, &aMoveState, &aPortalData, &aPlayerGeo](
                               const component::Portal & aPortal,
                               const component::GlobalPose & aPortalPose) {
                 Box_f portalHitbox = component::transformHitbox(
@@ -101,11 +78,27 @@ void PortalManagement::update()
                     aMoveState.mDestinationPortal = destinationPortalIndex;
                 }
 
-                if (component::collideWithSat(portalExitHitbox, playerHitbox) && aPortalData.mPortalImage)
+                if (aPortalData.mPortalImage)
                 {
-                    Phase removePortalImage;
-                    aPortalData.mPortalImage->get(removePortalImage)->erase();
-                    aPortalData.mPortalImage = std::nullopt;
+                    Phase handlePortalImage;
+                    component::Geometry imageGeo = aPortalData.mPortalImage->get(handlePortalImage)->get<component::Geometry>();
+                    component::GlobalPose imagePose = aPortalData.mPortalImage->get(handlePortalImage)->get<component::GlobalPose>();
+                    component::Collision imageCollision = aPortalData.mPortalImage->get(handlePortalImage)->get<component::Collision>();
+                    Box_f playerPortalImageHitbox = component::transformHitbox(
+                        imagePose.mPosition, imageCollision.mHitbox);
+
+                    if (component::collideWithSat(portalExitHitbox, playerPortalImageHitbox))
+                    {
+                        aPlayerGeo.mPosition += imageGeo.mPosition.as<math::Vec>();
+                        aPortalData.mPortalImage->get(handlePortalImage)->erase();
+                        aPortalData.mPortalImage = std::nullopt;
+                    }
+
+                    if (component::collideWithSat(portalExitHitbox, playerHitbox))
+                    {
+                        aPortalData.mPortalImage->get(handlePortalImage)->erase();
+                        aPortalData.mPortalImage = std::nullopt;
+                    }
                 }
             });
 
@@ -128,6 +121,7 @@ void PortalManagement::update()
                             {1.f, 1.f, 1.f},
                             Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                    math::Turn<float>{0.25f}});
+                        portal.add(component::Collision{component::gPlayerHitbox});
                         aPortalData.mPortalImage = newPortalImage;
                     }
                     insertEntityInScene(newPortalImage, aPlayerHandle);
