@@ -148,7 +148,7 @@ void VertexStream::respecifyData(std::size_t aBufferViewIndex, std::span<T_value
     // Assert the buffer view index is in range.
     assert(aBufferViewIndex < mVertexBuffers.size());
     // Assert that it is the only buffer, or the data has the size of other buffers.
-    assert(mVertexBuffers.size() == 1 || mVertexCount == aData.size());
+    assert(mVertexBuffers.size() == 1 || mVertexCount == (int)aData.size());
 
     respecifyBuffer(mVertexBuffers[aBufferViewIndex].mBuffer, aData, graphics::BufferHint::StreamDraw);
     mVertexCount = (GLsizei)aData.size();

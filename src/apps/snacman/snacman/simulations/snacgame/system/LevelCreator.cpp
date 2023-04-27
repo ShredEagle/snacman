@@ -190,7 +190,7 @@ void LevelCreator::update()
                         break;
                 }
 
-                for (int moveIndex = 0; moveIndex < gDirections.size(); ++moveIndex)
+                for (size_t moveIndex = 0; moveIndex < gDirections.size(); ++moveIndex)
                 {
                     const Pos2_i dir = gDirections.at(moveIndex);
                     const int move = gAllowedMovement.at(moveIndex);
@@ -199,6 +199,8 @@ void LevelCreator::update()
                         tile.mAllowedMove |= move;
                         if (tile.mType == component::TileType::Portal)
                         {
+                            // This inverse the allowed Movement flag up becomes down and right becomes left
+                            // because this flip the least significant bit
                             tile.mAllowedMove |= gAllowedMovement.at(moveIndex ^ 0b01);
                         }
                     }
