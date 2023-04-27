@@ -24,16 +24,7 @@ class SceneGraphResolver
 {
 public:
     SceneGraphResolver(GameContext & aGameContext,
-                       ent::Handle<ent::Entity> aSceneRoot) :
-        mSceneRoot{aSceneRoot}, mNodes{aGameContext.mWorld}
-    {
-        mNodes.onRemoveEntity([](ent::Handle<ent::Entity> aHandle,
-                                  component::SceneNode & aNode,
-                                  const component::Geometry &,
-                                  const component::GlobalPose &) {
-            removeEntityFromScene(aHandle);
-        });
-    }
+                       ent::Handle<ent::Entity> aSceneRoot);
 
     void update();
 

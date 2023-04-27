@@ -1,5 +1,9 @@
 #include "PlayerInvulFrame.h"
 
+#include "../component/VisualModel.h"
+
+#include <snac-renderer/Mesh.h>
+#include <memory>
 #include <snacman/Profiling.h>
 
 
@@ -7,23 +11,25 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
+const std::shared_ptr<snac::Model> nullModel = std::make_shared<snac::Model>();
+
 void PlayerInvulFrame::update(float aDelta)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    mPlayer.each([aDelta](component::PlayerLifeCycle & aPlayer,
-                                   component::Geometry & aPlayerGeometry) {
+    mPlayer.each([aDelta, this](component::PlayerLifeCycle & aPlayer,
+                                   component::VisualModel & aPlayerModel) {
         // TODO: (franz): this should be better
         if (aPlayer.mIsAlive && aPlayer.mInvulFrameCounter > 0.f && aPlayer.mHitStun <= 0.f) {
             aPlayer.mInvulFrameCounter -= aDelta;
 
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 0)
             {
-                aPlayerGeometry.mColor.a() = 1.f;
+                aPlayerModel.mModel = mGameContext->mResources.getModel("models/donut/DONUT.gltf");
             }
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 2)
             {
-                aPlayerGeometry.mColor.a() = 0.f;
+                aPlayerModel.mModel = nullModel;
             }
         }
         if (aPlayer.mIsAlive && aPlayer.mInvulFrameCounter > 0.f && aPlayer.mHitStun > 0.f)
@@ -33,11 +39,11 @@ void PlayerInvulFrame::update(float aDelta)
 
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 0)
             {
-                aPlayerGeometry.mColor.a() = 1.f;
+                aPlayerModel.mModel = mGameContext->mResources.getModel("models/donut/DONUT.gltf");
             }
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 2)
             {
-                aPlayerGeometry.mColor.a() = 0.f;
+                aPlayerModel.mModel = nullModel;
             }
         }
     });

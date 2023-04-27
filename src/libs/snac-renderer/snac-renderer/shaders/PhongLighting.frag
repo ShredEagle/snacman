@@ -8,9 +8,8 @@ in vec4 ex_Tangent_c;
 in vec4 ex_ColorFactor;
 #ifdef TEXTURES
 in vec2[2] ex_TextureCoords;
-#else
-in vec4 ex_Albedo;
 #endif
+in vec4 ex_Albedo;
 #ifdef SHADOW
 in vec4 ex_Position_lightClip;
 #endif
@@ -59,7 +58,7 @@ void main(void)
     vec4 color = 
         ex_ColorFactor 
 #ifdef TEXTURES
-        * texture(u_BaseColorTexture, ex_TextureCoords[u_BaseColorUVIndex]);
+        * texture(u_BaseColorTexture, ex_TextureCoords[u_BaseColorUVIndex]) * ex_Albedo;
 #else
         * ex_Albedo;
 #endif

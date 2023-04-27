@@ -1,9 +1,8 @@
 #pragma once
 
-#include "../GameContext.h"
-
-#include "../component/Geometry.h"
 #include "../component/PlayerLifeCycle.h"
+#include "../component/VisualModel.h"
+#include "../GameContext.h"
 
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
@@ -15,12 +14,15 @@ namespace system {
 class PlayerInvulFrame
 {
 public:
-    PlayerInvulFrame(GameContext & aGameContext) : mPlayer{aGameContext.mWorld} {}
+    PlayerInvulFrame(GameContext & aGameContext) :
+        mGameContext{&aGameContext}, mPlayer{mGameContext->mWorld}
+    {}
 
     void update(float aDelta);
 
 private:
-    ent::Query<component::PlayerLifeCycle, component::Geometry> mPlayer;
+    GameContext * mGameContext;
+    ent::Query<component::PlayerLifeCycle, component::VisualModel> mPlayer;
 };
 
 } // namespace system

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "../GameContext.h"
 
 #include "../component/Geometry.h"
@@ -23,7 +24,7 @@ public:
     void update(float aDelta);
 
 private:
-    ent::Query<component::Geometry, component::PlayerMoveState> mPlayer;
+    ent::Query<component::Geometry, component::PlayerMoveState, component::PlayerModel> mPlayer;
 };
 
 } // namespace system

@@ -22,22 +22,27 @@ void RoundMonitor::update()
             aHandle.get(destroyLevel)->erase();
         });
 
+        // Tearing down level
         EntHandle level = *mGameContext->mLevel;
         component::LevelData & levelData =
             level.get(destroyLevel)->get<component::LevelData>();
-        // TODO: (franz): make a function for the level teardown
-        // before the round change
-        levelData.mSeed++;
-        levelData.mTiles.clear();
-        levelData.mNodes.clear();
+        levelData.mSeed++; // update seed
+        levelData.mTiles.clear(); // removes tiles
+        levelData.mNodes.clear(); // removes pathfinding nodes
+        levelData.mPortalIndex.clear(); // removes portal information
         levelData.mFile =
-            mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml";
+            mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml"; // choose right file
         level.get(destroyLevel)->remove<component::LevelCreated>();
         level.get(destroyLevel)->add(component::LevelToCreate{});
+
+        // Removing players
         mPlayers.each([&destroyLevel](EntHandle aHandle,
                                       component::PlayerLifeCycle & lifeCycle,
                                       component::PlayerPowerUp & aPowerup) {
+            // Reset alive status so that player can be spawned
             lifeCycle.mIsAlive = false;
+
+            // Removes powerup if the player has any
             if (aHandle.get()->has<component::PlayerPowerUp>())
             {
                 aHandle.get(destroyLevel)

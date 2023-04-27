@@ -1,5 +1,8 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/component/Collision.h"
+#include "snacman/simulations/snacgame/component/GlobalPose.h"
+#include "snacman/simulations/snacgame/component/PlayerPortalData.h"
 #include "../GameContext.h"
 #include "../component/LevelTags.h"
 #include "../component/Geometry.h"
@@ -26,8 +29,8 @@ public:
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::Geometry, component::PlayerMoveState> mPlayer;
-    ent::Query<component::Geometry, component::Portal> mPortals;
+    ent::Query<component::GlobalPose, component::PlayerMoveState, component::Collision, component::PlayerPortalData, component::Geometry> mPlayer;
+    ent::Query<component::Portal, component::GlobalPose> mPortals;
 };
 
 } // namespace system

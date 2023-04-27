@@ -1,8 +1,12 @@
 #include "PortalManagement.h"
 
-#include "../typedef.h"
-#include "../LevelHelper.h"
+#include "snacman/simulations/snacgame/Entities.h"
+#include "snacman/simulations/snacgame/SceneGraph.h"
 
+#include "../LevelHelper.h"
+#include "../typedef.h"
+
+#include <snacman/DebugDrawing.h>
 #include <snacman/Profiling.h>
 
 namespace ad {
@@ -17,31 +21,48 @@ void PortalManagement::update()
         ent::Phase portalPhase;
         const component::LevelData & levelData =
             level.get(portalPhase)->get<component::LevelData>();
-        const std::vector<component::Tile> & tiles = levelData.mTiles;
-        int colCount = levelData.mSize.height();
 
-        mPlayer.each([&](component::Geometry & aPlayerGeo,
-                         component::PlayerMoveState & aMoveState) {
-            math::Position<3, float> & playerPos = aPlayerGeo.mPosition;
-            const Pos2_i intPlayerPos = getLevelPosition_i(playerPos.xy());
-
-            if (aMoveState.mCurrentPortal != -1 && aMoveState.mDestinationPortal != -1)
-            {
-                const component::Tile & currentTile = tiles.at(intPlayerPos.x() + intPlayerPos.y() * colCount);
-                if (currentTile.mType == component::TileType::Void)
-                {
-                    int destFlatPosition = aMoveState.mDestinationPortal;
-                    playerPos.x() = static_cast<float>(destFlatPosition % colCount);
-                    playerPos.y() = static_cast<float>(destFlatPosition / colCount);
-                }
-            }
-
+        mPlayer.each([&levelData, this](
+                         EntHandle aPlayerHandle,
+                         component::GlobalPose & aPlayerPose,
+                         component::PlayerMoveState & aMoveState,
+                         const component::Collision & aPlayerCol,
+                         component::Geometry & aPlayerGeo,
+                         component::PlayerPortalData & aPortalData) {
             aMoveState.mCurrentPortal = -1;
             aMoveState.mDestinationPortal = -1;
 
-            mPortals.each([&](component::Geometry & aPortalGeo, component::Portal & aPortal) {
-                math::Position<2, int> intPortalPos{aPortalGeo.mPosition.xy()};
-                if (intPlayerPos == intPortalPos)
+            Box_f playerHitbox = component::transformHitbox(
+                aPlayerPose.mPosition, aPlayerCol.mHitbox);
+
+            mPortals.each([&playerHitbox, &levelData, &aMoveState, &aPortalData, &aPlayerGeo](
+                              const component::Portal & aPortal,
+                              const component::GlobalPose & aPortalPose) {
+                Box_f portalHitbox = component::transformHitbox(
+                    aPortalPose.mPosition, aPortal.mEnterHitbox);
+
+                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::debug)
+                    .addBox(
+                        snac::DebugDrawer::Entry{
+                            .mPosition = {0.f, 0.f, 0.f},
+                            .mColor = math::hdr::gGreen<float>,
+                        },
+                        portalHitbox);
+
+                Box_f portalExitHitbox = component::transformHitbox(
+                    aPortalPose.mPosition, aPortal.mExitHitbox);
+
+                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::debug)
+                    .addBox(
+                        snac::DebugDrawer::Entry{
+                            .mPosition = {0.f, 0.f, 0.f},
+                            .mColor = math::hdr::gRed<float>,
+                        },
+                        portalExitHitbox);
+
+                // If player collides with the portal hitbox we set up
+                // the player portal teleportation
+                if (component::collideWithSat(portalHitbox, playerHitbox))
                 {
                     int destinationPortalIndex = -1;
                     for (int portalIndex : levelData.mPortalIndex)
@@ -55,6 +76,55 @@ void PortalManagement::update()
 
                     aMoveState.mCurrentPortal = aPortal.portalIndex;
                     aMoveState.mDestinationPortal = destinationPortalIndex;
+                }
+
+                if (aPortalData.mPortalImage)
+                {
+                    Phase handlePortalImage;
+                    component::Geometry imageGeo = aPortalData.mPortalImage->get(handlePortalImage)->get<component::Geometry>();
+                    component::GlobalPose imagePose = aPortalData.mPortalImage->get(handlePortalImage)->get<component::GlobalPose>();
+                    component::Collision imageCollision = aPortalData.mPortalImage->get(handlePortalImage)->get<component::Collision>();
+                    Box_f playerPortalImageHitbox = component::transformHitbox(
+                        imagePose.mPosition, imageCollision.mHitbox);
+
+                    if (component::collideWithSat(portalExitHitbox, playerPortalImageHitbox))
+                    {
+                        aPlayerGeo.mPosition += imageGeo.mPosition.as<math::Vec>();
+                        aPortalData.mPortalImage->get(handlePortalImage)->erase();
+                        aPortalData.mPortalImage = std::nullopt;
+                    }
+
+                    if (component::collideWithSat(portalExitHitbox, playerHitbox))
+                    {
+                        aPortalData.mPortalImage->get(handlePortalImage)->erase();
+                        aPortalData.mPortalImage = std::nullopt;
+                    }
+                }
+            });
+
+            mPortals.each([&aMoveState, &aPortalData, &aPlayerHandle,
+                           &aPlayerGeo,
+                           this](const component::Portal & aPortal) {
+                if (aPortal.portalIndex == aMoveState.mDestinationPortal
+                    && !aPortalData.mPortalImage)
+                {
+                    EntHandle newPortalImage = mGameContext->mWorld.addEntity();
+                    {
+                        Phase addPortalImage;
+                        Entity portal = *newPortalImage.get(addPortalImage);
+                        Vec2 relativePos = aPortal.mMirrorSpawnPosition.xy()
+                                           - aPlayerGeo.mPosition.xy();
+                        addMeshGeoNode(
+                            addPortalImage, *mGameContext, portal,
+                            "models/donut/donut.gltf",
+                            {relativePos.x(), relativePos.y(), 0.f}, 0.2f,
+                            {1.f, 1.f, 1.f},
+                            Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                                   math::Turn<float>{0.25f}});
+                        portal.add(component::Collision{component::gPlayerHitbox});
+                        aPortalData.mPortalImage = newPortalImage;
+                    }
+                    insertEntityInScene(newPortalImage, aPlayerHandle);
                 }
             });
         });

@@ -51,7 +51,6 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
         };
         const component::SceneNode * prevNode = &fakePrevNode;
 
-        // TODO: (franz) use the optionalness of next child and prev child
         while (prevNode->mNextChild)
         {
             ent::Handle<ent::Entity> current = *prevNode->mNextChild;
@@ -78,6 +77,18 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
 }
 
 } // namespace
+
+SceneGraphResolver::SceneGraphResolver(GameContext & aGameContext,
+                   ent::Handle<ent::Entity> aSceneRoot) :
+    mSceneRoot{aSceneRoot}, mNodes{aGameContext.mWorld}
+{
+    mNodes.onRemoveEntity([](ent::Handle<ent::Entity> aHandle,
+                              component::SceneNode & aNode,
+                              const component::Geometry &,
+                              const component::GlobalPose &) {
+        removeEntityFromScene(aHandle);
+    });
+}
 
 void SceneGraphResolver::update()
 {

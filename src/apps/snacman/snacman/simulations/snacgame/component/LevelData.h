@@ -1,6 +1,8 @@
 #pragma once
 
 #include "LevelTags.h"
+#include "math/Vector.h"
+#include "snacman/simulations/snacgame/LevelHelper.h"
 #include "../InputConstants.h"
 
 #include <platform/Filesystem.h>
@@ -14,18 +16,12 @@ namespace ad {
 namespace snacgame {
 namespace component {
 
-constexpr int gAllowedMovementNone = gPlayerMoveFlagNone;
-constexpr int gAllowedMovementUp = gPlayerMoveFlagUp;
-constexpr int gAllowedMovementDown = gPlayerMoveFlagDown;
-constexpr int gAllowedMovementLeft = gPlayerMoveFlagLeft;
-constexpr int gAllowedMovementRight = gPlayerMoveFlagRight;
-
 enum class TileType
 {
     Void,
     Path,
+    Powerup,
     Portal,
-    Pen,
     Spawn,
 };
 
@@ -33,6 +29,7 @@ struct Tile
 {
     TileType mType;
     int mAllowedMove = gAllowedMovementNone;
+    math::Position<2, float> mPos = math::Position<2, float>::Zero();
 };
 
 struct PathfindNode
