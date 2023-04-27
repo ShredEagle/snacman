@@ -3,6 +3,8 @@
 #include "GameParameters.h"
 
 #include "component/GlobalPose.h"
+#include "snacman/simulations/snacgame/component/Geometry.h"
+#include "snacman/simulations/snacgame/component/LevelTags.h"
 
 #include <entity/Entity.h>
 #include <entity/Query.h>
@@ -82,7 +84,7 @@ createPortalEntity(GameContext & aContext,
                    ent::Phase & aPhase,
                    const math::Position<2, float> & aPos,
                    int aPortalIndex);
-void addPortalHitbox(ent::Handle<ent::Entity> aPortal, math::Vec<3, float> aDirection);
+void addPortalInfo(component::Portal & aPortal, const component::Geometry & aGeo, math::Vec<3, float> aDirection);
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
                    const math::Position<2, float> & aPos);

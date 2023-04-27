@@ -35,6 +35,7 @@ constexpr const math::Box<float> gPortalHitbox{{-0.5f, 0.f, -0.5f},
 struct Portal
 {
     int portalIndex;
+    math::Position<3, float> mMirrorSpawnPosition;
     math::Box<float> mEnterHitbox;
     math::Box<float> mExitHitbox;
 };

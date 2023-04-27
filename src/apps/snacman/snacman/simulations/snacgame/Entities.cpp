@@ -215,16 +215,17 @@ createPortalEntity(GameContext & aContext,
     return handle;
 }
 
-void addPortalHitbox(EntHandle aPortal, Vec3 aDirection)
+void addPortalInfo(component::Portal & aPortal, const component::Geometry & aGeo, Vec3 aDirection)
  {
      Box_f portalEntrance{component::gPortalHitbox};
-     portalEntrance.mPosition -= aDirection;
+     portalEntrance.mPosition += aDirection;
      Box_f portalExit{component::gPortalHitbox};
-     portalExit.mPosition += aDirection;
+     portalExit.mPosition -= aDirection;
 
      Phase addHitboxPhase;
-     aPortal.get(addHitboxPhase)->get<component::Portal>().mEnterHitbox = portalEntrance;
-     aPortal.get(addHitboxPhase)->get<component::Portal>().mExitHitbox = portalExit;
+     aPortal.mEnterHitbox = portalEntrance;
+     aPortal.mExitHitbox = portalExit;
+     aPortal.mMirrorSpawnPosition = aGeo.mPosition + aDirection;
 
  }
 

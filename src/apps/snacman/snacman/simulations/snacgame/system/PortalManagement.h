@@ -29,7 +29,7 @@ public:
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::GlobalPose, component::PlayerMoveState, component::Collision, component::PlayerPortalData> mPlayer;
+    ent::Query<component::GlobalPose, component::PlayerMoveState, component::Collision, component::PlayerPortalData, component::Geometry> mPlayer;
     ent::Query<component::Portal, component::GlobalPose> mPortals;
 };
 

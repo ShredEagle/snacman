@@ -219,11 +219,11 @@ void LevelCreator::update()
                 // The algorithm only checks for horizontal orientation of the portal
                 if (tiles.at(pos.x() + 1 + pos.y() * stride).mType != component::TileType::Void)
                 {
-                    addPortalHitbox(aHandle, Vec3{1.f, 0.f, 0.f});
+                    addPortalInfo(aPortal, aGeo, Vec3{-1.f, 0.f, 0.f});
                 }
                 else if (tiles.at(pos.x() - 1 + pos.y() * stride).mType != component::TileType::Void)
                 {
-                    addPortalHitbox(aHandle, Vec3{-1.f, 0.f, 0.f});
+                    addPortalInfo(aPortal, aGeo, Vec3{1.f, 0.f, 0.f});
                 }
 
         });
