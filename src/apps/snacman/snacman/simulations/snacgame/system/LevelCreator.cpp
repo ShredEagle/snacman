@@ -207,12 +207,25 @@ void LevelCreator::update()
         }
         } // end createLevel phase
 
+        createStageDecor(*mGameContext);
         mEntities.each([&aLevelHandle](EntHandle aHandle, const component::LevelEntity &) {
             insertEntityInScene(aHandle, aLevelHandle);
         });
 
-        mPortals.each([](EntHandle aHandle, component::Portal & aPortal, const component::Geometry & aGeo) {
+        mPortals.each([&tiles, stride](EntHandle aHandle, component::Portal & aPortal, const component::Geometry & aGeo) {
                 Pos2_i pos = {(int)aGeo.mPosition.x(), (int)aGeo.mPosition.y()};
+
+                // HACK: (franz)
+                // The algorithm only checks for horizontal orientation of the portal
+                if (tiles.at(pos.x() + 1 + pos.y() * stride).mType != component::TileType::Void)
+                {
+                    addPortalHitbox(aHandle, Vec3{1.f, 0.f, 0.f});
+                }
+                else if (tiles.at(pos.x() - 1 + pos.y() * stride).mType != component::TileType::Void)
+                {
+                    addPortalHitbox(aHandle, Vec3{-1.f, 0.f, 0.f});
+                }
+
         });
 
         {

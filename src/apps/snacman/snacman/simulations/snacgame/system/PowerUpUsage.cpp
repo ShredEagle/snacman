@@ -12,6 +12,7 @@
 
 #include "../typedef.h"
 
+#include <snacman/DebugDrawing.h>
 #include <math/Box.h>
 #include <math/Transformations.h>
 #include <utility>
@@ -23,20 +24,28 @@ namespace system {
 void PowerUpUsage::update()
 {
     Phase powerup;
-    mPlayers.each([&](EntHandle aPlayer, component::Geometry & aPlayerGeo,
+    mPlayers.each([&](EntHandle aPlayer, const component::GlobalPose & aPlayerPose,
                       const component::PlayerSlot & aSlot,
                       component::Collision aPlayerCol) {
         const Box_f playerHitbox = component::transformHitbox(
-            aPlayerGeo.mPosition, aPlayerCol.mHitbox);
+            aPlayerPose.mPosition, aPlayerCol.mHitbox);
         Entity playerEnt = *aPlayer.get(powerup);
         if (!playerEnt.has<component::PlayerPowerUp>())
         {
             mPowerups.each([&](ent::Handle<ent::Entity> aHandle,
                                component::PowerUp & aPowerup,
-                               const component::Geometry & aPowerupGeo,
+                               const component::GlobalPose & aPowerupGeo,
                                const component::Collision & aPowerupCol) {
                 const Box_f powerupHitbox = component::transformHitbox(
                     aPowerupGeo.mPosition, aPowerupCol.mHitbox);
+
+                DBGDRAW(snac::gHitboxDrawer, snac::DebugDrawer::Level::off).addBox(
+                    snac::DebugDrawer::Entry{
+                        .mPosition = {0.f, 0.f, 0.f},
+                        .mColor = math::hdr::gBlue<float>,
+                    },
+                    powerupHitbox
+                );
 
                 if (!aPowerup.mPickedUp
                     && component::collideWithSat(powerupHitbox, playerHitbox))
@@ -87,20 +96,20 @@ void PowerUpUsage::update()
     });
 
     mInGamePowerups.each([this, &powerup](EntHandle aPowerupHandle,
-                                const component::Geometry & aPowerupGeo,
+                                const component::GlobalPose & aPowerupPose,
                                 const component::Collision & aPowerupCol,
                                 component::InGamePowerup & aPowerup) {
         const Box_f powerupHitbox = component::transformHitbox(
-            aPowerupGeo.mPosition, aPowerupCol.mHitbox);
+            aPowerupPose.mPosition, aPowerupCol.mHitbox);
         mPlayers.each([&aPowerup, powerupHitbox, &aPowerupHandle, &powerup](
                           EntHandle aPlayerHandle,
-                          const component::Geometry & aPlayerGeo,
+                          const component::GlobalPose & aPlayerPose,
                           const component::Collision & aPlayerCol,
                           component::PlayerLifeCycle & aPlayerLifeCycle) {
             if (aPlayerHandle != aPowerup.mOwner)
             {
                 const Box_f playerHitbox = component::transformHitbox(
-                    aPlayerGeo.mPosition, aPlayerCol.mHitbox);
+                    aPlayerPose.mPosition, aPlayerCol.mHitbox);
 
                 if (component::collideWithSat(powerupHitbox, playerHitbox))
                 {

@@ -1,10 +1,11 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/component/Geometry.h"
+#include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "../GameContext.h"
 #include "../component/Controller.h"
 #include "../component/PlayerLifeCycle.h"
 #include "../component/PlayerPowerUp.h"
-#include "../component/Geometry.h"
 #include "../component/LevelTags.h"
 #include "../component/PlayerSlot.h"
 #include "../component/Collision.h"
@@ -36,10 +37,10 @@ public:
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::Geometry, component::PlayerSlot, component::Collision, component::PlayerLifeCycle> mPlayers;
+    ent::Query<component::GlobalPose, component::Geometry, component::PlayerSlot, component::Collision, component::PlayerLifeCycle> mPlayers;
     ent::Query<component::Geometry, component::PlayerSlot, component::PlayerPowerUp, component::Controller> mPowUpPlayers;
-    ent::Query<component::Geometry, component::PowerUp, component::Collision, component::LevelEntity> mPowerups;
-    ent::Query<component::Geometry, component::InGamePowerup, component::Collision, component::LevelEntity> mInGamePowerups;
+    ent::Query<component::GlobalPose, component::PowerUp, component::Collision, component::LevelEntity> mPowerups;
+    ent::Query<component::GlobalPose, component::InGamePowerup, component::Collision, component::LevelEntity> mInGamePowerups;
 };
 
 } // namespace system

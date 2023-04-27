@@ -14,19 +14,14 @@ struct Collision
     math::Box<float> mHitbox;
 };
 
-constexpr const math::Box<float> gPlayerHitbox{{-0.5f, -0.5f, 0.f},
+constexpr const math::Box<float> gPlayerHitbox{{-0.5f, 0.f, -0.5f},
                                                {1.f, 1.f, 1.f}};
 
-constexpr const math::Box<float> gPillHitbox{{-0.2f, -0.2f, 0.0f},
-                                               {0.4f, 0.4f, 0.8f}};
+constexpr const math::Box<float> gPillHitbox{{-0.2f, -0.2f, -0.2f},
+                                               {0.4f, 0.4f, 0.4f}};
 
-constexpr const math::Box<float> gPowerUpHitbox{{-0.4f, -0.4f, 0.0f},
-                                               {0.8f, 0.8f, 1.6f}};
-
-// This assume that portal are always on a boundary of the level
-// in the x coordinate
-constexpr const math::Box<float> gPortalHitbox{{1.f, -0.5f, 0.0f},
-                                               {1.f, 1.f, 1.f}};
+constexpr const math::Box<float> gPowerUpHitbox{{-0.35f, -0.35f, -0.35f},
+                                               {0.7f, 0.7f, 0.7f}};
 
 inline math::Box<float> transformHitbox(const math::Position<3, float> & aPos, const math::Box<float> & aBox)
 {

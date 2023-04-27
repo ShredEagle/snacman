@@ -212,9 +212,21 @@ createPortalEntity(GameContext & aContext,
                        math::hdr::gRed<float>);
     Entity portal = *handle.get(aPhase);
     portal.add(component::Portal{aPortalIndex});
-    portal.add(component::Collision{component::gPortalHitbox});
     return handle;
 }
+
+void addPortalHitbox(EntHandle aPortal, Vec3 aDirection)
+ {
+     Box_f portalEntrance{component::gPortalHitbox};
+     portalEntrance.mPosition -= aDirection;
+     Box_f portalExit{component::gPortalHitbox};
+     portalExit.mPosition += aDirection;
+
+     Phase addHitboxPhase;
+     aPortal.get(addHitboxPhase)->get<component::Portal>().mEnterHitbox = portalEntrance;
+     aPortal.get(addHitboxPhase)->get<component::Portal>().mExitHitbox = portalExit;
+
+ }
 
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
@@ -418,6 +430,7 @@ EntHandle createStageDecor(GameContext & aContext)
                                         math::Turn<float>{0.25f}} * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                         math::Turn<float>{0.25f}}
                 );
+        stageEntity.add(component::LevelEntity{});
     }
     return result;
 }

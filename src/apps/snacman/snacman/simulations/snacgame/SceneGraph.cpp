@@ -6,7 +6,6 @@
 #include "typedef.h"
 
 #include <entity/EntityManager.h>
-
 #include <math/Transformations.h>
 
 namespace ad {
@@ -62,46 +61,51 @@ Quat_f getRotation(const TransformMatrix & aMatrix, float aScale)
     float w = 1;
     float x = 0;
     float y = 0;
-    float z= 0;
+    float z = 0;
     switch (biggestIndex)
     {
-        case 0:
-            w = biggestVal;
-            x = (rot.at(1, 2) - rot.at(2, 1)) * mult;
-            y = (rot.at(2, 0) - rot.at(0, 2)) * mult;
-            z = (rot.at(0, 1) - rot.at(1, 0)) * mult;
-            break;
-        case 1:
-            x = biggestVal;
-            w = (rot.at(1, 2) - rot.at(2, 1)) * mult;
-            y = (rot.at(0, 1) + rot.at(1, 0)) * mult;
-            z = (rot.at(2, 0) + rot.at(0, 2)) * mult;
-            break;
-        case 2:
-            y = biggestVal;
-            w = (rot.at(2, 0) - rot.at(0, 2)) * mult;
-            x = (rot.at(0, 1) + rot.at(1, 0)) * mult;
-            z = (rot.at(1, 2) + rot.at(2, 1)) * mult;
-            break;
-        case 3:
-            z = biggestVal;
-            w = (rot.at(0, 1) - rot.at(1, 0)) * mult;
-            y = (rot.at(1, 2) + rot.at(2, 1)) * mult;
-            x = (rot.at(2, 0) + rot.at(0, 2)) * mult;
-            break;
+    case 0:
+        w = biggestVal;
+        x = (rot.at(1, 2) - rot.at(2, 1)) * mult;
+        y = (rot.at(2, 0) - rot.at(0, 2)) * mult;
+        z = (rot.at(0, 1) - rot.at(1, 0)) * mult;
+        break;
+    case 1:
+        x = biggestVal;
+        w = (rot.at(1, 2) - rot.at(2, 1)) * mult;
+        y = (rot.at(0, 1) + rot.at(1, 0)) * mult;
+        z = (rot.at(2, 0) + rot.at(0, 2)) * mult;
+        break;
+    case 2:
+        y = biggestVal;
+        w = (rot.at(2, 0) - rot.at(0, 2)) * mult;
+        x = (rot.at(0, 1) + rot.at(1, 0)) * mult;
+        z = (rot.at(1, 2) + rot.at(2, 1)) * mult;
+        break;
+    case 3:
+        z = biggestVal;
+        w = (rot.at(0, 1) - rot.at(1, 0)) * mult;
+        y = (rot.at(1, 2) + rot.at(2, 1)) * mult;
+        x = (rot.at(2, 0) + rot.at(0, 2)) * mult;
+        break;
     }
     return Quat_f(x, y, z, w);
 }
-
-
 
 namespace {
 void computeNewLocalTransform(component::Geometry & aChildGeo,
                               const component::GlobalPose & aChildPose,
                               const component::GlobalPose & aParentPose)
 {
-    TransformMatrix childTransform = math::trans3d::scaleUniform(aChildPose.mScaling) * aChildPose.mOrientation.toRotationMatrix() * math::trans3d::translate(aChildPose.mPosition.as<math::Vec>());
-    TransformMatrix invParentTransform = (math::trans3d::scaleUniform(aParentPose.mScaling) * aParentPose.mOrientation.toRotationMatrix() * math::trans3d::translate(aParentPose.mPosition.as<math::Vec>())).inverse();
+    TransformMatrix childTransform =
+        math::trans3d::scaleUniform(aChildPose.mScaling)
+        * aChildPose.mOrientation.toRotationMatrix()
+        * math::trans3d::translate(aChildPose.mPosition.as<math::Vec>());
+    TransformMatrix invParentTransform =
+        (math::trans3d::scaleUniform(aParentPose.mScaling)
+         * aParentPose.mOrientation.toRotationMatrix()
+         * math::trans3d::translate(aParentPose.mPosition.as<math::Vec>()))
+            .inverse();
 
     TransformMatrix newLocalTransform = childTransform * invParentTransform;
 
@@ -154,6 +158,9 @@ void insertEntityInScene(ent::Handle<ent::Entity> aHandle,
     component::SceneNode & parentNode =
         parentEntity.get<component::SceneNode>();
     component::SceneNode & newNode = newChild.get<component::SceneNode>();
+    assert(newNode.mParent == std::nullopt
+           && "Can't add a node into the scene graph that is already part of "
+              "the scene graph");
 
     if (parentNode.mFirstChild)
     {

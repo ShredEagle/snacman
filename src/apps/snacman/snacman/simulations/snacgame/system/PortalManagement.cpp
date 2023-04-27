@@ -6,6 +6,7 @@
 #include "../LevelHelper.h"
 #include "../typedef.h"
 
+#include <snacman/DebugDrawing.h>
 #include <snacman/Profiling.h>
 
 namespace ad {
@@ -25,7 +26,7 @@ void PortalManagement::update()
 
         mPlayer.each([&tiles, &colCount, &levelData, this](
                          EntHandle aPlayerHandle,
-                         component::Geometry & aPlayerGeo,
+                         component::GlobalPose & aPlayerGeo,
                          component::PlayerMoveState & aMoveState,
                          const component::Collision & aPlayerCol,
                          component::PlayerPortalData & aPortalData) {
@@ -58,11 +59,29 @@ void PortalManagement::update()
 
             mPortals.each([&playerHitbox, &levelData, &aMoveState,
                            &aPortalData](
-                              const component::Geometry & aPortalGeo,
                               const component::Portal & aPortal,
-                              const component::Collision & aPortalCol) {
+                              const component::GlobalPose & aPortalPose) {
                 Box_f portalHitbox = component::transformHitbox(
-                    aPortalGeo.mPosition, aPortalCol.mHitbox);
+                    aPortalPose.mPosition, aPortal.mEnterHitbox);
+
+                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::off).addBox(
+                    snac::DebugDrawer::Entry{
+                        .mPosition = {0.f, 0.f, 0.f},
+                        .mColor = math::hdr::gGreen<float>,
+                    },
+                    portalHitbox
+                );
+
+                Box_f portalExitHitbox = component::transformHitbox(
+                    aPortalPose.mPosition, aPortal.mExitHitbox);
+
+                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::off).addBox(
+                    snac::DebugDrawer::Entry{
+                        .mPosition = {0.f, 0.f, 0.f},
+                        .mColor = math::hdr::gRed<float>,
+                    },
+                    portalExitHitbox
+                );
 
                 // If player collides with the portal hitbox we set up
                 // the player portal teleportation
@@ -80,12 +99,12 @@ void PortalManagement::update()
 
                     aMoveState.mCurrentPortal = aPortal.portalIndex;
                     aMoveState.mDestinationPortal = destinationPortalIndex;
-                    aPortalData.mCurrentPortalPos = aPortalGeo.mPosition.xy();
+                    aPortalData.mCurrentPortalPos = aPortalPose.mPosition.xy();
                 }
             });
 
             mPortals.each([&aMoveState, &aPortalData, &aPlayerHandle, this](
-                              const component::Geometry & aPortalGeo,
+                              const component::GlobalPose & aPortalGeo,
                               const component::Portal & aPortal) {
                 if (aPortal.portalIndex == aMoveState.mDestinationPortal
                     && !aPortalData.mPortalImage)

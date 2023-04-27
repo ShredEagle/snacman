@@ -15,6 +15,8 @@ namespace {
     {
         snac::DebugDrawer::AddDrawer(gBoundingBoxDrawer);
         snac::DebugDrawer::AddDrawer(gWorldDrawer);
+        snac::DebugDrawer::AddDrawer(gPortalDrawer);
+        snac::DebugDrawer::AddDrawer(gHitboxDrawer);
     }
 
 } // namespace anonymous

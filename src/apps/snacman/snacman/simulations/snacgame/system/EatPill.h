@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "../GameContext.h"
 
 #include "../component/Collision.h"
@@ -26,13 +27,13 @@ public:
     void update();
 
 private:
-    ent::Query<component::Geometry,
+    ent::Query<component::GlobalPose,
                component::PlayerSlot,
                component::Collision,
                component::PlayerLifeCycle,
                component::Text>
         mPlayers;
-    ent::Query<component::Geometry, component::Collision, component::Pill>
+    ent::Query<component::GlobalPose, component::Collision, component::Pill>
         mPills;
 };
 

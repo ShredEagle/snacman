@@ -410,10 +410,8 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                 aHandle.id(),
                 visu::Entity{
                     .mPosition_world = aGlobPose.mPosition,
-                    .mScaling = math::Size<3, float>{aGlobPose.mScaling,
-                                                     aGlobPose.mScaling,
-                                                     aGlobPose.mScaling}
-                                    .cwMul(aGlobPose.mInstanceScaling),
+                    .mScaling = aGlobPose.mInstanceScaling *
+                                    aGlobPose.mScaling,
                     .mOrientation = aGlobPose.mOrientation,
                     .mColor = aGlobPose.mColor,
                     .mModel = aVisualModel.mModel,
