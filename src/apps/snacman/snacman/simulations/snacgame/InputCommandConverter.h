@@ -2,6 +2,7 @@
 
 #include "InputConstants.h"
 #include "component/Controller.h"
+#include "snacman/Logging.h"
 
 #include <platform/Filesystem.h>
 
@@ -66,6 +67,16 @@ struct BidirectionalMap
     const T_forward reverseLookup(const T_reverse & aInput) const
     {
         return mReverseMap.at(aInput);
+    }
+
+    const bool contains(const T_forward & aName) const
+    {
+        return mMap.contains(aName);
+    }
+
+    const bool rcontains(const T_reverse & aName) const
+    {
+        return mReverseMap.contains(aName);
     }
 
     const std::unordered_map<T_forward, T_reverse> mMap;
@@ -194,9 +205,16 @@ public:
                 it->second;
             for (const auto & [commandName, key] : mappings)
             {
-                groupMappings.push_back(
-                    {translateMappingValueToInputType<T_input_type>(key),
-                     gCommandFlags.lookup(commandName)});
+                if (gCommandFlags.contains(commandName))
+                {
+                    groupMappings.push_back(
+                        {translateMappingValueToInputType<T_input_type>(key),
+                         gCommandFlags.lookup(commandName)});
+                }
+                else
+                {
+                    SELOG(error)("Missing command name \"{}\" present in \"{}\" in command flags", commandName, aPath.c_str());
+                }
             }
         }
     }

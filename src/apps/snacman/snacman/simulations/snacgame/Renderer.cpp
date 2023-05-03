@@ -161,7 +161,7 @@ void Renderer::render(const visu::GraphicState & aState)
         * aState.mCamera.mWorldToCamera).xyz();
 
     math::hdr::Rgb_f lightColor = to_hdr<float>(math::sdr::gWhite) * 0.8f;
-    math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.1f, 0.1f, 0.1f};
+    math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.4f, 0.4f, 0.4f};
 
     const math::Size<2, int> framebufferSize = mAppInterface.getFramebufferSize();
 
