@@ -35,8 +35,7 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface,
                    arte::FontFace aDebugFontFace) :
     mAppInterface{aAppInterface},
     mPipelineShadows{aAppInterface, aTechniqueAccess},
-    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
-            snac::Camera::gDefaults},
+    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults},
     mDebugRenderer{aTechniqueAccess, std::move(aDebugFontFace)}
 {
     mPipelineShadows.getControls().mShadowBias = 0.0005f;
@@ -143,12 +142,9 @@ void Renderer::render(const visu::GraphicState & aState)
     END_RECURRING_GL(sortModelProfile);
 
     // Position camera
-    mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
-    // TODO #camera remove that local camera
-    snac::Camera cam{
-        math::getRatio<float>(mAppInterface.getWindowSize()),
-        snac::Camera::gDefaults};
-    cam.setPose(aState.mCamera.mWorldToCamera);
+    // TODO #camera The Camera instance should come from the graphic state directly
+    mCamera.setPose(aState.mCamera.mWorldToCamera);
+    mCameraBuffer.set(mCamera);
 
 
     const math::AffineMatrix<4, GLfloat> worldToLight = 
@@ -171,10 +167,10 @@ void Renderer::render(const visu::GraphicState & aState)
             {snac::Semantic::LightPosition, {lightPosition_cam}},
             {snac::Semantic::AmbientColor, {ambientColor}},
             {snac::Semantic::FramebufferResolution, framebufferSize},
-            {snac::Semantic::ViewingMatrix, cam.assembleViewMatrix()}
+            {snac::Semantic::ViewingMatrix, mCamera.assembleViewMatrix()}
         },
         .mUniformBlocks{
-            {snac::BlockSemantic::Viewing, &mCamera.mViewing},
+            {snac::BlockSemantic::Viewing, &mCameraBuffer.mViewing},
         }
     };
 

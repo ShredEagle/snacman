@@ -78,7 +78,8 @@ private:
     // TODO Is it the correct place to host the pipeline instance?
     // This notably force to instantiate it with the Renderer (before the Resources manager is available).
     snac::ForwardShadows mPipelineShadows;
-    snac::CameraBuffer mCamera;
+    snac::Camera mCamera;
+    snac::CameraBuffer mCameraBuffer;
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;

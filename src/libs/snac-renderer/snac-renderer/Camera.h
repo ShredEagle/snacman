@@ -18,6 +18,8 @@ math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVertica
 // TODO extend with orthographic projection
 struct Camera
 {
+    friend struct CameraBuffer;
+
     // TODO rename perspectiveparameters
     struct Parameters
     {
@@ -37,7 +39,10 @@ struct Camera
     math::Matrix<4, 4, GLfloat> assembleViewMatrix() const
     { return mWorldToCamera * mProjection; }
 
-    const Camera::Parameters getCurrentParameters() const
+    float getCurrentAspectRatio() const
+    { return mCurrentAspectRatio; }
+
+    const Camera::Parameters & getCurrentParameters() const
     { return mCurrentParameters; }
 
     static constexpr Parameters gDefaults{
@@ -52,16 +57,22 @@ private:
     math::AffineMatrix<4, GLfloat> mWorldToCamera = math::AffineMatrix<4, GLfloat>::Identity();
     math::Matrix<4, 4, GLfloat> mProjection;
 
+    float mCurrentAspectRatio;
     Camera::Parameters mCurrentParameters;
 };
 
 // TODO redesign, potentially in term of a Camera member?
 struct CameraBuffer
 {
-    CameraBuffer(float aAspectRatio, Camera::Parameters aParameters);
+    CameraBuffer();
+    CameraBuffer(Camera aCamera);
+    //CameraBuffer(float aAspectRatio, Camera::Parameters aParameters);
 
-    void resetProjection(float aAspectRatio, Camera::Parameters aParameters);
+    void set(Camera aCamera);
+
     void setWorldToCamera(const math::AffineMatrix<4, GLfloat> & aTransformation);
+
+    void setProjection(const math::Matrix<4, 4, GLfloat> & aProjection);
 
     graphics::UniformBufferObject mViewing;
 };
