@@ -39,9 +39,11 @@ namespace {
         MAPPING(TANGENT, Tangent)
         MAPPING(TEXCOORD_0, TextureCoords0)
         MAPPING(TEXCOORD_1, TextureCoords1)
+        MAPPING(JOINTS_0, Joints0)
+        MAPPING(WEIGHTS_0, Weights0)
         else
         {
-            SELOG(debug)("Gltf semantic \"{}\" is not handled.", aGltfSemantic);
+            SELOG(info)("Gltf semantic \"{}\" is not handled.", aGltfSemantic);
             return std::nullopt;
         }
 

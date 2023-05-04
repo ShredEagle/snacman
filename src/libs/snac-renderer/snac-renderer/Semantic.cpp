@@ -23,6 +23,8 @@ std::string to_string(Semantic aSemantic)
         MAPPING(Albedo)
         MAPPING(TextureCoords0)
         MAPPING(TextureCoords1)
+        MAPPING(Joints0)
+        MAPPING(Weights0)
         MAPPING(LocalToWorld)
         MAPPING(InstancePosition)
         MAPPING(TextureOffset)
@@ -83,6 +85,8 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(Albedo)
     MAPPING(TextureCoords0)
     MAPPING(TextureCoords1)
+    MAPPING(Joints0)
+    MAPPING(Weights0)
     MAPPING(LocalToWorld)
     MAPPING(InstancePosition)
     MAPPING(TextureOffset)
@@ -133,6 +137,8 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::TextureCoords0:
         case Semantic::TextureCoords1:
         case Semantic::LocalToWorld:
+        case Semantic::Joints0:
+        case Semantic::Weights0:
         case Semantic::InstancePosition:
         case Semantic::TextureOffset:
         case Semantic::BoundingBox:
@@ -182,6 +188,7 @@ std::string to_string(BlockSemantic aBlockSemantic)
     {
         MAPPING(Viewing)
         MAPPING(GlyphMetrics)
+        MAPPING(JointMatrices)
         default:
         {
             auto value = static_cast<std::underlying_type_t<Semantic>>(aBlockSemantic);
@@ -208,6 +215,7 @@ BlockSemantic to_blockSemantic(std::string_view aBlockName)
     if(false){}
     MAPPING(Viewing)
     MAPPING(GlyphMetrics)
+    MAPPING(JointMatrices)
     else
     {
         if (aBlockName.ends_with(']'))

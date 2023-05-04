@@ -361,6 +361,7 @@ void Scene::render(Renderer & aRenderer)
         },
         .mUniformBlocks{
             {snac::BlockSemantic::Viewing, &mCameraBuffer.mViewing},
+            {snac::BlockSemantic::JointMatrices, &mJointMatrices},
         },
     };
 

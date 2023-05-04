@@ -58,10 +58,9 @@ void main(void)
     vec4 color = 
         ex_ColorFactor 
 #ifdef TEXTURES
-        * texture(u_BaseColorTexture, ex_TextureCoords[u_BaseColorUVIndex]) * ex_Albedo;
-#else
-        * ex_Albedo;
+        * texture(u_BaseColorTexture, ex_TextureCoords[u_BaseColorUVIndex])
 #endif
+        * ex_Albedo;
     
     //
     // Compute the fragment normal

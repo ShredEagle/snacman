@@ -16,6 +16,8 @@ enum class Semantic
     Albedo,
     TextureCoords0,
     TextureCoords1,
+    Joints0,
+    Weights0,
     // Usually per instance
     LocalToWorld,
     InstancePosition,
@@ -61,6 +63,7 @@ enum class BlockSemantic
 {
     Viewing, // camera pose and projection
     GlyphMetrics, // metrics for the glyphs found in the glyph atlas
+    JointMatrices,
 };
 
 
