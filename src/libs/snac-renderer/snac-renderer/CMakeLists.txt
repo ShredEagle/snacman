@@ -14,6 +14,7 @@ set(${TARGET_NAME}_HEADERS
     Mesh.h
     Render.h
     ResourceLoad.h
+    Rigging.h
     Semantic.h
     SetupDrawing.h
     ShaderResource.h
@@ -43,6 +44,7 @@ set(${TARGET_NAME}_SOURCES
     Mesh.cpp
     Render.cpp
     ResourceLoad.cpp
+    Rigging.cpp
     Semantic.cpp
     SetupDrawing.cpp
     ShaderResource.cpp

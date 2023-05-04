@@ -383,18 +383,33 @@ namespace {
 } // unnamed namespace
 
 
-Model loadGltf(filesystem::path aModel, std::string_view aName)
+Model loadGltf(const arte::Gltf & gltf, std::string_view aName)
 {
-    arte::Gltf gltf{aModel};
-
     Model model{
         .mName = std::string{aName},
     };
 
     bool firstPrimitive = true;
 
-    // Collapse the primitives from all meshes in the file into a single collection of primitives.
-    for (Owned<gltf::Mesh> gltfMesh : gltf.getMeshes())
+
+    model.mRigs.reserve(gltf.getSkins().size());
+    for (Const_Owned<gltf::Skin> gltfSkin : gltf.getSkins())
+    {
+        model.mRigs.push_back(makeFromSkin(gltfSkin));
+    }
+
+    std::unordered_map<std::size_t/*gltf-mesh index*/, std::size_t/*gltf-skin index*/> mMeshToSkin;
+    for (Const_Owned<gltf::Node> gltfNode : gltf.getNodes())
+    {
+        if(auto skin = gltfNode->skin)
+        {
+            assert(gltfNode->mesh);
+            mMeshToSkin[*gltfNode->mesh] = *skin;
+        }
+    }
+
+    // Create a distinct Model mesh for (each Gltf primitive (of each Gltf mesh)).
+    for (Const_Owned<gltf::Mesh> gltfMesh : gltf.getMeshes())
     {
         const std::string & meshName = 
             (gltfMesh->name.empty() ? std::string{"<mesh#"} + std::to_string(gltfMesh.id()) + ">" : gltfMesh->name);
@@ -416,6 +431,52 @@ Model loadGltf(filesystem::path aModel, std::string_view aName)
     }
 
     return model;
+}
+
+
+namespace {
+
+    Node::Index addGltfNode(Const_Owned<arte::gltf::Node> aGltfNode,
+                            Node::Index aParentIndex,
+                            NodeTree<arte::gltf::Node::Matrix> & aOutTree,
+                            std::vector<Node::Index> & aOutMapping)
+    {
+        Node::Index nodeIdx = aOutTree.addNode(aParentIndex,
+                                               arte::gltf::getTransformationAsMatrix(aGltfNode));
+        aOutTree.mNodeNames[nodeIdx] = aGltfNode->name;
+        aOutMapping[aGltfNode.id()] = nodeIdx;
+
+        for(Const_Owned<arte::gltf::Node> child : aGltfNode.iterate(&arte::gltf::Node::children))
+        {
+            addGltfNode(child, nodeIdx, aOutTree, aOutMapping);
+        }
+
+        return nodeIdx;
+    }
+
+} //unnamed namespace
+
+
+std::pair<NodeTree<arte::gltf::Node::Matrix>, std::vector<Node::Index>>
+loadHierarchy(const arte::Gltf & aGltf, std::size_t aSceneIndex)
+{
+    Const_Owned<gltf::Scene> scene = aGltf.get(gltf::Index<gltf::Scene>{aSceneIndex});
+
+    auto nodeCount = aGltf.countNodes();
+    NodeTree<arte::gltf::Node::Matrix> tree;
+    tree.reserve(nodeCount);
+    std::vector<Node::Index> gltfIndexToTreeIndex(nodeCount);
+
+    auto roots = scene.iterate(&arte::gltf::Scene::nodes);
+    assert(roots.size() >= 1);
+    auto rootIt = roots.begin();
+    tree.mFirstRoot = addGltfNode(*rootIt++, Node::gInvalidIndex, tree, gltfIndexToTreeIndex);
+    for(; rootIt != roots.end(); ++rootIt)
+    {
+        addGltfNode(*rootIt, Node::gInvalidIndex, tree, gltfIndexToTreeIndex);
+    }
+
+    return {tree, gltfIndexToTreeIndex};
 }
 
 

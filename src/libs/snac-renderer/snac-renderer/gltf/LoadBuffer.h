@@ -44,6 +44,23 @@ arte::Image<T_pixel> loadImageData(arte::Const_Owned<arte::gltf::Image> aImage);
 // TODO Ad 2022/03/15 Implement a way to only load exactly the bytes of an accessor
 // This could notably allow optimization when a contiguous accessor is used as-is.
 
+// Implementation detail of loadTypedData()
+std::vector<std::byte> loadContiguousData_impl(arte::Const_Owned<arte::gltf::Accessor> aAccessor);
+
+template <class T_value>
+std::vector<T_value> loadTypedData(arte::Const_Owned<arte::gltf::Accessor> aAccessor)
+{
+    // TODO Ad 2023/05/03 This can probably be optimized to work without a copy
+    // by only loading the accessor bytes (in case of no-stride).
+    std::vector<std::byte> completeBuffer = loadContiguousData_impl(aAccessor);
+
+    std::vector<T_value> result;
+    result.reserve(aAccessor->count);
+    T_value * first = reinterpret_cast<T_value *>(completeBuffer.data());
+    std::copy(first, first + aAccessor->count, std::back_inserter(result));
+    return result;
+}
+
 
 } // namespace snac
 } // namespace ad

@@ -327,6 +327,33 @@ arte::Image<T_pixel> loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
 }
 
 
+// Implementation detail of loadTypedData()
+std::vector<std::byte> loadContiguousData_impl(arte::Const_Owned<arte::gltf::Accessor> aAccessor)
+{
+    // TODO Handle no buffer view (accessor initialized to zeros)
+    auto bufferView = checkedBufferView(aAccessor);
+
+    // TODO Handle stride (might not always be allowed though: e.g. in animation buffer views?)
+    if(bufferView->byteStride)
+    {
+        if (*bufferView->byteStride == getElementByteSize(aAccessor))
+        {
+            SELOG(trace)
+                 ("Buffer view #{} has an explicit stride of {}, which matches the element byte size.",
+                  *aAccessor->bufferView, *bufferView->byteStride);
+        }
+        else
+        {
+            SELOG(critical)
+                 ("Buffer view #{} has an non-default stride, not currently supported when loading typed data.",
+                  *aAccessor->bufferView);
+            throw std::logic_error{"Buffer view with stride when loading typed data."};
+        }
+    }
+
+    return loadBufferData(aAccessor, bufferView);
+}
+
 
 //
 // Explicit template instanciations
