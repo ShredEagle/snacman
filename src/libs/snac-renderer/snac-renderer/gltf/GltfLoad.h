@@ -2,6 +2,9 @@
 
 
 #include "../Mesh.h"
+#include "../Rigging.h"
+
+#include <arte/gltf/Gltf.h>
 
 #include <platform/Filesystem.h>
 

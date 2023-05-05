@@ -9,6 +9,7 @@
 #include <snac-renderer/Camera.h>
 #include <snac-renderer/DebugRenderer.h>
 #include <snac-renderer/Render.h>
+#include <snac-renderer/Rigging.h>
 
 
 namespace ad {

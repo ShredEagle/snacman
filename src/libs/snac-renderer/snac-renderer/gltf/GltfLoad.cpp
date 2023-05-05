@@ -394,11 +394,11 @@ Model loadGltf(const arte::Gltf & gltf, std::string_view aName)
     bool firstPrimitive = true;
 
 
-    model.mRigs.reserve(gltf.getSkins().size());
-    for (Const_Owned<gltf::Skin> gltfSkin : gltf.getSkins())
-    {
-        model.mRigs.push_back(makeFromSkin(gltfSkin));
-    }
+    //model.mRigs.reserve(gltf.getSkins().size());
+    //for (Const_Owned<gltf::Skin> gltfSkin : gltf.getSkins())
+    //{
+    //    model.mRigs.push_back(makeFromSkin(gltfSkin));
+    //}
 
     std::unordered_map<std::size_t/*gltf-mesh index*/, std::size_t/*gltf-skin index*/> mMeshToSkin;
     for (Const_Owned<gltf::Node> gltfNode : gltf.getNodes())
