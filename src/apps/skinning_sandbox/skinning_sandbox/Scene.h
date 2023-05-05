@@ -18,8 +18,23 @@ namespace snac {
 constexpr unsigned int gFontPixelHeight = 50;
 
 
+enum class DebugSkeleton
+{
+    Hierarchy,
+    Pose,
+    Hybrid,
+    None,
+};
+
+
 struct Scene
 {
+    struct Control
+    {
+        bool mShowBasis = true;
+        DebugSkeleton mShownSkeleton = DebugSkeleton::None;
+    };
+
     Scene(graphics::ApplicationGlfw & aGlfwApp,
           const filesystem::path & aGltfPath,
           DebugRenderer aDebugRenderer,
@@ -50,6 +65,8 @@ struct Scene
     } mRigging;
     graphics::UniformBufferObject mJointMatrices;
     double mAnimationTime = 0.;
+
+    Control mControl;
 };
 
 

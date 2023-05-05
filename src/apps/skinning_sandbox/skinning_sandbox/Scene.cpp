@@ -6,6 +6,9 @@
 
 #include <graphics/CameraUtilities.h>
 
+#include <imguiui/Widgets.h>
+#include <imguiui/Widgets-impl.h>
+
 #include <math/Transformations.h>
 
 #include <renderer/BufferLoad.h>
@@ -263,6 +266,21 @@ InstanceStream prepareSingleInstance()
 }
 
 
+std::string to_string(DebugSkeleton aType)
+{
+    #define CASE(e) case DebugSkeleton::e: return #e;
+    switch(aType)
+    {
+        CASE(Hierarchy)
+        CASE(Pose)
+        CASE(Hybrid)
+        CASE(None)
+        default:
+            return "<INVALID>";
+    }
+    #undef CASE
+}
+
 Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
             const filesystem::path & aGltfPath,
              DebugRenderer aDebugRenderer,
@@ -331,9 +349,10 @@ void Scene::update(double aDelta)
     //
     // Animation update
     //
+
     // TODO handle different playback modes (single, ping-pong, repeat)
-    const auto sillyLValue = mRigging.mRig.computeJointMatrices();
     animation.animate((float)std::fmod(mAnimationTime, animation.mEndTime), nodeTree);
+    const auto sillyLValue = mRigging.mRig.computeJointMatrices();
     graphics::load(mJointMatrices,
                    std::span{sillyLValue},
                    graphics::BufferHint::StreamDraw);
@@ -342,7 +361,24 @@ void Scene::update(double aDelta)
     mCamera.setPose(mCameraControl.getParentToLocal());
     mCameraBuffer.set(mCamera);
 
-    DBGDRAW_INFO(gDebugDrawer).addBasis({});
+    mImguiUi.newFrame();
+    Guard guiFrameScope{[this](){mImguiUi.render();}};
+
+    ImGui::Begin("Debugging");
+
+    ImGui::Checkbox("Show canonical basis", &mControl.mShowBasis);
+    if(mControl.mShowBasis)
+    {
+        DBGDRAW_INFO(gDebugDrawer).addBasis({});
+    }
+
+    static const auto skeletonTypes = {
+        DebugSkeleton::None,
+        DebugSkeleton::Hierarchy,
+        DebugSkeleton::Pose,
+        DebugSkeleton::Hybrid
+    };
+    imguiui::addCombo<DebugSkeleton>("Show skeleton", mControl.mShownSkeleton, std::span{skeletonTypes});
 
     static std::array<math::hdr::Rgba_f, 3> gColorRotation{
         math::hdr::gMagenta<float>,
@@ -351,24 +387,46 @@ void Scene::update(double aDelta)
     };
 
     //for(Node::Index nodeIdx = 0; nodeIdx != nodeTree.mHierarchy.size(); ++nodeIdx)
-    for(Node::Index nodeIdx : animation.mNodes)
+    // TODO iterate over the rig instead of the animation
+    //for(Node::Index nodeIdx : animation.mNodes)
+    for(Node::Index nodeIdx : mRigging.mRig.mJoints)
     {
-        if(Node::Index parentIdx = nodeTree.mHierarchy[nodeIdx].mParent; parentIdx != Node::gInvalidIndex)
+        // Draw a segment between each joint 
+        // (sadly, this is missing "leaf bones", for joints without a child)
+        if (mControl.mShownSkeleton == DebugSkeleton::Hierarchy
+            || mControl.mShownSkeleton == DebugSkeleton::Hybrid)
         {
-            // Only if the parent is also a joint do we trace the bone
-            if(std::find(animation.mNodes.begin(), animation.mNodes.end(), parentIdx) != animation.mNodes.end())
+            if(Node::Index parentIdx = nodeTree.mHierarchy[nodeIdx].mParent; parentIdx != Node::gInvalidIndex)
             {
-                auto parentPos = math::Position<4, float>{0.f, 0.f, 0.f, 1.f} * nodeTree.mGlobalPose[parentIdx];
-                auto nodePos = math::Position<4, float>{0.f, 0.f, 0.f, 1.f} * nodeTree.mGlobalPose[nodeIdx];
-                DBGDRAW_INFO(gDebugDrawer).addLine(parentPos.xyz(),
-                                                nodePos.xyz(),
-                                                gColorRotation[nodeIdx % gColorRotation.size()]);
+                // Only if the parent is also a joint do we trace the bone
+                if(std::find(animation.mNodes.begin(), animation.mNodes.end(), parentIdx) != animation.mNodes.end())
+                {
+                    auto parentPos = math::Position<4, float>{0.f, 0.f, 0.f, 1.f} * nodeTree.mGlobalPose[parentIdx];
+                    auto nodePos = math::Position<4, float>{0.f, 0.f, 0.f, 1.f} * nodeTree.mGlobalPose[nodeIdx];
+                    DBGDRAW_INFO(gDebugDrawer).addLine(parentPos.xyz(),
+                                                    nodePos.xyz(),
+                                                    gColorRotation[nodeIdx % gColorRotation.size()]);
 
+                }
             }
+        }
+
+        // Draw a 1 unit long segment along the Y axis of each joint local space.
+        // Hybrid only draws it for joints with no child.
+        if (mControl.mShownSkeleton == DebugSkeleton::Pose
+                 || (mControl.mShownSkeleton == DebugSkeleton::Hybrid
+                    && !nodeTree.hasChild(nodeIdx)) )
+        {
+            auto nodePos = math::Position<4, float>{0.f, 0.f, 0.f, 1.f} * nodeTree.mGlobalPose[nodeIdx];
+            auto nodePosY = math::Position<4, float>{0.f, 1.f, 0.f, 1.f} * nodeTree.mGlobalPose[nodeIdx];
+            DBGDRAW_INFO(gDebugDrawer).addLine(nodePos.xyz(),
+                                                nodePosY.xyz(),
+                                                math::hdr::gBlack<float>);
         }
     }
 
-    mImguiUi.newFrame();
+    ImGui::End();
+
 
     ImGui::Begin("Node hierarchy");
     for(Node::Index root = mRigging.mRig.mScene.mFirstRoot;
@@ -378,8 +436,6 @@ void Scene::update(double aDelta)
         presentNodeTree(root);
     }
     ImGui::End();
-
-    Guard guiFrameScope{[this](){mImguiUi.render();}};
 }
 
 
