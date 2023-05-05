@@ -213,7 +213,7 @@ public:
                 }
                 else
                 {
-                    SELOG(error)("Missing command name \"{}\" present in \"{}\" in command flags", commandName, aPath.c_str());
+                    SELOG(error)("Missing command name \"{}\" present in \"{}\" in command flags", commandName, aPath.string());
                 }
             }
         }
