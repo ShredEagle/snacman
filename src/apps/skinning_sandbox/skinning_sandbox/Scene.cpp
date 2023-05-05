@@ -31,6 +31,10 @@ struct Anim
     static constexpr Index_t gInvalidIndex = std::numeric_limits<Index_t::Value_t>::max();
     using Path = arte::gltf::animation::Target::Path;
 
+    Anim(arte::gltf::Index<arte::gltf::Node> aTargetNode) :
+        mGltfNode{aTargetNode}
+    {}
+
     /// @return The index of the input (time) accessor.
     arte::gltf::Index<arte::gltf::Accessor>
     add(Path aPath, arte::Const_Owned<arte::gltf::animation::Sampler> aSampler)
@@ -75,6 +79,9 @@ struct Anim
             && scaleAccessor != gInvalidIndex;
     }
 
+    // Only used if there is no sampler for a path:
+    // The value is then copied from the gltf node
+    arte::gltf::Index<arte::gltf::Node> mGltfNode;
     Index_t translationAccessor = gInvalidIndex;
     Index_t rotationAccessor = gInvalidIndex;
     Index_t scaleAccessor = gInvalidIndex;
@@ -91,7 +98,8 @@ void assertAccessor(arte::Const_Owned<arte::gltf::Accessor> aAccessor,
 
 
 NodeAnimation readAnimation(arte::Const_Owned<arte::gltf::Animation> aGltfAnimation,
-                            const std::vector<Node::Index> & aGltfToTreeIndex)
+                            const std::vector<Node::Index> & aGltfToTreeIndex,
+                            const arte::Gltf & aGltf)
 {
     std::unordered_map<std::size_t/*nodetree index*/, Anim> perNode;
 
@@ -101,9 +109,13 @@ NodeAnimation readAnimation(arte::Const_Owned<arte::gltf::Animation> aGltfAnimat
     for (const arte::gltf::animation::Channel & channel : aGltfAnimation->channels)
     {
         assert(channel.target.node.has_value());
-        auto samplerInput =
-            perNode[aGltfToTreeIndex[*channel.target.node]]
-                .add(channel.target.path, samplers.at(channel.sampler));
+        
+        // Get the existing Anim for this nodetree index, or insert an Anim if its is not present.
+        auto [iterator, didInsert] = perNode.try_emplace(
+            aGltfToTreeIndex[*channel.target.node], // Key
+            *channel.target.node // gltf node index
+        );
+        auto samplerInput = iterator->second.add(channel.target.path, samplers.at(channel.sampler));
 
         if(inputAccessorIdx != Anim::gInvalidIndex && inputAccessorIdx != samplerInput)
         {
@@ -123,24 +135,54 @@ NodeAnimation readAnimation(arte::Const_Owned<arte::gltf::Animation> aGltfAnimat
     animation.mEndTime = std::get<arte::gltf::Accessor::MinMax<float>>(*inputAccessor->bounds).max[0];
     for(const auto & [nodeIndex, anim] : perNode)
     {
-        if (!anim.isComplete())
+        // For each path (rotation, translation, scale), read the keyframe data if the path is animated
+        // or make N copies of the node's initial value for the path if it is not animated.
+        // TODO #anim Can we not make N copies of the constant channels?
+
+        NodeAnimation::NodeKeyframes nodeKeyframes;
+        auto gltfNode = aGltf.get(anim.mGltfNode);
+
+        if (anim.translationAccessor != Node::gInvalidIndex)
         {
-            throw std::logic_error{"Only supporting complete animations at the moment."};
+            auto translationAccessor = aGltfAnimation.get(anim.translationAccessor);
+            assertAccessor(translationAccessor, arte::gltf::Accessor::ElementType::Vec3, GL_FLOAT);
+            nodeKeyframes.mTranslations = loadTypedData<math::Vec<3, float>>(translationAccessor);
+        }
+        else
+        {
+            std::fill_n(std::back_inserter(nodeKeyframes.mTranslations),
+                        animation.mTimepoints.size(),
+                        getTransformationAsTRS(gltfNode).translation);
         }
 
-        auto translationAccessor = aGltfAnimation.get(anim.translationAccessor);
-        assertAccessor(translationAccessor, arte::gltf::Accessor::ElementType::Vec3, GL_FLOAT);
-        auto rotationAccessor = aGltfAnimation.get(anim.rotationAccessor);
-        assertAccessor(rotationAccessor, arte::gltf::Accessor::ElementType::Vec4, GL_FLOAT);
-        auto scaleAccessor = aGltfAnimation.get(anim.scaleAccessor);
-        assertAccessor(scaleAccessor, arte::gltf::Accessor::ElementType::Vec3, GL_FLOAT);
+        if (anim.rotationAccessor != Node::gInvalidIndex)
+        {
+            auto rotationAccessor = aGltfAnimation.get(anim.rotationAccessor);
+            assertAccessor(rotationAccessor, arte::gltf::Accessor::ElementType::Vec4, GL_FLOAT);
+            nodeKeyframes.mRotations = loadTypedData<math::Quaternion<float>>(rotationAccessor);
+        }
+        else
+        {
+            std::fill_n(std::back_inserter(nodeKeyframes.mRotations),
+                        animation.mTimepoints.size(),
+                        getTransformationAsTRS(gltfNode).rotation);
+        }
+
+        if (anim.scaleAccessor != Node::gInvalidIndex)
+        {
+            auto scaleAccessor = aGltfAnimation.get(anim.scaleAccessor);
+            assertAccessor(scaleAccessor, arte::gltf::Accessor::ElementType::Vec3, GL_FLOAT);
+            nodeKeyframes.mScales = loadTypedData<math::Vec<3, float>>(scaleAccessor);
+        }
+        else
+        {
+            std::fill_n(std::back_inserter(nodeKeyframes.mScales),
+                        animation.mTimepoints.size(),
+                        getTransformationAsTRS(gltfNode).scale);
+        }
 
         animation.mNodes.push_back(nodeIndex);
-        animation.mKeyframesEachNode.push_back(NodeAnimation::NodeKeyframes{
-            .mTranslations = loadTypedData<math::Vec<3, float>>(translationAccessor),
-            .mRotations = loadTypedData<math::Quaternion<float>>(rotationAccessor),
-            .mScales = loadTypedData<math::Vec<3, float>>(scaleAccessor),
-        }); 
+        animation.mKeyframesEachNode.push_back(std::move(nodeKeyframes));
     }
 
     return animation;
@@ -148,7 +190,8 @@ NodeAnimation readAnimation(arte::Const_Owned<arte::gltf::Animation> aGltfAnimat
 
 
 std::unordered_map<std::string, NodeAnimation>
-loadAnimations(const arte::Gltf & aGltf, const std::vector<Node::Index> & aGltfToTreeIndex)
+loadAnimations(const arte::Gltf & aGltf,
+               const std::vector<Node::Index> & aGltfToTreeIndex)
 {
     std::unordered_map<std::string, NodeAnimation> animations;
 
@@ -156,7 +199,7 @@ loadAnimations(const arte::Gltf & aGltf, const std::vector<Node::Index> & aGltfT
     {
         std::string name = animation->name;
         name = (name.empty() ? "anim_#" + animation.id() : name);
-        animations.emplace(name, readAnimation(animation, aGltfToTreeIndex));
+        animations.emplace(name, readAnimation(animation, aGltfToTreeIndex, aGltf));
     }
 
     return animations;
