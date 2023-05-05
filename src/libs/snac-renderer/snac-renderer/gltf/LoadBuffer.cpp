@@ -174,9 +174,7 @@ std::vector<std::byte> loadBufferData(arte::Const_Owned<arte::gltf::Buffer> aBuf
 }
 
 
-// Note: not part of the public interface for the moment
-// I am afraid users will be confused whether the buffer view offset is applied.
-std::vector<std::byte> loadBufferData(arte::Const_Owned<arte::gltf::BufferView> aBufferView)
+std::vector<std::byte> loadBufferViewData(arte::Const_Owned<arte::gltf::BufferView> aBufferView)
 {
     return loadBufferData(
         aBufferView.get(&arte::gltf::BufferView::buffer),
@@ -199,7 +197,7 @@ std::vector<GLuint>
 loadIndices(arte::Const_Owned<arte::gltf::accessor::Indices> aIndices, std::size_t aCount)
 {
     auto bufferView = aIndices.get(&arte::gltf::accessor::Indices::bufferView);
-    std::vector<std::byte> buffer = loadBufferData(bufferView);
+    std::vector<std::byte> buffer = loadBufferViewData(bufferView);
 
     std::byte * first = buffer.data() + bufferView->byteOffset + aIndices->byteOffset;
     switch(aIndices->componentType)
@@ -217,40 +215,41 @@ loadIndices(arte::Const_Owned<arte::gltf::accessor::Indices> aIndices, std::size
 }
 
 
-std::vector<std::byte>
-loadBufferData(arte::Const_Owned<arte::gltf::Accessor> aAccessor,
-               arte::Const_Owned<arte::gltf::BufferView> aBufferView)
-{
-    std::vector<std::byte> bufferData = loadBufferData(aBufferView);
-
-    if(aAccessor->sparse)
-    {
-        auto sparse = aAccessor.get(&arte::gltf::Accessor::sparse);
-        std::vector<GLuint> indices =
-            loadIndices(sparse.get(&arte::gltf::accessor::Sparse::indices), sparse->count);
-
-        auto values = sparse.get(&arte::gltf::accessor::Sparse::values);
-        auto valuesBufferView = values.get(&arte::gltf::accessor::Values::bufferView);
-        std::vector<std::byte> differenceBuffer = loadBufferData(valuesBufferView);
-        const std::byte * difference =
-            differenceBuffer.data() + valuesBufferView->byteOffset + values->byteOffset;
-
-        std::byte * element =
-            bufferData.data() + aBufferView->byteOffset + aAccessor->byteOffset;
-        const std::size_t elementSize = getElementByteSize(aAccessor);
-
-        std::size_t iteration = 0;
-        for (auto modifiedIndex : indices)
-        {
-            std::copy(difference + iteration * elementSize,
-                      difference + (iteration + 1) * elementSize,
-                      element + modifiedIndex * elementSize);
-            ++iteration;
-        }
-    }
-
-    return bufferData;
-}
+// Keep, for the sparse logic
+//std::vector<std::byte>
+//loadWholeBufferViewData(arte::Const_Owned<arte::gltf::Accessor> aAccessor,
+//                        arte::Const_Owned<arte::gltf::BufferView> aBufferView)
+//{
+//    std::vector<std::byte> bufferData = loadBufferData(aBufferView);
+//
+//    if(aAccessor->sparse)
+//    {
+//        auto sparse = aAccessor.get(&arte::gltf::Accessor::sparse);
+//        std::vector<GLuint> indices =
+//            loadIndices(sparse.get(&arte::gltf::accessor::Sparse::indices), sparse->count);
+//
+//        auto values = sparse.get(&arte::gltf::accessor::Sparse::values);
+//        auto valuesBufferView = values.get(&arte::gltf::accessor::Values::bufferView);
+//        std::vector<std::byte> differenceBuffer = loadBufferData(valuesBufferView);
+//        const std::byte * difference =
+//            differenceBuffer.data() + valuesBufferView->byteOffset + values->byteOffset;
+//
+//        std::byte * element =
+//            bufferData.data() + aBufferView->byteOffset + aAccessor->byteOffset;
+//        const std::size_t elementSize = getElementByteSize(aAccessor);
+//
+//        std::size_t iteration = 0;
+//        for (auto modifiedIndex : indices)
+//        {
+//            std::copy(difference + iteration * elementSize,
+//                      difference + (iteration + 1) * elementSize,
+//                      element + modifiedIndex * elementSize);
+//            ++iteration;
+//        }
+//    }
+//
+//    return bufferData;
+//}
 
 
 const std::map<arte::gltf::Image::MimeType, arte::ImageFormat> gMimeToFormat {
@@ -320,7 +319,7 @@ arte::Image<T_pixel> loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
             throw std::logic_error{"Image with buffer view but no mime type."};
         }
 
-        auto bytes = loadBufferData(bufferView);
+        auto bytes = loadBufferViewData(bufferView);
         //return loadImageFromBytes(std::span<std::byte>{bytes}, *aImage->mimeType);
         return loadImageFromBytes<T_pixel>(bytes, *aImage->mimeType);
     }
@@ -332,6 +331,9 @@ std::vector<std::byte> loadContiguousData_impl(arte::Const_Owned<arte::gltf::Acc
 {
     // TODO Handle no buffer view (accessor initialized to zeros)
     auto bufferView = checkedBufferView(aAccessor);
+    
+    // Not implemented for the moment
+    assert(!aAccessor->sparse);
 
     // TODO Handle stride (might not always be allowed though: e.g. in animation buffer views?)
     if(bufferView->byteStride)
@@ -351,7 +353,7 @@ std::vector<std::byte> loadContiguousData_impl(arte::Const_Owned<arte::gltf::Acc
         }
     }
 
-    return loadBufferData(aAccessor, bufferView);
+    return loadBufferViewData(bufferView);
 }
 
 

@@ -51,9 +51,10 @@ namespace {
     }
 
 
+    /// @brief Prepare an OpenGL buffer loaded with the data from the complete `aBufferView`.
+    /// @tparam T_buffer Type of OpenGL buffer.
     template <class T_buffer>
-    T_buffer prepareBuffer(Const_Owned<gltf::Accessor> aAccessor,
-                           Const_Owned<gltf::BufferView> aBufferView)
+    T_buffer prepareBuffer(Const_Owned<gltf::BufferView> aBufferView)
     {
         GLenum target = [&]()
         {
@@ -76,7 +77,7 @@ namespace {
         glBindBuffer(target, buffer);
         glBufferData(target,
                      aBufferView->byteLength,
-                     loadBufferData(aAccessor, aBufferView).data(),
+                     loadBufferViewData(aBufferView).data(),
                      GL_STATIC_DRAW);
         glBindBuffer(target, 0);
 
@@ -94,7 +95,7 @@ namespace {
     {
         auto gltfBufferView = checkedBufferView(aAccessor);
         return BufferView{
-            .mBuffer = prepareBuffer<graphics::VertexBufferObject>(aAccessor, gltfBufferView),
+            .mBuffer = prepareBuffer<graphics::VertexBufferObject>(gltfBufferView),
             .mStride = (GLsizei)gltfBufferView->byteStride.value_or(0),
         };
     }
@@ -295,7 +296,7 @@ namespace {
 
             auto gltfBufferView = checkedBufferView(indicesAccessor);
             stream.mIndices = IndicesAccessor{
-                .mIndexBuffer = prepareBuffer<graphics::IndexBufferObject>(indicesAccessor, gltfBufferView),
+                .mIndexBuffer = prepareBuffer<graphics::IndexBufferObject>(gltfBufferView),
                 .mIndexCount = (GLsizei)indicesAccessor->count,
                 .mAttribute = attributeFromAccessor(indicesAccessor),
             };
