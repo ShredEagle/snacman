@@ -68,7 +68,7 @@ void runApplication()
 
     Scene scene{
         glfwApp,
-        //arte::Gltf{finder.pathFor("models/anim/SimpleSkin/glTF/SimpleSkin.gltf")},
+        //finder.pathFor("models/anim/SimpleSkin/glTF/SimpleSkin.gltf"),
         finder.pathFor("models/anim/anim.gltf"),
         DebugRenderer{pass(TechniqueLoader{finder}),
                       freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))},
