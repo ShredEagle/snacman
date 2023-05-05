@@ -46,10 +46,12 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/PathToOnGrid.h
     simulations/snacgame/component/PlayerLifeCycle.h
     simulations/snacgame/component/PlayerModel.h
+    simulations/snacgame/component/PlayerHud.h
     simulations/snacgame/component/PlayerMoveState.h
     simulations/snacgame/component/PlayerPortalData.h
     simulations/snacgame/component/PlayerSlot.h
     simulations/snacgame/component/PlayerPowerUp.h
+    simulations/snacgame/component/PowerUp.h
     simulations/snacgame/component/SceneNode.h
     simulations/snacgame/component/Spawner.h
     simulations/snacgame/component/Text.h

@@ -9,6 +9,7 @@
 #include "component/PlayerMoveState.h"
 #include "component/PlayerSlot.h"
 #include "component/PoseScreenSpace.h"
+#include "component/PowerUp.h"
 #include "component/SceneNode.h"
 #include "component/Spawner.h"
 #include "component/Speed.h"
@@ -19,6 +20,7 @@
 #include "component/AllowedMovement.h"
 #include "component/PlayerPowerUp.h"
 #include "snacman/simulations/snacgame/SceneGraph.h"
+#include "snacman/simulations/snacgame/component/PlayerHud.h"
 #include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "snacman/simulations/snacgame/component/PlayerPortalData.h"
 #include "typedef.h"
@@ -179,14 +181,14 @@ ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
     return handle;
 }
 
-EntHandle createPlayerPowerUp(GameContext & aContext)
+EntHandle createPlayerPowerUp(GameContext & aContext, const component::PowerUpType aType)
 {
     ent::Phase init;
     auto handle = aContext.mWorld.addEntity();
     Entity powerUp = *handle.get(init);
     addMeshGeoNode(
-        init, aContext, powerUp, "models/collar/collar.gltf",
-        {0.f, -1.f, 1.5f},
+        init, aContext, powerUp, component::gPowerupPathByType.at(static_cast<unsigned int>(aType)),
+        {1.f, 1.f, 0.f},
         0.3f, {1.f, 1.f, 1.f});
     return handle;
 }
@@ -281,7 +283,7 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             {0.f, 0.f, gPlayerHeight});
         addMeshGeoNode(
             sceneInit, aContext, model, "models/donut/donut.gltf",
-            {0.f, 0.f, 0.f}, 0.2f, {1.f, 1.f, 1.f},
+            {0.f, 0.f, 0.f}, 1.f, {0.2f, 0.2f, 0.2f},
             Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                                     math::Turn<float>{0.25f}} * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                     math::Turn<float>{0.25f}},
@@ -297,25 +299,19 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
         component::PlayerSlot & playerSlot =
             player.get<component::PlayerSlot>();
         playerSlot.mFilled = true;
-        std::ostringstream playerText;
-        playerText << "P" << playerSlot.mIndex + 1 << " 0";
 
         player
             .add(component::PlayerModel{.mModel = playerModel})
-            .add(component::PlayerLifeCycle{.mIsAlive = false})
+            .add(component::PlayerLifeCycle{.mIsAlive = false, .mTimeToRespawn = component::gBaseTimeToRespawn})
             .add(component::PlayerMoveState{})
             .add(component::AllowedMovement{})
             .add(component::Controller{.mType = aControllerType,
                                        .mControllerId = aControllerId})
-            .add(component::Text{
-                .mString{playerText.str()},
-                .mFont = std::move(font),
-                .mColor = playerSlot.mColor,
-            })
             .add(component::PoseScreenSpace{
                 .mPosition_u = {-0.9f + 0.2f * static_cast<float>(playerSlot.mIndex), 0.8f}})
             .add(component::Collision{component::gPlayerHitbox})
-            .add(component::PlayerPortalData{});
+            .add(component::PlayerPortalData{})
+            .add(component::PlayerHud{});
 
     }
     return aSlot;
@@ -399,6 +395,7 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
     aHandle.get(aPhase)->remove<component::PoseScreenSpace>();
     aHandle.get(aPhase)->remove<component::SceneNode>();
     aHandle.get(aPhase)->remove<component::GlobalPose>();
+    aHandle.get(aPhase)->remove<component::PlayerHud>();
     if (aHandle.get(aPhase)->has<component::PlayerPowerUp>())
     {
         aHandle.get(aPhase)->get<component::PlayerPowerUp>().mPowerUp.get(aPhase)->erase();

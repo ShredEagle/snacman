@@ -5,6 +5,7 @@
 #include "component/GlobalPose.h"
 #include "snacman/simulations/snacgame/component/Geometry.h"
 #include "snacman/simulations/snacgame/component/LevelTags.h"
+#include "snacman/simulations/snacgame/component/PowerUp.h"
 
 #include <entity/Entity.h>
 #include <entity/Query.h>
@@ -73,7 +74,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
 ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
                                        ent::Phase & aPhase,
                                        const math::Position<2, float> & Pos);
-ent::Handle<ent::Entity> createPlayerPowerUp(GameContext & aContext);
+ent::Handle<ent::Entity> createPlayerPowerUp(GameContext & aContext, const component::PowerUpType aType);
 
 ent::Handle<ent::Entity>
 createPathEntity(GameContext & aContext,

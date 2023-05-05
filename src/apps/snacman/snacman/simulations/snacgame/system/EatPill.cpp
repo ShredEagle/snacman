@@ -1,5 +1,6 @@
 #include "EatPill.h"
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
+#include "snacman/simulations/snacgame/component/PlayerHud.h"
 
 #include "../component/SceneNode.h"
 #include "../GameParameters.h"
@@ -18,10 +19,8 @@ void EatPill::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
     mPlayers.each([this](const component::GlobalPose & aPlayerGeo,
-                         const component::PlayerSlot & aSlot,
                          component::Collision aPlayerCol,
-                         component::PlayerLifeCycle & aPlayerData,
-                         component::Text & aText) {
+                         component::PlayerHud & aHud) {
         ent::Phase eatPillUpdate;
         Box_f playerHitbox = component::transformHitbox(aPlayerGeo.mPosition,
                                                         aPlayerCol.mHitbox);
@@ -34,8 +33,8 @@ void EatPill::update()
             playerHitbox
         );
 
-        mPills.each([&eatPillUpdate, &playerHitbox, &aPlayerData, &aSlot,
-                     &aText](ent::Handle<ent::Entity> aHandle,
+        mPills.each([&eatPillUpdate, &playerHitbox,
+                     &aHud](ent::Handle<ent::Entity> aHandle,
                              const component::GlobalPose & aPillGeo,
                              const component::Collision & aPillCol) {
             Box_f pillHitbox = component::transformHitbox(aPillGeo.mPosition,
@@ -44,11 +43,7 @@ void EatPill::update()
             if (component::collideWithSat(pillHitbox, playerHitbox))
             {
                 aHandle.get(eatPillUpdate)->erase();
-                aPlayerData.mPoints += gPointPerPill;
-                std::ostringstream playerText;
-                playerText << "P" << aSlot.mIndex + 1 << " "
-                           << aPlayerData.mPoints;
-                aText.mString = playerText.str();
+                aHud.mScore = gPointPerPill;
             }
         });
     });

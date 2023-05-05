@@ -1,6 +1,7 @@
 #pragma once
 
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
+#include "snacman/simulations/snacgame/component/PlayerHud.h"
 #include "../GameContext.h"
 
 #include "../component/Collision.h"
@@ -28,10 +29,8 @@ public:
 
 private:
     ent::Query<component::GlobalPose,
-               component::PlayerSlot,
                component::Collision,
-               component::PlayerLifeCycle,
-               component::Text>
+               component::PlayerHud>
         mPlayers;
     ent::Query<component::GlobalPose, component::Collision, component::Pill>
         mPills;

@@ -3,6 +3,8 @@
 #include "EntityWrap.h"
 #include "GameContext.h"
 #include "Renderer.h"
+#include "snacman/simulations/snacgame/component/PlayerHud.h"
+#include "snacman/simulations/snacgame/component/PlayerSlot.h"
 
 #include "../../Input.h"
 
@@ -134,6 +136,7 @@ private:
     EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
     EntityWrap<ent::Query<component::Text, component::GlobalPose>> mQueryTextWorld;
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
+    EntityWrap<ent::Query<component::PlayerHud, component::PlayerSlot>> mQueryHuds;
 
     // A float would run out of precision too quickly.
     double mSimulationTime{0.};

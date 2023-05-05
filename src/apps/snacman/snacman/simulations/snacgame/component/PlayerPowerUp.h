@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LevelTags.h"
+#include "PowerUp.h"
 
 #include <entity/Entity.h>
 

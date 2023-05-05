@@ -209,7 +209,6 @@ void removeEntityFromScene(ent::Handle<ent::Entity> aHandle)
     removedNode.mParent = std::nullopt;
     removedNode.mNextChild = std::nullopt;
     removedNode.mPrevChild = std::nullopt;
-    removedNode.mFirstChild = std::nullopt;
 }
 
 void transferEntity(EntHandle aHandle, EntHandle aNewParent)

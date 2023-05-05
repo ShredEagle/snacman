@@ -2,6 +2,7 @@
 
 #include "snacman/simulations/snacgame/component/Collision.h"
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
+#include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "snacman/simulations/snacgame/component/PlayerPortalData.h"
 #include "../GameContext.h"
 #include "../component/LevelTags.h"
@@ -25,12 +26,13 @@ public:
         mPortals{mGameContext->mWorld}
     {}
 
-    void update();
+    void preGraphUpdate();
+    void postGraphUpdate();
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::GlobalPose, component::PlayerMoveState, component::Collision, component::PlayerPortalData, component::Geometry> mPlayer;
-    ent::Query<component::Portal, component::GlobalPose> mPortals;
+    ent::Query<component::GlobalPose, component::Collision, component::PlayerPortalData, component::Geometry, component::PlayerModel> mPlayer;
+    ent::Query<component::Portal, component::GlobalPose, component::Geometry> mPortals;
 };
 
 } // namespace system
