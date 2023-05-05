@@ -33,6 +33,7 @@ struct Scene
     {
         bool mShowBasis = true;
         DebugSkeleton mShownSkeleton = DebugSkeleton::None;
+        std::unordered_map<std::string, NodeAnimation>::iterator mSelectedAnimation;
     };
 
     Scene(graphics::ApplicationGlfw & aGlfwApp,

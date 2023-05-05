@@ -336,13 +336,26 @@ Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
 
     //std::cerr << "Hierarchy:\n" << mRigging.mRig.mJoints << std::endl;
     SELOG(info)("Found {} animations.", mRigging.mAnimations.size());
+
+    mControl.mSelectedAnimation = mRigging.mAnimations.begin();
 }
 
 
 void Scene::update(double aDelta)
 {
+    mImguiUi.newFrame();
+    Guard guiFrameScope{[this](){mImguiUi.render();}};
+
+    ImGui::Begin("Controls");
+
+    imguiui::addCombo("Animation",
+                      mControl.mSelectedAnimation,
+                      mRigging.mAnimations.begin(),
+                      mRigging.mAnimations.end(),
+                      [](std::unordered_map<std::string, NodeAnimation>::iterator aIt)
+                      { return aIt->first; });
+    const NodeAnimation & animation = mControl.mSelectedAnimation->second;
     auto & nodeTree = mRigging.mRig.mScene;
-    const NodeAnimation & animation = mRigging.mAnimations.begin()->second;
 
     mAnimationTime += aDelta;
 
@@ -361,11 +374,6 @@ void Scene::update(double aDelta)
     mCamera.setPose(mCameraControl.getParentToLocal());
     mCameraBuffer.set(mCamera);
 
-    mImguiUi.newFrame();
-    Guard guiFrameScope{[this](){mImguiUi.render();}};
-
-    ImGui::Begin("Debugging");
-
     ImGui::Checkbox("Show canonical basis", &mControl.mShowBasis);
     if(mControl.mShowBasis)
     {
@@ -380,7 +388,7 @@ void Scene::update(double aDelta)
     };
     imguiui::addCombo<DebugSkeleton>("Show skeleton", mControl.mShownSkeleton, std::span{skeletonTypes});
 
-    static std::array<math::hdr::Rgba_f, 3> gColorRotation{
+    static const std::array<math::hdr::Rgba_f, 3> gColorRotation{
         math::hdr::gMagenta<float>,
         math::hdr::gCyan<float>,
         math::hdr::gYellow<float>,
