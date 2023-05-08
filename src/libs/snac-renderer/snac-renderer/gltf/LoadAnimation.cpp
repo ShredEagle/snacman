@@ -132,7 +132,10 @@ namespace {
 
 
     NodeAnimation readAnimation(arte::Const_Owned<arte::gltf::Animation> aGltfAnimation,
-                                const std::vector<Node::Index> & aGltfToTreeIndex)
+                                const std::vector<Node::Index> & aGltfToTreeIndex,
+                                // Note: For the moment, we implicitly couple animations with a specific rig.
+                                // Ideally, this coupling could be alleviated with better data models on our side.
+                                const Rig & aRigSanityCheck)
     {
         std::unordered_map<Node::Index, Anim> perNode;
 
@@ -151,6 +154,16 @@ namespace {
             if(aGltfToTreeIndex[gltfNodeIndex] == Node::gInvalidIndex)
             {
                 throw std::logic_error{"Animation targets a node which is not part of the loaded hierarchy."};
+            }
+
+            // TODO #anim This coupling from Rig to Animation is not necessarily a good thing 
+            // (see note on the parameter)
+            if(std::find(aRigSanityCheck.mJoints.begin(),
+                         aRigSanityCheck.mJoints.end(),
+                         aGltfToTreeIndex[gltfNodeIndex]) 
+               == aRigSanityCheck.mJoints.end())
+            {
+                throw std::logic_error{"Animation targets a node which is not a joint in the rig."};
             }
             
             // Get the existing Anim for this nodetree index, or insert an Anim if its is not present.
@@ -243,7 +256,8 @@ namespace {
 
     std::unordered_map<std::string, NodeAnimation>
     loadAnimations(const arte::Gltf & aGltf,
-                const std::vector<Node::Index> & aGltfToTreeIndex)
+                   const std::vector<Node::Index> & aGltfToTreeIndex,
+                   const Rig & aRigSanityCheck)
     {
         std::unordered_map<std::string, NodeAnimation> animations;
 
@@ -251,7 +265,7 @@ namespace {
         {
             std::string name = animation->name;
             name = (name.empty() ? "anim_#" + animation.id() : name);
-            animations.emplace(name, readAnimation(animation, aGltfToTreeIndex));
+            animations.emplace(name, readAnimation(animation, aGltfToTreeIndex, aRigSanityCheck));
         }
 
         return animations;
@@ -299,7 +313,7 @@ loadSkeletalAnimation(const Gltf & aGltf,
     rig = loadSkin(aGltf.get(aSkinIndex), indexMapping);
     rig.mScene = std::move(scene);
 
-    animations = loadAnimations(aGltf, indexMapping);
+    animations = loadAnimations(aGltf, indexMapping, rig);
 
     return {std::move(rig), std::move(animations)};
 }
