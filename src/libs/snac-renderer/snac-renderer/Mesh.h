@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IntrospectProgram.h"
+#include "Rigging.h"
 #include "Semantic.h"
 #include "UniformParameters.h"
 

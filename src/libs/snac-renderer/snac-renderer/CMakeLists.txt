@@ -25,6 +25,7 @@ set(${TARGET_NAME}_HEADERS
     3rdparty/nvpro/Profiler_gl.hpp
 
     gltf/GltfLoad.h
+    gltf/LoadAnimation.h
     gltf/LoadBuffer.h
 
     pipelines/ForwardShadows.h
@@ -56,6 +57,7 @@ set(${TARGET_NAME}_SOURCES
     text/TextRenderer.cpp
 
     gltf/GltfLoad.cpp
+    gltf/LoadAnimation.cpp
     gltf/LoadBuffer.cpp
 
     pipelines/ForwardShadows.cpp

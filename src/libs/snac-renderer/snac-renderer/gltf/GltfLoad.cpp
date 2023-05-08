@@ -436,51 +436,6 @@ Model loadGltf(const arte::Gltf & gltf, std::string_view aName)
 }
 
 
-namespace {
-
-    Node::Index addGltfNode(Const_Owned<arte::gltf::Node> aGltfNode,
-                            Node::Index aParentIndex,
-                            NodeTree<arte::gltf::Node::Matrix> & aOutTree,
-                            std::vector<Node::Index> & aOutMapping)
-    {
-        Node::Index nodeIdx = aOutTree.addNode(aParentIndex,
-                                               arte::gltf::getTransformationAsMatrix(aGltfNode));
-        aOutTree.mNodeNames[nodeIdx] = aGltfNode->name;
-        aOutMapping[aGltfNode.id()] = nodeIdx;
-
-        for(Const_Owned<arte::gltf::Node> child : aGltfNode.iterate(&arte::gltf::Node::children))
-        {
-            addGltfNode(child, nodeIdx, aOutTree, aOutMapping);
-        }
-
-        return nodeIdx;
-    }
-
-} //unnamed namespace
-
-
-std::pair<NodeTree<arte::gltf::Node::Matrix>, std::vector<Node::Index>>
-loadHierarchy(const arte::Gltf & aGltf, std::size_t aSceneIndex)
-{
-    Const_Owned<gltf::Scene> scene = aGltf.get(gltf::Index<gltf::Scene>{aSceneIndex});
-
-    auto nodeCount = aGltf.countNodes();
-    NodeTree<arte::gltf::Node::Matrix> tree;
-    tree.reserve(nodeCount);
-    std::vector<Node::Index> gltfIndexToTreeIndex(nodeCount);
-
-    auto roots = scene.iterate(&arte::gltf::Scene::nodes);
-    assert(roots.size() >= 1);
-    auto rootIt = roots.begin();
-    tree.mFirstRoot = addGltfNode(*rootIt++, Node::gInvalidIndex, tree, gltfIndexToTreeIndex);
-    for(; rootIt != roots.end(); ++rootIt)
-    {
-        addGltfNode(*rootIt, Node::gInvalidIndex, tree, gltfIndexToTreeIndex);
-    }
-
-    return {tree, gltfIndexToTreeIndex};
-}
-
 
 } // namespace snac
 } // namespace ad
