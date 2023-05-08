@@ -1,5 +1,6 @@
 #include "GltfLoad.h"
 
+#include "LoadAnimation.h"
 #include "LoadBuffer.h"
 
 #include "../Logging.h"
@@ -385,7 +386,7 @@ namespace {
 } // unnamed namespace
 
 
-Model loadGltf(const arte::Gltf & gltf, std::string_view aName)
+Model loadGltf(const arte::Gltf & aGltf, std::string_view aName)
 {
     Model model{
         .mName = std::string{aName},
@@ -394,14 +395,18 @@ Model loadGltf(const arte::Gltf & gltf, std::string_view aName)
     bool firstPrimitive = true;
 
 
-    //model.mRigs.reserve(gltf.getSkins().size());
-    //for (Const_Owned<gltf::Skin> gltfSkin : gltf.getSkins())
-    //{
-    //    model.mRigs.push_back(makeFromSkin(gltfSkin));
-    //}
+    auto gltfSkins = aGltf.getSkins();
+    assert(gltfSkins.size() <= 1); // Only support a maximum of one rig per model at this moment
+    if(gltfSkins.size() == 1)
+    {
+        // We hardcode loading the first scene in the node hierarchy, assuming there is just one.
+        assert(aGltf.countScenes() == 1); 
+        std::tie(model.mRig, model.mAnimations) = 
+            loadSkeletalAnimation(aGltf, 0/*skin index*/, 0/*scene index*/);
+    }
 
     std::unordered_map<std::size_t/*gltf-mesh index*/, std::size_t/*gltf-skin index*/> mMeshToSkin;
-    for (Const_Owned<gltf::Node> gltfNode : gltf.getNodes())
+    for (Const_Owned<gltf::Node> gltfNode : aGltf.getNodes())
     {
         if(auto skin = gltfNode->skin)
         {
@@ -411,7 +416,7 @@ Model loadGltf(const arte::Gltf & gltf, std::string_view aName)
     }
 
     // Create a distinct Model mesh for (each Gltf primitive (of each Gltf mesh)).
-    for (Const_Owned<gltf::Mesh> gltfMesh : gltf.getMeshes())
+    for (Const_Owned<gltf::Mesh> gltfMesh : aGltf.getMeshes())
     {
         const std::string & meshName = 
             (gltfMesh->name.empty() ? std::string{"<mesh#"} + std::to_string(gltfMesh.id()) + ">" : gltfMesh->name);

@@ -18,7 +18,6 @@
 #include <snac-renderer/ResourceLoad.h>
 
 #include <snac-renderer/gltf/GltfLoad.h>
-#include <snac-renderer/gltf/LoadAnimation.h>
 
 
 namespace ad {
@@ -26,15 +25,6 @@ namespace snac {
 
 
 const std::string gDebugDrawer = "skinning";
-
-
-Scene::RiggingData loadRiggingData(const arte::Gltf & aGltf)
-{
-    Scene::RiggingData result;
-    std::tie(result.mRig, result.mAnimations) =
-        loadSkeletalAnimation(aGltf, 0/*skin index*/, 0/*scene index*/);
-    return result;
-}
 
 
 InstanceStream prepareSingleInstance()
@@ -80,8 +70,7 @@ Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
     mSingleInstance{prepareSingleInstance()},
     // TOOD the gltf object is loaded twice, when loading the model and when loading the animation data
     mSkin{loadModel(aGltfPath,
-                    loadEffect(mFinder.pathFor("effects/MeshRigging.sefx"), TechniqueLoader{mFinder}))},
-    mRigging{loadRiggingData(arte::Gltf{aGltfPath})}
+                    loadEffect(mFinder.pathFor("effects/MeshRigging.sefx"), TechniqueLoader{mFinder}))}
 {
     DebugDrawer::AddDrawer(gDebugDrawer);
 
@@ -120,9 +109,9 @@ Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
         });
 
     //std::cerr << "Hierarchy:\n" << mRigging.mRig.mJoints << std::endl;
-    SELOG(info)("Found {} animations.", mRigging.mAnimations.size());
-
-    mControl.mSelectedAnimation = mRigging.mAnimations.begin();
+    SELOG(info)("Loaded model contains {} animations.", mSkin.mAnimations.size());
+    assert(mSkin.mAnimations.size() > 0);
+    mControl.mSelectedAnimation = mSkin.mAnimations.begin();
 }
 
 
@@ -135,12 +124,12 @@ void Scene::update(double aDelta)
 
     imguiui::addCombo("Animation",
                       mControl.mSelectedAnimation,
-                      mRigging.mAnimations.begin(),
-                      mRigging.mAnimations.end(),
+                      mSkin.mAnimations.begin(),
+                      mSkin.mAnimations.end(),
                       [](std::unordered_map<std::string, NodeAnimation>::iterator aIt)
                       { return aIt->first; });
     const NodeAnimation & animation = mControl.mSelectedAnimation->second;
-    auto & nodeTree = mRigging.mRig.mScene;
+    auto & nodeTree = mSkin.mRig.mScene;
 
     mAnimationTime += aDelta;
 
@@ -150,7 +139,7 @@ void Scene::update(double aDelta)
 
     // TODO handle different playback modes (single, ping-pong, repeat)
     animation.animate((float)std::fmod(mAnimationTime, animation.mEndTime), nodeTree);
-    const auto sillyLValue = mRigging.mRig.computeJointMatrices();
+    const auto sillyLValue = mSkin.mRig.computeJointMatrices();
     graphics::load(mJointMatrices,
                    std::span{sillyLValue},
                    graphics::BufferHint::StreamDraw);
@@ -182,7 +171,7 @@ void Scene::update(double aDelta)
     //for(Node::Index nodeIdx = 0; nodeIdx != nodeTree.mHierarchy.size(); ++nodeIdx)
     // TODO iterate over the rig instead of the animation
     //for(Node::Index nodeIdx : animation.mNodes)
-    for(Node::Index nodeIdx : mRigging.mRig.mJoints)
+    for(Node::Index nodeIdx : mSkin.mRig.mJoints)
     {
         // Draw a segment between each joint 
         // (sadly, this is missing "leaf bones", for joints without a child)
@@ -222,9 +211,9 @@ void Scene::update(double aDelta)
 
 
     ImGui::Begin("Node hierarchy");
-    for(Node::Index root = mRigging.mRig.mScene.mFirstRoot;
+    for(Node::Index root = mSkin.mRig.mScene.mFirstRoot;
         root != Node::gInvalidIndex;
-        root = mRigging.mRig.mScene.mHierarchy[root].mNextSibling)
+        root = mSkin.mRig.mScene.mHierarchy[root].mNextSibling)
     {
         presentNodeTree(root);
     }
@@ -283,7 +272,7 @@ void Scene::render(Renderer & aRenderer)
 
 int Scene::presentNodeTree(Node::Index aNode)
 {
-    auto & nodeTree = mRigging.mRig.mScene;
+    auto & nodeTree = mSkin.mRig.mScene;
 
     int selected = -1;
 

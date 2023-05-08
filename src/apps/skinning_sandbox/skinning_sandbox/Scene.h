@@ -56,19 +56,13 @@ struct Scene
     std::shared_ptr<graphics::AppInterface::SizeListener> mSizeListening;
     snac::DebugRenderer mDebugRenderer;
     imguiui::ImguiUi mImguiUi;
+    Control mControl;
 
     Renderer mRenderer;
     InstanceStream mSingleInstance;
     Model mSkin;
-    struct RiggingData
-    {
-        Rig mRig;
-        std::unordered_map<std::string, NodeAnimation> mAnimations;
-    } mRigging;
     graphics::UniformBufferObject mJointMatrices;
     double mAnimationTime = 0.;
-
-    Control mControl;
 };
 
 
