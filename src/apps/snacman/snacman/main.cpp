@@ -160,6 +160,10 @@ void runApplication()
     //
     // Main simulation loop
     //
+    Time time;
+
+    // TODO we might extend the Time structure to handle user wall-time
+    // and use this facility to handle simulation steps pacing.
     Clock::time_point beginStepTime =
         Clock::now() - configurableSettings.mSimulationDelta;
 
@@ -180,7 +184,7 @@ void runApplication()
         {
             TIME_RECURRING(Main, "Simulation_update");
             if (simulation.update(
-                    (float) asSeconds(configurableSettings.mSimulationDelta),
+                    (float) time.advance(configurableSettings.mSimulationDelta).mSimulationDeltaSeconds,
                     input))
             {
                 break;

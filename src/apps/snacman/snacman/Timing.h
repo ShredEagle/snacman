@@ -20,6 +20,33 @@ constexpr double asSeconds(Clock::duration aDuration)
     return aDuration.count() * gTickPeriod;
 }
 
+struct Time
+{
+    void setSimulationDelta(Clock::duration aDelta)
+    { 
+        mSimulationDeltaDuration = aDelta;
+        mSimulationDeltaSeconds = asSeconds(mSimulationDeltaDuration); 
+    }
+
+    /// @brief Advance by the currently set delta
+    Time & advance()
+    {
+        mSimulationTimepoint += mSimulationDeltaDuration;
+        return *this;
+    }
+
+    /// @brief Advance by the newly set delta
+    Time & advance(Clock::duration aDelta)
+    {
+        setSimulationDelta(aDelta);
+        return advance();
+    }
+
+    Clock::time_point mSimulationTimepoint;
+    Clock::duration mSimulationDeltaDuration;
+    double mSimulationDeltaSeconds;
+};
+
 
 struct SleepResult
 {
