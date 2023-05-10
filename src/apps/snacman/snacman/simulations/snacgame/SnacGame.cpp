@@ -345,7 +345,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     }
 }
 
-bool SnacGame::update(float aDelta, RawInput & aInput)
+bool SnacGame::update(const snac::Time & aTime, RawInput & aInput)
 {
     snac::DebugDrawer::StartFrame();
 
@@ -360,12 +360,12 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
         return false;
     }
 
-    float updateDelta = aDelta / mGameContext.mSimulationControl.mSpeedRatio;
-    mSimulationTime += aDelta;
+    //float updateDelta = aDelta / mGameContext.mSimulationControl.mSpeedRatio;
+    snac::Clock::duration updateDelta = aTime.mSimulationDeltaDuration;
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
     std::optional<scene::Transition> transition =
-        mStateMachine->getCurrentScene()->update(updateDelta, aInput);
+        mStateMachine->getCurrentScene()->update(aTime, aInput);
 
     if (transition)
     {
@@ -387,9 +387,8 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
         TIME_RECURRING(Main, "Save state");
         mGameContext.mSimulationControl.saveState(
             mGameContext.mWorld.saveState(),
-            std::chrono::microseconds{static_cast<long>(aDelta * 1'000'000)},
-            std::chrono::microseconds{
-                static_cast<long>(updateDelta * 1'000'000)});
+            std::chrono::duration_cast<std::chrono::milliseconds>(aTime.mSimulationDeltaDuration),
+            std::chrono::duration_cast<std::chrono::milliseconds>(updateDelta));
     }
 
     return false;

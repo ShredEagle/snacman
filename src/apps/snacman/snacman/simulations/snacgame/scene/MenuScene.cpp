@@ -70,7 +70,7 @@ void MenuScene::teardown(RawInput & aInput)
 }
 
 std::optional<Transition>
-MenuScene::update(float aDelta, RawInput & aInput)
+MenuScene::update(const snac::Time & aTime, RawInput & aInput)
 {
     TIME_RECURRING_CLASSFUNC(Main);
     ControllerCommand keyboardCommand{

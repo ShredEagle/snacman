@@ -138,7 +138,7 @@ void GameScene::teardown(RawInput & aInput)
     }
 }
 
-std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
+std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
 
@@ -212,19 +212,19 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
 
     mSystems.get(update)->get<system::LevelCreator>().update();
     mSystems.get(update)->get<system::RoundMonitor>().update();
-    mSystems.get(update)->get<system::PlayerInvulFrame>().update(aDelta);
+    mSystems.get(update)->get<system::PlayerInvulFrame>().update((float)aTime.mSimulationDeltaSeconds);
     mSystems.get(update)->get<system::AllowMovement>().update();
-    mSystems.get(update)->get<system::ConsolidateGridMovement>().update(aDelta);
-    mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
-    mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
-    mSystems.get(update)->get<system::AdvanceAnimations>().update();
+    mSystems.get(update)->get<system::ConsolidateGridMovement>().update((float)aTime.mSimulationDeltaSeconds);
+    mSystems.get(update)->get<system::IntegratePlayerMovement>().update((float)aTime.mSimulationDeltaSeconds);
+    mSystems.get(update)->get<system::MovementIntegration>().update((float)aTime.mSimulationDeltaSeconds);
+    mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
     mSystems.get(update)->get<system::Pathfinding>().update();
     mSystems.get(update)->get<system::EatPill>().update();
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
     mSystems.get(update)->get<system::PowerUpUsage>().update();
     mSystems.get(update)->get<system::PortalManagement>().update();
-    mSystems.get(update)->get<system::PlayerSpawner>().update(aDelta);
+    mSystems.get(update)->get<system::PlayerSpawner>().update((float)aTime.mSimulationDeltaSeconds);
 
     mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
 

@@ -32,8 +32,7 @@ struct SimulationControl
 
     void saveState(ent::State && aState,
                    std::chrono::microseconds aFrameDuration,
-                   std::chrono::microseconds aUpdateDelta
-                   )
+                   std::chrono::microseconds aUpdateDelta)
     {
         mSaveStateIndex = (mSaveStateIndex + 1) % gNumberOfSavedStates;
         if (mSaveStateIndex == static_cast<std::size_t>(mSelectedSaveState))

@@ -184,7 +184,7 @@ void runApplication()
         {
             TIME_RECURRING(Main, "Simulation_update");
             if (simulation.update(
-                    (float) time.advance(configurableSettings.mSimulationDelta).mSimulationDeltaSeconds,
+                    time.advance(configurableSettings.mSimulationDelta),
                     input))
             {
                 break;

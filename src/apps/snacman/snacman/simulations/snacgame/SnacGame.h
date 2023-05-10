@@ -113,7 +113,7 @@ public:
              arte::Freetype & aFreetype,
              RawInput & aInput);
 
-    bool update(float aDelta, RawInput & aInput);
+    bool update(const snac::Time & aTime, RawInput & aInput);
 
     void drawDebugUi(snac::ConfigurableSettings & aSettings,
                      ImguiInhibiter & aInhibiter,
@@ -134,9 +134,6 @@ private:
     EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
     EntityWrap<ent::Query<component::Text, component::GlobalPose>> mQueryTextWorld;
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
-
-    // A float would run out of precision too quickly.
-    double mSimulationTime{0.};
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;

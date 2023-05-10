@@ -29,8 +29,7 @@ public:
         Scene(aName, aGameContext, aContext, aSceneRoot), mSlots{mGameContext.mWorld}, mItems{mGameContext.mWorld}
     {}
 
-    std::optional<Transition>
-    update(float aDelta, RawInput & aInput) override;
+    std::optional<Transition> update(const snac::Time & aTime, RawInput & aInput) override;
 
     void setup(const Transition & aTransition,
                RawInput & aInput) override;

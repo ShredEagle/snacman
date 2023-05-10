@@ -19,7 +19,7 @@ public:
         mAnimations{aGameContext.mWorld}
     {}
 
-    void update();
+    void update(const snac::Time & aTime);
 
 private:
     ent::Query<component::RigAnimation> mAnimations;

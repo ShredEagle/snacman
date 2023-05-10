@@ -82,7 +82,7 @@ public:
     Scene & operator=(Scene &&) = delete;
     virtual ~Scene() = default;
 
-    virtual std::optional<Transition> update(float aDelta,
+    virtual std::optional<Transition> update(const snac::Time & aTime,
                                              RawInput & aInput) = 0;
 
     virtual void setup(const Transition & aTransition, RawInput & aInput) = 0;
