@@ -85,7 +85,8 @@ void runApplication()
 
     // Application and window initialization
     graphics::ApplicationGlfw glfwApp{
-        getVersionedName(), 1920, 1024, graphics::ApplicationFlag::Fullscreen // TODO handle via settings
+        getVersionedName(), 1920, 1024
+        //, graphics::ApplicationFlag::Fullscreen // TODO handle via settings
                                     // TODO, applicationFlags
     };
 
