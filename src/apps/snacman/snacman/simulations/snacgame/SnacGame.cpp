@@ -422,7 +422,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                 skeletal = visu::Entity::SkeletalAnimation{
                     .mRig = &aVisualModel.mModel->mRig,
                     .mAnimation = rigAnimation.mAnimation,
-                    .mParameterValue = rigAnimation.mParameter.at(2), // TODO have animation
+                    .mParameterValue = rigAnimation.mParameterValue,
                 };
             }
             state->mEntities.insert(

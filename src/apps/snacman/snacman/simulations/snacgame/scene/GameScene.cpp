@@ -17,6 +17,7 @@
 #include "../component/Text.h"
 #include "../component/VisualModel.h"
 
+#include "../system/AdvanceAnimations.h"
 #include "../system/AllowMovement.h"
 #include "../system/ConsolidateGridMovement.h"
 #include "../system/Debug_BoundingBoxes.h"
@@ -216,6 +217,7 @@ std::optional<Transition> GameScene::update(float aDelta, RawInput & aInput)
     mSystems.get(update)->get<system::ConsolidateGridMovement>().update(aDelta);
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(aDelta);
     mSystems.get(update)->get<system::MovementIntegration>().update(aDelta);
+    mSystems.get(update)->get<system::AdvanceAnimations>().update();
     mSystems.get(update)->get<system::Pathfinding>().update();
     mSystems.get(update)->get<system::EatPill>().update();
 

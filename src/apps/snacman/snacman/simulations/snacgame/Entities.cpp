@@ -133,8 +133,9 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
 
 
 ent::Handle<ent::Entity> createAnimatedTest(GameContext & aContext,
-                        Phase & aPhase,
-                        const math::Position<2, float> & aGridPos)
+                                            Phase & aPhase,
+                                            snac::Clock::time_point aStartTime,
+                                            const math::Position<2, float> & aGridPos)
 {
     auto handle = aContext.mWorld.addEntity();
     Entity entity = *handle.get(aPhase);
@@ -152,7 +153,7 @@ ent::Handle<ent::Entity> createAnimatedTest(GameContext & aContext,
     const snac::NodeAnimation & animation = model->mAnimations.begin()->second;
     entity.add(component::RigAnimation{
         .mAnimation = &animation,
-        .mStartTime = snac::Clock::now(),
+        .mStartTime = aStartTime,
         .mParameter{animation.mEndTime},
     });
     entity.add(component::LevelEntity{});

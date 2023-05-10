@@ -134,8 +134,8 @@ void LevelCreator::update()
         {
         Phase createLevel;
 
-        createAnimatedTest(*mGameContext, createLevel, {14.f, 7.f});
-        createAnimatedTest(*mGameContext, createLevel, { 0.f, 7.f});
+        createAnimatedTest(*mGameContext, createLevel, snac::Clock::now(), {14.f, 7.f});
+        createAnimatedTest(*mGameContext, createLevel, snac::Clock::now() + snac::ms{1000}, { 0.f, 7.f});
 
         for (int i = 1; i < height - 1; ++i)
         {

@@ -3,11 +3,13 @@
 #include "GameParameters.h"
 
 #include "component/GlobalPose.h"
-#include "snacman/simulations/snacgame/component/Geometry.h"
-#include "snacman/simulations/snacgame/component/LevelTags.h"
 
-#include <entity/Entity.h>
-#include <entity/Query.h>
+#include "entity/Entity.h"
+#include "entity/Query.h"
+
+#include <snacman/Timing.h>
+#include <snacman/simulations/snacgame/component/Geometry.h>
+#include <snacman/simulations/snacgame/component/LevelTags.h>
 
 #include <math/Color.h>
 #include <math/Quaternion.h>
@@ -69,6 +71,7 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
 
 ent::Handle<ent::Entity> createAnimatedTest(GameContext & aContext,
                                             ent::Phase & aPhase,
+                                            snac::Clock::time_point aStartTime,
                                             const math::Position<2, float> & aGridPos);
 
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
