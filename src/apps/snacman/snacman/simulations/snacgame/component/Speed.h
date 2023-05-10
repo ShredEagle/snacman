@@ -29,6 +29,7 @@ struct Speed
 
 
 } // namespace component
-} // namespace cubes
+
+} // namespace snacgame
 } // namespace ad
 

@@ -83,6 +83,7 @@ private:
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;
+    graphics::UniformBufferObject mJointMatrices;
 };
 
 

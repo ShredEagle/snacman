@@ -17,6 +17,8 @@ in vec4 in_Albedo;
 #ifdef RIGGING
 in uvec4 ve_Joints0;
 in vec4  ve_Weights0;
+
+in uint in_MatrixPaletteOffset; // default value of 0 is what we need when a single palette is provided.
 #endif
 
 in mat4 in_LocalToWorld;
@@ -40,7 +42,7 @@ uniform vec4 u_BaseColorFactor = vec4(1., 1., 1., 1.);
 #ifdef RIGGING
 layout(std140, binding = 1) uniform JointMatricesBlock
 {
-    mat4 joints[128];
+    mat4 joints[512];
 };
 #endif
 
@@ -67,10 +69,10 @@ void main(void)
         in_LocalToWorld
         * 
             // Skinning matrix
-            ( ve_Weights0[0] * joints[ve_Joints0[0]]
-            + ve_Weights0[1] * joints[ve_Joints0[1]]
-            + ve_Weights0[2] * joints[ve_Joints0[2]]
-            + ve_Weights0[3] * joints[ve_Joints0[3]])
+            ( ve_Weights0[0] * joints[in_MatrixPaletteOffset + ve_Joints0[0]]
+            + ve_Weights0[1] * joints[in_MatrixPaletteOffset + ve_Joints0[1]]
+            + ve_Weights0[2] * joints[in_MatrixPaletteOffset + ve_Joints0[2]]
+            + ve_Weights0[3] * joints[in_MatrixPaletteOffset + ve_Joints0[3]])
         ;
 #else
     mat4 localToWorld = in_LocalToWorld;

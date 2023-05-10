@@ -64,6 +64,11 @@ struct NodeTree
 // TODO rename (clarify the fact it is not the animation of just a single node)
 struct NodeAnimation
 {
+    // TODO #anim hosting the NodeTree in the Rig instanc" is a problem,
+    // notably because this function mutates the node tree directly.
+    // see also todo (a48c8) 
+    // Maybe the Rig should host a read only hierarchy (no transformation) of joints (no whole scene)
+    // and the animation would produce an array of global transformations from this hierarchy.
     void animate(float aTimepoint, NodeTree<math::AffineMatrix<4, float>> & aNodeTree) const;
 
     // The sequence of node indices that are animated.
@@ -106,12 +111,6 @@ struct Rig
     std::vector<math::AffineMatrix<4, float>> mInverseBindMatrices;
     std::string mName;
 };
-
-
-void animate(NodeTree<math::AffineMatrix<4, float>> & aNodeTree,
-             float aTimepoint,
-             const NodeAnimation & aAnimation);
-
 
 
 //

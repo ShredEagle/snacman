@@ -9,6 +9,7 @@
 #include "component/PlayerMoveState.h"
 #include "component/PlayerSlot.h"
 #include "component/PoseScreenSpace.h"
+#include "component/RigAnimation.h"
 #include "component/SceneNode.h"
 #include "component/Spawner.h"
 #include "component/Speed.h"
@@ -66,26 +67,28 @@ void addGeoNode(Phase & aPhase,
         .add(component::GlobalPose{});
 }
 
-void addMeshGeoNode(Phase & aPhase,
-                    GameContext & aContext,
-                    Entity & aEnt,
-                    const char * aModelPath,
-                    Pos3 aPos,
-                    float aScale,
-                    Size3 aInstanceScale,
-                    Quat_f aOrientation,
-                    HdrColor_f aColor)
+std::shared_ptr<snac::Model> 
+addMeshGeoNode(Phase & aPhase,
+               GameContext & aContext,
+               Entity & aEnt,
+               const char * aModelPath,
+               Pos3 aPos,
+               float aScale,
+               Size3 aInstanceScale,
+               Quat_f aOrientation,
+               HdrColor_f aColor)
 {
+    auto model = aContext.mResources.getModel(aModelPath);
     aEnt.add(component::Geometry{.mPosition = aPos,
                                  .mScaling = aScale,
                                  .mInstanceScaling = aInstanceScale,
                                  .mOrientation = aOrientation,
                                  .mColor = aColor})
-        .add(component::VisualModel{
-            .mModel = aContext.mResources.getModel(aModelPath),
-        })
+        .add(component::VisualModel{.mModel = model})
         .add(component::SceneNode{})
         .add(component::GlobalPose{});
+
+        return model;
 }
 
 namespace {
@@ -129,8 +132,37 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
 }
 
 
+ent::Handle<ent::Entity> createAnimatedTest(GameContext & aContext,
+                        Phase & aPhase,
+                        const math::Position<2, float> & aGridPos)
+{
+    auto handle = aContext.mWorld.addEntity();
+    Entity entity = *handle.get(aPhase);
+    std::shared_ptr<snac::Model> model = 
+        addMeshGeoNode(aPhase, aContext, entity, "models/anim/anim.gltf",
+                       {
+                            static_cast<float>(aGridPos.x()),
+                            static_cast<float>(aGridPos.y()),
+                            gLevelHeight
+                       },
+                       0.45f,
+                       lLevelElementScaling,
+                       math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                       math::Turn<float>{0.25f}});
+    const snac::NodeAnimation & animation = model->mAnimations.begin()->second;
+    entity.add(component::RigAnimation{
+        .mAnimation = &animation,
+        .mStartTime = snac::Clock::now(),
+        .mParameter{animation.mEndTime},
+    });
+    entity.add(component::LevelEntity{});
+
+    return handle;
+}
+
+
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
-        Phase & aPhase,
+                                    Phase & aPhase,
                                     const math::Position<2, float> & aGridPos)
 {
     auto handle = aContext.mWorld.addEntity();

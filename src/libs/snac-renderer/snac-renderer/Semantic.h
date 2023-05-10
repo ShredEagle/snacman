@@ -22,6 +22,7 @@ enum class Semantic
     LocalToWorld,
     InstancePosition,
     TextureOffset,
+    MatrixPaletteOffset, // Usefull to index into a buffer of joint matrices for different instances
     BoundingBox,
     Bearing,
     GlyphIndex,

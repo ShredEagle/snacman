@@ -21,6 +21,7 @@
 #include "component/PlayerSlot.h"
 #include "component/PathToOnGrid.h"
 #include "component/PoseScreenSpace.h"
+#include "component/RigAnimation.h"
 #include "component/SceneNode.h"
 #include "component/Text.h"
 #include "component/VisualModel.h"
@@ -402,10 +403,28 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
     ent::Phase nomutation;
 
+    //
+    // Worldspace models
+    //
     mQueryRenderable.get(nomutation)
         .each([&state](ent::Handle<ent::Entity> aHandle,
                        const component::GlobalPose & aGlobPose,
-                       const component::VisualModel & aVisualModel) {
+                       // TODO #anim restore this constness (for the moment, animation mutate the rig's scene)
+                       /*const*/ component::VisualModel & aVisualModel)
+        {
+            // Note: This feels bad to test component presence here
+            // but we do not want to handle VisualModel the same way depending on the presence of RigAnimation
+            // (and we do not have "negation" on Queries, to separately get VisualModels without RigAnimation)
+            visu::Entity::SkeletalAnimation skeletal;
+            if(auto entity = *aHandle.get(); entity.has<component::RigAnimation>())
+            {
+                const auto & rigAnimation = aHandle.get()->get<component::RigAnimation>();
+                skeletal = visu::Entity::SkeletalAnimation{
+                    .mRig = &aVisualModel.mModel->mRig,
+                    .mAnimation = rigAnimation.mAnimation,
+                    .mParameterValue = rigAnimation.mParameter.at(2), // TODO have animation
+                };
+            }
             state->mEntities.insert(
                 aHandle.id(),
                 visu::Entity{
@@ -415,6 +434,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                     .mOrientation = aGlobPose.mOrientation,
                     .mColor = aGlobPose.mColor,
                     .mModel = aVisualModel.mModel,
+                    .mRigging = std::move(skeletal),
                 });
         });
 

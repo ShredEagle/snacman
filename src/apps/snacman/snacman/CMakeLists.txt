@@ -50,6 +50,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/PlayerPortalData.h
     simulations/snacgame/component/PlayerSlot.h
     simulations/snacgame/component/PlayerPowerUp.h
+    simulations/snacgame/component/RigAnimation.h
     simulations/snacgame/component/SceneNode.h
     simulations/snacgame/component/Spawner.h
     simulations/snacgame/component/Text.h

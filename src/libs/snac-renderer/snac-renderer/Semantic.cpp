@@ -28,6 +28,7 @@ std::string to_string(Semantic aSemantic)
         MAPPING(LocalToWorld)
         MAPPING(InstancePosition)
         MAPPING(TextureOffset)
+        MAPPING(MatrixPaletteOffset)
         MAPPING(BoundingBox)
         MAPPING(Bearing)
         MAPPING(GlyphIndex)
@@ -90,6 +91,7 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(LocalToWorld)
     MAPPING(InstancePosition)
     MAPPING(TextureOffset)
+    MAPPING(MatrixPaletteOffset)
     MAPPING(BoundingBox)
     MAPPING(Bearing)
     MAPPING(GlyphIndex)
@@ -141,6 +143,7 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::Weights0:
         case Semantic::InstancePosition:
         case Semantic::TextureOffset:
+        case Semantic::MatrixPaletteOffset:
         case Semantic::BoundingBox:
         case Semantic::Bearing:
         case Semantic::GlyphIndex:

@@ -24,6 +24,7 @@ enum class ControllerType;
 // Forward
 namespace snac {
 struct Font;
+struct Model;
 }
 
 namespace snacgame {
@@ -51,7 +52,7 @@ void addGeoNode(
     math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
     math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
 
-void addMeshGeoNode(
+std::shared_ptr<snac::Model> addMeshGeoNode(
     ent::Phase & aPhase,
     GameContext & aContext,
     ent::Entity & aEnt,
@@ -65,6 +66,10 @@ void addMeshGeoNode(
 ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
                                          std::string aText,
                                          component::GlobalPose aPose);
+
+ent::Handle<ent::Entity> createAnimatedTest(GameContext & aContext,
+                                            ent::Phase & aPhase,
+                                            const math::Position<2, float> & aGridPos);
 
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
                                     ent::Phase & aPhase,

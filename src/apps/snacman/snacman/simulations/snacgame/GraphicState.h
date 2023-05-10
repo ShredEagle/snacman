@@ -11,6 +11,7 @@
 #include <math/Interpolation/QuaternionInterpolation.h>
 
 #include <snac-renderer/DebugDrawer.h>
+#include <snac-renderer/Rigging.h>
 #include <snac-renderer/text/Text.h>
 
 #include <functional>
@@ -29,6 +30,18 @@ struct Entity
     math::Quaternion<float> mOrientation;
     math::hdr::Rgba_f mColor;
     std::shared_ptr<snac::Model> mModel;
+    
+    // TODO #anim would be better to interpolate the animation time (Parameter)
+    // between each GPU frame, instead of providing fixed parameter value
+    // (cannot be inteprolated because of periodic behaviours).
+    struct SkeletalAnimation
+    {
+        //TODO #anim (a48c8) this is **not** const because animation writes to the underlying scene,
+        // but this is very smelly (and an invitatin to race conditions)
+        snac::Rig *mRig = nullptr;
+        const snac::NodeAnimation * mAnimation = nullptr;
+        double mParameterValue = 0.;
+    } mRigging;
 };
 
                     
@@ -40,6 +53,7 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
         math::slerp(aLeftEntity.mOrientation,   aRightEntity.mOrientation,      aInterpolant),
         math::lerp(aLeftEntity.mColor,          aRightEntity.mColor,            aInterpolant),
         aRightEntity.mModel,
+        aRightEntity.mRigging,
     };
 }
 
