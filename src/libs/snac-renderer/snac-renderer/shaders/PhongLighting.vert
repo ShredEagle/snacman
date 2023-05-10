@@ -15,10 +15,7 @@ in vec2 ve_TextureCoords1;
 in vec4 in_Albedo;
 
 #ifdef RIGGING
-in uvec4 ve_Joints0;
-in vec4  ve_Weights0;
-
-in uint in_MatrixPaletteOffset; // default value of 0 is what we need when a single palette is provided.
+#include "Rigging.glsl"
 #endif
 
 in mat4 in_LocalToWorld;
@@ -39,13 +36,6 @@ uniform mat4 u_LightViewingMatrix;
 
 uniform vec4 u_BaseColorFactor = vec4(1., 1., 1., 1.);
 
-#ifdef RIGGING
-layout(std140, binding = 1) uniform JointMatricesBlock
-{
-    mat4 joints[512];
-};
-#endif
-
 // TODO change _c to _cam
 out vec3 ex_Position_c;
 out vec3 ex_Normal_c;
@@ -64,19 +54,12 @@ out vec4 ex_Position_lightClip;
 
 void main(void)
 {
-#ifdef RIGGING
-    mat4 localToWorld =
+    mat4 localToWorld = 
         in_LocalToWorld
-        * 
-            // Skinning matrix
-            ( ve_Weights0[0] * joints[in_MatrixPaletteOffset + ve_Joints0[0]]
-            + ve_Weights0[1] * joints[in_MatrixPaletteOffset + ve_Joints0[1]]
-            + ve_Weights0[2] * joints[in_MatrixPaletteOffset + ve_Joints0[2]]
-            + ve_Weights0[3] * joints[in_MatrixPaletteOffset + ve_Joints0[3]])
-        ;
-#else
-    mat4 localToWorld = in_LocalToWorld;
+#ifdef RIGGING
+        * assembleSkinningMatrix()
 #endif
+    ;
 
     // TODO maybe u_WorldToCamera and in_LocalToWorld should be pre-multiplied in client code?
     mat4 localToCamera = u_WorldToCamera * localToWorld;

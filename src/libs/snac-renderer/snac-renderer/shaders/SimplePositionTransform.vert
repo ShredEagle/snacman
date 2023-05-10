@@ -8,6 +8,10 @@ in vec2 ve_TextureCoords0;
 in mat4 in_LocalToWorld;
 #endif
 
+#ifdef RIGGING
+#include "Rigging.glsl"
+#endif
+
 uniform mat4 u_ViewingMatrix;
 
 out vec4 ex_Albedo;
@@ -20,7 +24,11 @@ void main(void)
 #ifdef MODEL_MATRIX
         * in_LocalToWorld
 #endif
-        * vec4(ve_Position_l, 1.f);
+#ifdef RIGGING
+        * assembleSkinningMatrix()
+#endif
+        * vec4(ve_Position_l, 1.f)
+        ;
 
     ex_Albedo = ve_Albedo;
     ex_TextureCoords = ve_TextureCoords0;

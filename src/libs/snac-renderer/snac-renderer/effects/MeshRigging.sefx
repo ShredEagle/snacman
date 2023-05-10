@@ -13,7 +13,7 @@
             "annotations": {
                 "pass": "depth"
             },
-            "programfile": "shaders/DepthMap.prog",
+            "programfile": "shaders/DepthMapRigging.prog",
             "name": "shadow_mapping"
         }
     ]
