@@ -14,7 +14,7 @@ const std::array<math::Position<2, float>, 4> gHudPositions{
     math::Position<2, float>{0.7f, -0.5f},
 };
 
-const std::array<const char *, static_cast<unsigned int>(PowerUpType::_last)> gPowerUpName{
+const std::array<const char *, static_cast<unsigned int>(PowerUpType::_End)> gPowerUpName{
     "Donut Seeking dog",
     "Donut swapper",
 };

@@ -91,14 +91,11 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     ent::Phase init;
 
     // Creating the slot entity those will be used a player entities
-    mGameContext.mWorld.addEntity().get(init)->add(
-        component::PlayerSlot{0, false, gSlotColors.at(0)});
-    mGameContext.mWorld.addEntity().get(init)->add(
-        component::PlayerSlot{1, false, gSlotColors.at(1)});
-    mGameContext.mWorld.addEntity().get(init)->add(
-        component::PlayerSlot{2, false, gSlotColors.at(2)});
-    mGameContext.mWorld.addEntity().get(init)->add(
-        component::PlayerSlot{3, false, gSlotColors.at(3)});
+    for (int i = 0; i < gMaxPlayerSlots; ++i)
+    {
+        mGameContext.mWorld.addEntity().get(init)->add(
+            component::PlayerSlot{i, false, gSlotColors.at(i)});
+    }
 
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(scene::Transition{}, aInput);

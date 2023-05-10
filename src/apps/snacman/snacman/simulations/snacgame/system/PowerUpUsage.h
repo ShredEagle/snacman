@@ -39,6 +39,9 @@ public:
     std::pair<math::Position<2, float>, ent::Handle<ent::Entity>>
     getPowerupPlacementTile(ent::Handle<ent::Entity> aHandle,
                             const component::Geometry & aPlayerGeo);
+    std::optional<ent::Handle<ent::Entity>>
+    getClosestPlayer(ent::Handle<ent::Entity> aHandle,
+                     const math::Position<3, float> & aPos);
 
 private:
     GameContext * mGameContext;
@@ -52,9 +55,11 @@ private:
     ent::Query<component::Geometry,
                component::PlayerPowerUp,
                component::PlayerSlot,
+               component::GlobalPose,
                component::Controller>
         mPowUpPlayers;
     ent::Query<component::GlobalPose,
+               component::Geometry,
                component::PowerUp,
                component::Collision,
                component::VisualModel,

@@ -192,7 +192,7 @@ void LevelCreator::update()
 
                 for (size_t moveIndex = 0; moveIndex < gDirections.size(); ++moveIndex)
                 {
-                    const Pos2_i dir = gDirections.at(moveIndex);
+                    const Vec2_i dir = gDirections.at(moveIndex);
                     const int move = gAllowedMovement.at(moveIndex);
                     if (tiles.at(i + dir.x() + (j + dir.y()) * stride).mType != component::TileType::Void)
                     {

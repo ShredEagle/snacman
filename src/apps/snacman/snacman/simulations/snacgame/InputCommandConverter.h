@@ -94,6 +94,13 @@ const inline BidirectionalMap<std::string, int> gCommandFlags{
     {"gPlayerMoveFlagRight", gPlayerMoveFlagRight},
     {"gPlayerUsePowerup", gPlayerUsePowerup | gPositiveEdge},
 
+    {"gRightJoyUp", gRightJoyUp},
+    {"gRightJoyDown", gRightJoyDown},
+    {"gRightJoyLeft", gRightJoyLeft},
+    {"gRightJoyRight", gRightJoyRight},
+    {"gNextPowerUpTarget", gNextPowerUpTarget},
+    {"gPrevPowerUpTarget", gPrevPowerUpTarget},
+
     {"gJoin", gJoin | gPositiveEdge},
 
     {"gSelectItem", gSelectItem | gPositiveEdge},

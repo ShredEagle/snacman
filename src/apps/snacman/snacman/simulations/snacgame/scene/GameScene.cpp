@@ -106,6 +106,7 @@ GameScene::GameScene(const std::string & aName,
 
 void GameScene::teardown(RawInput & aInput)
 {
+    TIME_SINGLE(Main, "teardown game scene");
     {
         Phase destroy;
 

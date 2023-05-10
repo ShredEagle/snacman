@@ -127,8 +127,12 @@ findSlotAndBind(GameContext & aContext,
                 ControllerType aType,
                 int aIndex);
 
+void swapPlayerPosition(ent::Phase & aPhase, ent::Handle<ent::Entity> aPlayer, ent::Handle<ent::Entity> aOther);
+void removeRoundTransientPlayerComponent(ent::Phase & aPhase, ent::Handle<ent::Entity> aHandle);
 ent::Handle<ent::Entity> removePlayerFromGame(ent::Phase & aPhase,
                                               ent::Handle<ent::Entity> aHandle);
+
+ent::Handle<ent::Entity> createTargetArrow(GameContext & aContext, const math::hdr::Rgba_f & aColor);
 
 } // namespace snacgame
 } // namespace ad
