@@ -1,5 +1,6 @@
 #include "RoundMonitor.h"
 
+#include "snacman/simulations/snacgame/Entities.h"
 #include "snacman/simulations/snacgame/component/LevelData.h"
 #include "snacman/simulations/snacgame/SceneGraph.h"
 
@@ -41,16 +42,9 @@ void RoundMonitor::update()
                                       component::PlayerPowerUp & aPowerup) {
             // Reset alive status so that player can be spawned
             lifeCycle.mIsAlive = false;
+            lifeCycle.mTimeToRespawn = component::gBaseTimeToRespawn;
 
-            // Removes powerup if the player has any
-            if (aHandle.get()->has<component::PlayerPowerUp>())
-            {
-                aHandle.get(destroyLevel)
-                    ->get<component::PlayerPowerUp>()
-                    .mPowerUp.get(destroyLevel)
-                    ->erase();
-                aHandle.get(destroyLevel)->remove<component::PlayerPowerUp>();
-            }
+            removeRoundTransientPlayerComponent(destroyLevel, aHandle);
             removeEntityFromScene(aHandle);
         });
     };

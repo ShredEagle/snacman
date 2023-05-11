@@ -17,7 +17,7 @@ void PlayerSpawner::update(float aDelta)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    mSpawnable.each([this, aDelta, mLevel = *mGameContext->mLevel](EntHandle aPlayerHandle, component::PlayerLifeCycle & aPlayer,
+    mSpawnable.each([this, &aDelta](EntHandle aPlayerHandle, component::PlayerLifeCycle & aPlayer,
                                    component::Geometry & aPlayerGeometry) {
         if (!aPlayer.mIsAlive) {
             if (aPlayer.mTimeToRespawn < 0) {
@@ -25,14 +25,14 @@ void PlayerSpawner::update(float aDelta)
             } else {
                 // TODO: Needs an alg to choose the right spawner if there are
                 // many spawner
-                mSpawner.each([mLevel, aPlayerHandle, &aPlayer, &aPlayerGeometry](component::Spawner & aSpawner) {
+                mSpawner.each([this, aPlayerHandle, &aPlayer, &aPlayerGeometry](component::Spawner & aSpawner) {
                     if (!aPlayer.mIsAlive && !aSpawner.mSpawnedPlayer) {
                         aPlayer.mIsAlive = true;
                         aPlayer.mTimeToRespawn = component::gBaseTimeToRespawn;
                         aPlayer.mInvulFrameCounter = component::gBaseInvulFrameDuration;
                         aPlayerGeometry.mPosition = aSpawner.mSpawnPosition;
                         aSpawner.mSpawnedPlayer = true;
-                        insertEntityInScene(aPlayerHandle, mLevel);
+                        insertEntityInScene(aPlayerHandle, *mGameContext->mLevel);
                     }
                 });
             }

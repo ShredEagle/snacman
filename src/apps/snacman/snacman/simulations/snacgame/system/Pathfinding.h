@@ -117,7 +117,7 @@ pathfind(const math::Position<2, float> & aSource,
             break;
         }
 
-        for (math::Position<2, int> offset : gDirections)
+        for (math::Vec<2, int> offset : gDirections)
         {
             component::PathfindNode & visitedNode =
                 aNodes.at(static_cast<size_t>((int)current->mIndex + offset.x()

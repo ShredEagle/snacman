@@ -73,7 +73,6 @@ EntHandle createLevel(GameContext & aContext, const char * aLvlFile)
         levelEntity.add(component::LevelData(aContext.mWorld,
                                              markovRoot.value(), aLvlFile,
                                              {15, 15, 1}, 123123));
-        levelEntity.add(component::LevelToCreate{});
         levelEntity.add(component::SceneNode{});
         levelEntity.add(component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
         levelEntity.add(component::GlobalPose{});
@@ -106,9 +105,9 @@ GameScene::GameScene(const std::string & aName,
                 mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml");
 }
 
-
 void GameScene::teardown(RawInput & aInput)
 {
+    TIME_SINGLE(Main, "teardown game scene");
     {
         Phase destroy;
 
@@ -211,20 +210,24 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
     }
 
     mSystems.get(update)->get<system::LevelCreator>().update();
-    mSystems.get(update)->get<system::RoundMonitor>().update();
-    mSystems.get(update)->get<system::PlayerInvulFrame>().update((float)aTime.mDeltaSeconds);
+
+    mSystems.get(update)->get<system::PlayerInvulFrame>().update(aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::AllowMovement>().update();
     mSystems.get(update)->get<system::ConsolidateGridMovement>().update((float)aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update((float)aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::MovementIntegration>().update((float)aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
     mSystems.get(update)->get<system::Pathfinding>().update();
-    mSystems.get(update)->get<system::EatPill>().update();
+    mSystems.get(update)->get<system::PortalManagement>().preGraphUpdate();
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
-    mSystems.get(update)->get<system::PowerUpUsage>().update();
-    mSystems.get(update)->get<system::PortalManagement>().update();
-    mSystems.get(update)->get<system::PlayerSpawner>().update((float)aTime.mDeltaSeconds);
+
+    mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate();
+    mSystems.get(update)->get<system::PowerUpUsage>().update(aTime.mDeltaSeconds);
+    mSystems.get(update)->get<system::EatPill>().update();
+
+    mSystems.get(update)->get<system::RoundMonitor>().update();
+    mSystems.get(update)->get<system::PlayerSpawner>().update(aTime.mDeltaSeconds);
 
     mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
 

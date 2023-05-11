@@ -7,16 +7,6 @@ namespace component {
 struct Pill
 {};
 
-enum class PowerUpType {
-    Dog,
-};
-
-struct PowerUp
-{
-    PowerUpType mType;
-    bool mPickedUp = false;
-};
-
 struct LevelEntity
 {};
 

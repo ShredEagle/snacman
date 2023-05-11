@@ -41,8 +41,6 @@ void GlobalPose::drawUi() const
 
 void PlayerMoveState::drawUi() const
 {
-    ImGui::Text("Current portal %d", mCurrentPortal);
-    ImGui::Text("Dest portal %d", mDestinationPortal);
 }
 
 void AllowedMovement::drawUi() const

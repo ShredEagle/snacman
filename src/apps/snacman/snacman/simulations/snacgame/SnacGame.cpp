@@ -7,6 +7,7 @@
 #include "scene/Scene.h"
 #include "SimulationControl.h"
 #include "SceneGraph.h"
+#include "snacman/simulations/snacgame/component/PlayerHud.h"
 #include "system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
 #include "typedef.h"
@@ -85,19 +86,17 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mQueryRenderable{mGameContext.mWorld, mGameContext.mWorld},
     mQueryTextWorld{mGameContext.mWorld, mGameContext.mWorld},
     mQueryTextScreen{mGameContext.mWorld, mGameContext.mWorld},
+    mQueryHuds{mGameContext.mWorld, mGameContext.mWorld},
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
 
     // Creating the slot entity those will be used a player entities
-    mGameContext.mWorld.addEntity().get(init)->add(
-        component::PlayerSlot{0, false, gSlotColors.at(0)});
-    mGameContext.mWorld.addEntity().get(init)->add(
-        component::PlayerSlot{1, false, gSlotColors.at(1)});
-    mGameContext.mWorld.addEntity().get(init)->add(
-        component::PlayerSlot{2, false, gSlotColors.at(2)});
-    mGameContext.mWorld.addEntity().get(init)->add(
-        component::PlayerSlot{3, false, gSlotColors.at(3)});
+    for (int i = 0; i < gMaxPlayerSlots; ++i)
+    {
+        mGameContext.mWorld.addEntity().get(init)->add(
+            component::PlayerSlot{i, false, gSlotColors.at(i)});
+    }
 
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(scene::Transition{}, aInput);
@@ -494,6 +493,49 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                     .mColor = aText.mColor,
                 });
         });
+
+    auto font =
+        mGameContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120);
+
+    mQueryHuds.get(nomutation)
+        .each([&font, &state, this](ent::Handle<ent::Entity> aHandle,
+                    const component::PlayerHud & aHud, const component::PlayerSlot & aSlot)
+    {
+        math::Position<3, float> position_screenPix{component::gHudPositions.at(aSlot.mIndex).cwMul(
+                    static_cast<math::Position<2, GLfloat>>(this->mAppInterface->getFramebufferSize())/2.f),
+        0.f};
+        math::Position<3, float> powerupOffset{math::Position<2, float>{0.f, -0.1f}.cwMul(
+                    static_cast<math::Position<2, GLfloat>>(this->mAppInterface->getFramebufferSize())/2.f),
+        0.f};
+
+
+        std::ostringstream playerText;
+        playerText << "P" << aSlot.mIndex + 1 << " "
+                   << aHud.mScore;
+
+        state->mTextScreenEntities.insert(
+            aHandle.id(),
+            visu::Text{
+                .mPosition_world = position_screenPix,
+                .mScaling = math::Size<3, float>{1.f, 1.f, 1.f}, 
+                .mOrientation = Quat_f::Identity(),
+                .mString = playerText.str(),
+                .mFont = font,
+                .mColor = aSlot.mColor,
+            });
+
+        state->mTextScreenEntities.insert(
+            aHandle.id() + 100,
+            visu::Text{
+                .mPosition_world = position_screenPix + powerupOffset.as<math::Vec>(),
+                .mScaling = math::Size<3, float>{0.3f, 0.3f, 0.3f}, 
+                .mOrientation = Quat_f::Identity(),
+                .mString = aHud.mPowerUpName,
+                .mFont = font,
+                .mColor = aSlot.mColor,
+            });
+
+    });
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
 

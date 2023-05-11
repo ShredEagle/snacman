@@ -23,5 +23,14 @@ constexpr int gGoLeft = 1 << 20;
 constexpr int gGoRight = 1 << 21;
 
 constexpr int gQuitCommand = 1 << 22;
+
+constexpr int gRightJoyUp = 1 << 23;
+constexpr int gRightJoyDown = 1 << 24;
+constexpr int gRightJoyLeft = 1 << 25;
+constexpr int gRightJoyRight = 1 << 26;
+
+constexpr int gBaseTargetShift = 27;
+constexpr int gPrevPowerUpTarget = 1 << gBaseTargetShift;
+constexpr int gNextPowerUpTarget = 1 << (gBaseTargetShift + 1);
 }
 }

@@ -29,9 +29,9 @@ inline Position<2, int> getLevelPosition_i(const Position<2, float> & aPos)
                             static_cast<int>(aPos.y() + gCellSize / 2)};
 }
 
-constexpr std::array<Position<2, int>, 4> gDirections{
-    Position<2, int>{0, 1}, Position<2, int>{0, -1},
-    Position<2, int>{1, 0}, Position<2, int>{-1, 0}};
+constexpr std::array<Vec<2, int>, 4> gDirections{
+    Vec<2, int>{0, 1}, Vec<2, int>{0, -1},
+    Vec<2, int>{1, 0}, Vec<2, int>{-1, 0}};
 
 constexpr std::array<const int, 4> gAllowedMovement{
     gAllowedMovementUp, gAllowedMovementDown,

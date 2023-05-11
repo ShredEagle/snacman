@@ -19,6 +19,7 @@ void MovementIntegration::update(float aDelta)
             math::Quaternion rotation{aMovement.mRotation.mAxis, aDelta * aMovement.mRotation.mAngle};
             // Quaternion multiplication perform rotation from right to left
             aPose.mOrientation = rotation * aPose.mOrientation;
+            aPose.mPosition += aDelta * aMovement.mSpeed;
         }
     );
     mScreenMovables.each(

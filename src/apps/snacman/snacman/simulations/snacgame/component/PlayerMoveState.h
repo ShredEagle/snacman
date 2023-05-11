@@ -9,8 +9,6 @@ namespace component {
 struct PlayerMoveState
 {
     int mMoveState = gPlayerMoveFlagNone;
-    int mCurrentPortal = -1;
-    int mDestinationPortal = -1;
 
     void drawUi() const;
 };
