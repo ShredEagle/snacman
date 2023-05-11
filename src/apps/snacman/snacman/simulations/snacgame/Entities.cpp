@@ -159,7 +159,7 @@ ent::Handle<ent::Entity> createAnimatedTest(GameContext & aContext,
     entity.add(component::RigAnimation{
         .mAnimation = &animation,
         .mStartTime = aStartTime,
-        .mParameter{animation.mEndTime},
+        .mParameter = decltype(component::RigAnimation::mParameter){animation.mEndTime},
     });
     entity.add(component::LevelEntity{});
 
