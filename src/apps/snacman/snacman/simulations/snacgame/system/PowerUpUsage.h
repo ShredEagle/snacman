@@ -3,6 +3,7 @@
 #include "snacman/simulations/snacgame/component/Geometry.h"
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "snacman/simulations/snacgame/component/PlayerHud.h"
+#include "snacman/simulations/snacgame/component/Speed.h"
 #include "snacman/simulations/snacgame/component/VisualModel.h"
 
 #include "../component/Collision.h"
@@ -31,13 +32,14 @@ public:
         mPlayers{mGameContext->mWorld},
         mPowUpPlayers{mGameContext->mWorld},
         mPowerups{mGameContext->mWorld},
-        mInGamePowerups(mGameContext->mWorld)
+        mInGameDogPowerups(mGameContext->mWorld),
+        mInGameMissilePowerups(mGameContext->mWorld)
     {}
 
     void update(float aDelta);
 
     std::pair<math::Position<2, float>, ent::Handle<ent::Entity>>
-    getPowerupPlacementTile(ent::Handle<ent::Entity> aHandle,
+    getDogPlacementTile(ent::Handle<ent::Entity> aHandle,
                             const component::Geometry & aPlayerGeo);
     std::optional<ent::Handle<ent::Entity>>
     getClosestPlayer(ent::Handle<ent::Entity> aHandle,
@@ -68,8 +70,15 @@ private:
     ent::Query<component::GlobalPose,
                component::InGamePowerup,
                component::Collision,
+               component::Geometry,
                component::LevelEntity>
-        mInGamePowerups;
+        mInGameDogPowerups;
+    ent::Query<component::GlobalPose,
+               component::InGamePowerup,
+               component::Speed,
+               component::Geometry,
+               component::LevelEntity>
+        mInGameMissilePowerups;
 };
 
 } // namespace system

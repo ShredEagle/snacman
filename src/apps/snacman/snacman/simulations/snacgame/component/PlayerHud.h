@@ -17,6 +17,7 @@ const std::array<math::Position<2, float>, 4> gHudPositions{
 const std::array<const char *, static_cast<unsigned int>(PowerUpType::_End)> gPowerUpName{
     "Donut Seeking dog",
     "Donut swapper",
+    "Donut controlled missile"
 };
 
 struct PlayerHud

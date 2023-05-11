@@ -18,14 +18,18 @@ enum class PowerUpType : unsigned int
 struct PowerUpBaseInfo
 {
     const char * mPath = "";
-    const math::Quaternion<float> mOrientation =
+    const math::Quaternion<float> mLevelOrientation =
         math::Quaternion<float>::Identity();
-    const math::Size<3, float> mInstanceScale = {1.f, 1.f, 1.f};
-    const float mScaling = 1.f;
+    const math::Quaternion<float> mPlayerOrientation =
+        math::Quaternion<float>::Identity();
+    const math::Size<3, float> mLevelInstanceScale = {1.f, 1.f, 1.f};
+    const math::Size<3, float> mPlayerInstanceScale = {1.f, 1.f, 1.f};
+    const float mLevelScaling = 1.f;
+    const float mPlayerScaling = 1.f;
     const math::Vec<3, float> mPosOffset = math::Vec<3, float>::Zero();
 };
 
-const math::Quaternion<float> gBasePowerupQuat =  math::Quaternion<float>{
+const math::Quaternion<float> gLevelBasePowerupQuat =  math::Quaternion<float>{
     math::UnitVec<3, float>{{1.f, 0.f, 0.f}}, math::Turn<float>{0.2f}};
 
 constexpr std::array<PowerUpBaseInfo,
@@ -33,15 +37,19 @@ constexpr std::array<PowerUpBaseInfo,
     gPowerupPathByType{
         PowerUpBaseInfo{
             .mPath = "models/collar/collar.gltf",
-            .mScaling = 0.2f,
+            .mLevelScaling = 0.2f,
+            .mPlayerScaling = 0.2f,
         },
         PowerUpBaseInfo{
             .mPath = "models/teleport/teleport.gltf",
-            .mScaling = 0.3f,
+            .mLevelScaling = 0.3f,
+            .mPlayerScaling = 0.3f,
         },
         PowerUpBaseInfo{
             .mPath = "models/missile/missile.gltf",
-            .mScaling = 0.2f,
+            .mPlayerOrientation = math::Quaternion<float>{0.f, 0.f, -0.707f, 0.707f},
+            .mLevelScaling = 0.3f,
+            .mPlayerScaling = 0.3f,
         },
     };
 

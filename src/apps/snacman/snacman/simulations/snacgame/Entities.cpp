@@ -168,8 +168,8 @@ createPowerUp(GameContext & aContext,
         aPhase, aContext, powerUp, info.mPath,
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gPillHeight},
-        info.mScaling, info.mInstanceScale,
-        component::gBasePowerupQuat * info.mOrientation);
+        info.mLevelScaling, info.mLevelInstanceScale,
+        component::gLevelBasePowerupQuat * info.mLevelOrientation);
     powerUp
         .add(component::Speed{
             .mRotation =
@@ -192,7 +192,7 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     addMeshGeoNode(
         init, aContext, powerUp,
         info.mPath,
-        {1.f, 1.f, 0.f}, 0.3f, {1.f, 1.f, 1.f});
+        {1.f, 1.f, 0.f}, info.mPlayerScaling, info.mPlayerInstanceScale, info.mPlayerOrientation);
     return handle;
 }
 
@@ -406,6 +406,7 @@ void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
         switch (powerup.mType)
         {
         case component::PowerUpType::Dog:
+        case component::PowerUpType::Missile:
             break;
         case component::PowerUpType::Teleport:
             if (std::get<component::TeleportPowerUpInfo>(powerup.mInfo)
@@ -417,7 +418,6 @@ void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
             }
             break;
         case component::PowerUpType::_End:
-        default:
             break;
         }
 
@@ -451,6 +451,8 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
     playerEntity.remove<component::SceneNode>();
     playerEntity.remove<component::GlobalPose>();
     playerEntity.remove<component::PlayerHud>();
+
+    removeRoundTransientPlayerComponent(aPhase, aHandle);
 
     playerEntity.get<component::PlayerModel>().mModel.get(aPhase)->erase();
     playerEntity.remove<component::PlayerModel>();
