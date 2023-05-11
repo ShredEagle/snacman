@@ -113,7 +113,7 @@ public:
              arte::Freetype & aFreetype,
              RawInput & aInput);
 
-    bool update(const snac::Time & aTime, RawInput & aInput);
+    bool update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput);
 
     void drawDebugUi(snac::ConfigurableSettings & aSettings,
                      ImguiInhibiter & aInhibiter,
@@ -137,6 +137,8 @@ private:
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;
+
+    snac::Time mSimulationTime;
 };
 
 } // namespace snacgame

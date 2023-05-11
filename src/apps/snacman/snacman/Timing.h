@@ -20,31 +20,45 @@ constexpr double asSeconds(Clock::duration aDuration)
     return aDuration.count() * gTickPeriod;
 }
 
+// Note: There are several timelines and periods involved:
+// * The wall-time timepoint ("real world time")
+// * The simulation update period == how much real-time should ideally elapse between two call to Simulation::update()
+// * The simulation timepoint (what is the time in the simulation)
+// * The simulation delta == the duration that should be simulated by the call to Simulation::update()
 struct Time
 {
-    void setSimulationDelta(Clock::duration aDelta)
-    { 
-        mSimulationDeltaDuration = aDelta;
-        mSimulationDeltaSeconds = asSeconds(mSimulationDeltaDuration); 
-    }
-
     /// @brief Advance by the currently set delta
     Time & advance()
     {
-        mSimulationTimepoint += mSimulationDeltaDuration;
+        mTimepoint += mDeltaDuration;
         return *this;
     }
 
     /// @brief Advance by the newly set delta
     Time & advance(Clock::duration aDelta)
     {
-        setSimulationDelta(aDelta);
+        setDelta(aDelta);
         return advance();
     }
 
-    Clock::time_point mSimulationTimepoint;
-    Clock::duration mSimulationDeltaDuration;
-    double mSimulationDeltaSeconds;
+    /// @brief Set the provided timepoint, computing the delta from last timepoint
+    Time & setTimepoint(Clock::time_point aTimepoint)
+    {
+        setDelta(aTimepoint - mTimepoint);
+        mTimepoint = aTimepoint;
+    }
+
+private:
+    void setDelta(Clock::duration aDelta)
+    { 
+        mDeltaDuration = aDelta;
+        mDeltaSeconds = asSeconds(mDeltaDuration); 
+    }
+
+public:
+    Clock::time_point mTimepoint; // the timepoint in the timeline of the simulation
+    Clock::duration mDeltaDuration; // 
+    double mDeltaSeconds;
 };
 
 

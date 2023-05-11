@@ -75,8 +75,8 @@ void runApplication()
 {
     SELOG(info)("I'm a snac man.");
     SELOG(debug)
-    ("Initial delta time {}ms.",
-     std::chrono::duration_cast<ms>(gSimulationDelta).count());
+    ("Initial simulation perdiod {}ms.",
+     std::chrono::duration_cast<ms>(gSimulationPeriod).count());
 
     initializeDebugDrawers();
 
@@ -160,12 +160,11 @@ void runApplication()
     //
     // Main simulation loop
     //
-    Time time;
 
     // TODO we might extend the Time structure to handle user wall-time
     // and use this facility to handle simulation steps pacing.
     Clock::time_point beginStepTime =
-        Clock::now() - configurableSettings.mSimulationDelta;
+        Clock::now() - configurableSettings.mSimulationPeriod;
 
     while (glfwApp.handleEvents())
     {
@@ -184,7 +183,7 @@ void runApplication()
         {
             TIME_RECURRING(Main, "Simulation_update");
             if (simulation.update(
-                    time.advance(configurableSettings.mSimulationDelta),
+                    configurableSettings.mSimulationPeriod,
                     input))
             {
                 break;
@@ -214,17 +213,17 @@ void runApplication()
         // inconsistency on each new delta value. (Because an update for
         // duration D2 would be presented after a duration of D1.)
 
-        // End the step profiling explicitly here (instead of adding a nesting level)
+        // End the step profiling explicitly here (instead of adding a brace nesting level)
         END_RECURRING(stepRecurringScope);
 
         if (!gWaitByBusyLoop)
         {
             if (auto beforeSleep = Clock::now();
-                (beginStepTime + configurableSettings.mSimulationDelta)
+                (beginStepTime + configurableSettings.mSimulationPeriod)
                 > beforeSleep)
             {
                 Clock::duration ahead = beginStepTime
-                                        + configurableSettings.mSimulationDelta
+                                        + configurableSettings.mSimulationPeriod
                                         - beforeSleep;
                 // Could be sleep_until
                 std::this_thread::sleep_for(ahead);
@@ -240,7 +239,7 @@ void runApplication()
         {
             TIME_RECURRING(Main, "busy_wait");
             SleepResult slept =
-                sleepBusy(configurableSettings.mSimulationDelta, beginStepTime);
+                sleepBusy(configurableSettings.mSimulationPeriod, beginStepTime);
             SELOG(trace)
             ("Expected to sleep for {}ms, actually slept for {}ms",
              std::chrono::duration_cast<ms>(slept.targetDuration).count(),

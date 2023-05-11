@@ -247,13 +247,13 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             ImGui::Begin("Gameloop", &mImguiDisplays.mShowSimulationDelta);
             int simulationDelta =
                 (int) duration_cast<std::chrono::milliseconds>(
-                    aSettings.mSimulationDelta)
+                    aSettings.mSimulationPeriod)
                     .count();
-            if (ImGui::InputInt("Simulation period (ms)", &simulationDelta))
+            if (ImGui::InputInt("Update call period (ms)", &simulationDelta))
             {
                 simulationDelta = std::clamp(simulationDelta, 1, 200);
             }
-            aSettings.mSimulationDelta =
+            aSettings.mSimulationPeriod =
                 std::chrono::milliseconds{simulationDelta};
             int updateDuration = (int) duration_cast<std::chrono::milliseconds>(
                                      aSettings.mUpdateDuration)
@@ -345,7 +345,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     }
 }
 
-bool SnacGame::update(const snac::Time & aTime, RawInput & aInput)
+bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
 {
     snac::DebugDrawer::StartFrame();
 
@@ -354,18 +354,19 @@ bool SnacGame::update(const snac::Time & aTime, RawInput & aInput)
         snac::Camera::gDefaults.vFov, // TODO Should be dynamic
         mAppInterface->getWindowSize().height());
 
+    // If the simulation is paused and step was not pressed, return now
+    // This avoids incrementing the simulation time, and does not call the systems update
     if (!mGameContext.mSimulationControl.mPlaying
         && !mGameContext.mSimulationControl.mStep)
     {
         return false;
     }
 
-    //float updateDelta = aDelta / mGameContext.mSimulationControl.mSpeedRatio;
-    snac::Clock::duration updateDelta = aTime.mSimulationDeltaDuration;
+    mSimulationTime.advance(aUpdatePeriod / mGameContext.mSimulationControl.mSpeedRatio);
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
     std::optional<scene::Transition> transition =
-        mStateMachine->getCurrentScene()->update(aTime, aInput);
+        mStateMachine->getCurrentScene()->update(mSimulationTime, aInput);
 
     if (transition)
     {
@@ -387,8 +388,8 @@ bool SnacGame::update(const snac::Time & aTime, RawInput & aInput)
         TIME_RECURRING(Main, "Save state");
         mGameContext.mSimulationControl.saveState(
             mGameContext.mWorld.saveState(),
-            std::chrono::duration_cast<std::chrono::milliseconds>(aTime.mSimulationDeltaDuration),
-            std::chrono::duration_cast<std::chrono::milliseconds>(updateDelta));
+            std::chrono::duration_cast<std::chrono::milliseconds>(aUpdatePeriod),
+            std::chrono::duration_cast<std::chrono::milliseconds>(mSimulationTime.mDeltaDuration));
     }
 
     return false;

@@ -5,12 +5,12 @@
 namespace ad {
 namespace snac {
 
-constexpr Clock::duration gSimulationDelta = Clock::duration{std::chrono::seconds{1}} / 100;
+constexpr Clock::duration gSimulationPeriod = Clock::duration{std::chrono::seconds{1}} / 100;
 
 struct ConfigurableSettings
 {
-    Clock::duration mSimulationDelta{
-        gSimulationDelta};
+    Clock::duration mSimulationPeriod{
+        gSimulationPeriod};
     Clock::duration mUpdateDuration{0};
     std::atomic<bool> mInterpolate{true};
 };

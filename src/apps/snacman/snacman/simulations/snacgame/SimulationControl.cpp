@@ -13,9 +13,9 @@ constexpr ImU32 colorNoState = IM_COL32(50, 0, 200, 255);
 constexpr ImU32 unselectedBorderColor = IM_COL32(233, 233, 233, 255);
 constexpr ImU32 selectedBorderColor = IM_COL32(0, 233, 0, 255);
 constexpr float rectHeight = 40.f;
-constexpr float maxSpeedRatio = 64.f;
-constexpr float minSpeedRatio = 1.f;
-constexpr float speedRatioStep = 2.f;
+constexpr int maxSpeedRatio = 64;
+constexpr int minSpeedRatio = 1;
+constexpr int speedRatioStep = 2;
 
 
 void SimulationControl::drawSimulationUi(ent::EntityManager & aWorld, bool * open)
@@ -51,7 +51,7 @@ void SimulationControl::drawSimulationUi(ent::EntityManager & aWorld, bool * ope
         mSpeedRatio /= speedRatioStep;
     }
     ImGui::SameLine();
-    ImGui::Text("1/%.0fx", mSpeedRatio);
+    ImGui::Text("1/%ix", mSpeedRatio);
     if (ImGui::Button("Start saving states"))
     {
         mSaveGameState = true;

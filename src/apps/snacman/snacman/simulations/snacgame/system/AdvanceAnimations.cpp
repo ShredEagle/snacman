@@ -8,13 +8,13 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
-void AdvanceAnimations::update(const snac::Time & aTime)
+void AdvanceAnimations::update(const snac::Time & aSimulationTime)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
     mAnimations.each([&](component::RigAnimation & aRigAnimation)
     {
-        aRigAnimation.mParameterValue = aRigAnimation.getParameter(aTime.mSimulationTimepoint);
+        aRigAnimation.mParameterValue = aRigAnimation.getParameter(aSimulationTime.mTimepoint);
     });
 }
 
