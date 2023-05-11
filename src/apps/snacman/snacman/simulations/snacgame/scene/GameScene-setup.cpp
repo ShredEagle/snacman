@@ -3,6 +3,7 @@
 
 #include "GameScene.h"
 
+#include "../system/AdvanceAnimations.h"
 #include "../system/AllowMovement.h"
 #include "../system/ConsolidateGridMovement.h"
 #include "../system/Debug_BoundingBoxes.h"
@@ -55,6 +56,7 @@ void GameScene::setup(const Transition & aTransition, RawInput & aInput)
             .add(system::IntegratePlayerMovement{mGameContext})
             .add(system::LevelCreator{mGameContext})
             .add(system::MovementIntegration{mGameContext})
+            .add(system::AdvanceAnimations{mGameContext})
             .add(system::EatPill{mGameContext})
             .add(system::PortalManagement{mGameContext})
             .add(system::PowerUpUsage{mGameContext})

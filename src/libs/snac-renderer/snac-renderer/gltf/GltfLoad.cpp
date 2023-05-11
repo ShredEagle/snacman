@@ -1,5 +1,6 @@
 #include "GltfLoad.h"
 
+#include "LoadAnimation.h"
 #include "LoadBuffer.h"
 
 #include "../Logging.h"
@@ -39,9 +40,11 @@ namespace {
         MAPPING(TANGENT, Tangent)
         MAPPING(TEXCOORD_0, TextureCoords0)
         MAPPING(TEXCOORD_1, TextureCoords1)
+        MAPPING(JOINTS_0, Joints0)
+        MAPPING(WEIGHTS_0, Weights0)
         else
         {
-            SELOG(debug)("Gltf semantic \"{}\" is not handled.", aGltfSemantic);
+            SELOG(info)("Gltf semantic \"{}\" is not handled.", aGltfSemantic);
             return std::nullopt;
         }
 
@@ -49,9 +52,10 @@ namespace {
     }
 
 
+    /// @brief Prepare an OpenGL buffer loaded with the data from the complete `aBufferView`.
+    /// @tparam T_buffer Type of OpenGL buffer.
     template <class T_buffer>
-    T_buffer prepareBuffer(Const_Owned<gltf::Accessor> aAccessor,
-                           Const_Owned<gltf::BufferView> aBufferView)
+    T_buffer prepareGLBuffer(Const_Owned<gltf::BufferView> aBufferView)
     {
         GLenum target = [&]()
         {
@@ -74,7 +78,7 @@ namespace {
         glBindBuffer(target, buffer);
         glBufferData(target,
                      aBufferView->byteLength,
-                     loadBufferData(aAccessor, aBufferView).data(),
+                     loadBufferViewData(aBufferView).data(),
                      GL_STATIC_DRAW);
         glBindBuffer(target, 0);
 
@@ -88,12 +92,11 @@ namespace {
     }
 
 
-    BufferView prepareBufferView(Const_Owned<gltf::Accessor> aAccessor)
+    BufferView prepareBufferView(Const_Owned<gltf::BufferView> aGltfBufferView)
     {
-        auto gltfBufferView = checkedBufferView(aAccessor);
         return BufferView{
-            .mBuffer = prepareBuffer<graphics::VertexBufferObject>(aAccessor, gltfBufferView),
-            .mStride = (GLsizei)gltfBufferView->byteStride.value_or(0),
+            .mBuffer = prepareGLBuffer<graphics::VertexBufferObject>(aGltfBufferView),
+            .mStride = (GLsizei)aGltfBufferView->byteStride.value_or(0),
         };
     }
 
@@ -248,7 +251,7 @@ namespace {
                 // TODO implement some assertions that distinct buffer views do not overlap on a buffer range.
                 // (since at the moment we create one distinct GL buffer per buffer view).
                 bufferViewId = stream.mVertexBuffers.size();
-                stream.mVertexBuffers.push_back(prepareBufferView(accessor));
+                stream.mVertexBuffers.push_back(prepareBufferView(checkedBufferView(accessor)));
                 bufferViewMap.emplace(gltfBufferViewId, bufferViewId);
             }
 
@@ -293,7 +296,7 @@ namespace {
 
             auto gltfBufferView = checkedBufferView(indicesAccessor);
             stream.mIndices = IndicesAccessor{
-                .mIndexBuffer = prepareBuffer<graphics::IndexBufferObject>(indicesAccessor, gltfBufferView),
+                .mIndexBuffer = prepareGLBuffer<graphics::IndexBufferObject>(gltfBufferView),
                 .mIndexCount = (GLsizei)indicesAccessor->count,
                 .mAttribute = attributeFromAccessor(indicesAccessor),
             };
@@ -383,18 +386,37 @@ namespace {
 } // unnamed namespace
 
 
-Model loadGltf(filesystem::path aModel, std::string_view aName)
+Model loadGltf(const arte::Gltf & aGltf, std::string_view aName)
 {
-    arte::Gltf gltf{aModel};
-
     Model model{
         .mName = std::string{aName},
     };
 
     bool firstPrimitive = true;
 
-    // Collapse the primitives from all meshes in the file into a single collection of primitives.
-    for (Owned<gltf::Mesh> gltfMesh : gltf.getMeshes())
+
+    auto gltfSkins = aGltf.getSkins();
+    assert(gltfSkins.size() <= 1); // Only support a maximum of one rig per model at this moment
+    if(gltfSkins.size() == 1)
+    {
+        // We hardcode loading the first scene in the node hierarchy, assuming there is just one.
+        assert(aGltf.countScenes() == 1); 
+        std::tie(model.mRig, model.mAnimations) = 
+            loadSkeletalAnimation(aGltf, 0/*skin index*/, 0/*scene index*/);
+    }
+
+    std::unordered_map<std::size_t/*gltf-mesh index*/, std::size_t/*gltf-skin index*/> mMeshToSkin;
+    for (Const_Owned<gltf::Node> gltfNode : aGltf.getNodes())
+    {
+        if(auto skin = gltfNode->skin)
+        {
+            assert(gltfNode->mesh);
+            mMeshToSkin[*gltfNode->mesh] = *skin;
+        }
+    }
+
+    // Create a distinct Model mesh for (each Gltf primitive (of each Gltf mesh)).
+    for (Const_Owned<gltf::Mesh> gltfMesh : aGltf.getMeshes())
     {
         const std::string & meshName = 
             (gltfMesh->name.empty() ? std::string{"<mesh#"} + std::to_string(gltfMesh.id()) + ">" : gltfMesh->name);
@@ -417,6 +439,7 @@ Model loadGltf(filesystem::path aModel, std::string_view aName)
 
     return model;
 }
+
 
 
 } // namespace snac

@@ -36,7 +36,7 @@ public:
               ent::Handle<ent::Entity> aSceneRoot
               );
 
-    std::optional<Transition> update(float aDelta,
+    std::optional<Transition> update(const snac::Time & aTime,
                                      RawInput & aInput) override;
 
     void setup(const Transition & aTransition, RawInput & aInput) override;

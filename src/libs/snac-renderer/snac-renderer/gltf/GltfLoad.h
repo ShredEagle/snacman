@@ -2,6 +2,9 @@
 
 
 #include "../Mesh.h"
+#include "../Rigging.h"
+
+#include <arte/gltf/Gltf.h>
 
 #include <platform/Filesystem.h>
 
@@ -10,7 +13,13 @@ namespace ad {
 namespace snac {
 
 
-Model loadGltf(filesystem::path aModel, std::string_view aName);
+Model loadGltf(const arte::Gltf & aGltf, std::string_view aName);
+
+inline Model loadGltf(filesystem::path aModel, std::string_view aName)
+{
+    return loadGltf(arte::Gltf{aModel}, aName);
+}
+
 
 inline Model loadGltf(filesystem::path aModel)
 {
@@ -19,7 +28,6 @@ inline Model loadGltf(filesystem::path aModel)
     // Sadly, at this point this information is lost, we only have the actual full path.
     return loadGltf(aModel, aModel.filename().string());
 }
-
 
 
 } // namespace snac

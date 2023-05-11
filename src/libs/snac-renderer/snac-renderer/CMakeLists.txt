@@ -14,6 +14,7 @@ set(${TARGET_NAME}_HEADERS
     Mesh.h
     Render.h
     ResourceLoad.h
+    Rigging.h
     Semantic.h
     SetupDrawing.h
     ShaderResource.h
@@ -24,6 +25,7 @@ set(${TARGET_NAME}_HEADERS
     3rdparty/nvpro/Profiler_gl.hpp
 
     gltf/GltfLoad.h
+    gltf/LoadAnimation.h
     gltf/LoadBuffer.h
 
     pipelines/ForwardShadows.h
@@ -43,6 +45,7 @@ set(${TARGET_NAME}_SOURCES
     Mesh.cpp
     Render.cpp
     ResourceLoad.cpp
+    Rigging.cpp
     Semantic.cpp
     SetupDrawing.cpp
     ShaderResource.cpp
@@ -54,6 +57,7 @@ set(${TARGET_NAME}_SOURCES
     text/TextRenderer.cpp
 
     gltf/GltfLoad.cpp
+    gltf/LoadAnimation.cpp
     gltf/LoadBuffer.cpp
 
     pipelines/ForwardShadows.cpp

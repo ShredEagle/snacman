@@ -11,6 +11,8 @@
 
 #include <platform/Filesystem.h>
 
+#include <renderer/BufferLoad.h>
+
 #include <snac-renderer/text/Text.h>
 #include <snac-renderer/Instances.h>
 #include <snac-renderer/Semantic.h>
@@ -25,6 +27,11 @@
 // TODO #generic-render remove once all geometry and shader programs are created
 // outside.
 
+
+static constexpr unsigned int gMaxBones = 32;
+static constexpr unsigned int gMaxRiggedInstances = 16;
+
+
 namespace ad {
 namespace snacgame {
 
@@ -35,10 +42,12 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface,
                    arte::FontFace aDebugFontFace) :
     mAppInterface{aAppInterface},
     mPipelineShadows{aAppInterface, aTechniqueAccess},
-    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()),
-            snac::Camera::gDefaults},
+    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults},
     mDebugRenderer{aTechniqueAccess, std::move(aDebugFontFace)}
 {
+    graphics::initialize<math::AffineMatrix<4, float>>(mJointMatrices,
+                                                       gMaxBones * gMaxRiggedInstances,
+                                                       graphics::BufferHint::DynamicDraw);
     mPipelineShadows.getControls().mShadowBias = 0.0005f;
 }
 
@@ -49,18 +58,19 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface,
 //}
 
 std::shared_ptr<snac::Model> Renderer::LoadModel(filesystem::path aModel,
+                                                 filesystem::path aEffect, 
                                                  snac::Resources & aResources)
 {
     if (aModel.string() == "CUBE")
     {
         auto model = std::make_shared<snac::Model>();
-        model->mParts.push_back({snac::loadCube(aResources.getShaderEffect("effects/Mesh.sefx"))});
+        model->mParts.push_back({snac::loadCube(aResources.getShaderEffect(aEffect))});
         return model;
     }
     else
     {
         return std::make_shared<snac::Model>(
-            loadModel(aModel, aResources.getShaderEffect("effects/MeshTextures.sefx")));
+            loadModel(aModel, aResources.getShaderEffect(aEffect)));
     }
 }
 
@@ -127,28 +137,45 @@ void Renderer::render(const visu::GraphicState & aState)
     TIME_RECURRING_GL("Render");
 
     // Stream the instance buffer data
-    std::map<snac::Model *, std::vector<snac::PoseColor>> sortedModels;
+    std::map<snac::Model *, std::vector<snac::PoseColorSkeleton>> sortedModels;
 
     BEGIN_RECURRING_GL("Sort_meshes", sortModelProfile);
+    GLuint jointMatricesCount = 0;
     for (const visu::Entity & entity : aState.mEntities)
     {
-        sortedModels[entity.mModel.get()].push_back(snac::PoseColor{
+        GLuint matrixPaletteOffset = std::numeric_limits<GLuint>::max();
+        if(entity.mRigging.mAnimation != nullptr)
+        {
+            {
+                TIME_RECURRING_GL("Prepare_joint_matrices");
+
+                entity.mRigging.mAnimation->animate(
+                    (float)entity.mRigging.mParameterValue,
+                    entity.mRigging.mRig->mScene);
+
+                const auto jointMatrices = entity.mRigging.mRig->computeJointMatrices();
+                graphics::replaceSubset(mJointMatrices, jointMatricesCount, std::span{jointMatrices});
+            }
+
+            matrixPaletteOffset = jointMatricesCount;
+            jointMatricesCount += (GLuint)entity.mRigging.mRig->mJoints.size();
+        }
+
+        sortedModels[entity.mModel.get()].push_back(snac::PoseColorSkeleton{
             .pose = math::trans3d::scale(entity.mScaling)
                     * entity.mOrientation.toRotationMatrix()
                     * math::trans3d::translate(
                         entity.mPosition_world.as<math::Vec>()),
             .albedo = to_sdr(entity.mColor),
+            .matrixPaletteOffset = matrixPaletteOffset,
         });
     }
     END_RECURRING_GL(sortModelProfile);
 
     // Position camera
-    mCamera.setWorldToCamera(aState.mCamera.mWorldToCamera);
-    // TODO #camera remove that local camera
-    snac::Camera cam{
-        math::getRatio<float>(mAppInterface.getWindowSize()),
-        snac::Camera::gDefaults};
-    cam.setPose(aState.mCamera.mWorldToCamera);
+    // TODO #camera The Camera instance should come from the graphic state directly
+    mCamera.setPose(aState.mCamera.mWorldToCamera);
+    mCameraBuffer.set(mCamera);
 
 
     const math::AffineMatrix<4, GLfloat> worldToLight = 
@@ -171,10 +198,11 @@ void Renderer::render(const visu::GraphicState & aState)
             {snac::Semantic::LightPosition, {lightPosition_cam}},
             {snac::Semantic::AmbientColor, {ambientColor}},
             {snac::Semantic::FramebufferResolution, framebufferSize},
-            {snac::Semantic::ViewingMatrix, cam.assembleViewMatrix()}
+            {snac::Semantic::ViewingMatrix, mCamera.assembleViewMatrix()}
         },
         .mUniformBlocks{
-            {snac::BlockSemantic::Viewing, &mCamera.mViewing},
+            {snac::BlockSemantic::Viewing, &mCameraBuffer.mViewing},
+            {snac::BlockSemantic::JointMatrices, &mJointMatrices},
         }
     };
 
@@ -193,7 +221,7 @@ void Renderer::render(const visu::GraphicState & aState)
         static std::list<snac::InstanceStream> instanceStreams;
         while(instanceStreams.size() < sortedModels.size())
         {
-            instanceStreams.push_back(snac::initializeInstanceStream<snac::PoseColor>());
+            instanceStreams.push_back(snac::initializeInstanceStream<snac::PoseColorSkeleton>());
         }
 
         auto streamIt = instanceStreams.begin();

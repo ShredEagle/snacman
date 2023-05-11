@@ -160,7 +160,8 @@ struct Scene
     };
     std::vector<Entity> mEntities;
 
-    CameraBuffer mCamera;
+    Camera mCamera;
+    CameraBuffer mCameraBuffer;
     MouseOrbitalControl mCameraControl;
     const resource::ResourceFinder & mFinder;
 
@@ -221,7 +222,7 @@ inline Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
     mSizeListening = appInterface.listenWindowResize(
         [this](const math::Size<2, int> & size)
         {
-            mCamera.resetProjection(math::getRatio<float>(size), Camera::gDefaults); 
+            mCamera.setPerspectiveProjection(math::getRatio<float>(size), Camera::gDefaults); 
             mCameraControl.setWindowSize(size);
         });
 
@@ -282,7 +283,8 @@ std::vector<Pass::Visual> Scene::getVisuals() const
 
 inline void Scene::update()
 {
-    mCamera.setWorldToCamera(mCameraControl.getParentToLocal());
+    mCamera.setPose(mCameraControl.getParentToLocal());
+    mCameraBuffer.set(mCamera);
 }
 
 
@@ -319,7 +321,7 @@ inline void Scene::render(Renderer & aRenderer)
             {snac::Semantic::AmbientColor, {ambientColor}},
         },
         .mUniformBlocks{
-            {BlockSemantic::Viewing, &mCamera.mViewing},
+            {BlockSemantic::Viewing, &mCameraBuffer.mViewing},
         },
     };
 

@@ -53,7 +53,9 @@ public:
     //void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
     // TODO Extend beyond cubes.
-    static std::shared_ptr<snac::Model> LoadModel(filesystem::path aModel, snac::Resources & aResources);
+    static std::shared_ptr<snac::Model> LoadModel(filesystem::path aModel,
+                                                  filesystem::path aEffect,
+                                                  snac::Resources & aResources);
 
     std::shared_ptr<snac::Font> loadFont(arte::FontFace aFontFace,
                                          unsigned int aPixelHeight,
@@ -78,10 +80,12 @@ private:
     // TODO Is it the correct place to host the pipeline instance?
     // This notably force to instantiate it with the Renderer (before the Resources manager is available).
     snac::ForwardShadows mPipelineShadows;
-    snac::CameraBuffer mCamera;
+    snac::Camera mCamera;
+    snac::CameraBuffer mCameraBuffer;
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;
+    graphics::UniformBufferObject mJointMatrices;
 };
 
 

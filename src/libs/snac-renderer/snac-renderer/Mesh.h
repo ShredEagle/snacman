@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IntrospectProgram.h"
+#include "Rigging.h"
 #include "Semantic.h"
 #include "UniformParameters.h"
 
@@ -117,6 +118,12 @@ struct Model
     std::vector<Mesh> mParts;
     math::Box<GLfloat> mBoundingBox;
     std::string mName;
+    
+    // TODO I am not happy with this data model, and having everything in the Model,but let's go for it.
+    // Support a single rig for the whole model at the moment, this should change when needed.
+    Rig mRig;
+    // TODO StringId instead of string
+    std::unordered_map<std::string, NodeAnimation> mAnimations;
 };
 
 

@@ -3,11 +3,13 @@
 #include "GameParameters.h"
 
 #include "component/GlobalPose.h"
-#include "snacman/simulations/snacgame/component/Geometry.h"
-#include "snacman/simulations/snacgame/component/LevelTags.h"
 
-#include <entity/Entity.h>
-#include <entity/Query.h>
+#include "entity/Entity.h"
+#include "entity/Query.h"
+
+#include <snacman/Timing.h>
+#include <snacman/simulations/snacgame/component/Geometry.h>
+#include <snacman/simulations/snacgame/component/LevelTags.h>
 
 #include <math/Color.h>
 #include <math/Quaternion.h>
@@ -24,6 +26,7 @@ enum class ControllerType;
 // Forward
 namespace snac {
 struct Font;
+struct Model;
 }
 
 namespace snacgame {
@@ -51,11 +54,12 @@ void addGeoNode(
     math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
     math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
 
-void addMeshGeoNode(
+std::shared_ptr<snac::Model> addMeshGeoNode(
     ent::Phase & aPhase,
     GameContext & aContext,
     ent::Entity & aEnt,
     const char * aModelPath,
+    const char * aEffectPath,
     math::Position<3, float> aPos = math::Position<3, float>::Zero(),
     float aScale = 1.f,
     math::Size<3, float> aInstanceScale = {1.f, 1.f, 1.f},
@@ -65,6 +69,11 @@ void addMeshGeoNode(
 ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
                                          std::string aText,
                                          component::GlobalPose aPose);
+
+ent::Handle<ent::Entity> createAnimatedTest(GameContext & aContext,
+                                            ent::Phase & aPhase,
+                                            snac::Clock::time_point aStartTime,
+                                            const math::Position<2, float> & aGridPos);
 
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
                                     ent::Phase & aPhase,

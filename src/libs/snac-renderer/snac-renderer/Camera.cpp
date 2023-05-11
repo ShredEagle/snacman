@@ -52,28 +52,40 @@ void Camera::setPerspectiveProjection(float aAspectRatio, Parameters aParameters
                                   aAspectRatio,
                                   aParameters.zNear,
                                   aParameters.zFar);
+    mCurrentAspectRatio = aAspectRatio;
     mCurrentParameters = aParameters;
 }
 
 
-CameraBuffer::CameraBuffer(float aAspectRatio, Camera::Parameters aParameters)
+CameraBuffer::CameraBuffer()
 {
     const std::array<math::Matrix<4, 4, float>, 2> identities{
         math::Matrix<4, 4, float>::Identity(),
-        makePerspectiveProjection(aParameters.vFov, aAspectRatio, aParameters.zNear, aParameters.zFar)
+        math::Matrix<4, 4, float>::Identity(),
     };
 
     load(mViewing, std::span{identities}, graphics::BufferHint::DynamicDraw);
 }
 
 
-void CameraBuffer::resetProjection(float aAspectRatio, Camera::Parameters aParameters)
+CameraBuffer::CameraBuffer(Camera aCamera) : CameraBuffer()
 {
-    auto perspectiveProjection = 
-        makePerspectiveProjection(aParameters.vFov, aAspectRatio, aParameters.zNear, aParameters.zFar);
+    set(aCamera);
+}
+
+
+void CameraBuffer::set(Camera aCamera)
+{
+    setWorldToCamera(aCamera.mWorldToCamera);
+    setProjection(aCamera.mProjection);
+}
+
+
+void CameraBuffer::setProjection(const math::Matrix<4, 4, GLfloat> & aProjection)
+{
     graphics::ScopedBind bound{mViewing};
-    glBufferSubData(GL_UNIFORM_BUFFER, sizeof(math::Matrix<4, 4, float>), sizeof(perspectiveProjection),
-                    perspectiveProjection.data());
+    glBufferSubData(GL_UNIFORM_BUFFER, sizeof(math::Matrix<4, 4, float>), sizeof(aProjection),
+                    aProjection.data());
 }
 
 

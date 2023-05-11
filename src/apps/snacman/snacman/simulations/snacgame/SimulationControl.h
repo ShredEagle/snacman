@@ -24,16 +24,14 @@ struct SimulationControl
     bool mPlaying = true;
     bool mStep = false;
     bool mSaveGameState = true;
-    float mSpeedRatio{1.f};
+    int mSpeedRatio{1};
     std::size_t mSaveStateIndex = 0;
     int mSelectedSaveState = -1;
-    std::array<std::optional<SaveState>, gNumberOfSavedStates>
-        mPreviousGameState;
+    std::array<std::optional<SaveState>, gNumberOfSavedStates> mPreviousGameState;
 
     void saveState(ent::State && aState,
                    std::chrono::microseconds aFrameDuration,
-                   std::chrono::microseconds aUpdateDelta
-                   )
+                   std::chrono::microseconds aUpdateDelta)
     {
         mSaveStateIndex = (mSaveStateIndex + 1) % gNumberOfSavedStates;
         if (mSaveStateIndex == static_cast<std::size_t>(mSelectedSaveState))

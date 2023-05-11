@@ -57,7 +57,6 @@ void LevelCreator::update()
                                                 math::Degree<float>{45.f}
                                             },
                         });
-        //insertEntityInScene(title, aLevelHandle);
 
         markovjunior::Grid aGrid = interpreter.mGrid;
 
@@ -134,6 +133,10 @@ void LevelCreator::update()
         // instantiation
         {
         Phase createLevel;
+
+        createAnimatedTest(*mGameContext, createLevel, snac::Clock::now(), {14.f, 7.f});
+        createAnimatedTest(*mGameContext, createLevel, snac::Clock::now() + snac::ms{1000}, { 0.f, 7.f});
+
         for (int i = 1; i < height - 1; ++i)
         {
             for (int j = 1; j < stride - 1; ++j)

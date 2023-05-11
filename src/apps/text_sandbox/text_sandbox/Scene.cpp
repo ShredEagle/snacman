@@ -21,7 +21,7 @@ Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
              const resource::ResourceFinder & aFinder) :
     mAppInterface{*aGlfwApp.getAppInterface()},
     mCamera{math::getRatio<float>(mAppInterface.getFramebufferSize()), Camera::gDefaults},
-    mCameraBuffer{math::getRatio<float>(mAppInterface.getFramebufferSize()), Camera::gDefaults},
+    mCameraBuffer{mCamera},
     mCameraControl{mAppInterface.getWindowSize(), Camera::gDefaults.vFov},
     mFinder{aFinder},
     mDebugRenderer{std::move(aDebugRenderer)},
@@ -60,7 +60,6 @@ Scene::Scene(graphics::ApplicationGlfw & aGlfwApp,
         [this](const math::Size<2, int> & size)
         {
             mCamera.setPerspectiveProjection(math::getRatio<float>(size), Camera::gDefaults); 
-            //mCameraBuffer.resetProjection(math::getRatio<float>(size), Camera::gDefaults); 
             mCameraControl.setWindowSize(size);
         });
 
@@ -71,7 +70,7 @@ void Scene::update()
 {
     DebugDrawer::StartFrame();
     mCamera.setPose(mCameraControl.getParentToLocal());
-    mCameraBuffer.setWorldToCamera(mCameraControl.getParentToLocal());
+    mCameraBuffer.set(mCamera);
     DBGDRAW_INFO(gDebugDrawer).addBasis({});
 }
 

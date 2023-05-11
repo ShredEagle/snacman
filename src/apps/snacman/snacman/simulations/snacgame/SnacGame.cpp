@@ -21,6 +21,7 @@
 #include "component/PlayerSlot.h"
 #include "component/PathToOnGrid.h"
 #include "component/PoseScreenSpace.h"
+#include "component/RigAnimation.h"
 #include "component/SceneNode.h"
 #include "component/Text.h"
 #include "component/VisualModel.h"
@@ -246,13 +247,13 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             ImGui::Begin("Gameloop", &mImguiDisplays.mShowSimulationDelta);
             int simulationDelta =
                 (int) duration_cast<std::chrono::milliseconds>(
-                    aSettings.mSimulationDelta)
+                    aSettings.mSimulationPeriod)
                     .count();
-            if (ImGui::InputInt("Simulation period (ms)", &simulationDelta))
+            if (ImGui::InputInt("Update call period (ms)", &simulationDelta))
             {
                 simulationDelta = std::clamp(simulationDelta, 1, 200);
             }
-            aSettings.mSimulationDelta =
+            aSettings.mSimulationPeriod =
                 std::chrono::milliseconds{simulationDelta};
             int updateDuration = (int) duration_cast<std::chrono::milliseconds>(
                                      aSettings.mUpdateDuration)
@@ -320,7 +321,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 {
                     Phase pathfinding;
                     Entity pEntity = *pathfinder.get(pathfinding);
-                    addMeshGeoNode(pathfinding, mGameContext, pEntity, "CUBE",
+                    addMeshGeoNode(pathfinding, mGameContext, pEntity, 
+                                   "CUBE", "effects/Mesh.sefx",
                                    {7.f, 7.f, gPillHeight}, 1.f,
                                    {0.5f, 0.5f, 0.5f});
                     pEntity.add(component::AllowedMovement{
@@ -344,7 +346,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
     }
 }
 
-bool SnacGame::update(float aDelta, RawInput & aInput)
+bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
 {
     snac::DebugDrawer::StartFrame();
 
@@ -353,18 +355,19 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
         snac::Camera::gDefaults.vFov, // TODO Should be dynamic
         mAppInterface->getWindowSize().height());
 
+    // If the simulation is paused and step was not pressed, return now
+    // This avoids incrementing the simulation time, and does not call the systems update
     if (!mGameContext.mSimulationControl.mPlaying
         && !mGameContext.mSimulationControl.mStep)
     {
         return false;
     }
 
-    float updateDelta = aDelta / mGameContext.mSimulationControl.mSpeedRatio;
-    mSimulationTime += aDelta;
+    mSimulationTime.advance(aUpdatePeriod / mGameContext.mSimulationControl.mSpeedRatio);
 
     // mSystemMove.get(update)->get<system::Move>().update(aDelta);
     std::optional<scene::Transition> transition =
-        mStateMachine->getCurrentScene()->update(updateDelta, aInput);
+        mStateMachine->getCurrentScene()->update(mSimulationTime, aInput);
 
     if (transition)
     {
@@ -386,9 +389,8 @@ bool SnacGame::update(float aDelta, RawInput & aInput)
         TIME_RECURRING(Main, "Save state");
         mGameContext.mSimulationControl.saveState(
             mGameContext.mWorld.saveState(),
-            std::chrono::microseconds{static_cast<long>(aDelta * 1'000'000)},
-            std::chrono::microseconds{
-                static_cast<long>(updateDelta * 1'000'000)});
+            std::chrono::duration_cast<std::chrono::milliseconds>(aUpdatePeriod),
+            std::chrono::duration_cast<std::chrono::milliseconds>(mSimulationTime.mDeltaDuration));
     }
 
     return false;
@@ -402,10 +404,28 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
     ent::Phase nomutation;
 
+    //
+    // Worldspace models
+    //
     mQueryRenderable.get(nomutation)
         .each([&state](ent::Handle<ent::Entity> aHandle,
                        const component::GlobalPose & aGlobPose,
-                       const component::VisualModel & aVisualModel) {
+                       // TODO #anim restore this constness (for the moment, animation mutate the rig's scene)
+                       /*const*/ component::VisualModel & aVisualModel)
+        {
+            // Note: This feels bad to test component presence here
+            // but we do not want to handle VisualModel the same way depending on the presence of RigAnimation
+            // (and we do not have "negation" on Queries, to separately get VisualModels without RigAnimation)
+            visu::Entity::SkeletalAnimation skeletal;
+            if(auto entity = *aHandle.get(); entity.has<component::RigAnimation>())
+            {
+                const auto & rigAnimation = aHandle.get()->get<component::RigAnimation>();
+                skeletal = visu::Entity::SkeletalAnimation{
+                    .mRig = &aVisualModel.mModel->mRig,
+                    .mAnimation = rigAnimation.mAnimation,
+                    .mParameterValue = rigAnimation.mParameterValue,
+                };
+            }
             state->mEntities.insert(
                 aHandle.id(),
                 visu::Entity{
@@ -415,6 +435,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                     .mOrientation = aGlobPose.mOrientation,
                     .mColor = aGlobPose.mColor,
                     .mModel = aVisualModel.mModel,
+                    .mRigging = std::move(skeletal),
                 });
         });
 

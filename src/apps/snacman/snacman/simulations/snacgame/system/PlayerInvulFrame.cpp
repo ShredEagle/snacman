@@ -25,7 +25,7 @@ void PlayerInvulFrame::update(float aDelta)
 
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 0)
             {
-                aPlayerModel.mModel = mGameContext->mResources.getModel("models/donut/donut.gltf");
+                aPlayerModel.mModel = mGameContext->mResources.getModel("models/donut/donut.gltf", "effects/MeshTextures.sefx");
             }
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 2)
             {
@@ -39,7 +39,7 @@ void PlayerInvulFrame::update(float aDelta)
 
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 0)
             {
-                aPlayerModel.mModel = mGameContext->mResources.getModel("models/donut/donut.gltf");
+                aPlayerModel.mModel = mGameContext->mResources.getModel("models/donut/donut.gltf", "effects/MeshTextures.sefx");
             }
             if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 2)
             {

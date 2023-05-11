@@ -113,7 +113,7 @@ public:
              arte::Freetype & aFreetype,
              RawInput & aInput);
 
-    bool update(float aDelta, RawInput & aInput);
+    bool update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput);
 
     void drawDebugUi(snac::ConfigurableSettings & aSettings,
                      ImguiInhibiter & aInhibiter,
@@ -135,11 +135,10 @@ private:
     EntityWrap<ent::Query<component::Text, component::GlobalPose>> mQueryTextWorld;
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
 
-    // A float would run out of precision too quickly.
-    double mSimulationTime{0.};
-
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;
+
+    snac::Time mSimulationTime;
 };
 
 } // namespace snacgame
