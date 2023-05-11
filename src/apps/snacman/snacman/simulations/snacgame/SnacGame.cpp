@@ -321,7 +321,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 {
                     Phase pathfinding;
                     Entity pEntity = *pathfinder.get(pathfinding);
-                    addMeshGeoNode(pathfinding, mGameContext, pEntity, "CUBE",
+                    addMeshGeoNode(pathfinding, mGameContext, pEntity, 
+                                   "CUBE", "effects/Mesh.sefx",
                                    {7.f, 7.f, gPillHeight}, 1.f,
                                    {0.5f, 0.5f, 0.5f});
                     pEntity.add(component::AllowedMovement{

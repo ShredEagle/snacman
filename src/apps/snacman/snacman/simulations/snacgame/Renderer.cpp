@@ -58,24 +58,19 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface,
 //}
 
 std::shared_ptr<snac::Model> Renderer::LoadModel(filesystem::path aModel,
+                                                 filesystem::path aEffect, 
                                                  snac::Resources & aResources)
 {
     if (aModel.string() == "CUBE")
     {
         auto model = std::make_shared<snac::Model>();
-        model->mParts.push_back({snac::loadCube(aResources.getShaderEffect("effects/Mesh.sefx"))});
+        model->mParts.push_back({snac::loadCube(aResources.getShaderEffect(aEffect))});
         return model;
-    }
-    // TODO handle via data instead of hardcoding
-    else if(aModel.stem() == "anim")
-    {
-        return std::make_shared<snac::Model>(
-            loadModel(aModel, aResources.getShaderEffect("effects/MeshRigging.sefx")));
     }
     else
     {
         return std::make_shared<snac::Model>(
-            loadModel(aModel, aResources.getShaderEffect("effects/MeshTextures.sefx")));
+            loadModel(aModel, aResources.getShaderEffect(aEffect)));
     }
 }
 

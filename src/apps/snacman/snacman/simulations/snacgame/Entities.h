@@ -59,6 +59,7 @@ std::shared_ptr<snac::Model> addMeshGeoNode(
     GameContext & aContext,
     ent::Entity & aEnt,
     const char * aModelPath,
+    const char * aEffectPath,
     math::Position<3, float> aPos = math::Position<3, float>::Zero(),
     float aScale = 1.f,
     math::Size<3, float> aInstanceScale = {1.f, 1.f, 1.f},

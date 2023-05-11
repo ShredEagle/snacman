@@ -174,7 +174,9 @@ public:
     //    });
     //}
 
-    std::future<std::shared_ptr<snac::Model>> loadModel(filesystem::path aModel, Resources & aResources)
+    std::future<std::shared_ptr<snac::Model>> loadModel(filesystem::path aModel, 
+                                                        filesystem::path aEffect, 
+                                                        Resources & aResources)
     {
         // Almost certainly a programming error:
         // There is a risk the calling code will block on the future completion
@@ -185,12 +187,12 @@ public:
         // all captured types must be copyable.
         auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Model>>>();
         std::future<std::shared_ptr<snac::Model>> future = promise->get_future();
-        push([promise = std::move(promise), shape = std::move(aModel), &aResources]
+        push([promise = std::move(promise), shape = std::move(aModel), effect = std::move(aEffect), &aResources]
              (T_renderer & aRenderer) 
              {
                 try
                 {
-                    promise->set_value(aRenderer.LoadModel(shape, aResources));
+                    promise->set_value(aRenderer.LoadModel(shape, effect, aResources));
                 }
                 catch(...)
                 {

@@ -22,21 +22,21 @@ Resources::~Resources()
 }
 
 
-std::shared_ptr<Model> Resources::getModel(filesystem::path aModel)
+std::shared_ptr<Model> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
 {
     // This is bad design, but lazy to get the result quickly
     if(aModel.string() == "CUBE")
     {
         if (!mCube)
         {
-            mCube = mRenderThread.loadModel(aModel, *this)
+            mCube = mRenderThread.loadModel(aModel, aEffect, *this)
                 .get(); // synchronize call
         }
         return mCube;
     }
     else
     {
-        return mModels.load(aModel, mFinder, mRenderThread, *this);
+        return mModels.load(aModel, mFinder, aEffect, mRenderThread, *this);
     }
 }
 
@@ -78,10 +78,11 @@ std::shared_ptr<Font> Resources::FontLoader(
 
 std::shared_ptr<Model> Resources::ModelLoader(
     filesystem::path aModel, 
+    filesystem::path aEffect,
     RenderThread<snacgame::Renderer> & aRenderThread,
     Resources & aResources)
 {
-    return aRenderThread.loadModel(aModel, aResources)
+    return aRenderThread.loadModel(aModel, aEffect, aResources)
             .get(); // synchronize call
 }
 

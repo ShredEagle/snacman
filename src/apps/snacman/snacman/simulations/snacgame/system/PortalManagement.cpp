@@ -117,6 +117,7 @@ void PortalManagement::update()
                         addMeshGeoNode(
                             addPortalImage, *mGameContext, portal,
                             "models/donut/donut.gltf",
+                            "effects/MeshTextures.sefx",
                             {relativePos.x(), relativePos.y(), 0.f}, 0.2f,
                             {1.f, 1.f, 1.f},
                             Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},

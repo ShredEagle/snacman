@@ -72,13 +72,14 @@ addMeshGeoNode(Phase & aPhase,
                GameContext & aContext,
                Entity & aEnt,
                const char * aModelPath,
+               const char * aEffectPath,
                Pos3 aPos,
                float aScale,
                Size3 aInstanceScale,
                Quat_f aOrientation,
                HdrColor_f aColor)
 {
-    auto model = aContext.mResources.getModel(aModelPath);
+    auto model = aContext.mResources.getModel(aModelPath, aEffectPath);
     aEnt.add(component::Geometry{.mPosition = aPos,
                                  .mScaling = aScale,
                                  .mInstanceScaling = aInstanceScale,
@@ -99,7 +100,9 @@ void createLevelElement(Phase & aPhase,
                         HdrColor_f aColor)
 {
     Entity path = *aHandle.get(aPhase);
-    addMeshGeoNode(aPhase, aContext, path, "models/square_biscuit/square_biscuit.gltf",
+    addMeshGeoNode(aPhase, aContext, path, 
+                   "models/square_biscuit/square_biscuit.gltf",
+                   "effects/MeshTextures.sefx",
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gLevelHeight},
                    0.45f, lLevelElementScaling, math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
@@ -140,7 +143,9 @@ ent::Handle<ent::Entity> createAnimatedTest(GameContext & aContext,
     auto handle = aContext.mWorld.addEntity();
     Entity entity = *handle.get(aPhase);
     std::shared_ptr<snac::Model> model = 
-        addMeshGeoNode(aPhase, aContext, entity, "models/anim/anim.gltf",
+        addMeshGeoNode(aPhase, aContext, entity,
+                       "models/anim/anim.gltf",
+                       "effects/MeshRigging.sefx",
                        {
                             static_cast<float>(aGridPos.x()),
                             static_cast<float>(aGridPos.y()),
@@ -169,7 +174,8 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
     auto handle = aContext.mWorld.addEntity();
     Entity pill = *handle.get(aPhase);
     addMeshGeoNode(
-        aPhase, aContext, pill, "models/burger/burger.gltf",
+        aPhase, aContext, pill,
+        "models/burger/burger.gltf", "effects/MeshTextures.sefx",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gPillHeight},
         0.16f, {1.f, 1.f, 1.f},
@@ -194,7 +200,8 @@ ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
     auto handle = aContext.mWorld.addEntity();
     Entity powerUp = *handle.get(aPhase);
     addMeshGeoNode(
-        aPhase, aContext, powerUp, "models/collar/collar.gltf",
+        aPhase, aContext, powerUp,
+        "models/collar/collar.gltf", "effects/MeshTextures.sefx",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gPillHeight},
         0.3f, {1.f, 1.f, 1.f},
@@ -218,7 +225,8 @@ EntHandle createPlayerPowerUp(GameContext & aContext)
     auto handle = aContext.mWorld.addEntity();
     Entity powerUp = *handle.get(init);
     addMeshGeoNode(
-        init, aContext, powerUp, "models/collar/collar.gltf",
+        init, aContext, powerUp,
+        "models/collar/collar.gltf", "effects/MeshTextures.sefx",
         {0.f, -1.f, 1.5f},
         0.3f, {1.f, 1.f, 1.f});
     return handle;
@@ -313,7 +321,8 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             sceneInit, aContext, player,
             {0.f, 0.f, gPlayerHeight});
         addMeshGeoNode(
-            sceneInit, aContext, model, "models/donut/donut.gltf",
+            sceneInit, aContext, model, 
+            "models/donut/donut.gltf", "effects/MeshTextures.sefx",
             {0.f, 0.f, 0.f}, 0.2f, {1.f, 1.f, 1.f},
             Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                                     math::Turn<float>{0.25f}} * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
@@ -458,7 +467,8 @@ EntHandle createStageDecor(GameContext & aContext)
         Phase createStage;
         Entity stageEntity = *result.get(createStage);
 
-        addMeshGeoNode(createStage, aContext, stageEntity, "models/stage/stage.gltf",
+        addMeshGeoNode(createStage, aContext, stageEntity, 
+                "models/stage/stage.gltf", "effects/MeshTextures.sefx",
                 {7.f, 7.f, -0.4f}, 1.f, {1.f, 1.f, 1.f},
                 Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                                         math::Turn<float>{0.25f}} * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},

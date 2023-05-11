@@ -41,7 +41,10 @@ public:
     // Just to log it
     ~Resources();
 
-    std::shared_ptr<Model> getModel(filesystem::path aModel);
+    /// @warning It is an error to load the same model with distinct effects.
+    /// At the moment, the effect path is not considered when looking up in the map,
+    /// so the model will always have the effect it was loaded with the first time.
+    std::shared_ptr<Model> getModel(filesystem::path aModel, filesystem::path aEffect);
 
     std::shared_ptr<Font> getFont(filesystem::path aFont,
                                   unsigned int aPixelHeight = gDefaultPixelHeight,
@@ -77,6 +80,7 @@ private:
 
     static std::shared_ptr<Model> ModelLoader(
         filesystem::path aModel, 
+        filesystem::path aEffect,
         RenderThread<snacgame::Renderer> & aRenderThread,
         Resources & aResources);
     
