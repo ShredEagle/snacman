@@ -22,6 +22,7 @@
 #include <math/Transformations.h>
 #include <optional>
 #include <snacman/DebugDrawing.h>
+#include <snacman/Profiling.h>
 #include <utility>
 
 namespace ad {
@@ -29,6 +30,7 @@ namespace snacgame {
 namespace system {
 void PowerUpUsage::update(float aDelta)
 {
+    TIME_RECURRING_CLASSFUNC(Main);
     mPowerups.each([&aDelta, this](component::PowerUp & aPowerUp,
                                    component::VisualModel & aVisualModel,
                                    component::Geometry & aGeo) {
