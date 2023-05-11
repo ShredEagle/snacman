@@ -62,7 +62,7 @@ public:
     { return mControls; }
 
 private:
-    static constexpr math::Size<2, int> gShadowMapSize{1024, 1024};
+    static constexpr math::Size<2, int> gShadowMapSize{2048, 2048};
 
     const graphics::AppInterface & mAppInterface;
 
