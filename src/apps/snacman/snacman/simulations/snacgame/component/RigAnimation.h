@@ -2,7 +2,7 @@
 
 #include <snacman/Timing.h>
 
-#include <math/Interpolation/Parameter.h>
+#include <math/Interpolation/ParameterAnimation.h>
 
 #include <snac-renderer/Rigging.h>
 
@@ -16,7 +16,7 @@ struct RigAnimation
     // TODO this pointer is bad design, we need a better handle mechanism for resources
     const snac::NodeAnimation * mAnimation;
     snac::Clock::time_point mStartTime;
-    math::Parameter<double, math::FullRange, math::periodic::PingPong> mParameter;
+    math::ParameterAnimation<double, math::FullRange, math::periodic::PingPong> mParameter;
     // TODO this is a somehow a duplication, because we need the resulting parameter value to make the graphic state.
     double mParameterValue;
 
