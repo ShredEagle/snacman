@@ -13,16 +13,6 @@ namespace {
 
     math::AffineMatrix<4, float> computeMatrix(
         const NodeAnimation::NodeKeyframes & aKeyframes,
-        std::size_t aStepIndex)
-    {
-        return math::trans3d::scale(aKeyframes.mScales[aStepIndex].as<math::Size>())
-                * aKeyframes.mRotations[aStepIndex].toRotationMatrix()
-                * math::trans3d::translate(aKeyframes.mTranslations[aStepIndex]);
-    }
-
-
-    math::AffineMatrix<4, float> computeMatrix(
-        const NodeAnimation::NodeKeyframes & aKeyframes,
         std::size_t aPreviousStep, std::size_t aNextStep,
         float aInterpolant)
     {

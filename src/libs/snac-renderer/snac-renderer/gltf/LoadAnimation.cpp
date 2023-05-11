@@ -264,7 +264,7 @@ namespace {
         for(arte::Const_Owned<arte::gltf::Animation> animation : aGltf.getAnimations())
         {
             std::string name = animation->name;
-            name = (name.empty() ? "anim_#" + animation.id() : name);
+            name = (name.empty() ? "anim_#" + std::to_string(animation.id()) : name);
             animations.emplace(name, readAnimation(animation, aGltfToTreeIndex, aRigSanityCheck));
         }
 

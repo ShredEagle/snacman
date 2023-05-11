@@ -46,6 +46,7 @@ struct Time
     {
         setDelta(aTimepoint - mTimepoint);
         mTimepoint = aTimepoint;
+        return *this;
     }
 
 private:
