@@ -52,10 +52,18 @@ void EatPill::update()
         });
     });
 
-    mHuds.each([](const component::PlayerHud & aPlayerHud, component::Text & aText)
+    mHuds.each([](const component::PlayerHud & aPlayerHud)
     {
-        aText.mString = "P" + std::to_string(aPlayerHud.getSlot().mIndex + 1) 
+        auto scoreView = aPlayerHud.mScoreText.get();
+        assert(scoreView && scoreView->has<component::Text>());
+        auto & text = scoreView->get<component::Text>();
+
+        text.mString = "P" + std::to_string(aPlayerHud.getSlot().mIndex + 1) 
                         + " " + std::to_string(aPlayerHud.getScore());
+        
+        auto powerupView = aPlayerHud.mPowerupText.get();
+        assert(powerupView && powerupView->has<component::Text>());
+        powerupView->get<component::Text>().mString = aPlayerHud.getPowerUpName();
     });
 
     mPills.each([](const component::GlobalPose & aPillPose, const component::Collision & aPillCol) {

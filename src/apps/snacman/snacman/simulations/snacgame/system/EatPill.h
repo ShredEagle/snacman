@@ -36,7 +36,7 @@ private:
         mPlayers;
     ent::Query<component::GlobalPose, component::Collision, component::Pill>
         mPills;
-    ent::Query<component::PlayerHud, component::Text>
+    ent::Query<component::PlayerHud>
         mHuds;
 };
 

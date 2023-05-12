@@ -25,8 +25,8 @@ const std::array<math::Position<2, float>, 4> gHudPositionsScreenspace{
 };
 
 const std::array<math::Position<3, float>, 4> gHudPositionsWorld{
-    math::Position<3, float>{-6.f, 11.f, gPlayerHeight},
-    math::Position<3, float>{-6.f,  2.f, gPlayerHeight},
+    math::Position<3, float>{-7.f, 11.f, gPlayerHeight},
+    math::Position<3, float>{-7.f,  2.f, gPlayerHeight},
     math::Position<3, float>{18.f, 11.f, gPlayerHeight},
     math::Position<3, float>{18.f,  2.f, gPlayerHeight},
 };
@@ -43,6 +43,9 @@ struct PlayerHud
     int getScore() const;
     const PlayerSlot & getSlot() const;
     const char * getPowerUpName() const;
+
+    ent::Handle<ent::Entity> mScoreText;
+    ent::Handle<ent::Entity> mPowerupText;
 
     ent::Handle<ent::Entity> mPlayer;
     // Note: It is not convenient to populate this at the moment the powerup is picked up

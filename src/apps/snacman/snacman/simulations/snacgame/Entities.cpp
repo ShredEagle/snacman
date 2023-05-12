@@ -310,20 +310,61 @@ createHudPaperScore(GameContext & aContext,
     ent::Entity_view player = *aPlayer.get();
     component::PlayerSlot & playerSlot = player.get<component::PlayerSlot>();
 
-    Phase createHud;
     EntHandle hudHandle = aContext.mWorld.addEntity();
-    ent::Entity hud = *hudHandle.get(createHud);
-    // Create the Hud common ancestor in the scene graph
-    addGeoNode(createHud, aContext, hud, component::gHudPositionsWorld[playerSlot.mIndex]);
-    hud.add(component::PlayerHud{
-            .mPlayer = aPlayer,
-        })
-        .add(component::Text{
-            .mFont = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120),
-            .mColor = playerSlot.mColor,
-        })
-        .add(component::LevelEntity{});
-        ;
+    {
+        Phase createHud;
+
+        ent::Entity hud = *hudHandle.get(createHud);
+        // Create the Hud common ancestor in the scene graph
+        addGeoNode(createHud, aContext, hud, component::gHudPositionsWorld[playerSlot.mIndex]);
+    }
+
+    // The score text line
+    EntHandle scoreHandle =   aContext.mWorld.addEntity();
+    EntHandle powerupHandle = aContext.mWorld.addEntity();
+    {
+        Phase createScore;
+
+        {
+            ent::Entity scoreText = *scoreHandle.get(createScore);
+            scoreText
+                .add(component::Text{
+                    .mFont = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120),
+                    .mColor = playerSlot.mColor,
+                })
+                //.add(component::LevelEntity{}) crashes because it also tries to add as a child of the scene
+                ;
+
+            addGeoNode(createScore, aContext, scoreText, {0.f, 0.f, 0.f}, 1.25f);
+        }
+
+        {
+            ent::Entity powerupText = *powerupHandle.get(createScore);
+            powerupText 
+                .add(component::Text{
+                    .mString = "Pup",
+                    .mFont = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120),
+                    .mColor = playerSlot.mColor,
+                })
+                ;
+            addGeoNode(createScore, aContext, powerupText, {0.f, -.25f, 0.f}, 0.7f);
+        }
+    }
+
+    {
+        Phase completeSceneGraph;
+
+        insertEntityInScene(scoreHandle, hudHandle);
+        insertEntityInScene(powerupHandle, hudHandle);
+        hudHandle.get(completeSceneGraph)
+            ->add(component::PlayerHud{
+                .mScoreText = scoreHandle,
+                .mPowerupText = powerupHandle,
+                .mPlayer = aPlayer,
+            })
+            .add(component::LevelEntity{})
+            ;
+    }
 
     return hudHandle;
 }
