@@ -14,6 +14,9 @@ constexpr float gOtherTurningZoneHalfWidth = 0.05f;
 constexpr int gPointPerPill = 10;
 constexpr int gMaxPlayerSlots = 4;
 
+constexpr float gPillHeight = 6 * gCellSize * 0.1f;
+constexpr float gPlayerHeight = 0 * gCellSize * 0.1f;
+constexpr float gLevelHeight = 0 * gCellSize * 0.1f;
 
 static const math::Quaternion<float> gWorldCoordTo3dCoordQuat = math::Quaternion<float>{
     math::UnitVec<3, float>::MakeFromUnitLength({-1.f, 0.f, 0.f}),

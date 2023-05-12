@@ -52,6 +52,12 @@ void EatPill::update()
         });
     });
 
+    mHuds.each([](const component::PlayerHud & aPlayerHud, component::Text & aText)
+    {
+        aText.mString = "P" + std::to_string(aPlayerHud.getSlot().mIndex + 1) 
+                        + " " + std::to_string(aPlayerHud.getScore());
+    });
+
     mPills.each([](const component::GlobalPose & aPillPose, const component::Collision & aPillCol) {
         Box_f pillHitbox = component::transformHitbox(aPillPose.mPosition,
                                                       aPillCol.mHitbox);

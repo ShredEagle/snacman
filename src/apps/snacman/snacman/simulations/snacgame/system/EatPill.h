@@ -22,7 +22,9 @@ class EatPill
 {
 public:
     EatPill(GameContext & aGameContext) :
-        mPlayers{aGameContext.mWorld}, mPills{aGameContext.mWorld}
+        mPlayers{aGameContext.mWorld},
+        mPills{aGameContext.mWorld},
+        mHuds{aGameContext.mWorld}
     {}
 
     void update();
@@ -34,6 +36,8 @@ private:
         mPlayers;
     ent::Query<component::GlobalPose, component::Collision, component::Pill>
         mPills;
+    ent::Query<component::PlayerHud, component::Text>
+        mHuds;
 };
 
 } // namespace system

@@ -48,7 +48,6 @@ private:
     ent::Query<component::LevelEntity> mTiles;
     ent::Query<component::PlayerSlot> mSlots;
     ent::Query<component::PlayerSlot, component::Controller> mPlayers;
-    ent::Query<component::PlayerHud> mHuds;
     ent::Query<component::PathToOnGrid> mPathfinders;
 };
 

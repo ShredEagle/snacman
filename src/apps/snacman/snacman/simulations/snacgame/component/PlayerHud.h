@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../GameParameters.h"
 #include "snacman/simulations/snacgame/component/PowerUp.h"
 
 #include <entity/Entity.h>
@@ -15,11 +16,19 @@ namespace component {
 
 struct PlayerSlot;
 
-const std::array<math::Position<2, float>, 4> gHudPositions{
+// Note: Unused since we moved to bills
+const std::array<math::Position<2, float>, 4> gHudPositionsScreenspace{
     math::Position<2, float>{-0.95f, 0.5f},
     math::Position<2, float>{-0.95f, -0.5f},
     math::Position<2, float>{0.7f, 0.5f},
     math::Position<2, float>{0.7f, -0.5f},
+};
+
+const std::array<math::Position<3, float>, 4> gHudPositionsWorld{
+    math::Position<3, float>{-6.f, 11.f, gPlayerHeight},
+    math::Position<3, float>{-6.f,  2.f, gPlayerHeight},
+    math::Position<3, float>{18.f, 11.f, gPlayerHeight},
+    math::Position<3, float>{18.f,  2.f, gPlayerHeight},
 };
 
 const std::array<const char *, static_cast<unsigned int>(PowerUpType::_End)> gPowerUpName{

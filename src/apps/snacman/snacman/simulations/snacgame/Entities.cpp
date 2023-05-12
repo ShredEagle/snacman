@@ -231,6 +231,7 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     return handle;
 }
 
+
 EntHandle createPathEntity(GameContext & aContext,
                            Phase & aPhase,
                            const math::Position<2, float> & aGridPos)
@@ -240,6 +241,7 @@ EntHandle createPathEntity(GameContext & aContext,
                        math::hdr::gWhite<float>);
     return handle;
 }
+
 
 ent::Handle<ent::Entity>
 createPortalEntity(GameContext & aContext,
@@ -254,6 +256,7 @@ createPortalEntity(GameContext & aContext,
     portal.add(component::Portal{aPortalIndex});
     return handle;
 }
+
 
 void addPortalInfo(component::Portal & aPortal,
                    const component::Geometry & aGeo,
@@ -270,6 +273,7 @@ void addPortalInfo(component::Portal & aPortal,
     aPortal.mMirrorSpawnPosition = aGeo.mPosition + aDirection;
 }
 
+
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
                    Phase & aPhase,
@@ -280,6 +284,7 @@ createCopPenEntity(GameContext & aContext,
                        math::hdr::gYellow<float>);
     return handle;
 }
+
 
 ent::Handle<ent::Entity>
 createPlayerSpawnEntity(GameContext & aContext,
@@ -307,11 +312,18 @@ createHudPaperScore(GameContext & aContext,
 
     Phase createHud;
     EntHandle hudHandle = aContext.mWorld.addEntity();
-    hudHandle.get(createHud)
-        ->add(component::PlayerHud{
+    ent::Entity hud = *hudHandle.get(createHud);
+    // Create the Hud common ancestor in the scene graph
+    addGeoNode(createHud, aContext, hud, component::gHudPositionsWorld[playerSlot.mIndex]);
+    hud.add(component::PlayerHud{
             .mPlayer = aPlayer,
         })
-    ;
+        .add(component::Text{
+            .mFont = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120),
+            .mColor = playerSlot.mColor,
+        })
+        .add(component::LevelEntity{});
+        ;
 
     return hudHandle;
 }
