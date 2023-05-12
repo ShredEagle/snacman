@@ -140,6 +140,12 @@ add_executable(${TARGET_NAME}
                ${CMAKE_CURRENT_BINARY_DIR}/build_info.h
 )
 
+if(MSVC)
+    # Otherwise GameScene-setup.cpp errors:
+    # "fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj"
+    target_compile_options(${TARGET_NAME} PRIVATE "/bigobj")
+endif()
+
 cmc_target_current_include_directory(${TARGET_NAME} ADD_BINARY_DIR PRIVATE)
 
 set_target_properties(${TARGET_NAME} PROPERTIES
