@@ -30,7 +30,7 @@ public:
 private:
     ent::Query<component::GlobalPose,
                component::Collision,
-               component::PlayerHud>
+               component::PlayerLifeCycle>
         mPlayers;
     ent::Query<component::GlobalPose, component::Collision, component::Pill>
         mPills;

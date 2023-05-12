@@ -15,12 +15,15 @@
 namespace ad {
 namespace snacgame {
 namespace system {
+
+
 void EatPill::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
     mPlayers.each([this](const component::GlobalPose & aPlayerGeo,
                          component::Collision aPlayerCol,
-                         component::PlayerHud & aHud) {
+                         component::PlayerLifeCycle & aPlayerLifeCycle)
+    {
         ent::Phase eatPillUpdate;
         Box_f playerHitbox = component::transformHitbox(aPlayerGeo.mPosition,
                                                         aPlayerCol.mHitbox);
@@ -33,17 +36,18 @@ void EatPill::update()
             playerHitbox
         );
 
-        mPills.each([&eatPillUpdate, &playerHitbox,
-                     &aHud](ent::Handle<ent::Entity> aHandle,
-                             const component::GlobalPose & aPillGeo,
-                             const component::Collision & aPillCol) {
+        mPills.each([&eatPillUpdate, &playerHitbox, &aPlayerLifeCycle]
+                    (ent::Handle<ent::Entity> aHandle,
+                     const component::GlobalPose & aPillGeo,
+                     const component::Collision & aPillCol) 
+        {
             Box_f pillHitbox = component::transformHitbox(aPillGeo.mPosition,
                                                           aPillCol.mHitbox);
 
             if (component::collideWithSat(pillHitbox, playerHitbox))
             {
                 aHandle.get(eatPillUpdate)->erase();
-                aHud.mScore = gPointPerPill;
+                aPlayerLifeCycle.mScore += gPointPerPill;
             }
         });
     });
@@ -60,6 +64,8 @@ void EatPill::update()
                 pillHitbox);
     });
 }
+
+
 } // namespace system
 } // namespace snacgame
 } // namespace ad

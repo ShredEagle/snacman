@@ -63,7 +63,6 @@ void PowerUpUsage::update(float aDelta)
     // Powerup pickup phase
     mPlayers.each([&](EntHandle aPlayer,
                       const component::GlobalPose & aPlayerPose,
-                      component::PlayerHud & aHud,
                       const component::PlayerSlot & aSlot,
                       component::Collision aPlayerCol) {
         const Box_f playerHitbox = component::transformHitbox(
@@ -93,8 +92,6 @@ void PowerUpUsage::update(float aDelta)
                         createPlayerPowerUp(*mGameContext, aPowerup.mType);
                     component::PlayerPowerUp newPowerup = {
                         .mPowerUp = playerPowerup, .mType = aPowerup.mType};
-                    aHud.mPowerUpName = component::gPowerUpName.at(
-                        static_cast<std::size_t>(aPowerup.mType));
                     insertEntityInScene(playerPowerup,
                                         aPlayer.get(powerup)
                                             ->get<component::PlayerModel>()

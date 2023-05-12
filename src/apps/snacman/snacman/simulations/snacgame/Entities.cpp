@@ -297,6 +297,26 @@ createPlayerSpawnEntity(GameContext & aContext,
     return spawner;
 }
 
+
+ent::Handle<ent::Entity>
+createHudPaperScore(GameContext & aContext,
+                    ent::Handle<ent::Entity> aPlayer)
+{
+    ent::Entity_view player = *aPlayer.get();
+    component::PlayerSlot & playerSlot = player.get<component::PlayerSlot>();
+
+    Phase createHud;
+    EntHandle hudHandle = aContext.mWorld.addEntity();
+    hudHandle.get(createHud)
+        ->add(component::PlayerHud{
+            .mPlayer = aPlayer,
+        })
+    ;
+
+    return hudHandle;
+}
+
+
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
                                             ControllerType aControllerType,
                                             ent::Handle<ent::Entity> aSlot,
@@ -317,8 +337,9 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
         Entity model = *playerModel.get(sceneInit);
 
         addGeoNode(sceneInit, aContext, player, {0.f, 0.f, gPlayerHeight});
-        addMeshGeoNode(sceneInit, aContext, model, "models/donut/donut.gltf",
-                       "effects/MeshTextures.sefx", {0.f, 0.f, 0.f}, 1.f,
+        addMeshGeoNode(sceneInit, aContext, model,
+                       "models/donut/donut.gltf", "effects/MeshTextures.sefx",
+                       {0.f, 0.f, 0.f}, 1.f,
                        {0.2f, 0.2f, 0.2f},
                        Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                               math::Turn<float>{0.25f}}
@@ -345,16 +366,15 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             .add(component::AllowedMovement{})
             .add(component::Controller{.mType = aControllerType,
                                        .mControllerId = aControllerId})
-            .add(component::PoseScreenSpace{
-                .mPosition_u =
-                    {-0.9f + 0.2f * static_cast<float>(playerSlot.mIndex),
-                     0.8f}})
             .add(component::Collision{component::gPlayerHitbox})
             .add(component::PlayerPortalData{})
-            .add(component::PlayerHud{});
+        ;
+
+        createHudPaperScore(aContext, aSlot);
     }
     return aSlot;
 }
+
 
 std::optional<ent::Handle<ent::Entity>>
 findSlotAndBind(GameContext & aContext,
@@ -483,12 +503,9 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
     playerEntity.remove<component::Geometry>();
     playerEntity.remove<component::PlayerLifeCycle>();
     playerEntity.remove<component::PlayerMoveState>();
-    playerEntity.remove<component::Text>();
     playerEntity.remove<component::VisualModel>();
-    playerEntity.remove<component::PoseScreenSpace>();
     playerEntity.remove<component::SceneNode>();
     playerEntity.remove<component::GlobalPose>();
-    playerEntity.remove<component::PlayerHud>();
 
     removeRoundTransientPlayerComponent(aPhase, aHandle);
 

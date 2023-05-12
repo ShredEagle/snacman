@@ -12,7 +12,7 @@ constexpr float gBaseHitStunDuration = 2.f;
 
 struct PlayerLifeCycle
 {
-    int mPoints = 0;
+    int mScore = 0;
     bool mIsAlive = false;
     float mTimeToRespawn = 0;
     float mInvulFrameCounter = 0;

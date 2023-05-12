@@ -5,6 +5,7 @@
 #include "../component/Controller.h"
 #include "../component/LevelTags.h"
 #include "../component/PathToOnGrid.h"
+#include "../component/PlayerHud.h"
 #include "../component/PlayerSlot.h"
 
 #include <entity/EntityManager.h>
@@ -47,6 +48,7 @@ private:
     ent::Query<component::LevelEntity> mTiles;
     ent::Query<component::PlayerSlot> mSlots;
     ent::Query<component::PlayerSlot, component::Controller> mPlayers;
+    ent::Query<component::PlayerHud> mHuds;
     ent::Query<component::PathToOnGrid> mPathfinders;
 };
 

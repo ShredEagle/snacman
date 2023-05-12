@@ -99,6 +99,7 @@ GameScene::GameScene(const std::string & aName,
     mTiles{mGameContext.mWorld},
     mSlots{mGameContext.mWorld},
     mPlayers{mGameContext.mWorld},
+    mHuds{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
     createLevel(mGameContext,
@@ -125,6 +126,11 @@ void GameScene::teardown(RawInput & aInput)
                                  component::PlayerSlot & aSlot,
                                  component::Controller & aController) {
             removePlayerFromGame(destroy, aHandle);
+        });
+
+        mHuds.each([&destroy](EntHandle aHandle)
+        {
+            aHandle.get(destroy)->erase();
         });
     }
     {
