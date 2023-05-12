@@ -2,6 +2,7 @@
 // fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj
 
 #include "GameScene.h"
+#include "snacman/simulations/snacgame/system/AnimationManager.h"
 
 #include "../system/AdvanceAnimations.h"
 #include "../system/AllowMovement.h"
@@ -57,6 +58,7 @@ void GameScene::setup(const Transition & aTransition, RawInput & aInput)
             .add(system::LevelCreator{mGameContext})
             .add(system::MovementIntegration{mGameContext})
             .add(system::AdvanceAnimations{mGameContext})
+            .add(system::AnimationManager{mGameContext})
             .add(system::EatPill{mGameContext})
             .add(system::PortalManagement{mGameContext})
             .add(system::PowerUpUsage{mGameContext})

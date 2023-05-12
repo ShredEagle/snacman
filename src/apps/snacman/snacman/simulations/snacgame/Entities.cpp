@@ -317,14 +317,23 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
         Entity model = *playerModel.get(sceneInit);
 
         addGeoNode(sceneInit, aContext, player, {0.f, 0.f, gPlayerHeight});
-        addMeshGeoNode(sceneInit, aContext, model, "models/donut/donut.gltf",
-                       "effects/MeshTextures.sefx", {0.f, 0.f, 0.f}, 1.f,
+        std::shared_ptr<snac::Model> modelData = addMeshGeoNode(sceneInit, aContext, model, "models/donut/donut.gltf",
+                       "effects/MeshRiggingTextures.sefx", {0.f, 0.f, 0.f}, 1.f,
                        {0.2f, 0.2f, 0.2f},
                        Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                               math::Turn<float>{0.25f}}
                            * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                     math::Turn<float>{0.25f}},
                        playerSlot.mColor);
+        std::string animName = "idle";
+        const snac::NodeAnimation & animation = modelData->mAnimations.at(animName);
+        model.add(component::RigAnimation{
+                .mAnimName = animName,
+                .mAnimation = &animation,
+                .mAnimationMap = &modelData->mAnimations,
+                .mStartTime = snac::Clock::now(),
+                .mParameter = decltype(component::RigAnimation::mParameter){animation.mEndTime},
+        });
     }
 
     insertEntityInScene(playerModel, aSlot);

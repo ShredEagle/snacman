@@ -1,4 +1,5 @@
 #include "IntegratePlayerMovement.h"
+#include "snacman/simulations/snacgame/component/RigAnimation.h"
 
 #include "../LevelHelper.h"
 #include "../GameParameters.h"
@@ -74,6 +75,9 @@ void IntegratePlayerMovement::update(float aDelta)
                 math::Quaternion<float>{
                     math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                     math::Turn<float>{0.25f}};
+        }
+        else
+        {
         }
     });
 }

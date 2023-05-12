@@ -2,6 +2,7 @@
 // fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj
 
 #include "GameScene.h"
+#include "snacman/simulations/snacgame/system/AnimationManager.h"
 
 #include "../component/Context.h"
 #include "../component/Controller.h"
@@ -216,6 +217,7 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
     mSystems.get(update)->get<system::ConsolidateGridMovement>().update((float)aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update((float)aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::MovementIntegration>().update((float)aTime.mDeltaSeconds);
+    mSystems.get(update)->get<system::AnimationManager>().update();
     mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
     mSystems.get(update)->get<system::Pathfinding>().update();
     mSystems.get(update)->get<system::PortalManagement>().preGraphUpdate();
