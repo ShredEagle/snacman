@@ -321,6 +321,7 @@ createHudPaperScore(GameContext & aContext,
     // The score text line
     EntHandle scoreHandle =   aContext.mWorld.addEntity();
     EntHandle powerupHandle = aContext.mWorld.addEntity();
+    EntHandle billpadHandle = aContext.mWorld.addEntity();
     {
         Phase createScore;
 
@@ -329,7 +330,8 @@ createHudPaperScore(GameContext & aContext,
             scoreText
                 .add(component::Text{
                     .mFont = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120),
-                    .mColor = playerSlot.mColor,
+                    //.mColor = playerSlot.mColor,
+                    .mColor = math::hdr::gBlack<float>,
                 })
                 //.add(component::LevelEntity{}) crashes because it also tries to add as a child of the scene
                 ;
@@ -343,10 +345,30 @@ createHudPaperScore(GameContext & aContext,
                 .add(component::Text{
                     .mString = "Pup",
                     .mFont = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120),
-                    .mColor = playerSlot.mColor,
+                    //.mColor = playerSlot.mColor,
+                    .mColor = math::hdr::gBlack<float>,
                 })
                 ;
             addGeoNode(aContext, powerupText, {0.f, -.25f, 0.f}, 0.7f);
+        }
+
+        {
+            ent::Entity billpad = *billpadHandle.get(createScore);
+            addMeshGeoNode(
+                aContext,
+                billpad,
+                "models/billpad/billpad.gltf", "effects/MeshTextures.sefx",
+                {0.f, 0.f, -gPlayerHeight / 2.f},
+                8.f,
+                {1.f, 1.f, 1.f},
+                Quat_f{
+                    math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                    math::Turn<float>{-0.25f}}
+                    * Quat_f{
+                        math::UnitVec<3, float>{{0.f, 1.f, 0.f}},
+                        math::Turn<float>{0.25f}}
+                    ,
+                playerSlot.mColor);
         }
     }
 
@@ -355,6 +377,8 @@ createHudPaperScore(GameContext & aContext,
 
         insertEntityInScene(scoreHandle, hudHandle);
         insertEntityInScene(powerupHandle, hudHandle);
+        insertEntityInScene(billpadHandle, hudHandle);
+
         hudHandle.get(completeSceneGraph)
             ->add(component::PlayerHud{
                 .mScoreText = scoreHandle,

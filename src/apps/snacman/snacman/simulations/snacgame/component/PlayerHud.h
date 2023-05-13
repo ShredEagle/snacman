@@ -27,8 +27,8 @@ const std::array<math::Position<2, float>, 4> gHudPositionsScreenspace{
 const std::array<math::Position<3, float>, 4> gHudPositionsWorld{
     math::Position<3, float>{-7.f, 11.f, gPlayerHeight},
     math::Position<3, float>{-7.f,  2.f, gPlayerHeight},
-    math::Position<3, float>{18.f, 11.f, gPlayerHeight},
-    math::Position<3, float>{18.f,  2.f, gPlayerHeight},
+    math::Position<3, float>{19.f, 11.f, gPlayerHeight},
+    math::Position<3, float>{19.f,  2.f, gPlayerHeight},
 };
 
 const std::array<const char *, static_cast<unsigned int>(PowerUpType::_End)> gPowerUpName{
