@@ -40,7 +40,6 @@ struct Transition;
 struct GameContext;
 
 void addGeoNode(
-    ent::Phase & aPhase,
     GameContext & aContext,
     ent::Entity & aEnt,
     math::Position<3, float> aPos = math::Position<3, float>::Zero(),
@@ -50,7 +49,6 @@ void addGeoNode(
     math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
 
 std::shared_ptr<snac::Model> addMeshGeoNode(
-    ent::Phase & aPhase,
     GameContext & aContext,
     ent::Entity & aEnt,
     const char * aModelPath,

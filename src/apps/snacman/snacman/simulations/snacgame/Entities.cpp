@@ -50,8 +50,8 @@ namespace snacgame {
 
 constexpr Size3 lLevelElementScaling = {1.f, 1.f, 1.f};
 
-void addGeoNode(Phase & aPhase,
-                GameContext & aContext,
+// TODO phase is not used...
+void addGeoNode(GameContext & aContext,
                 Entity & aEnt,
                 Pos3 aPos,
                 float aScale,
@@ -68,8 +68,7 @@ void addGeoNode(Phase & aPhase,
         .add(component::GlobalPose{});
 }
 
-std::shared_ptr<snac::Model> addMeshGeoNode(Phase & aPhase,
-                                            GameContext & aContext,
+std::shared_ptr<snac::Model> addMeshGeoNode(GameContext & aContext,
                                             Entity & aEnt,
                                             const char * aModelPath,
                                             const char * aEffectPath,
@@ -101,7 +100,7 @@ void createLevelElement(Phase & aPhase,
 {
     Entity path = *aHandle.get(aPhase);
     addMeshGeoNode(
-        aPhase, aContext, path, "models/square_biscuit/square_biscuit.gltf",
+        aContext, path, "models/square_biscuit/square_biscuit.gltf",
         "effects/MeshTextures.sefx",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gLevelHeight},
@@ -144,7 +143,7 @@ createAnimatedTest(GameContext & aContext,
     auto handle = aContext.mWorld.addEntity();
     Entity entity = *handle.get(aPhase);
     std::shared_ptr<snac::Model> model = addMeshGeoNode(
-        aPhase, aContext, entity, "models/anim/anim.gltf",
+        aContext, entity, "models/anim/anim.gltf",
         "effects/MeshRigging.sefx",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gLevelHeight},
@@ -169,7 +168,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
 {
     auto handle = aContext.mWorld.addEntity();
     Entity pill = *handle.get(aPhase);
-    addMeshGeoNode(aPhase, aContext, pill, "models/burger/burger.gltf",
+    addMeshGeoNode(aContext, pill, "models/burger/burger.gltf",
                    "effects/MeshTextures.sefx",
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gPillHeight},
@@ -198,7 +197,7 @@ createPowerUp(GameContext & aContext,
     component::PowerUpType baseType = component::PowerUpType::Dog;
     component::PowerUpBaseInfo info =
         component::gPowerupPathByType.at(static_cast<unsigned int>(baseType));
-    addMeshGeoNode(aPhase, aContext, powerUp, info.mPath,
+    addMeshGeoNode(aContext, powerUp, info.mPath,
                    "effects/MeshTextures.sefx",
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gPillHeight},
@@ -224,7 +223,7 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     Entity powerUp = *handle.get(init);
     component::PowerUpBaseInfo info =
         component::gPowerupPathByType.at(static_cast<unsigned int>(aType));
-    addMeshGeoNode(init, aContext, powerUp, info.mPath,
+    addMeshGeoNode(aContext, powerUp, info.mPath,
                    "effects/MeshTextures.sefx", {1.f, 1.f, 0.f},
                    info.mPlayerScaling, info.mPlayerInstanceScale,
                    info.mPlayerOrientation);
@@ -316,7 +315,7 @@ createHudPaperScore(GameContext & aContext,
 
         ent::Entity hud = *hudHandle.get(createHud);
         // Create the Hud common ancestor in the scene graph
-        addGeoNode(createHud, aContext, hud, component::gHudPositionsWorld[playerSlot.mIndex]);
+        addGeoNode(aContext, hud, component::gHudPositionsWorld[playerSlot.mIndex]);
     }
 
     // The score text line
@@ -335,7 +334,7 @@ createHudPaperScore(GameContext & aContext,
                 //.add(component::LevelEntity{}) crashes because it also tries to add as a child of the scene
                 ;
 
-            addGeoNode(createScore, aContext, scoreText, {0.f, 0.f, 0.f}, 1.25f);
+            addGeoNode(aContext, scoreText, {0.f, 0.f, 0.f}, 1.25f);
         }
 
         {
@@ -347,7 +346,7 @@ createHudPaperScore(GameContext & aContext,
                     .mColor = playerSlot.mColor,
                 })
                 ;
-            addGeoNode(createScore, aContext, powerupText, {0.f, -.25f, 0.f}, 0.7f);
+            addGeoNode(aContext, powerupText, {0.f, -.25f, 0.f}, 0.7f);
         }
     }
 
@@ -389,8 +388,8 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
 
         Entity model = *playerModel.get(sceneInit);
 
-        addGeoNode(sceneInit, aContext, player, {0.f, 0.f, gPlayerHeight});
-        addMeshGeoNode(sceneInit, aContext, model,
+        addGeoNode(aContext, player, {0.f, 0.f, gPlayerHeight});
+        addMeshGeoNode(aContext, model,
                        "models/donut/donut.gltf", "effects/MeshTextures.sefx",
                        {0.f, 0.f, 0.f}, 1.f,
                        {0.2f, 0.2f, 0.2f},
@@ -575,7 +574,7 @@ EntHandle createStageDecor(GameContext & aContext)
         Phase createStage;
         Entity stageEntity = *result.get(createStage);
 
-        addMeshGeoNode(createStage, aContext, stageEntity,
+        addMeshGeoNode(aContext, stageEntity,
                        "models/stage/stage.gltf", "effects/MeshTextures.sefx",
                        {7.f, 7.f, -0.4f}, 1.f, {1.f, 1.f, 1.f},
                        Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
@@ -594,7 +593,7 @@ EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
         Phase createTargetArrow;
         Entity stageEntity = *result.get(createTargetArrow);
 
-        addMeshGeoNode(createTargetArrow, aContext, stageEntity,
+        addMeshGeoNode(aContext, stageEntity,
                        "models/arrow/arrow.gltf", "effects/MeshTextures.sefx", {0.f, 0.f, 2.f}, 0.4f,
                        {1.f, 1.f, 1.f},
                        Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
