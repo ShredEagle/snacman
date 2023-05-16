@@ -128,6 +128,10 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
         mImguiDisplays.display();
 
+        if (mImguiDisplays.mShowSceneEditor)
+        {
+            mSceneEditor.showEditor(mStateMachine->getCurrentScene()->mSceneRoot);
+        }
         if (mImguiDisplays.mShowPlayerInfo)
         {
             ent::Phase update;

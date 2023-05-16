@@ -25,6 +25,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/GameContext.h
     simulations/snacgame/GameParameters.h
     simulations/snacgame/GraphicState.h
+    simulations/snacgame/ImguiSceneEditor.h
     simulations/snacgame/InputConstants.h
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/LevelHelper.h
@@ -93,6 +94,7 @@ set(${TARGET_NAME}_SOURCES
     Resources.cpp
 
     simulations/snacgame/Entities.cpp
+    simulations/snacgame/ImguiSceneEditor.cpp
     simulations/snacgame/Renderer.cpp
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SimulationControl.cpp
