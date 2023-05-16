@@ -326,29 +326,31 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
     {
         Phase createScore;
 
+        const std::string fontname = "fonts/notes/Bitcheese.ttf";
+
         {
             ent::Entity scoreText = *scoreHandle.get(createScore);
             scoreText
                 .add(component::Text{
-                    .mFont = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120),
+                    .mFont = aContext.mResources.getFont(fontname, 100),
                     //.mColor = playerSlot.mColor,
                     .mColor = math::hdr::gBlack<float>,
                 })
                 ;
 
-            addGeoNode(aContext, scoreText, {-1.7f, 0.6f, 0.f}, 1.25f);
+            addGeoNode(aContext, scoreText, {-1.7f, 0.6f, 0.f}, 1.f);
         }
 
         {
             ent::Entity powerupText = *powerupHandle.get(createScore);
             powerupText 
                 .add(component::Text{
-                    .mFont = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120),
+                    .mFont = aContext.mResources.getFont(fontname, 100),
                     //.mColor = playerSlot.mColor,
                     .mColor = math::hdr::gBlack<float>,
                 })
                 ;
-            addGeoNode(aContext, powerupText, {-1.9f, -.25f, 0.f}, 0.7f);
+            addGeoNode(aContext, powerupText, {-1.9f, -.5f, 0.f}, 0.6f);
         }
 
         {
