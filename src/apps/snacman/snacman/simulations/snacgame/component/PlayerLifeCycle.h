@@ -24,7 +24,7 @@ struct PlayerLifeCycle
     float mHitStun = 0;
 
     // The HUD showing player informations (score, power-up)
-    ent::Handle<ent::Entity> mHud;
+    std::optional<ent::Handle<ent::Entity>> mHud;
 };
 
 

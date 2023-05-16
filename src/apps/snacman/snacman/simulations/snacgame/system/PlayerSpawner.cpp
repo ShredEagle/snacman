@@ -1,5 +1,6 @@
 #include "PlayerSpawner.h"
 
+#include "../Entities.h"
 #include "../SceneGraph.h"
 #include "../typedef.h"
 
@@ -17,19 +18,26 @@ void PlayerSpawner::update(float aDelta)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    mSpawnable.each([this, &aDelta](EntHandle aPlayerHandle, component::PlayerLifeCycle & aPlayer,
-                                   component::Geometry & aPlayerGeometry) {
+    mSpawnable.each([this, &aDelta](EntHandle aPlayerHandle,
+                                    component::PlayerLifeCycle & aPlayer,
+                                    component::PlayerSlot & aSlot,
+                                    component::Geometry & aPlayerGeometry) 
+    {
         if (!aPlayer.mIsAlive) {
             if (aPlayer.mTimeToRespawn < 0) {
                 aPlayer.mTimeToRespawn -= aDelta;
             } else {
                 // TODO: Needs an alg to choose the right spawner if there are
                 // many spawner
-                mSpawner.each([this, aPlayerHandle, &aPlayer, &aPlayerGeometry](component::Spawner & aSpawner) {
-                    if (!aPlayer.mIsAlive && !aSpawner.mSpawnedPlayer) {
+                mSpawner.each([this, aPlayerHandle, &aPlayer, &aSlot, &aPlayerGeometry]
+                              (component::Spawner & aSpawner) 
+                {
+                    if (!aPlayer.mIsAlive && !aSpawner.mSpawnedPlayer) 
+                    {
                         aPlayer.mIsAlive = true;
                         aPlayer.mTimeToRespawn = component::gBaseTimeToRespawn;
                         aPlayer.mInvulFrameCounter = component::gBaseInvulFrameDuration;
+                        aPlayer.mHud = createHudBillpad(*mGameContext, aSlot);
                         aPlayerGeometry.mPosition = aSpawner.mSpawnPosition;
                         aSpawner.mSpawnedPlayer = true;
                         insertEntityInScene(aPlayerHandle, *mGameContext->mLevel);

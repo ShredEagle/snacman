@@ -384,7 +384,7 @@ void PowerUpUsage::update(float aDelta)
     // Update power-up name in HUD
     mPlayers.each([](ent::Handle<ent::Entity> aPlayer, component::PlayerLifeCycle & aLifeCycle)
     {
-        auto & playerHud = snac::getComponent<component::PlayerHud>(aLifeCycle.mHud);
+        auto & playerHud = snac::getComponent<component::PlayerHud>(*aLifeCycle.mHud);
         snac::getComponent<component::Text>(playerHud.mPowerupText)
                 .mString = component::getPowerUpName(aPlayer);
     });

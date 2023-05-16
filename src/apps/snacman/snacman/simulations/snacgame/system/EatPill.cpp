@@ -53,7 +53,7 @@ void EatPill::update()
                 aLifeCycle.mScore += gPointPerPill;
 
                 // Update the text showing the score in the hud.
-                auto & playerHud = snac::getComponent<component::PlayerHud>(aLifeCycle.mHud);
+                auto & playerHud = snac::getComponent<component::PlayerHud>(*aLifeCycle.mHud);
                 snac::getComponent<component::Text>(playerHud.mScoreText)
                         .mString = std::to_string(aLifeCycle.mScore);
             }

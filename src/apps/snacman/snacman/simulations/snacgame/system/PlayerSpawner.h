@@ -2,6 +2,7 @@
 
 #include "../GameContext.h"
 #include "../component/PlayerLifeCycle.h"
+#include "../component/PlayerSlot.h"
 #include "../component/Spawner.h"
 #include "../component/Geometry.h"
 
@@ -23,9 +24,10 @@ public:
     {}
 
     void update(float aDelta);
+
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerLifeCycle, component::Geometry> mSpawnable;
+    ent::Query<component::PlayerLifeCycle, component::PlayerSlot, component::Geometry> mSpawnable;
     ent::Query<component::Spawner> mSpawner;
 };
 

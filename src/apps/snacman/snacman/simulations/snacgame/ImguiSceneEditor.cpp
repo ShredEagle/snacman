@@ -3,6 +3,8 @@
 #include "component/Geometry.h"
 #include "component/SceneNode.h"
 
+#include <snacman/EntityUtilities.h>
+
 #include <imgui.h>
 
 #include <string>
@@ -18,10 +20,7 @@ namespace {
 
     const component::SceneNode & getNode(ent::Handle<ent::Entity> aEntityHandle)
     {
-        assert(aEntityHandle.isValid());
-        auto entity = *aEntityHandle.get();
-        assert(entity.has<SceneNode>());
-        return entity.get<SceneNode>();
+        return snac::getComponent<component::SceneNode>(aEntityHandle);
     }
 
     component::Geometry & getGeometry(ent::Handle<ent::Entity> aEntityHandle)

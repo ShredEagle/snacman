@@ -303,12 +303,8 @@ createPlayerSpawnEntity(GameContext & aContext,
 
 
 ent::Handle<ent::Entity>
-createHudPaperScore(GameContext & aContext,
-                    ent::Handle<ent::Entity> aPlayer)
+createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
 {
-    ent::Entity_view player = *aPlayer.get();
-    component::PlayerSlot & playerSlot = player.get<component::PlayerSlot>();
-
     EntHandle hudHandle = aContext.mWorld.addEntity();
     {
         Phase createHud;
@@ -317,10 +313,10 @@ createHudPaperScore(GameContext & aContext,
         // Create the Hud common ancestor in the scene graph
         addGeoNode(aContext,
                    hud,
-                   component::gHudPositionsWorld[playerSlot.mIndex],
+                   component::gHudPositionsWorld[aPlayerSlot.mIndex],
                    1.f,
                    {1.f, 1.f , 1.f},
-                   component::gHudOrientationsWorld[playerSlot.mIndex]);
+                   component::gHudOrientationsWorld[aPlayerSlot.mIndex]);
     }
 
     // The score text line
@@ -338,7 +334,6 @@ createHudPaperScore(GameContext & aContext,
                     //.mColor = playerSlot.mColor,
                     .mColor = math::hdr::gBlack<float>,
                 })
-                //.add(component::LevelEntity{}) crashes because it also tries to add as a child of the scene
                 ;
 
             addGeoNode(aContext, scoreText, {-1.7f, 0.6f, 0.f}, 1.25f);
@@ -362,17 +357,17 @@ createHudPaperScore(GameContext & aContext,
                 aContext,
                 billpad,
                 "models/billpad/billpad.gltf", "effects/MeshTextures.sefx",
-                {0.f, 0.f, -gPlayerHeight / 2.f},
+                {0.f, 0.f, -0.28f},
                 8.f,
                 {1.f, 1.f, 1.f},
                 Quat_f{
                     math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
-                    math::Turn<float>{-0.25f}}
+                    math::Turn<float>{0.25f}}
                     * Quat_f{
                         math::UnitVec<3, float>{{0.f, 1.f, 0.f}},
-                        math::Turn<float>{0.25f}}
+                        math::Turn<float>{-0.25f}}
                     ,
-                playerSlot.mColor);
+                aPlayerSlot.mColor);
         }
     }
 
@@ -383,12 +378,14 @@ createHudPaperScore(GameContext & aContext,
         insertEntityInScene(powerupHandle, hudHandle);
         insertEntityInScene(billpadHandle, hudHandle);
 
+        assert(aContext.mLevel);
+        insertEntityInScene(hudHandle, *aContext.mLevel);
+
         hudHandle.get(completeSceneGraph)
             ->add(component::PlayerHud{
                 .mScoreText = scoreHandle,
                 .mPowerupText = powerupHandle,
             })
-            .add(component::LevelEntity{})
             ;
     }
 
@@ -441,7 +438,6 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             .add(component::PlayerLifeCycle{
                 .mIsAlive = false,
                 .mTimeToRespawn = component::gBaseTimeToRespawn,
-                .mHud = createHudPaperScore(aContext, aSlot),
             })
             .add(component::PlayerMoveState{})
             .add(component::AllowedMovement{})
@@ -531,6 +527,7 @@ void swapPlayerPosition(Phase & aPhase, EntHandle aPlayer, EntHandle aOther)
     // Remove portal image if there is one
 }
 
+
 void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
 {
     Entity playerEntity = *aHandle.get(aPhase);
@@ -578,6 +575,10 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
     slot.mFilled = false;
 
     Entity playerEntity = *aHandle.get(aPhase);
+
+    // Remove the whole hud subtree (billpad, texts, ...)
+    eraseEntityRecursive(*playerEntity.get<component::PlayerLifeCycle>().mHud, aPhase);
+
     playerEntity.remove<component::Controller>();
     playerEntity.remove<component::Geometry>();
     playerEntity.remove<component::PlayerLifeCycle>();
