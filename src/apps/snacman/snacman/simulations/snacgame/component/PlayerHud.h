@@ -43,9 +43,9 @@ const std::array<math::Quaternion<float>, 4> gHudOrientationsWorld{
 };
 
 const std::array<const char *, static_cast<unsigned int>(PowerUpType::_End)> gPowerUpName{
-    "Donut Seeking dog",
+    "Seeking dog",
     "Donut swapper",
-    "Donut controlled missile"
+    "Controlled missile"
 };
 
 
