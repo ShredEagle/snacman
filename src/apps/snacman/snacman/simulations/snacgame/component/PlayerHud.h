@@ -25,10 +25,21 @@ const std::array<math::Position<2, float>, 4> gHudPositionsScreenspace{
 };
 
 const std::array<math::Position<3, float>, 4> gHudPositionsWorld{
-    math::Position<3, float>{-7.f, 11.f, gPlayerHeight},
-    math::Position<3, float>{-7.f,  2.f, gPlayerHeight},
-    math::Position<3, float>{19.f, 11.f, gPlayerHeight},
-    math::Position<3, float>{19.f,  2.f, gPlayerHeight},
+    math::Position<3, float>{-6.5f, 10.f, gPlayerHeight},
+    math::Position<3, float>{-4.0f,  1.f, gPlayerHeight},
+    math::Position<3, float>{20.5f, 10.f, gPlayerHeight},
+    math::Position<3, float>{18.5f,  1.f, gPlayerHeight},
+};
+
+namespace {
+    const auto axis = math::UnitVec<3, float>::MakeFromUnitLength({0.f, 0.f, 1.f});
+}
+
+const std::array<math::Quaternion<float>, 4> gHudOrientationsWorld{
+    math::Quaternion<float>{axis, math::Degree<float>{ -5.f}},
+    math::Quaternion<float>{axis, math::Degree<float>{ 20.f}},
+    math::Quaternion<float>{axis, math::Degree<float>{  5.f}},
+    math::Quaternion<float>{axis, math::Degree<float>{-20.f}},
 };
 
 const std::array<const char *, static_cast<unsigned int>(PowerUpType::_End)> gPowerUpName{

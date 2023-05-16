@@ -315,7 +315,12 @@ createHudPaperScore(GameContext & aContext,
 
         ent::Entity hud = *hudHandle.get(createHud);
         // Create the Hud common ancestor in the scene graph
-        addGeoNode(aContext, hud, component::gHudPositionsWorld[playerSlot.mIndex]);
+        addGeoNode(aContext,
+                   hud,
+                   component::gHudPositionsWorld[playerSlot.mIndex],
+                   1.f,
+                   {1.f, 1.f , 1.f},
+                   component::gHudOrientationsWorld[playerSlot.mIndex]);
     }
 
     // The score text line
@@ -336,7 +341,7 @@ createHudPaperScore(GameContext & aContext,
                 //.add(component::LevelEntity{}) crashes because it also tries to add as a child of the scene
                 ;
 
-            addGeoNode(aContext, scoreText, {0.f, 0.f, 0.f}, 1.25f);
+            addGeoNode(aContext, scoreText, {-1.7f, 0.6f, 0.f}, 1.25f);
         }
 
         {
@@ -349,7 +354,7 @@ createHudPaperScore(GameContext & aContext,
                     .mColor = math::hdr::gBlack<float>,
                 })
                 ;
-            addGeoNode(aContext, powerupText, {0.f, -.25f, 0.f}, 0.7f);
+            addGeoNode(aContext, powerupText, {-1.9f, -.25f, 0.f}, 0.7f);
         }
 
         {
