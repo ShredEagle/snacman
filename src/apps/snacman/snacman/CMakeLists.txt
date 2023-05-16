@@ -7,6 +7,7 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     DebugDrawing.h
+    EntityUtilities.h
     GraphicState.h
     ImguiUtilities.h
     Input.h

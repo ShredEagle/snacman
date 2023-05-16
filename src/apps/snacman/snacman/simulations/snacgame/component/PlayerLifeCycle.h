@@ -1,6 +1,9 @@
 #pragma once
 
 
+#include <entity/Entity.h>
+
+
 namespace ad {
 namespace snacgame {
 namespace component {
@@ -18,7 +21,10 @@ struct PlayerLifeCycle
     float mInvulFrameCounter = 0;
 
     // Hit stun
-    float mHitStun = 0; 
+    float mHitStun = 0;
+
+    // The HUD showing player informations (score, power-up)
+    ent::Handle<ent::Entity> mHud;
 };
 
 

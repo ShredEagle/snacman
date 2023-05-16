@@ -1,6 +1,8 @@
 #include "EatPill.h"
+
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "snacman/simulations/snacgame/component/PlayerHud.h"
+#include <snacman/EntityUtilities.h>
 
 #include "../component/SceneNode.h"
 #include "../GameParameters.h"
@@ -12,6 +14,7 @@
 #include <snacman/DebugDrawing.h>
 #include <snacman/Profiling.h>
 
+
 namespace ad {
 namespace snacgame {
 namespace system {
@@ -22,7 +25,7 @@ void EatPill::update()
     TIME_RECURRING_CLASSFUNC(Main);
     mPlayers.each([this](const component::GlobalPose & aPlayerGeo,
                          component::Collision aPlayerCol,
-                         component::PlayerLifeCycle & aPlayerLifeCycle)
+                         component::PlayerLifeCycle & aLifeCycle)
     {
         ent::Phase eatPillUpdate;
         Box_f playerHitbox = component::transformHitbox(aPlayerGeo.mPosition,
@@ -36,7 +39,7 @@ void EatPill::update()
             playerHitbox
         );
 
-        mPills.each([&eatPillUpdate, &playerHitbox, &aPlayerLifeCycle]
+        mPills.each([&eatPillUpdate, &playerHitbox, &aLifeCycle]
                     (ent::Handle<ent::Entity> aHandle,
                      const component::GlobalPose & aPillGeo,
                      const component::Collision & aPillCol) 
@@ -47,23 +50,14 @@ void EatPill::update()
             if (component::collideWithSat(pillHitbox, playerHitbox))
             {
                 aHandle.get(eatPillUpdate)->erase();
-                aPlayerLifeCycle.mScore += gPointPerPill;
+                aLifeCycle.mScore += gPointPerPill;
+
+                // Update the text showing the score in the hud.
+                auto & playerHud = snac::getComponent<component::PlayerHud>(aLifeCycle.mHud);
+                snac::getComponent<component::Text>(playerHud.mScoreText)
+                        .mString = std::to_string(aLifeCycle.mScore);
             }
         });
-    });
-
-    mHuds.each([](const component::PlayerHud & aPlayerHud)
-    {
-        auto scoreView = aPlayerHud.mScoreText.get();
-        assert(scoreView && scoreView->has<component::Text>());
-        auto & text = scoreView->get<component::Text>();
-
-        text.mString = "P" + std::to_string(aPlayerHud.getSlot().mIndex + 1) 
-                        + " " + std::to_string(aPlayerHud.getScore());
-        
-        auto powerupView = aPlayerHud.mPowerupText.get();
-        assert(powerupView && powerupView->has<component::Text>());
-        powerupView->get<component::Text>().mString = aPlayerHud.getPowerUpName();
     });
 
     mPills.each([](const component::GlobalPose & aPillPose, const component::Collision & aPillCol) {

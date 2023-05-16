@@ -14,7 +14,6 @@ namespace ad {
 namespace snacgame {
 namespace component {
 
-struct PlayerSlot;
 
 // Note: Unused since we moved to bills
 const std::array<math::Position<2, float>, 4> gHudPositionsScreenspace{
@@ -31,6 +30,7 @@ const std::array<math::Position<3, float>, 4> gHudPositionsWorld{
     math::Position<3, float>{18.5f,  1.f, gPlayerHeight},
 };
 
+// TODO Why is the rotation in the plane of the table around Z and not Y?
 namespace {
     const auto axis = math::UnitVec<3, float>::MakeFromUnitLength({0.f, 0.f, 1.f});
 }
@@ -48,20 +48,12 @@ const std::array<const char *, static_cast<unsigned int>(PowerUpType::_End)> gPo
     "Controlled missile"
 };
 
+const char * getPowerUpName(ent::Handle<ent::Entity> aPlayer);
 
 struct PlayerHud
 {
-    int getScore() const;
-    const PlayerSlot & getSlot() const;
-    const char * getPowerUpName() const;
-
     ent::Handle<ent::Entity> mScoreText;
     ent::Handle<ent::Entity> mPowerupText;
-
-    ent::Handle<ent::Entity> mPlayer;
-    // Note: It is not convenient to populate this at the moment the powerup is picked up
-    // since the PlayerHud is not part of the Player anymore.
-    //const char * mPowerUpName = "";
 };
 
 

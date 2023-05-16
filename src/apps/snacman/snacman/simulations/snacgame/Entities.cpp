@@ -348,7 +348,6 @@ createHudPaperScore(GameContext & aContext,
             ent::Entity powerupText = *powerupHandle.get(createScore);
             powerupText 
                 .add(component::Text{
-                    .mString = "Pup",
                     .mFont = aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120),
                     //.mColor = playerSlot.mColor,
                     .mColor = math::hdr::gBlack<float>,
@@ -388,7 +387,6 @@ createHudPaperScore(GameContext & aContext,
             ->add(component::PlayerHud{
                 .mScoreText = scoreHandle,
                 .mPowerupText = powerupHandle,
-                .mPlayer = aPlayer,
             })
             .add(component::LevelEntity{})
             ;
@@ -442,7 +440,9 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
         player.add(component::PlayerModel{.mModel = playerModel})
             .add(component::PlayerLifeCycle{
                 .mIsAlive = false,
-                .mTimeToRespawn = component::gBaseTimeToRespawn})
+                .mTimeToRespawn = component::gBaseTimeToRespawn,
+                .mHud = createHudPaperScore(aContext, aSlot),
+            })
             .add(component::PlayerMoveState{})
             .add(component::AllowedMovement{})
             .add(component::Controller{.mType = aControllerType,
@@ -450,8 +450,6 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             .add(component::Collision{component::gPlayerHitbox})
             .add(component::PlayerPortalData{})
         ;
-
-        createHudPaperScore(aContext, aSlot);
     }
     return aSlot;
 }
