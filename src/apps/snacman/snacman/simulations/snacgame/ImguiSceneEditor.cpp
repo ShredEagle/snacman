@@ -37,13 +37,13 @@ namespace {
     {
         TT_angle<float> roll, pitch, yaw;
 
-        template <template <class> class TT_angle>
-        EulerAngles<TT_angle> as() const
+        template <template <class> class TT_targetAngle>
+        EulerAngles<TT_targetAngle> as() const
         {
             return {
-                roll.as<TT_angle>(),
-                pitch.as<TT_angle>(),
-                yaw.as<TT_angle>(),
+                roll.template as<TT_targetAngle>(),
+                pitch.template as<TT_targetAngle>(),
+                yaw.template as<TT_targetAngle>(),
             };
         }
     };
