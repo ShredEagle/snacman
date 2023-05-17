@@ -201,11 +201,10 @@ void PowerUpUsage::update(const snac::Time & aTime)
             if (aController.mInput.mCommand & gPlayerUsePowerup
                 && info.mCurrentTarget && info.mCurrentTarget->isValid())
             {
-                Phase swapPlayer;
-                swapPlayerPosition(swapPlayer, aHandle, *info.mCurrentTarget);
-                info.mTargetArrow->get(swapPlayer)->erase();
-                aPowerUp.mPowerUp.get(swapPlayer)->erase();
-                aHandle.get(swapPlayer)->remove<component::PlayerPowerUp>();
+                swapPlayerPosition(usage, aHandle, *info.mCurrentTarget);
+                info.mTargetArrow->get(usage)->erase();
+                aPowerUp.mPowerUp.get(usage)->erase();
+                aHandle.get(usage)->remove<component::PlayerPowerUp>();
                 break;
             }
 
@@ -292,9 +291,8 @@ void PowerUpUsage::update(const snac::Time & aTime)
                     info.mDelayChangeTarget -= delta;
                 }
 
-                Phase updateArrowParent;
                 if (info.mCurrentTarget
-                    != info.mTargetArrow->get(updateArrowParent)
+                    != info.mTargetArrow->get(usage)
                            ->get<component::SceneNode>()
                            .mParent)
                 {
@@ -332,8 +330,8 @@ void PowerUpUsage::update(const snac::Time & aTime)
 
                 EntHandle ring = mGameContext->mWorld.addEntity();
                 {
-                    Phase createRing;
-                    Entity ringEnt = *ring.get(createRing);
+                    Phase ringPhase;
+                    Entity ringEnt = *ring.get(ringPhase);
                     // TODO: (franz) put in Entities.cpp the creation of the area
                     addMeshGeoNode(
                         *mGameContext, ringEnt, "models/missile/area.gltf",
@@ -346,11 +344,11 @@ void PowerUpUsage::update(const snac::Time & aTime)
 
                 EntHandle missileModel = mGameContext->mWorld.addEntity();
                 {
-                    Phase createModel;
+                    Phase missilePhase;
                     constexpr component::PowerUpBaseInfo info =
                         component::gPowerupInfoByType[(
                             unsigned int) component::PowerUpType::Missile];
-                    Entity missileEnt = *missileModel.get(createModel);
+                    Entity missileEnt = *missileModel.get(missilePhase);
                     addMeshGeoNode(*mGameContext, missileEnt, info.mPath,
                                    info.mProgPath, {0.f, 0.f, gPillHeight},
                                    info.mPlayerScaling,
