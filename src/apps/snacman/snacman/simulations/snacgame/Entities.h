@@ -92,7 +92,7 @@ createPortalEntity(GameContext & aContext,
                    ent::Phase & aPhase,
                    const math::Position<2, float> & aPos,
                    int aPortalIndex);
-void addPortalInfo(component::Portal & aPortal,
+void addPortalInfo(GameContext & aContext, component::Portal & aPortal,
                    const component::Geometry & aGeo,
                    math::Vec<3, float> aDirection);
 ent::Handle<ent::Entity>
