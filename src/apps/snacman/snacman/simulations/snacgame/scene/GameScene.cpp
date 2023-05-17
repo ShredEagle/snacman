@@ -2,6 +2,8 @@
 // fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj
 
 #include "GameScene.h"
+#include "snacman/simulations/snacgame/system/AnimationManager.h"
+#include "snacman/simulations/snacgame/system/Explosion.h"
 
 #include "../component/Context.h"
 #include "../component/Controller.h"
@@ -152,11 +154,11 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
         switch (aController.mType)
         {
         case ControllerType::Keyboard:
-            aController.mCommandQuery = convertKeyboardInput(
+            aController.mInput = convertKeyboardInput(
                 "player", aInput.mKeyboard, mContext->mKeyboardMapping);
             break;
         case ControllerType::Gamepad:
-            aController.mCommandQuery = convertGamepadInput(
+            aController.mInput = convertGamepadInput(
                 "player", aInput.mGamepads.at(aController.mControllerId),
                 mContext->mGamepadMapping);
             break;
@@ -166,7 +168,7 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
 
         boundControllers.push_back(aController.mControllerId);
 
-        quit |= static_cast<bool>(aController.mCommandQuery & gQuitCommand);
+        quit |= static_cast<bool>(aController.mInput.mCommand & gQuitCommand);
     });
 
     // This works because gKeyboardControllerIndex is -1
@@ -178,23 +180,23 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
                       controlIndex)
             == boundControllers.end())
         {
-            int command = gNoCommand;
+            GameInput input{.mCommand = gNoCommand};
             const bool controllerIsKeyboard =
                 (int) controlIndex == gKeyboardControllerIndex;
 
             if (controllerIsKeyboard)
             {
-                command = convertKeyboardInput("unbound", aInput.mKeyboard,
+                input = convertKeyboardInput("unbound", aInput.mKeyboard,
                                                mContext->mKeyboardMapping);
             }
             else
             {
                 GamepadState & rawGamepad = aInput.mGamepads.at(controlIndex);
-                command = convertGamepadInput("unbound", rawGamepad,
+                input = convertGamepadInput("unbound", rawGamepad,
                                               mContext->mGamepadMapping);
             }
 
-            if (command & gJoin)
+            if (input.mCommand & gJoin)
             {
                 findSlotAndBind(mGameContext, mSlots,
                                 controllerIsKeyboard ? ControllerType::Keyboard
@@ -216,14 +218,16 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
     mSystems.get(update)->get<system::ConsolidateGridMovement>().update((float)aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update((float)aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::MovementIntegration>().update((float)aTime.mDeltaSeconds);
+    mSystems.get(update)->get<system::AnimationManager>().update();
     mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
     mSystems.get(update)->get<system::Pathfinding>().update();
     mSystems.get(update)->get<system::PortalManagement>().preGraphUpdate();
+    mSystems.get(update)->get<system::Explosion>().update(aTime);
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
 
     mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate();
-    mSystems.get(update)->get<system::PowerUpUsage>().update((float)aTime.mDeltaSeconds);
+    mSystems.get(update)->get<system::PowerUpUsage>().update(aTime);
     mSystems.get(update)->get<system::EatPill>().update();
 
     mSystems.get(update)->get<system::RoundMonitor>().update();

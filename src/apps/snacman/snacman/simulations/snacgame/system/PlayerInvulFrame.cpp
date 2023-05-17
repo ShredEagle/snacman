@@ -1,11 +1,14 @@
 #include "PlayerInvulFrame.h"
 
+#include "snacman/simulations/snacgame/component/PlayerModel.h"
+#include "snacman/simulations/snacgame/component/RigAnimation.h"
+
 #include "../component/VisualModel.h"
+#include "../typedef.h"
 
-#include <snac-renderer/Mesh.h>
 #include <memory>
+#include <snac-renderer/Mesh.h>
 #include <snacman/Profiling.h>
-
 
 namespace ad {
 namespace snacgame {
@@ -17,33 +20,39 @@ void PlayerInvulFrame::update(float aDelta)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    mPlayer.each([aDelta, this](component::PlayerLifeCycle & aPlayer,
-                                   component::VisualModel & aPlayerModel) {
+    ent::Phase hitStunAndInvul;
+    mPlayer.each([aDelta, this, &hitStunAndInvul](
+                     component::PlayerLifeCycle & aPlayer,
+                     component::PlayerModel & aPlayerModel) {
         // TODO: (franz): this should be better
-        if (aPlayer.mIsAlive && aPlayer.mInvulFrameCounter > 0.f && aPlayer.mHitStun <= 0.f) {
-            aPlayer.mInvulFrameCounter -= aDelta;
-
-            if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 0)
-            {
-                aPlayerModel.mModel = mGameContext->mResources.getModel("models/donut/donut.gltf", "effects/MeshTextures.sefx");
-            }
-            if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 2)
-            {
-                aPlayerModel.mModel = nullModel;
-            }
-        }
-        if (aPlayer.mIsAlive && aPlayer.mInvulFrameCounter > 0.f && aPlayer.mHitStun > 0.f)
+        if (aPlayer.mIsAlive && aPlayer.mInvulFrameCounter > 0.f)
         {
+        
             aPlayer.mInvulFrameCounter -= aDelta;
-            aPlayer.mHitStun -= aDelta;
 
-            if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 0)
+            if (aPlayer.mHitStun > 0.f)
             {
-                aPlayerModel.mModel = mGameContext->mResources.getModel("models/donut/donut.gltf", "effects/MeshTextures.sefx");
+                aPlayer.mHitStun -= aDelta;
             }
-            if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 2)
+
+            // TODO: (franz) since there is no alpha
+            // we remove the model from the player model
+            // but we also need to remove the animation from the player model
+            // entity since there is no animation on the null model
+            Entity model = *aPlayerModel.mModel.get(hitStunAndInvul);
+
+            if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 0
+                && !model.has<component::VisualModel>())
             {
-                aPlayerModel.mModel = nullModel;
+                model.add(component::VisualModel{
+                    .mModel = mGameContext->mResources.getModel(
+                        "models/donut/donut.gltf",
+                        "effects/MeshTextures.sefx")});
+            }
+            if (static_cast<int>(aPlayer.mInvulFrameCounter * 10.f) % 4 == 2
+                && model.has<component::VisualModel>())
+            {
+                model.remove<component::VisualModel>();
             }
         }
     });

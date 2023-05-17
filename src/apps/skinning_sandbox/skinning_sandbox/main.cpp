@@ -69,7 +69,7 @@ void runApplication()
     Scene scene{
         glfwApp,
         //finder.pathFor("models/anim/SimpleSkin/glTF/SimpleSkin.gltf"),
-        finder.pathFor("models/anim/anim.gltf"),
+        finder.pathFor("models/donut/donut.gltf"),
         DebugRenderer{pass(TechniqueLoader{finder}),
                       freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))},
         finder,

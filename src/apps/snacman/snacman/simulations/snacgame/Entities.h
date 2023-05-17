@@ -146,5 +146,7 @@ ent::Handle<ent::Entity> removePlayerFromGame(ent::Phase & aPhase,
 ent::Handle<ent::Entity> createTargetArrow(GameContext & aContext,
                                            const math::hdr::Rgba_f & aColor);
 
+ent::Handle<ent::Entity> createExplosion(GameContext & aContext, math::Position<3, float> & aPosition, const snac::Time & aTime);
+
 } // namespace snacgame
 } // namespace ad

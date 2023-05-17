@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/Timing.h"
 #include "snacman/simulations/snacgame/component/Geometry.h"
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "snacman/simulations/snacgame/component/PlayerHud.h"
@@ -36,7 +37,7 @@ public:
         mInGameMissilePowerups(mGameContext->mWorld)
     {}
 
-    void update(float aDelta);
+    void update(const snac::Time & aTime);
 
     std::pair<math::Position<2, float>, ent::Handle<ent::Entity>>
     getDogPlacementTile(ent::Handle<ent::Entity> aHandle,

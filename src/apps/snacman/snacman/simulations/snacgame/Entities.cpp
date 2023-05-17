@@ -3,6 +3,7 @@
 #include "component/AllowedMovement.h"
 #include "component/Collision.h"
 #include "component/Controller.h"
+#include "component/Explosion.h"
 #include "component/Geometry.h"
 #include "component/LevelTags.h"
 #include "component/MenuItem.h"
@@ -20,6 +21,7 @@
 #include "component/VisualModel.h"
 #include "GameContext.h"
 #include "scene/MenuScene.h"
+#include "snacman/simulations/snacgame/component/Explosion.h"
 #include "snacman/simulations/snacgame/component/PlayerHud.h"
 #include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "snacman/simulations/snacgame/component/PlayerPortalData.h"
@@ -196,7 +198,7 @@ createPowerUp(GameContext & aContext,
     Entity powerUp = *handle.get(aPhase);
     component::PowerUpType baseType = component::PowerUpType::Dog;
     component::PowerUpBaseInfo info =
-        component::gPowerupPathByType.at(static_cast<unsigned int>(baseType));
+        component::gPowerupInfoByType.at(static_cast<unsigned int>(baseType));
     addMeshGeoNode(aContext, powerUp, info.mPath,
                    "effects/MeshTextures.sefx",
                    {static_cast<float>(aGridPos.x()),
@@ -222,7 +224,7 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     auto handle = aContext.mWorld.addEntity();
     Entity powerUp = *handle.get(init);
     component::PowerUpBaseInfo info =
-        component::gPowerupPathByType.at(static_cast<unsigned int>(aType));
+        component::gPowerupInfoByType.at(static_cast<unsigned int>(aType));
     addMeshGeoNode(aContext, powerUp, info.mPath,
                    "effects/MeshTextures.sefx", {1.f, 1.f, 0.f},
                    info.mPlayerScaling, info.mPlayerInstanceScale,
@@ -435,15 +437,27 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
         Entity model = *playerModel.get(sceneInit);
 
         addGeoNode(aContext, player, {0.f, 0.f, gPlayerHeight});
-        addMeshGeoNode(aContext, model,
-                       "models/donut/donut.gltf", "effects/MeshTextures.sefx",
-                       {0.f, 0.f, 0.f}, 1.f,
-                       {0.2f, 0.2f, 0.2f},
-                       Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
-                              math::Turn<float>{0.25f}}
-                           * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
-                                    math::Turn<float>{0.25f}},
-                       playerSlot.mColor);
+        std::shared_ptr<snac::Model> modelData = addMeshGeoNode(
+            aContext, model, "models/donut/donut.gltf",
+            "effects/MeshRiggingTextures.sefx", {0.f, 0.f, 0.f}, 1.f,
+            {0.2f, 0.2f, 0.2f},
+            Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+                   math::Turn<float>{0.25f}}
+                * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                         math::Turn<float>{0.25f}},
+            playerSlot.mColor);
+        std::string animName = "idle";
+        const snac::NodeAnimation & animation =
+            modelData->mAnimations.at(animName);
+        model.add(component::RigAnimation{
+            .mAnimName = animName,
+            .mAnimation = &animation,
+            .mAnimationMap = &modelData->mAnimations,
+            .mStartTime = snac::Clock::now(),
+            .mParameter =
+                decltype(component::RigAnimation::mParameter){
+                    animation.mEndTime},
+        });
     }
 
     insertEntityInScene(playerModel, aSlot);
@@ -646,8 +660,8 @@ EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
         Phase createTargetArrow;
         Entity stageEntity = *result.get(createTargetArrow);
 
-        addMeshGeoNode(aContext, stageEntity,
-                       "models/arrow/arrow.gltf", "effects/MeshTextures.sefx", {0.f, 0.f, 2.f}, 0.4f,
+        addMeshGeoNode(aContext, stageEntity, "models/arrow/arrow.gltf",
+                       "effects/MeshTextures.sefx", {0.f, 0.f, 2.f}, 0.4f,
                        {1.f, 1.f, 1.f},
                        Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                               math::Turn<float>{0.25f}},
@@ -659,6 +673,25 @@ EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
                           .mAngle = math::Degree<float>{180.f}}});
     }
     return result;
+}
+
+EntHandle createExplosion(GameContext & aContext,
+                          math::Position<3, float> & aPos, const snac::Time & aTime)
+{
+    EntHandle explosion = aContext.mWorld.addEntity();
+    {
+        Phase createExplosion;
+        Entity explosionEnt = *explosion.get(createExplosion);
+        addMeshGeoNode(aContext, explosionEnt, "models/boom/boom.gltf",
+                       "effects/MeshTextures.sefx", aPos, 0.1f);
+        explosionEnt
+            .add(component::Explosion{
+                .mStartTime = aTime.mTimepoint,
+                .mParameter = math::ParameterAnimation<
+                    float, math::AnimationResult::Clamp>(0.5f)})
+            .add(component::LevelEntity{});
+    }
+    return explosion;
 }
 
 } // namespace snacgame

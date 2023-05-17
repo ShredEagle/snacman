@@ -1,4 +1,5 @@
 #include "IntegratePlayerMovement.h"
+#include "snacman/simulations/snacgame/component/RigAnimation.h"
 
 #include "../LevelHelper.h"
 #include "../GameParameters.h"
@@ -78,8 +79,11 @@ void IntegratePlayerMovement::update(float aDelta)
                     math::Turn<float>{0.25f}};
         }
 
-        snac::getComponent<component::VisualModel>(aModel.mModel)
-            .mDisableInterpolation = true;
+        if (aModel.mModel.get()->has<component::VisualModel>())
+        {
+            snac::getComponent<component::VisualModel>(aModel.mModel)
+                .mDisableInterpolation = true;
+        }
     });
 }
 

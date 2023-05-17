@@ -1,6 +1,8 @@
 #pragma once
 
-#include "snacman/Input.h"
+#include "../InputCommandConverter.h"
+
+#include <snacman/Input.h>
 
 namespace ad {
 namespace snacgame {
@@ -9,7 +11,7 @@ namespace component {
 struct Controller
 {
     ControllerType mType = ControllerType::Keyboard;
-    int mCommandQuery = 0;
+    GameInput mInput;
     int mControllerId;
 
     void drawUi() const;

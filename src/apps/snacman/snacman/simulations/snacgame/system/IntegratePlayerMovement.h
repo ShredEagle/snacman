@@ -1,6 +1,7 @@
 #pragma once
 
 #include "snacman/simulations/snacgame/component/PlayerModel.h"
+#include "snacman/simulations/snacgame/component/RigAnimation.h"
 #include "../GameContext.h"
 
 #include "../component/Geometry.h"

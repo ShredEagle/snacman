@@ -22,7 +22,7 @@ void ConsolidateGridMovement::update(float aDelta)
         int oldMoveState = aMoveState.mMoveState;
         int inputMoveFlag = gPlayerMoveFlagNone;
 
-        inputMoveFlag = aController.mCommandQuery;
+        inputMoveFlag = aController.mInput.mCommand;
 
         inputMoveFlag &= aAllowedMovement.mAllowedMovement;
 

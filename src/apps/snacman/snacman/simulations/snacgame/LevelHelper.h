@@ -29,9 +29,20 @@ inline Position<2, int> getLevelPosition_i(const Position<2, float> & aPos)
                             static_cast<int>(aPos.y() + gCellSize / 2)};
 }
 
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right
+};
+
 constexpr std::array<Vec<2, int>, 4> gDirections{
     Vec<2, int>{0, 1}, Vec<2, int>{0, -1},
     Vec<2, int>{1, 0}, Vec<2, int>{-1, 0}};
+
+constexpr std::array<Vec<2, float>, 4> gDirections_f{
+    Vec<2, float>{0.f, 1.f}, Vec<2, float>{0.f, -1.f},
+    Vec<2, float>{1.f, 0.f}, Vec<2, float>{-1.f, 0.f}};
 
 constexpr std::array<const int, 4> gAllowedMovement{
     gAllowedMovementUp, gAllowedMovementDown,
