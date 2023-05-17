@@ -1,4 +1,5 @@
 #include "Debug_BoundingBoxes.h"
+#include "snacman/simulations/snacgame/GameParameters.h"
 
 #include <snacman/DebugDrawing.h>
 #include <snacman/Profiling.h>
@@ -55,7 +56,7 @@ void Debug_BoundingBoxes::update()
         20.f, 5.f);
 
     // Also add the world basis
-    DBGDRAW_INFO(snac::gWorldDrawer).addBasis({});
+    DBGDRAW_INFO(snac::gWorldDrawer).addBasis({.mOrientation = gWorldCoordTo3dCoordQuat});
 }
 
 

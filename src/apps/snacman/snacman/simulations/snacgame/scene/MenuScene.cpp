@@ -74,13 +74,13 @@ MenuScene::update(const snac::Time & aTime, RawInput & aInput)
 {
     TIME_RECURRING_CLASSFUNC(Main);
     ControllerCommand keyboardCommand{
-        .mCommand = convertKeyboardInput("menu", aInput.mKeyboard,
-                                         mContext->mKeyboardMapping),
         .mId = gKeyboardControllerIndex,
         .mControllerType = ControllerType::Keyboard,
+        .mInput = convertKeyboardInput("menu", aInput.mKeyboard,
+                                         mContext->mKeyboardMapping),
     };
 
-    int accumulatedCommand = keyboardCommand.mCommand;
+    int accumulatedCommand = keyboardCommand.mInput.mCommand;
 
     std::vector<ControllerCommand> controllerCommandList;
 
@@ -88,12 +88,12 @@ MenuScene::update(const snac::Time & aTime, RawInput & aInput)
     {
         GamepadState & rawGamepad = aInput.mGamepads.at(index);
         ControllerCommand gamepadCommand{
-            .mCommand = convertGamepadInput("menu", rawGamepad,
-                                            mContext->mGamepadMapping),
             .mId = static_cast<int>(index),
             .mControllerType = ControllerType::Gamepad,
+            .mInput = convertGamepadInput("menu", rawGamepad,
+                                            mContext->mGamepadMapping),
         };
-        accumulatedCommand |= gamepadCommand.mCommand;
+        accumulatedCommand |= gamepadCommand.mInput.mCommand;
         controllerCommandList.push_back(gamepadCommand);
     }
 
@@ -123,7 +123,7 @@ MenuScene::update(const snac::Time & aTime, RawInput & aInput)
             }
             else if (aItem.mTransition.mTransitionName == "start")
             {
-                if (keyboardCommand.mCommand & gSelectItem)
+                if (keyboardCommand.mInput.mCommand & gSelectItem)
                 {
                     findSlotAndBind(mGameContext, mSlots,
                                     keyboardCommand.mControllerType,
@@ -132,7 +132,7 @@ MenuScene::update(const snac::Time & aTime, RawInput & aInput)
                 }
                 for (auto command : controllerCommandList)
                 {
-                    if (command.mCommand & gSelectItem)
+                    if (command.mInput.mCommand & gSelectItem)
                     {
                         findSlotAndBind(mGameContext, mSlots,
                                         command.mControllerType, command.mId);

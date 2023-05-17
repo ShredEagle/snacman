@@ -3,6 +3,7 @@
 #include "component/AllowedMovement.h"
 #include "component/Collision.h"
 #include "component/Controller.h"
+#include "component/Explosion.h"
 #include "component/Geometry.h"
 #include "component/LevelTags.h"
 #include "component/MenuItem.h"
@@ -20,6 +21,7 @@
 #include "component/VisualModel.h"
 #include "GameContext.h"
 #include "scene/MenuScene.h"
+#include "snacman/simulations/snacgame/component/Explosion.h"
 #include "snacman/simulations/snacgame/component/PlayerHud.h"
 #include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "snacman/simulations/snacgame/component/PlayerPortalData.h"
@@ -50,8 +52,7 @@ namespace snacgame {
 
 constexpr Size3 lLevelElementScaling = {1.f, 1.f, 1.f};
 
-void addGeoNode(Phase & aPhase,
-                GameContext & aContext,
+void addGeoNode(GameContext & aContext,
                 Entity & aEnt,
                 Pos3 aPos,
                 float aScale,
@@ -68,8 +69,7 @@ void addGeoNode(Phase & aPhase,
         .add(component::GlobalPose{});
 }
 
-std::shared_ptr<snac::Model> addMeshGeoNode(Phase & aPhase,
-                                            GameContext & aContext,
+std::shared_ptr<snac::Model> addMeshGeoNode(GameContext & aContext,
                                             Entity & aEnt,
                                             const char * aModelPath,
                                             const char * aEffectPath,
@@ -101,7 +101,7 @@ void createLevelElement(Phase & aPhase,
 {
     Entity path = *aHandle.get(aPhase);
     addMeshGeoNode(
-        aPhase, aContext, path, "models/square_biscuit/square_biscuit.gltf",
+        aContext, path, "models/square_biscuit/square_biscuit.gltf",
         "effects/MeshTextures.sefx",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gLevelHeight},
@@ -144,8 +144,7 @@ createAnimatedTest(GameContext & aContext,
     auto handle = aContext.mWorld.addEntity();
     Entity entity = *handle.get(aPhase);
     std::shared_ptr<snac::Model> model = addMeshGeoNode(
-        aPhase, aContext, entity, "models/anim/anim.gltf",
-        "effects/MeshRigging.sefx",
+        aContext, entity, "models/anim/anim.gltf", "effects/MeshRigging.sefx",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gLevelHeight},
         0.45f, lLevelElementScaling,
@@ -169,7 +168,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
 {
     auto handle = aContext.mWorld.addEntity();
     Entity pill = *handle.get(aPhase);
-    addMeshGeoNode(aPhase, aContext, pill, "models/burger/burger.gltf",
+    addMeshGeoNode(aContext, pill, "models/burger/burger.gltf",
                    "effects/MeshTextures.sefx",
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gPillHeight},
@@ -197,9 +196,8 @@ createPowerUp(GameContext & aContext,
     Entity powerUp = *handle.get(aPhase);
     component::PowerUpType baseType = component::PowerUpType::Dog;
     component::PowerUpBaseInfo info =
-        component::gPowerupPathByType.at(static_cast<unsigned int>(baseType));
-    addMeshGeoNode(aPhase, aContext, powerUp, info.mPath,
-                   "effects/MeshTextures.sefx",
+        component::gPowerupInfoByType.at(static_cast<unsigned int>(baseType));
+    addMeshGeoNode(aContext, powerUp, info.mPath, "effects/MeshTextures.sefx",
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gPillHeight},
                    info.mLevelScaling, info.mLevelInstanceScale,
@@ -223,11 +221,10 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     auto handle = aContext.mWorld.addEntity();
     Entity powerUp = *handle.get(init);
     component::PowerUpBaseInfo info =
-        component::gPowerupPathByType.at(static_cast<unsigned int>(aType));
-    addMeshGeoNode(init, aContext, powerUp, info.mPath,
-                   "effects/MeshTextures.sefx", {1.f, 1.f, 0.f},
-                   info.mPlayerScaling, info.mPlayerInstanceScale,
-                   info.mPlayerOrientation);
+        component::gPowerupInfoByType.at(static_cast<unsigned int>(aType));
+    addMeshGeoNode(aContext, powerUp, info.mPath, "effects/MeshTextures.sefx",
+                   {1.f, 1.f, 0.f}, info.mPlayerScaling,
+                   info.mPlayerInstanceScale, info.mPlayerOrientation);
     return handle;
 }
 
@@ -316,23 +313,27 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
 
         Entity model = *playerModel.get(sceneInit);
 
-        addGeoNode(sceneInit, aContext, player, {0.f, 0.f, gPlayerHeight});
-        std::shared_ptr<snac::Model> modelData = addMeshGeoNode(sceneInit, aContext, model, "models/donut/donut.gltf",
-                       "effects/MeshRiggingTextures.sefx", {0.f, 0.f, 0.f}, 1.f,
-                       {0.2f, 0.2f, 0.2f},
-                       Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
-                              math::Turn<float>{0.25f}}
-                           * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
-                                    math::Turn<float>{0.25f}},
-                       playerSlot.mColor);
+        addGeoNode(aContext, player, {0.f, 0.f, gPlayerHeight});
+        std::shared_ptr<snac::Model> modelData = addMeshGeoNode(
+            aContext, model, "models/donut/donut.gltf",
+            "effects/MeshRiggingTextures.sefx", {0.f, 0.f, 0.f}, 1.f,
+            {0.2f, 0.2f, 0.2f},
+            Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+                   math::Turn<float>{0.25f}}
+                * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                         math::Turn<float>{0.25f}},
+            playerSlot.mColor);
         std::string animName = "idle";
-        const snac::NodeAnimation & animation = modelData->mAnimations.at(animName);
+        const snac::NodeAnimation & animation =
+            modelData->mAnimations.at(animName);
         model.add(component::RigAnimation{
-                .mAnimName = animName,
-                .mAnimation = &animation,
-                .mAnimationMap = &modelData->mAnimations,
-                .mStartTime = snac::Clock::now(),
-                .mParameter = decltype(component::RigAnimation::mParameter){animation.mEndTime},
+            .mAnimName = animName,
+            .mAnimation = &animation,
+            .mAnimationMap = &modelData->mAnimations,
+            .mStartTime = snac::Clock::now(),
+            .mParameter =
+                decltype(component::RigAnimation::mParameter){
+                    animation.mEndTime},
         });
     }
 
@@ -514,9 +515,9 @@ EntHandle createStageDecor(GameContext & aContext)
         Phase createStage;
         Entity stageEntity = *result.get(createStage);
 
-        addMeshGeoNode(createStage, aContext, stageEntity,
-                       "models/stage/stage.gltf", "effects/MeshTextures.sefx",
-                       {7.f, 7.f, -0.4f}, 1.f, {1.f, 1.f, 1.f},
+        addMeshGeoNode(aContext, stageEntity, "models/stage/stage.gltf",
+                       "effects/MeshTextures.sefx", {7.f, 7.f, -0.4f}, 1.f,
+                       {1.f, 1.f, 1.f},
                        Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                               math::Turn<float>{0.25f}}
                            * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
@@ -533,8 +534,8 @@ EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
         Phase createTargetArrow;
         Entity stageEntity = *result.get(createTargetArrow);
 
-        addMeshGeoNode(createTargetArrow, aContext, stageEntity,
-                       "models/arrow/arrow.gltf", "effects/MeshTextures.sefx", {0.f, 0.f, 2.f}, 0.4f,
+        addMeshGeoNode(aContext, stageEntity, "models/arrow/arrow.gltf",
+                       "effects/MeshTextures.sefx", {0.f, 0.f, 2.f}, 0.4f,
                        {1.f, 1.f, 1.f},
                        Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                               math::Turn<float>{0.25f}},
@@ -546,6 +547,25 @@ EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
                           .mAngle = math::Degree<float>{180.f}}});
     }
     return result;
+}
+
+EntHandle createExplosion(GameContext & aContext,
+                          math::Position<3, float> & aPos, const snac::Time & aTime)
+{
+    EntHandle explosion = aContext.mWorld.addEntity();
+    {
+        Phase createExplosion;
+        Entity explosionEnt = *explosion.get(createExplosion);
+        addMeshGeoNode(aContext, explosionEnt, "models/boom/boom.gltf",
+                       "effects/MeshTextures.sefx", aPos, 0.1f);
+        explosionEnt
+            .add(component::Explosion{
+                .mStartTime = aTime.mTimepoint,
+                .mParameter = math::ParameterAnimation<
+                    float, math::AnimationResult::Clamp>(0.5f)})
+            .add(component::LevelEntity{});
+    }
+    return explosion;
 }
 
 } // namespace snacgame

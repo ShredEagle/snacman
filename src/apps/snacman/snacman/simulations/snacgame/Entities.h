@@ -44,7 +44,6 @@ constexpr float gPlayerHeight = 0 * gCellSize * 0.1f;
 constexpr float gLevelHeight = 0 * gCellSize * 0.1f;
 
 void addGeoNode(
-    ent::Phase & aPhase,
     GameContext & aContext,
     ent::Entity & aEnt,
     math::Position<3, float> aPos = math::Position<3, float>::Zero(),
@@ -54,7 +53,6 @@ void addGeoNode(
     math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
 
 std::shared_ptr<snac::Model> addMeshGeoNode(
-    ent::Phase & aPhase,
     GameContext & aContext,
     ent::Entity & aEnt,
     const char * aModelPath,
@@ -148,6 +146,8 @@ ent::Handle<ent::Entity> removePlayerFromGame(ent::Phase & aPhase,
 
 ent::Handle<ent::Entity> createTargetArrow(GameContext & aContext,
                                            const math::hdr::Rgba_f & aColor);
+
+ent::Handle<ent::Entity> createExplosion(GameContext & aContext, math::Position<3, float> & aPosition, const snac::Time & aTime);
 
 } // namespace snacgame
 } // namespace ad

@@ -1,8 +1,12 @@
 #include "PowerUpUsage.h"
 
+#include "math/VectorUtilities.h"
+#include "snacman/Timing.h"
+#include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "snacman/simulations/snacgame/component/SceneNode.h"
 #include "snacman/simulations/snacgame/component/Speed.h"
+#include "snacman/simulations/snacgame/component/VisualModel.h"
 #include "snacman/simulations/snacgame/GameParameters.h"
 
 #include "../component/AllowedMovement.h"
@@ -28,15 +32,16 @@
 namespace ad {
 namespace snacgame {
 namespace system {
-void PowerUpUsage::update(float aDelta)
+void PowerUpUsage::update(const snac::Time & aTime)
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    mPowerups.each([&aDelta, this](component::PowerUp & aPowerUp,
+    const float delta = aTime.mDeltaSeconds;
+    mPowerups.each([&delta, this](component::PowerUp & aPowerUp,
                                    component::VisualModel & aVisualModel,
                                    component::Geometry & aGeo) {
         if (aPowerUp.mSwapTimer > 0.f)
         {
-            aPowerUp.mSwapTimer -= aDelta;
+            aPowerUp.mSwapTimer -= delta;
         }
         else
         {
@@ -47,10 +52,11 @@ void PowerUpUsage::update(float aDelta)
                     (static_cast<unsigned int>(aPowerUp.mType) + 1)
                     % static_cast<unsigned int>(component::PowerUpType::_End));
 
-            component::PowerUpBaseInfo info = component::gPowerupPathByType.at(
+            component::PowerUpBaseInfo info = component::gPowerupInfoByType.at(
                 static_cast<unsigned int>(newType));
             // TODO: (franz) put the program in the powerup info
-            aVisualModel.mModel = mGameContext->mResources.getModel(info.mPath, "effects/MeshTextures.sefx");
+            aVisualModel.mModel = mGameContext->mResources.getModel(
+                info.mPath, "effects/MeshTextures.sefx");
             aPowerUp.mType = newType;
             aGeo.mInstanceScaling = info.mLevelInstanceScale;
             aGeo.mOrientation =
@@ -59,7 +65,7 @@ void PowerUpUsage::update(float aDelta)
         }
     });
 
-    Phase powerup;
+    Phase pickup;
     // Powerup pickup phase
     mPlayers.each([&](EntHandle aPlayer,
                       const component::GlobalPose & aPlayerPose,
@@ -68,7 +74,7 @@ void PowerUpUsage::update(float aDelta)
                       component::Collision aPlayerCol) {
         const Box_f playerHitbox = component::transformHitbox(
             aPlayerPose.mPosition, aPlayerCol.mHitbox);
-        Entity playerEnt = *aPlayer.get(powerup);
+        Entity playerEnt = *aPlayer.get(pickup);
         if (!playerEnt.has<component::PlayerPowerUp>())
         {
             mPowerups.each([&](ent::Handle<ent::Entity> aHandle,
@@ -96,11 +102,11 @@ void PowerUpUsage::update(float aDelta)
                     aHud.mPowerUpName = component::gPowerUpName.at(
                         static_cast<std::size_t>(aPowerup.mType));
                     insertEntityInScene(playerPowerup,
-                                        aPlayer.get(powerup)
+                                        aPlayer.get(pickup)
                                             ->get<component::PlayerModel>()
                                             .mModel);
                     aPowerup.mPickedUp = true;
-                    aHandle.get(powerup)->erase();
+                    aHandle.get(pickup)->erase();
 
                     switch (aPowerup.mType)
                     {
@@ -128,8 +134,9 @@ void PowerUpUsage::update(float aDelta)
         }
     });
 
+    Phase usage;
     // Power up usage phase
-    mPowUpPlayers.each([this, &powerup, &aDelta](
+    mPowUpPlayers.each([this, &usage, &delta](
                            EntHandle aHandle,
                            const component::Geometry & aPlayerGeo,
                            component::PlayerPowerUp & aPowerUp,
@@ -140,7 +147,7 @@ void PowerUpUsage::update(float aDelta)
         {
         case component::PowerUpType::Dog:
         {
-            if (aController.mCommandQuery & gPlayerUsePowerup)
+            if (aController.mInput.mCommand & gPlayerUsePowerup)
             {
                 // Get placement tile
                 auto [powerupPos, targetHandle] =
@@ -149,7 +156,7 @@ void PowerUpUsage::update(float aDelta)
                 // Adds components behavior
                 //  TODO: (franz) Animate the player
                 transferEntity(aPowerUp.mPowerUp, *mGameContext->mLevel);
-                Entity powerupEnt = *aPowerUp.mPowerUp.get(powerup);
+                Entity powerupEnt = *aPowerUp.mPowerUp.get(usage);
                 component::Geometry & puGeo =
                     powerupEnt.get<component::Geometry>();
                 powerupEnt.add(component::LevelEntity{})
@@ -157,14 +164,16 @@ void PowerUpUsage::update(float aDelta)
                     .add(component::PathToOnGrid{.mEntityTarget = targetHandle})
                     .add(component::Collision{.mHitbox =
                                                   component::gPowerUpHitbox})
-                    .add(component::InGamePowerup{.mOwner = aHandle,
-                                                  .mType = aPowerUp.mType});
+                    .add(component::InGamePowerup{
+                        .mOwner = aHandle,
+                        .mType = aPowerUp.mType,
+                        .mInfo = component::InGameDog{}});
 
                 puGeo.mPosition.x() = powerupPos.x();
                 puGeo.mPosition.y() = powerupPos.y();
                 puGeo.mPosition.z() = gPillHeight;
 
-                aHandle.get(powerup)->remove<component::PlayerPowerUp>();
+                aHandle.get(usage)->remove<component::PlayerPowerUp>();
             }
             break;
         }
@@ -188,7 +197,7 @@ void PowerUpUsage::update(float aDelta)
             }
 
             // This uses the powerup so this ends the switch statement
-            if (aController.mCommandQuery & gPlayerUsePowerup
+            if (aController.mInput.mCommand & gPlayerUsePowerup
                 && info.mCurrentTarget && info.mCurrentTarget->isValid())
             {
                 Phase swapPlayer;
@@ -199,9 +208,9 @@ void PowerUpUsage::update(float aDelta)
                 break;
             }
 
-            bool changeTarget = ((aController.mCommandQuery
+            bool changeTarget = ((aController.mInput.mCommand
                                   & (gNextPowerUpTarget | gPrevPowerUpTarget)))
-                                || (aController.mCommandQuery
+                                || (aController.mInput.mCommand
                                     & (gRightJoyUp | gRightJoyDown
                                        | gRightJoyLeft | gRightJoyRight));
 
@@ -214,9 +223,11 @@ void PowerUpUsage::update(float aDelta)
                     // commands and make them into 1 and 2 this then index the
                     // gDirections to get the horizontal plus and minus
                     // directions
-                    const Vec2_i direction = gDirections
-                        [(aController.mCommandQuery >> gBaseTargetShift & 0b11)
-                         + 1];
+                    const Vec2_i direction =
+                        gDirections[(aController.mInput.mCommand
+                                         >> gBaseTargetShift
+                                     & 0b11)
+                                    + 1];
 
                     constexpr int otherSlotSize = gMaxPlayerSlots - 1;
                     std::array<std::pair<Pos2, OptEntHandle>, otherSlotSize>
@@ -277,7 +288,7 @@ void PowerUpUsage::update(float aDelta)
                 }
                 else
                 {
-                    info.mDelayChangeTarget -= aDelta;
+                    info.mDelayChangeTarget -= delta;
                 }
 
                 Phase updateArrowParent;
@@ -299,31 +310,71 @@ void PowerUpUsage::update(float aDelta)
         }
         case component::PowerUpType::Missile:
         {
-            if (aController.mCommandQuery & gPlayerUsePowerup)
+            if (aController.mInput.mCommand & gPlayerUsePowerup)
             {
-                // Transfer powerup to level node in scene graph
-                // Adds components behavior
-                //  TODO: (franz) Animate the player
-                transferEntity(aPowerUp.mPowerUp, *mGameContext->mLevel);
-                Entity powerupEnt = *aPowerUp.mPowerUp.get(powerup);
+                // TODO: (franz) Animate the player
+                // TODO: (franz) redo this completely to have the model as a
+                // child from the creation of powerup
+                EntHandle rootPowerup = aPowerUp.mPowerUp;
+                Entity rootPowerupEnt = *rootPowerup.get(usage);
                 component::Geometry & puGeo =
-                    powerupEnt.get<component::Geometry>();
-                math::Vec<3, float> mForward = puGeo.mOrientation.rotate(
+                    rootPowerupEnt.get<component::Geometry>();
+                rootPowerupEnt.remove<component::VisualModel>();
+                Quat_f missileOrientation = puGeo.mOrientation;
+
+                // Transfer powerup to level node in scene graph
+                transferEntity(rootPowerup, *mGameContext->mLevel);
+                puGeo.mOrientation = Quat_f::Identity();
+                puGeo.mScaling = 1.f;
+                puGeo.mInstanceScaling = {1.f, 1.f, 1.f};
+                puGeo.mPosition.z() = 0.f;
+
+                EntHandle ring = mGameContext->mWorld.addEntity();
+                {
+                    Phase createRing;
+                    Entity ringEnt = *ring.get(createRing);
+                    // TODO: (franz) put in Entities.cpp the creation of the area
+                    addMeshGeoNode(
+                        *mGameContext, ringEnt, "models/missile/area.gltf",
+                        "effects/MeshTextures.sefx", {0.f, 0.f, 0.f}, 3.f,
+                        {1.f, 1.f, 1.f},
+                        Quat_f{UnitVec3{Vec3{1.f, 0.f, 0.f}}, Turn_f{0.25f}},
+                        aPlayerSlot.mColor);
+                    ringEnt.add(component::LevelEntity{});
+                }
+
+                EntHandle missileModel = mGameContext->mWorld.addEntity();
+                {
+                    Phase createModel;
+                    constexpr component::PowerUpBaseInfo info =
+                        component::gPowerupInfoByType[(
+                            unsigned int) component::PowerUpType::Missile];
+                    Entity missileEnt = *missileModel.get(createModel);
+                    addMeshGeoNode(*mGameContext, missileEnt, info.mPath,
+                                   info.mProgPath, {0.f, 0.f, gPillHeight},
+                                   info.mPlayerScaling,
+                                   info.mPlayerInstanceScale, missileOrientation);
+                    missileEnt.add(component::LevelEntity{});
+                }
+                insertEntityInScene(missileModel, rootPowerup);
+                insertEntityInScene(ring, rootPowerup);
+
+                // Adds components behavior
+                component::InGamePowerup inGamePowerup{
+                    .mOwner = aHandle,
+                    .mType = aPowerUp.mType,
+                    .mInfo = component::InGameMissile{
+                        .mModel = missileModel,
+                        .mDamageArea = ring,
+                    }};
+                math::Vec<3, float> mForward = missileOrientation.rotate(
                     math::Vec<3, float>{0.f, 1.f, 0.f});
-                powerupEnt.add(component::LevelEntity{})
-                    .add(component::Speed{
-                        .mSpeed = mForward,
-                        .mRotation =
-                            AxisAngle{
-                                math::UnitVec<3, float>::MakeFromUnitLength(
-                                    {0.f, 0.f, 1.f}),
-                                math::Turn<float>{0.1f}}})
-                    .add(component::InGamePowerup{.mOwner = aHandle,
-                                                  .mType = aPowerUp.mType});
 
-                puGeo.mPosition.z() = gPillHeight;
+                rootPowerupEnt.add(component::LevelEntity{})
+                    .add(component::Speed{.mSpeed = mForward})
+                    .add(inGamePowerup);
 
-                aHandle.get(powerup)->remove<component::PlayerPowerUp>();
+                aHandle.get(usage)->remove<component::PlayerPowerUp>();
             }
             break;
         }
@@ -332,15 +383,16 @@ void PowerUpUsage::update(float aDelta)
         }
     });
 
-    mInGameDogPowerups.each([this, &powerup](
-                             EntHandle aPowerupHandle,
-                             const component::GlobalPose & aPowerupPose,
-                             const component::Geometry & aGeo,
-                             const component::Collision & aPowerupCol,
-                             component::InGamePowerup & aPowerup) {
+    Phase inGameDog;
+    mInGameDogPowerups.each([this, &inGameDog](
+                                EntHandle aPowerupHandle,
+                                const component::GlobalPose & aPowerupPose,
+                                const component::Geometry & aGeo,
+                                const component::Collision & aPowerupCol,
+                                component::InGamePowerup & aPowerup) {
         const Box_f powerupHitbox = component::transformHitbox(
             aPowerupPose.mPosition, aPowerupCol.mHitbox);
-        mPlayers.each([&aPowerup, powerupHitbox, &aPowerupHandle, &powerup](
+        mPlayers.each([&aPowerup, powerupHitbox, &aPowerupHandle, &inGameDog](
                           EntHandle aPlayerHandle,
                           const component::GlobalPose & aPlayerPose,
                           const component::Collision & aPlayerCol,
@@ -354,28 +406,90 @@ void PowerUpUsage::update(float aDelta)
                 {
                     // TODO: (franz): make hitstun dependent on
                     // powerup type
-                    aPlayerLifeCycle.mHitStun =
-                        component::gBaseHitStunDuration;
+                    aPlayerLifeCycle.mHitStun = component::gBaseHitStunDuration;
                     aPlayerLifeCycle.mInvulFrameCounter =
                         component::gBaseHitStunDuration;
-                    aPowerupHandle.get(powerup)->erase();
+                    aPowerupHandle.get(inGameDog)->erase();
                 }
             }
         });
     });
 
-    mInGameMissilePowerups.each([](
-                             EntHandle aPowerupHandle,
-                             const component::GlobalPose & aPowerupPose,
-                             const component::Geometry & aGeo,
-                             component::Speed & aSpeed,
-                             component::InGamePowerup & aPowerup) {
+    Phase manageMissile;
+    mInGameMissilePowerups.each(
+        [&manageMissile, delta, this, &aTime](EntHandle aPowerupHandle,
+                         const component::GlobalPose & aPowerupPose,
+                         component::Geometry & aGeo, component::Speed & aSpeed,
+                         component::InGamePowerup & aPowerup) {
+            std::get<component::InGameMissile>(aPowerup.mInfo);
             // Change orientation
+            EntHandle aOwner = aPowerup.mOwner;
+            const component::Controller & aController =
+                aOwner.get(manageMissile)->get<component::Controller>();
+            const int command = aController.mInput.mCommand;
+            const Vec2 rightDir = aController.mInput.mRightDirection;
+            const bool dirInputPresent = command
+                                         & (gRightJoyUp | gRightJoyDown
+                                            | gRightJoyLeft | gRightJoyRight);
+            component::InGameMissile info = std::get<component::InGameMissile>(aPowerup.mInfo);
+            component::Geometry & modelGeo =
+                info.mModel.get(manageMissile)
+                    ->get<component::Geometry>();
+            component::GlobalPose & modelGlobalPose =
+                info.mModel.get(manageMissile)
+                    ->get<component::GlobalPose>();
+
+            // Make time tick
+            info.mDelayExplosion -= delta;
+
+            if (dirInputPresent)
+            {
+                // We make the missile up right with the first term and then we
+                // compute The proper orientation according to the directional
+                // input
+                /* modelGeo.mOrientation = Quat_f::Identity(); */
+                math::Angle<float> dirAngle{(float)getOrientedAngle(rightDir, Vec2{0.f, 1.f}).value()};
+                modelGeo.mOrientation =
+                    Quat_f{UnitVec3{Vec3{0.f, 0.f, 1.f}}, dirAngle}; 
+            }
+
+            DBGDRAW_DEBUG(snac::gHitboxDrawer).addBasis({.mPosition = modelGlobalPose.mPosition,
+                          .mOrientation = modelGlobalPose.mOrientation});
+            DBGDRAW_DEBUG(snac::gHitboxDrawer).addBasis({.mPosition = modelGlobalPose.mPosition + Vec3{1.f, 0.f, 0.f},
+                          .mOrientation = aPowerupPose.mOrientation});
+
             // Compute speed from orientation
-            math::Vec<3, float> mForward =
-                aGeo.mOrientation.rotate(math::Vec<3, float>{0.f, 1.f, 0.f});
-            aSpeed.mSpeed = mForward * 2.f;
-    });
+            math::Vec<3, float> mForward = (modelGeo.mOrientation).rotate(
+                math::Vec<3, float>{0.f, 1.f, 0.f});
+            aSpeed.mSpeed = mForward * component::gMissileSpeed;
+
+            const bool explodeMissile = command & gPlayerUsePowerup || info.mDelayExplosion <= 0.f;
+
+            if (explodeMissile)
+            {
+                // Boom boom the missile
+                // Find all player within radius
+                mPlayers.each([&aPowerupPose, aOwner](EntHandle aOther, component::PlayerLifeCycle & aPlayerLifeCycle, component::GlobalPose & aPlayerPose)
+                {
+                    float distance = (aPowerupPose.mPosition - aPlayerPose.mPosition).getNormSquared();
+
+                    if (distance < 2.f * 2.f && aOwner != aOther)
+                    {
+                        aPlayerLifeCycle.mHitStun = component::gBaseHitStunDuration;
+                        aPlayerLifeCycle.mInvulFrameCounter = component::gBaseHitStunDuration;
+                    }
+                });
+
+                // remove missile entity
+                component::InGameMissile & missileInfo = std::get<component::InGameMissile>(aPowerup.mInfo);
+                missileInfo.mDamageArea.get(manageMissile)->erase();
+                missileInfo.mModel.get(manageMissile)->erase();
+                aPowerupHandle.get(manageMissile)->erase();
+
+                EntHandle explosionHandle = createExplosion(*mGameContext, aGeo.mPosition, aTime);
+                insertEntityInScene(explosionHandle, *mGameContext->mLevel);
+            }
+        });
 }
 
 std::pair<Pos2, EntHandle>

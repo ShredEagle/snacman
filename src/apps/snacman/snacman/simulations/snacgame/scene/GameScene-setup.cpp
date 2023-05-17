@@ -3,6 +3,7 @@
 
 #include "GameScene.h"
 #include "snacman/simulations/snacgame/system/AnimationManager.h"
+#include "snacman/simulations/snacgame/system/Explosion.h"
 
 #include "../system/AdvanceAnimations.h"
 #include "../system/AllowMovement.h"
@@ -44,6 +45,11 @@ namespace {
 
 void GameScene::setup(const Transition & aTransition, RawInput & aInput)
 {
+    //Preload models to avoid loading time when they first appear in the game
+    mGameContext.mResources.getModel("models/collar/collar.gltf", "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/teleport/teleport.gltf", "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/missile/missile.gltf", "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/boom/boom.gltf", "effects/MeshTextures.sefx");
     {
         Phase init;
         setupLevel(mGameContext, init);
@@ -52,6 +58,7 @@ void GameScene::setup(const Transition & aTransition, RawInput & aInput)
             .add(system::PlayerSpawner{mGameContext})
             .add(system::RoundMonitor{mGameContext})
             .add(system::PlayerInvulFrame{mGameContext})
+            .add(system::Explosion{mGameContext})
             .add(system::AllowMovement{mGameContext})
             .add(system::ConsolidateGridMovement{mGameContext})
             .add(system::IntegratePlayerMovement{mGameContext})

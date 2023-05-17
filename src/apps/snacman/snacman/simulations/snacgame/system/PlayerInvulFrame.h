@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "../component/PlayerLifeCycle.h"
 #include "../component/VisualModel.h"
 #include "../GameContext.h"
@@ -22,7 +23,7 @@ public:
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerLifeCycle, component::VisualModel> mPlayer;
+    ent::Query<component::PlayerLifeCycle, component::PlayerModel> mPlayer;
 };
 
 } // namespace system

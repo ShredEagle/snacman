@@ -1,8 +1,10 @@
 #pragma once
 
 #include "InputConstants.h"
-#include "component/Controller.h"
-#include "snacman/Logging.h"
+#include "LevelHelper.h"
+
+#include <snacman/Input.h>
+#include <snacman/Logging.h>
 
 #include <platform/Filesystem.h>
 
@@ -10,11 +12,10 @@
 #include <GLFW/glfw3.h>
 #undef GLFW_INCLUDE_NONE
 
-#include <nlohmann/json.hpp>
-
 #include <concepts>
 #include <fstream>
 #include <initializer_list>
+#include <nlohmann/json.hpp>
 #include <unordered_map>
 
 using json = nlohmann::json;
@@ -98,8 +99,6 @@ const inline BidirectionalMap<std::string, int> gCommandFlags{
     {"gRightJoyDown", gRightJoyDown},
     {"gRightJoyLeft", gRightJoyLeft},
     {"gRightJoyRight", gRightJoyRight},
-    {"gNextPowerUpTarget", gNextPowerUpTarget},
-    {"gPrevPowerUpTarget", gPrevPowerUpTarget},
 
     {"gJoin", gJoin | gPositiveEdge},
 
@@ -220,7 +219,10 @@ public:
                 }
                 else
                 {
-                    SELOG(error)("Missing command name \"{}\" present in \"{}\" in command flags", commandName, aPath.string());
+                    SELOG(error)
+                    ("Missing command name \"{}\" present in \"{}\" in command "
+                     "flags",
+                     commandName, aPath.string());
                 }
             }
         }
@@ -256,17 +258,28 @@ using GamepadMapping = KeyMapping<GamepadAtomicInput>;
 
 using KeyboardMapping = KeyMapping<int>;
 
-struct ControllerCommand {
-    int mCommand;
-    int mId;
-    ControllerType mControllerType;
+struct GameInput
+{
+    // input flags
+    int mCommand = 0;
+    // Left joystick and zqsd
+    math::Vec<2, float> mLeftDirection = math::Vec<2, float>::Zero();
+    // Right joystick and up, down, left, right
+    math::Vec<2, float> mRightDirection = math::Vec<2, float>::Zero();
 };
 
-inline int convertKeyboardInput(const std::string & aGroup,
-                                const KeyboardState & aKeyboardState,
-                                const KeyboardMapping & aKeyboardMapping)
+struct ControllerCommand
 {
-    int commandFlags = 0;
+    int mId;
+    ControllerType mControllerType;
+    GameInput mInput;
+};
+
+inline GameInput convertKeyboardInput(const std::string & aGroup,
+                                      const KeyboardState & aKeyboardState,
+                                      const KeyboardMapping & aKeyboardMapping)
+{
+    GameInput keyboardInput{};
 
     for (const auto & [input, command] : aKeyboardMapping.mKeymaps.at(aGroup))
     {
@@ -275,21 +288,33 @@ inline int convertKeyboardInput(const std::string & aGroup,
         ButtonStatus stateWanted = command & gPositiveEdge
                                        ? ButtonStatus::PositiveEdge
                                        : ButtonStatus::Pressed;
-        commandFlags |= (static_cast<InputState::Enum_t>(
-                             std::get<ButtonStatus>(state.mState))
-                         >= static_cast<InputState::Enum_t>(stateWanted))
-                            ? (command & ~gPositiveEdge)
-                            : 0;
+        keyboardInput.mCommand |=
+            (static_cast<InputState::Enum_t>(
+                 std::get<ButtonStatus>(state.mState))
+             >= static_cast<InputState::Enum_t>(stateWanted))
+                ? (command & ~gPositiveEdge)
+                : 0;
     }
 
-    return commandFlags;
+    keyboardInput.mLeftDirection = 
+        gDirections_f.at(Direction::Up) * (keyboardInput.mCommand & gPlayerMoveFlagUp) / gPlayerMoveFlagUp
+        + gDirections_f.at(Direction::Down) * (keyboardInput.mCommand & gPlayerMoveFlagDown) / gPlayerMoveFlagDown
+        + gDirections_f.at(Direction::Left) * (keyboardInput.mCommand & gPlayerMoveFlagLeft) / gPlayerMoveFlagLeft
+        + gDirections_f.at(Direction::Right) * (keyboardInput.mCommand & gPlayerMoveFlagRight) / gPlayerMoveFlagRight;
+    keyboardInput.mRightDirection = 
+        gDirections_f.at(Direction::Up) * (keyboardInput.mCommand & gRightJoyUp) / gRightJoyUp
+        + gDirections_f.at(Direction::Down) * (keyboardInput.mCommand & gRightJoyDown) / gRightJoyDown
+        + gDirections_f.at(Direction::Left) * (keyboardInput.mCommand & gRightJoyLeft) / gRightJoyLeft
+        + gDirections_f.at(Direction::Right) * (keyboardInput.mCommand & gRightJoyRight) / gRightJoyRight;
+
+    return keyboardInput;
 }
 
-inline int convertGamepadInput(const std::string & aGroup,
-                               const GamepadState & aGamepadState,
-                               const GamepadMapping & aGamepadMapping)
+inline GameInput convertGamepadInput(const std::string & aGroup,
+                                     const GamepadState & aGamepadState,
+                                     const GamepadMapping & aGamepadMapping)
 {
-    int commandFlags = 0;
+    GameInput gamepadInput{};
 
     for (const auto & [input, command] : aGamepadMapping.mKeymaps.at(aGroup))
     {
@@ -300,36 +325,54 @@ inline int convertGamepadInput(const std::string & aGroup,
             ButtonStatus stateWanted = command & gPositiveEdge
                                            ? ButtonStatus::PositiveEdge
                                            : ButtonStatus::Pressed;
-            commandFlags |= (static_cast<InputState::Enum_t>(
-                                 std::get<ButtonStatus>(state.mState))
-                             >= static_cast<InputState::Enum_t>(stateWanted))
-                                ? (command & ~gPositiveEdge)
-                                : 0;
+            gamepadInput.mCommand |=
+                (static_cast<InputState::Enum_t>(
+                     std::get<ButtonStatus>(state.mState))
+                 >= static_cast<InputState::Enum_t>(stateWanted))
+                    ? (command & ~gPositiveEdge)
+                    : 0;
         }
         else
         {
             int index = static_cast<int>(input)
-                & ~static_cast<int>(GamepadAtomicInput::axisFlag)
-                & ~static_cast<int>(GamepadAtomicInput::positiveFlag);
+                        & ~static_cast<int>(GamepadAtomicInput::axisFlag)
+                        & ~static_cast<int>(GamepadAtomicInput::positiveFlag);
             const AxisStatus & state = aGamepadState.mAxis.at(index);
 
             if (static_cast<int>(input)
                 & static_cast<int>(GamepadAtomicInput::positiveFlag))
             {
-                commandFlags |= (static_cast<float>(state) > gJoystickDeadzone)
-                                    ? (command & ~gPositiveEdge)
-                                    : 0;
+                gamepadInput.mCommand |=
+                    (static_cast<float>(state) > gJoystickDeadzone)
+                        ? (command & ~gPositiveEdge)
+                        : 0;
             }
             else
             {
-                commandFlags |= (static_cast<float>(state) < -gJoystickDeadzone)
-                                    ? (command & ~gPositiveEdge)
-                                    : 0;
+                gamepadInput.mCommand |=
+                    (static_cast<float>(state) < -gJoystickDeadzone)
+                        ? (command & ~gPositiveEdge)
+                        : 0;
             }
         }
     }
 
-    return commandFlags;
+    gamepadInput.mLeftDirection = {
+        -std::get<AxisStatus>(
+            aGamepadState.mAxis.at(GLFW_GAMEPAD_AXIS_LEFT_X).mState)
+            .mCurrent,
+        -std::get<AxisStatus>(
+            aGamepadState.mAxis.at(GLFW_GAMEPAD_AXIS_LEFT_Y).mState)
+            .mCurrent};
+    gamepadInput.mRightDirection = {
+        -std::get<AxisStatus>(
+            aGamepadState.mAxis.at(GLFW_GAMEPAD_AXIS_RIGHT_X).mState)
+            .mCurrent,
+        -std::get<AxisStatus>(
+            aGamepadState.mAxis.at(GLFW_GAMEPAD_AXIS_RIGHT_Y).mState)
+            .mCurrent};
+
+    return gamepadInput;
 }
 
 } // namespace snacgame

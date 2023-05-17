@@ -1,8 +1,11 @@
 #pragma once
-#include "math/Quaternion.h"
-#include "math/Vector.h"
+
+#include <math/Quaternion.h>
+#include <math/Vector.h>
 
 #include <array>
+#include <variant>
+
 namespace ad {
 namespace snacgame {
 namespace component {
@@ -18,6 +21,7 @@ enum class PowerUpType : unsigned int
 struct PowerUpBaseInfo
 {
     const char * mPath = "";
+    const char * mProgPath = "";
     const math::Quaternion<float> mLevelOrientation =
         math::Quaternion<float>::Identity();
     const math::Quaternion<float> mPlayerOrientation =
@@ -29,27 +33,35 @@ struct PowerUpBaseInfo
     const math::Vec<3, float> mPosOffset = math::Vec<3, float>::Zero();
 };
 
+constexpr float gMissileSpeed = 5.f;
+
 const math::Quaternion<float> gLevelBasePowerupQuat =  math::Quaternion<float>{
     math::UnitVec<3, float>{{1.f, 0.f, 0.f}}, math::Turn<float>{0.2f}};
 
+constexpr math::Quaternion<float> gBaseMissileOrientation = math::Quaternion<float>{0.f, 0.f, -0.707f, 0.707f};
+
 constexpr std::array<PowerUpBaseInfo,
                      static_cast<unsigned int>(PowerUpType::_End)>
-    gPowerupPathByType{
+    gPowerupInfoByType{
         PowerUpBaseInfo{
             .mPath = "models/collar/collar.gltf",
+            .mProgPath = "effects/MeshTextures.sefx",
             .mLevelScaling = 0.2f,
             .mPlayerScaling = 0.2f,
         },
         PowerUpBaseInfo{
             .mPath = "models/teleport/teleport.gltf",
+            .mProgPath = "effects/MeshTextures.sefx",
             .mLevelScaling = 0.3f,
             .mPlayerScaling = 0.3f,
         },
         PowerUpBaseInfo{
             .mPath = "models/missile/missile.gltf",
-            .mPlayerOrientation = math::Quaternion<float>{0.f, 0.f, -0.707f, 0.707f},
+            .mProgPath = "effects/MeshTextures.sefx",
+            .mPlayerOrientation = gBaseMissileOrientation,
+            .mPlayerInstanceScale = {0.3f, 0.3f, 0.3f},
             .mLevelScaling = 0.3f,
-            .mPlayerScaling = 0.3f,
+            .mPlayerScaling = 1.f
         },
     };
 

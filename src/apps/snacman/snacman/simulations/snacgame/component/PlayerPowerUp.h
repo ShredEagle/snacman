@@ -10,7 +10,8 @@ namespace snacgame {
 namespace component {
 
 constexpr float gTeleportChangeTargetDelay = 1.f;
-constexpr float gMissileDelayExplosion = 15.f;
+constexpr float gMissileDelayFlashing = 4.f;
+constexpr float gMissileDelayExplosion = 5.f;
 
 struct DogPowerUpInfo
 {
@@ -34,10 +35,22 @@ struct PlayerPowerUp
     std::variant<DogPowerUpInfo, TeleportPowerUpInfo, MissilePowerUpInfo> mInfo;
 };
 
+struct InGameDog
+{
+};
+
+struct InGameMissile
+{
+    ent::Handle<ent::Entity> mModel;
+    ent::Handle<ent::Entity> mDamageArea;
+    float mDelayExplosion = gMissileDelayExplosion;
+};
+
 struct InGamePowerup
 {
     ent::Handle<ent::Entity> mOwner;
     PowerUpType mType;
+    std::variant<InGameMissile, InGameDog> mInfo;
 };
 
 } // namespace component

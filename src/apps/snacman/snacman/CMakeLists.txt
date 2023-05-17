@@ -37,6 +37,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/Collision.h
     simulations/snacgame/component/Context.h
     simulations/snacgame/component/Controller.h
+    simulations/snacgame/component/Explosion.h
     simulations/snacgame/component/Geometry.h
     simulations/snacgame/component/GlobalPose.h
     simulations/snacgame/component/LevelData.h
@@ -69,6 +70,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/ConsolidateGridMovement.h
     simulations/snacgame/system/Debug_BoundingBoxes.h
     simulations/snacgame/system/EatPill.h
+    simulations/snacgame/system/Explosion.h
     simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/MovementIntegration.h
     simulations/snacgame/system/LevelCreator.h
@@ -113,6 +115,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/ConsolidateGridMovement.cpp
     simulations/snacgame/system/Debug_BoundingBoxes.cpp
     simulations/snacgame/system/EatPill.cpp
+    simulations/snacgame/system/Explosion.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
     simulations/snacgame/system/MovementIntegration.cpp
     simulations/snacgame/system/LevelCreator.cpp
