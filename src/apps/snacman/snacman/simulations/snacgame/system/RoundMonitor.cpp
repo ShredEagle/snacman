@@ -47,7 +47,6 @@ void RoundMonitor::update()
                 removeEntityFromScene(aHandle);
                 // Notably reset alive status so that player can be spawned
                 lifeCycle.reset();
-                aMoveState.mMoveState = gPlayerMoveFlagNone;
             });
     };
 }

@@ -20,6 +20,7 @@ void PlayerSpawner::update(float aDelta)
 
     mSpawnable.each([this, &aDelta](EntHandle aPlayerHandle,
                                     component::PlayerLifeCycle & aPlayer,
+                                    component::PlayerMoveState & aMoveState,
                                     component::PlayerSlot & aSlot,
                                     component::Geometry & aPlayerGeometry) 
     {
@@ -29,7 +30,7 @@ void PlayerSpawner::update(float aDelta)
             } else {
                 // TODO: Needs an alg to choose the right spawner if there are
                 // many spawner
-                mSpawner.each([this, aPlayerHandle, &aPlayer, &aSlot, &aPlayerGeometry]
+                mSpawner.each([this, aPlayerHandle, &aPlayer, &aMoveState, &aSlot, &aPlayerGeometry]
                               (component::Spawner & aSpawner) 
                 {
                     if (!aPlayer.mIsAlive && !aSpawner.mSpawnedPlayer) 
@@ -40,6 +41,7 @@ void PlayerSpawner::update(float aDelta)
                         aPlayer.mHud = createHudBillpad(*mGameContext, aSlot);
                         aPlayerGeometry.mPosition = aSpawner.mSpawnPosition;
                         aSpawner.mSpawnedPlayer = true;
+                        aMoveState.mMoveState = gPlayerMoveFlagNone;
                         insertEntityInScene(aPlayerHandle, *mGameContext->mLevel);
                     }
                 });
