@@ -37,16 +37,18 @@ void RoundMonitor::update()
         level.get(destroyLevel)->add(component::LevelToCreate{});
 
         // Removing players
-        mPlayers.each([&destroyLevel](EntHandle aHandle,
-                                      component::PlayerLifeCycle & lifeCycle,
-                                      component::PlayerPowerUp & aPowerup) {
-            // Reset alive status so that player can be spawned
-            lifeCycle.mIsAlive = false;
-            lifeCycle.mTimeToRespawn = component::gBaseTimeToRespawn;
-
-            removeRoundTransientPlayerComponent(destroyLevel, aHandle);
-            removeEntityFromScene(aHandle);
-        });
+        mPlayers.each(
+            [&destroyLevel]
+            (EntHandle aHandle,
+             component::PlayerLifeCycle & lifeCycle,
+             component::PlayerMoveState & aMoveState) 
+            {
+                removeRoundTransientPlayerComponent(destroyLevel, aHandle);
+                removeEntityFromScene(aHandle);
+                // Notably reset alive status so that player can be spawned
+                lifeCycle.reset();
+                aMoveState.mMoveState = gPlayerMoveFlagNone;
+            });
     };
 }
 

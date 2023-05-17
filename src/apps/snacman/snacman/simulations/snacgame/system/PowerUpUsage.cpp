@@ -384,9 +384,15 @@ void PowerUpUsage::update(float aDelta)
     // Update power-up name in HUD
     mPlayers.each([](ent::Handle<ent::Entity> aPlayer, component::PlayerLifeCycle & aLifeCycle)
     {
-        auto & playerHud = snac::getComponent<component::PlayerHud>(*aLifeCycle.mHud);
-        snac::getComponent<component::Text>(playerHud.mPowerupText)
-                .mString = component::getPowerUpName(aPlayer);
+        // TODO code smell, this is defensive programming because sometimes we get there
+        // when the round monitor already removed the hud from the entitymanager
+        // (I suppose the correct logic would be not to execute this system on players between rounds)
+        if(aLifeCycle.mHud->isValid())
+        {
+            auto & playerHud = snac::getComponent<component::PlayerHud>(*aLifeCycle.mHud);
+            snac::getComponent<component::Text>(playerHud.mPowerupText)
+                    .mString = component::getPowerUpName(aPlayer);
+        }
     });
 }
 

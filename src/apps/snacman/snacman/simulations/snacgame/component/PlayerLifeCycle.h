@@ -15,6 +15,14 @@ constexpr float gBaseHitStunDuration = 2.f;
 
 struct PlayerLifeCycle
 {
+    void reset()
+    {
+        // Do not lose the hud reference though
+        auto hudCopy = std::move(mHud);
+        *this = PlayerLifeCycle{};
+        mHud = std::move(hudCopy);
+    }
+
     int mScore = 0;
     bool mIsAlive = false;
     float mTimeToRespawn = 0;

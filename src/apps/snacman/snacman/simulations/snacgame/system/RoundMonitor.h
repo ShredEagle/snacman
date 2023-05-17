@@ -3,7 +3,7 @@
 #include "../GameContext.h"
 #include "../component/LevelData.h"
 #include "../component/PlayerLifeCycle.h"
-#include "../component/PlayerPowerUp.h"
+#include "../component/PlayerMoveState.h"
 
 #include <entity/EntityManager.h>
 
@@ -24,7 +24,7 @@ public:
     void update();
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerLifeCycle, component::PlayerPowerUp> mPlayers;
+    ent::Query<component::PlayerLifeCycle, component::PlayerMoveState> mPlayers;
     ent::Query<component::Pill>
         mPills;
     ent::Query<component::LevelEntity> mLevelEntities;

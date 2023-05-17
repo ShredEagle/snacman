@@ -568,6 +568,10 @@ void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
             ->erase();
         aHandle.get(aPhase)->remove<component::PlayerPortalData>();
     }
+
+    // Remove the whole hud subtree (billpad, texts, ...)
+    assert(playerEntity.has<component::PlayerLifeCycle>());
+    eraseEntityRecursive(*playerEntity.get<component::PlayerLifeCycle>().mHud, aPhase);
 }
 
 EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
@@ -577,9 +581,6 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
     slot.mFilled = false;
 
     Entity playerEntity = *aHandle.get(aPhase);
-
-    // Remove the whole hud subtree (billpad, texts, ...)
-    eraseEntityRecursive(*playerEntity.get<component::PlayerLifeCycle>().mHud, aPhase);
 
     playerEntity.remove<component::Controller>();
     playerEntity.remove<component::Geometry>();
