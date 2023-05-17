@@ -222,12 +222,12 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
 
-    mSystems.get(update)->get<system::RoundMonitor>().update();
-    mSystems.get(update)->get<system::PlayerSpawner>().update((float)aTime.mDeltaSeconds);
-
     mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate();
     mSystems.get(update)->get<system::PowerUpUsage>().update((float)aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::EatPill>().update();
+
+    mSystems.get(update)->get<system::RoundMonitor>().update();
+    mSystems.get(update)->get<system::PlayerSpawner>().update((float)aTime.mDeltaSeconds);
 
     mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
 

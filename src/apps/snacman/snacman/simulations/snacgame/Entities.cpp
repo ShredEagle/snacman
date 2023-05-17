@@ -354,7 +354,7 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
                 })
                 ;
 
-            addGeoNode(aContext, roundText, {1.5f, 0.3f, 0.f}, 1.1f);
+            addGeoNode(aContext, roundText, {0.5f, 0.3f, 0.f}, 1.1f);
         }
 
         // Power-up
@@ -591,7 +591,9 @@ void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
 
     // Remove the whole hud subtree (billpad, texts, ...)
     assert(playerEntity.has<component::PlayerLifeCycle>());
-    eraseEntityRecursive(*playerEntity.get<component::PlayerLifeCycle>().mHud, aPhase);
+    auto & lifeCycle = playerEntity.get<component::PlayerLifeCycle>();
+    eraseEntityRecursive(*lifeCycle.mHud, aPhase);
+    lifeCycle.mHud = std::nullopt;
 }
 
 EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
