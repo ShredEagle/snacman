@@ -279,7 +279,8 @@ void addPortalInfo(GameContext & aContext,
         addMeshGeoNode(
             aContext, modelEnt, "models/portal/portal.gltf",
             "effects/MeshTextures.sefx",
-            {aGeo.mPosition.x() + aDirection.x() * 1.3f, aGeo.mPosition.y(), 0.f},
+            {aGeo.mPosition.x() + aDirection.x() * 1.3f, aGeo.mPosition.y(),
+             0.f},
             0.2f, {1.f, 1.f, 1.f},
             Quat_f{UnitVec3::MakeFromUnitLength({0.f, 0.f, 1.f}),
                    Turn_f{(-aDirection.x() - 1.f) / 2.f * 0.5f}}
@@ -692,6 +693,31 @@ EntHandle createExplosion(GameContext & aContext,
             .add(component::LevelEntity{});
     }
     return explosion;
+}
+
+EntHandle createPortalImage(GameContext & aContext,
+                            component::PlayerModel & aPlayerModel,
+                            const component::Portal & aPortal,
+                            component::PlayerPortalData & aPortalData)
+{
+    EntHandle newPortalImage = aContext.mWorld.addEntity();
+    {
+        Phase addPortalImage;
+        component::Geometry modelGeo =
+            aPlayerModel.mModel.get()->get<component::Geometry>();
+        Entity portal = *newPortalImage.get(addPortalImage);
+        Vec2 relativePos =
+            aPortal.mMirrorSpawnPosition.xy() - aPortalData.mCurrentPortalPos;
+        addMeshGeoNode(aContext, portal, "models/donut/donut.gltf",
+                       "effects/MeshTextures.sefx",
+                       {relativePos.x(), relativePos.y(), 0.f},
+                       modelGeo.mScaling, modelGeo.mInstanceScaling,
+                       modelGeo.mOrientation, modelGeo.mColor);
+        portal.add(component::Collision{component::gPlayerHitbox});
+        aPortalData.mPortalImage = newPortalImage;
+    }
+
+    return newPortalImage;
 }
 
 } // namespace snacgame

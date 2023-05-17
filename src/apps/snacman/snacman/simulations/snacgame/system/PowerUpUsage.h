@@ -4,6 +4,7 @@
 #include "snacman/simulations/snacgame/component/Geometry.h"
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "snacman/simulations/snacgame/component/PlayerHud.h"
+#include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "snacman/simulations/snacgame/component/Speed.h"
 #include "snacman/simulations/snacgame/component/VisualModel.h"
 
@@ -11,6 +12,7 @@
 #include "../component/Controller.h"
 #include "../component/LevelTags.h"
 #include "../component/PlayerLifeCycle.h"
+#include "../component/PlayerModel.h"
 #include "../component/PlayerPowerUp.h"
 #include "../component/PlayerSlot.h"
 #include "../component/PowerUp.h"
@@ -58,6 +60,7 @@ private:
                component::PlayerPowerUp,
                component::PlayerSlot,
                component::GlobalPose,
+               component::PlayerModel,
                component::Controller>
         mPowUpPlayers;
     ent::Query<component::GlobalPose,

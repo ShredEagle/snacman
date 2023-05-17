@@ -1,26 +1,21 @@
 #include "PortalManagement.h"
 
 #include "SceneGraphResolver.h"
-
-#include "../component/VisualModel.h"
-
 #include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "snacman/simulations/snacgame/Entities.h"
 #include "snacman/simulations/snacgame/SceneGraph.h"
 
-#include <snacman/EntityUtilities.h>
-
+#include "../component/VisualModel.h"
 #include "../LevelHelper.h"
 #include "../typedef.h"
 
 #include <snacman/DebugDrawing.h>
+#include <snacman/EntityUtilities.h>
 #include <snacman/Profiling.h>
-
 
 namespace ad {
 namespace snacgame {
 namespace system {
-
 
 void PortalManagement::preGraphUpdate()
 {
@@ -38,26 +33,8 @@ void PortalManagement::preGraphUpdate()
                 if (aPortal.portalIndex == aPortalData.mDestinationPortal
                     && !aPortalData.mPortalImage)
                 {
-                    EntHandle newPortalImage = mGameContext->mWorld.addEntity();
-                    {
-                        Phase addPortalImage;
-                        component::Geometry modelGeo =
-                            aPlayerModel.mModel.get(addPortalImage)
-                                ->get<component::Geometry>();
-                        Entity portal = *newPortalImage.get(addPortalImage);
-                        Vec2 relativePos = aPortal.mMirrorSpawnPosition.xy()
-                                           - aPortalData.mCurrentPortalPos;
-                        addMeshGeoNode(*mGameContext, portal,
-                                       "models/donut/donut.gltf",
-                                       "effects/MeshTextures.sefx",
-                                       {relativePos.x(), relativePos.y(), 0.f},
-                                       modelGeo.mScaling,
-                                       modelGeo.mInstanceScaling,
-                                       modelGeo.mOrientation, modelGeo.mColor);
-                        portal.add(
-                            component::Collision{component::gPlayerHitbox});
-                        aPortalData.mPortalImage = newPortalImage;
-                    }
+                    EntHandle newPortalImage = createPortalImage(
+                        *mGameContext, aPlayerModel, aPortal, aPortalData);
                     insertEntityInScene(newPortalImage, aPlayerHandle);
                 }
             });
@@ -82,20 +59,15 @@ void PortalManagement::postGraphUpdate()
                          component::Geometry & aPlayerGeo,
                          component::PlayerModel & aPlayerModel,
                          component::PlayerPortalData & aPortalData,
-                         const component::SceneNode & aPlayerNode)
-        {
+                         const component::SceneNode & aPlayerNode) {
             aPortalData.mCurrentPortal = -1;
             aPortalData.mDestinationPortal = -1;
 
             Box_f playerHitbox = component::transformHitbox(
                 aPlayerPose.mPosition, aPlayerCol.mHitbox);
 
-            mPortals.each([&playerHitbox,
-                           &levelData,
-                           &aPortalData,
-                           &aPlayerGeo,
-                           &aPlayerModel,
-                           &aPlayerNode](
+            mPortals.each([&playerHitbox, &levelData, &aPortalData, &aPlayerGeo,
+                           &aPlayerModel, &aPlayerNode](
                               const component::Portal & aPortal,
                               const component::Geometry & aPortalGeo,
                               const component::GlobalPose & aPortalPose) {
@@ -166,13 +138,15 @@ void PortalManagement::postGraphUpdate()
                     {
                         aPlayerGeo.mPosition = aPortalGeo.mPosition;
                         updateGlobalPosition(aPlayerNode);
-                        snac::getComponent<component::VisualModel>(aPlayerModel.mModel)
+                        snac::getComponent<component::VisualModel>(
+                            aPlayerModel.mModel)
                             .mDisableInterpolation = true;
                         aPortalData.mCurrentPortal = -1;
                         aPortalData.mDestinationPortal = -1;
 
                         ent::Phase removePortalImage;
-                        aPortalData.mPortalImage->get(removePortalImage)->erase();
+                        aPortalData.mPortalImage->get(removePortalImage)
+                            ->erase();
                         aPortalData.mPortalImage = std::nullopt;
                     }
 
@@ -183,7 +157,8 @@ void PortalManagement::postGraphUpdate()
                         aPortalData.mDestinationPortal = -1;
 
                         ent::Phase removePortalImage;
-                        aPortalData.mPortalImage->get(removePortalImage)->erase();
+                        aPortalData.mPortalImage->get(removePortalImage)
+                            ->erase();
                         aPortalData.mPortalImage = std::nullopt;
                     }
                 }

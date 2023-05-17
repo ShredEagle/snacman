@@ -6,6 +6,8 @@
 #include "GameParameters.h"
 #include "snacman/simulations/snacgame/component/Geometry.h"
 #include "snacman/simulations/snacgame/component/LevelTags.h"
+#include "snacman/simulations/snacgame/component/PlayerModel.h"
+#include "snacman/simulations/snacgame/component/PlayerPortalData.h"
 #include "snacman/simulations/snacgame/component/PowerUp.h"
 
 #include <math/Color.h>
@@ -33,7 +35,7 @@ namespace snacgame {
 namespace component {
 struct PlayerLifeCycle;
 struct PlayerSlot;
-}
+} // namespace component
 namespace scene {
 struct Transition;
 }
@@ -80,8 +82,7 @@ ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
                                        const component::PowerUpType aType,
                                        float aSwapPeriod);
 ent::Handle<ent::Entity>
-createPlayerPowerUp(GameContext & aContext, 
-                    const component::PowerUpType aType);
+createPlayerPowerUp(GameContext & aContext, const component::PowerUpType aType);
 
 ent::Handle<ent::Entity>
 createPathEntity(GameContext & aContext,
@@ -92,7 +93,8 @@ createPortalEntity(GameContext & aContext,
                    ent::Phase & aPhase,
                    const math::Position<2, float> & aPos,
                    int aPortalIndex);
-void addPortalInfo(GameContext & aContext, component::Portal & aPortal,
+void addPortalInfo(GameContext & aContext,
+                   component::Portal & aPortal,
                    const component::Geometry & aGeo,
                    math::Vec<3, float> aDirection);
 ent::Handle<ent::Entity>
@@ -152,7 +154,15 @@ ent::Handle<ent::Entity> removePlayerFromGame(ent::Phase & aPhase,
 ent::Handle<ent::Entity> createTargetArrow(GameContext & aContext,
                                            const math::hdr::Rgba_f & aColor);
 
-ent::Handle<ent::Entity> createExplosion(GameContext & aContext, math::Position<3, float> & aPosition, const snac::Time & aTime);
+ent::Handle<ent::Entity> createExplosion(GameContext & aContext,
+                                         math::Position<3, float> & aPosition,
+                                         const snac::Time & aTime);
+
+ent::Handle<ent::Entity>
+createPortalImage(GameContext & aContext,
+                  component::PlayerModel & aPlayerModel,
+                  const component::Portal & aPortal,
+                  component::PlayerPortalData & aPortalData);
 
 } // namespace snacgame
 } // namespace ad
