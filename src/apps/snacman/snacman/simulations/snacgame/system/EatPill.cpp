@@ -56,6 +56,8 @@ void EatPill::update()
                 auto & playerHud = snac::getComponent<component::PlayerHud>(*aLifeCycle.mHud);
                 snac::getComponent<component::Text>(playerHud.mScoreText)
                         .mString = std::to_string(aLifeCycle.mScore);
+                snac::getComponent<component::Text>(playerHud.mRoundText)
+                        .mString = std::to_string(aLifeCycle.mRoundsWon);
             }
         });
     });

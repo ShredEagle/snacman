@@ -53,6 +53,7 @@ const char * getPowerUpName(ent::Handle<ent::Entity> aPlayer);
 struct PlayerHud
 {
     ent::Handle<ent::Entity> mScoreText;
+    ent::Handle<ent::Entity> mRoundText;
     ent::Handle<ent::Entity> mPowerupText;
 };
 

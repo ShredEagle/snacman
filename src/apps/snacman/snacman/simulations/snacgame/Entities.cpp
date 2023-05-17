@@ -321,6 +321,7 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
 
     // The score text line
     EntHandle scoreHandle =   aContext.mWorld.addEntity();
+    EntHandle roundHandle =   aContext.mWorld.addEntity();
     EntHandle powerupHandle = aContext.mWorld.addEntity();
     EntHandle billpadHandle = aContext.mWorld.addEntity();
     {
@@ -328,6 +329,7 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
 
         const std::string fontname = "fonts/notes/Bitcheese.ttf";
 
+        // Score
         {
             ent::Entity scoreText = *scoreHandle.get(createScore);
             scoreText
@@ -341,6 +343,21 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
             addGeoNode(aContext, scoreText, {-1.7f, 0.6f, 0.f}, 1.f);
         }
 
+        // Rounds
+        {
+            ent::Entity roundText = *roundHandle.get(createScore);
+            roundText
+                .add(component::Text{
+                    .mFont = aContext.mResources.getFont(fontname, 100),
+                    //.mColor = playerSlot.mColor,
+                    .mColor = math::hdr::gBlack<float>,
+                })
+                ;
+
+            addGeoNode(aContext, roundText, {1.5f, 0.3f, 0.f}, 1.1f);
+        }
+
+        // Power-up
         {
             ent::Entity powerupText = *powerupHandle.get(createScore);
             powerupText 
@@ -350,9 +367,10 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
                     .mColor = math::hdr::gBlack<float>,
                 })
                 ;
-            addGeoNode(aContext, powerupText, {-1.9f, -.5f, 0.f}, 0.5f);
+            addGeoNode(aContext, powerupText, {-1.9f, -.7f, 0.f}, 0.5f);
         }
 
+        // Billpad model
         {
             ent::Entity billpad = *billpadHandle.get(createScore);
             addMeshGeoNode(
@@ -377,6 +395,7 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
         Phase completeSceneGraph;
 
         insertEntityInScene(scoreHandle, hudHandle);
+        insertEntityInScene(roundHandle, hudHandle);
         insertEntityInScene(powerupHandle, hudHandle);
         insertEntityInScene(billpadHandle, hudHandle);
 
@@ -386,6 +405,7 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
         hudHandle.get(completeSceneGraph)
             ->add(component::PlayerHud{
                 .mScoreText = scoreHandle,
+                .mRoundText = roundHandle,
                 .mPowerupText = powerupHandle,
             })
             ;
