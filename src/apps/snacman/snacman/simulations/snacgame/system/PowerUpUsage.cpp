@@ -35,7 +35,7 @@ namespace system {
 void PowerUpUsage::update(const snac::Time & aTime)
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    const float delta = aTime.mDeltaSeconds;
+    const float delta = (float)aTime.mDeltaSeconds;
     mPowerups.each([&delta, this](component::PowerUp & aPowerUp,
                                    component::VisualModel & aVisualModel,
                                    component::Geometry & aGeo) {
@@ -421,7 +421,6 @@ void PowerUpUsage::update(const snac::Time & aTime)
                          const component::GlobalPose & aPowerupPose,
                          component::Geometry & aGeo, component::Speed & aSpeed,
                          component::InGamePowerup & aPowerup) {
-            std::get<component::InGameMissile>(aPowerup.mInfo);
             // Change orientation
             EntHandle aOwner = aPowerup.mOwner;
             const component::Controller & aController =
