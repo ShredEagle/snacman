@@ -305,7 +305,9 @@ createPlayerSpawnEntity(GameContext & aContext,
 
 
 ent::Handle<ent::Entity>
-createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
+createHudBillpad(GameContext & aContext,
+                 const component::PlayerSlot & aPlayerSlot,
+                 const component::PlayerLifeCycle & aPlayerLifeCycle)
 {
     EntHandle hudHandle = aContext.mWorld.addEntity();
     {
@@ -336,6 +338,7 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
             ent::Entity scoreText = *scoreHandle.get(createScore);
             scoreText
                 .add(component::Text{
+                    .mString = std::to_string(aPlayerLifeCycle.mScore),
                     .mFont = aContext.mResources.getFont(fontname, 100),
                     //.mColor = playerSlot.mColor,
                     .mColor = math::hdr::gBlack<float>,
@@ -350,6 +353,7 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
             ent::Entity roundText = *roundHandle.get(createScore);
             roundText
                 .add(component::Text{
+                    .mString = std::to_string(aPlayerLifeCycle.mRoundsWon),
                     .mFont = aContext.mResources.getFont(fontname, 100),
                     //.mColor = playerSlot.mColor,
                     .mColor = math::hdr::gBlack<float>,
@@ -379,7 +383,7 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
                 aContext,
                 billpad,
                 "models/billpad/billpad.gltf", "effects/MeshTextures.sefx",
-                {0.f, 0.f, -0.28f},
+                {0.f, 0.f, -0.30f},
                 8.f,
                 {1.f, 1.f, 1.f},
                 Quat_f{

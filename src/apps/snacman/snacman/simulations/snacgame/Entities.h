@@ -31,6 +31,7 @@ struct Model;
 namespace snacgame {
 
 namespace component {
+struct PlayerLifeCycle;
 struct PlayerSlot;
 }
 namespace scene {
@@ -100,7 +101,9 @@ createPlayerSpawnEntity(GameContext & aContext,
                         const math::Position<2, float> & aPos);
 
 ent::Handle<ent::Entity>
-createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot);
+createHudBillpad(GameContext & aContext,
+                 const component::PlayerSlot & aPlayerSlot,
+                 const component::PlayerLifeCycle & aPlayerLifeCycle);
 
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
                                             ControllerType aControllerType,
