@@ -350,7 +350,7 @@ createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot)
                     .mColor = math::hdr::gBlack<float>,
                 })
                 ;
-            addGeoNode(aContext, powerupText, {-1.9f, -.5f, 0.f}, 0.6f);
+            addGeoNode(aContext, powerupText, {-1.9f, -.5f, 0.f}, 0.5f);
         }
 
         {
