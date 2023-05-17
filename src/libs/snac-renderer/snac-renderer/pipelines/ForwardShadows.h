@@ -38,6 +38,7 @@ class ForwardShadows
         MovableAtomic<GLenum> mCullFaceMode{GL_BACK};
 
         MovableAtomic<bool> mShowDepthMap{false};
+        math::Vec<2, float> mDepthMapRange{0.3f, 0.7f};
     };
 
 public:

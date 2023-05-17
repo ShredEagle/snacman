@@ -65,6 +65,8 @@ void ForwardShadows::Controls::drawGui()
     addCombo("Depth filtering", mDetphMapFilter, std::span{gAvailableFilters});
     addCombo("Culled faces", mCullFaceMode, std::span{gCullFaceModes});
     addCheckbox("Show depthmap", mShowDepthMap);
+
+    ImGui::InputFloat2("Depthmap range", mDepthMapRange.data());
 }
 
 
@@ -161,6 +163,9 @@ void ForwardShadows::execute(
         });
 
         auto scopedTexture = aProgramSetup.mTextures.push(Semantic::BaseColorTexture, &depthMap);
+
+        auto scopeUniforms = aProgramSetup.mUniforms.push(Semantic::RenormalizationRange,
+                                                          mControls.mDepthMapRange);
 
         showDepthmapPass.draw(screenQuad, aRenderer, aProgramSetup);
     }

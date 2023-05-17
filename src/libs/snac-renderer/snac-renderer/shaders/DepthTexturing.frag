@@ -4,8 +4,10 @@ in vec2 ex_TextureCoords;
 
 uniform float u_NearDistance;
 uniform float u_FarDistance;
+uniform vec2 u_RenormalizationRange;
 
 uniform sampler2D u_BaseColorTexture;
+
 
 out vec4 out_Color;
 
@@ -19,6 +21,12 @@ void main(void)
     float linearDepth = 
         (2 * u_NearDistance) 
         / (u_FarDistance + u_NearDistance - color.r * (u_FarDistance - u_NearDistance));
+
+
+    // Renormalization
+    linearDepth -= u_RenormalizationRange.x;
+    linearDepth /= (u_RenormalizationRange.y - u_RenormalizationRange.x);
+
 
     //
     // Gamma correction

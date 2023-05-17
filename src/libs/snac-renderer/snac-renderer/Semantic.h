@@ -43,6 +43,7 @@ enum class Semantic
     NearDistance,
     FarDistance,
     ShadowBias,
+    RenormalizationRange,
     // Usually samplers
     BaseColorTexture,
     NormalTexture,

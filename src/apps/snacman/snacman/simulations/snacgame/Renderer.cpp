@@ -178,8 +178,8 @@ void Renderer::render(const visu::GraphicState & aState)
     mCameraBuffer.set(mCamera);
 
 
-    const math::AffineMatrix<4, GLfloat> worldToLight = 
-        math::trans3d::rotateX(math::Degree<float>{65.f}) // this is about the worst angle for shadows, on closest labyrinth row
+    static const math::AffineMatrix<4, GLfloat> worldToLight = 
+        math::trans3d::rotateX(math::Degree<float>{60.f})
         * math::trans3d::translate<GLfloat>({0.f, 2.5f, -16.f});
 
     math::Position<3, GLfloat> lightPosition_cam = 
@@ -210,7 +210,7 @@ void Renderer::render(const visu::GraphicState & aState)
     {
         static snac::Camera shadowLightViewPoint{1, 
             {
-                .vFov = math::Degree<float>(75.f),
+                .vFov = math::Degree<float>(95.f),
                 .zNear = -1.f,
                 .zFar = -50.f,
             }};

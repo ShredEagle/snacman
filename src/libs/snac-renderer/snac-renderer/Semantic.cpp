@@ -48,6 +48,7 @@ std::string to_string(Semantic aSemantic)
         MAPPING(NearDistance)
         MAPPING(FarDistance)
         MAPPING(ShadowBias)
+        MAPPING(RenormalizationRange)
         MAPPING(BaseColorTexture)
         MAPPING(NormalTexture)
         MAPPING(MetallicRoughnessTexture)
@@ -111,6 +112,7 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(NearDistance)
     MAPPING(FarDistance)
     MAPPING(ShadowBias)
+    MAPPING(RenormalizationRange)
     MAPPING(BaseColorTexture)
     MAPPING(NormalTexture)
     MAPPING(MetallicRoughnessTexture)
@@ -166,6 +168,7 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::NearDistance:
         case Semantic::FarDistance:
         case Semantic::ShadowBias:
+        case Semantic::RenormalizationRange:
         case Semantic::BaseColorTexture:
         case Semantic::NormalTexture:
         case Semantic::MetallicRoughnessTexture:
