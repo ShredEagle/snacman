@@ -103,8 +103,10 @@ GameScene::GameScene(const std::string & aName,
     mPlayers{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
+    /* createLevel(mGameContext, */
+    /*             mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml"); */
     createLevel(mGameContext,
-                mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml");
+                "snaclvl4.xml");
 }
 
 void GameScene::teardown(RawInput & aInput)
