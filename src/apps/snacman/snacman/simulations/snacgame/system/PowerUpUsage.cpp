@@ -148,7 +148,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
         {
         case component::PowerUpType::Dog:
         {
-            if (aController.mInput.mCommand & gPlayerUsePowerup)
+            if (aController.mInput.mCommand & gPlayerUsePowerup && mPlayers.countMatches() > 1)
             {
                 // Get placement tile
                 auto [powerupPos, targetHandle] =
