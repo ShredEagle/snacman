@@ -21,6 +21,9 @@ math::Position<3, float> getTranslation(const math::AffineMatrix<4, float> & aMa
 float getUniformScale(const math::AffineMatrix<4, float> & aMatrix);
 math::Quaternion<float> getRotation(const math::AffineMatrix<4, float> & aMatrix, float aScale);
 
+/// @brief Erase the entity, and all its children, from the EntityManager.
+void eraseEntityRecursive(ent::Handle<ent::Entity> aHandle, ent::Phase & aPhase);
+
 template<class T_pose>
     concept Decomposition = requires(T_pose a)
     {

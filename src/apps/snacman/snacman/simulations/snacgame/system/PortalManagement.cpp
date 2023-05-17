@@ -38,7 +38,7 @@ void PortalManagement::preGraphUpdate()
                         Entity portal = *newPortalImage.get(addPortalImage);
                         Vec2 relativePos = aPortal.mMirrorSpawnPosition.xy()
                                            - aPortalData.mCurrentPortalPos;
-                        addMeshGeoNode(addPortalImage, *mGameContext, portal,
+                        addMeshGeoNode(*mGameContext, portal,
                                        "models/donut/donut.gltf",
                                        "effects/MeshTextures.sefx",
                                        {relativePos.x(), relativePos.y(), 0.f},

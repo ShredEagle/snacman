@@ -39,12 +39,7 @@ struct Transition;
 
 struct GameContext;
 
-constexpr float gPillHeight = 6 * gCellSize * 0.1f;
-constexpr float gPlayerHeight = 0 * gCellSize * 0.1f;
-constexpr float gLevelHeight = 0 * gCellSize * 0.1f;
-
 void addGeoNode(
-    ent::Phase & aPhase,
     GameContext & aContext,
     ent::Entity & aEnt,
     math::Position<3, float> aPos = math::Position<3, float>::Zero(),
@@ -54,7 +49,6 @@ void addGeoNode(
     math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
 
 std::shared_ptr<snac::Model> addMeshGeoNode(
-    ent::Phase & aPhase,
     GameContext & aContext,
     ent::Entity & aEnt,
     const char * aModelPath,
@@ -104,6 +98,9 @@ ent::Handle<ent::Entity>
 createPlayerSpawnEntity(GameContext & aContext,
                         ent::Phase & aPhase,
                         const math::Position<2, float> & aPos);
+
+ent::Handle<ent::Entity>
+createHudBillpad(GameContext & aContext, component::PlayerSlot aPlayerSlot);
 
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
                                             ControllerType aControllerType,

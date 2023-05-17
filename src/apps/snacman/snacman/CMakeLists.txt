@@ -7,6 +7,7 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     DebugDrawing.h
+    EntityUtilities.h
     GraphicState.h
     ImguiUtilities.h
     Input.h
@@ -25,6 +26,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/GameContext.h
     simulations/snacgame/GameParameters.h
     simulations/snacgame/GraphicState.h
+    simulations/snacgame/ImguiSceneEditor.h
     simulations/snacgame/InputConstants.h
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/LevelHelper.h
@@ -93,6 +95,7 @@ set(${TARGET_NAME}_SOURCES
     Resources.cpp
 
     simulations/snacgame/Entities.cpp
+    simulations/snacgame/ImguiSceneEditor.cpp
     simulations/snacgame/Renderer.cpp
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SimulationControl.cpp
@@ -100,6 +103,7 @@ set(${TARGET_NAME}_SOURCES
 
     simulations/snacgame/component/Context.cpp
     simulations/snacgame/component/DebugUi.cpp
+    simulations/snacgame/component/PlayerHud.cpp
 
     simulations/snacgame/scene/GameScene.cpp
     simulations/snacgame/scene/GameScene-setup.cpp

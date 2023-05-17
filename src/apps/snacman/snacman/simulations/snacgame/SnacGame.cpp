@@ -128,6 +128,10 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
         mImguiDisplays.display();
 
+        if (mImguiDisplays.mShowSceneEditor)
+        {
+            mSceneEditor.showEditor(mStateMachine->getCurrentScene()->mSceneRoot);
+        }
         if (mImguiDisplays.mShowPlayerInfo)
         {
             ent::Phase update;
@@ -320,9 +324,11 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 {
                     Phase pathfinding;
                     Entity pEntity = *pathfinder.get(pathfinding);
-                    addMeshGeoNode(pathfinding, mGameContext, pEntity, 
+                    addMeshGeoNode(mGameContext,
+                                   pEntity, 
                                    "CUBE", "effects/Mesh.sefx",
-                                   {7.f, 7.f, gPillHeight}, 1.f,
+                                   {7.f, 7.f, gPillHeight},
+                                   1.f,
                                    {0.5f, 0.5f, 0.5f});
                     pEntity.add(component::AllowedMovement{
                         .mWindow = gOtherTurningZoneHalfWidth});
@@ -467,8 +473,8 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     //
     mQueryTextScreen.get(nomutation)
         .each([&state, this](ent::Handle<ent::Entity> aHandle,
-                       component::Text & aText,
-                       component::PoseScreenSpace & aPose) 
+                             component::Text & aText,
+                             component::PoseScreenSpace & aPose) 
         {
 
             math::Position<3, float> position_screenPix{
@@ -496,46 +502,6 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
     auto font =
         mGameContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120);
-
-    mQueryHuds.get(nomutation)
-        .each([&font, &state, this](ent::Handle<ent::Entity> aHandle,
-                    const component::PlayerHud & aHud, const component::PlayerSlot & aSlot)
-    {
-        math::Position<3, float> position_screenPix{component::gHudPositions.at(aSlot.mIndex).cwMul(
-                    static_cast<math::Position<2, GLfloat>>(this->mAppInterface->getFramebufferSize())/2.f),
-        0.f};
-        math::Position<3, float> powerupOffset{math::Position<2, float>{0.f, -0.1f}.cwMul(
-                    static_cast<math::Position<2, GLfloat>>(this->mAppInterface->getFramebufferSize())/2.f),
-        0.f};
-
-
-        std::ostringstream playerText;
-        playerText << "P" << aSlot.mIndex + 1 << " "
-                   << aHud.mScore;
-
-        state->mTextScreenEntities.insert(
-            aHandle.id(),
-            visu::Text{
-                .mPosition_world = position_screenPix,
-                .mScaling = math::Size<3, float>{1.f, 1.f, 1.f}, 
-                .mOrientation = Quat_f::Identity(),
-                .mString = playerText.str(),
-                .mFont = font,
-                .mColor = aSlot.mColor,
-            });
-
-        state->mTextScreenEntities.insert(
-            aHandle.id() + 100,
-            visu::Text{
-                .mPosition_world = position_screenPix + powerupOffset.as<math::Vec>(),
-                .mScaling = math::Size<3, float>{0.3f, 0.3f, 0.3f}, 
-                .mOrientation = Quat_f::Identity(),
-                .mString = aHud.mPowerUpName,
-                .mFont = font,
-                .mColor = aSlot.mColor,
-            });
-
-    });
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
 

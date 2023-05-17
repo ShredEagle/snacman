@@ -3,6 +3,7 @@
 #include "EntityWrap.h"
 #include "GameContext.h"
 #include "Renderer.h"
+#include "ImguiSceneEditor.h"
 #include "snacman/simulations/snacgame/component/PlayerHud.h"
 #include "snacman/simulations/snacgame/component/PlayerSlot.h"
 
@@ -45,6 +46,7 @@ namespace visu { struct GraphicState; }
 
 struct ImguiDisplays
 {
+    bool mShowSceneEditor = false;
     bool mShowMappings = false;
     bool mShowSimulationDelta = false;
     bool mShowImguiDemo = false;
@@ -61,6 +63,7 @@ struct ImguiDisplays
     void display()
     {
         ImGui::Begin("Debug windows");
+        ImGui::Checkbox("Scene editor",  &mShowSceneEditor);
         ImGui::Checkbox("Speed control", &mSpeedControl);
         ImGui::Checkbox("Mappings", &mShowMappings);
         ImGui::Checkbox("Simulation delta", &mShowSimulationDelta);
@@ -136,10 +139,11 @@ private:
     EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
     EntityWrap<ent::Query<component::Text, component::GlobalPose>> mQueryTextWorld;
     EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
-    EntityWrap<ent::Query<component::PlayerHud, component::PlayerSlot>> mQueryHuds;
+    EntityWrap<ent::Query<component::PlayerHud>> mQueryHuds;
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;
+    SceneEditor mSceneEditor;
 
     snac::Time mSimulationTime;
 };

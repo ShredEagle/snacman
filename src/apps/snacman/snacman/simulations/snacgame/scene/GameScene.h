@@ -5,6 +5,7 @@
 #include "../component/Controller.h"
 #include "../component/LevelTags.h"
 #include "../component/PathToOnGrid.h"
+#include "../component/PlayerHud.h"
 #include "../component/PlayerSlot.h"
 
 #include <entity/EntityManager.h>

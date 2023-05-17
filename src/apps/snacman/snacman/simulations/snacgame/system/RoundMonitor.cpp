@@ -37,16 +37,34 @@ void RoundMonitor::update()
         level.get(destroyLevel)->add(component::LevelToCreate{});
 
         // Removing players
-        mPlayers.each([&destroyLevel](EntHandle aHandle,
-                                      component::PlayerLifeCycle & lifeCycle,
-                                      component::PlayerPowerUp & aPowerup) {
-            // Reset alive status so that player can be spawned
-            lifeCycle.mIsAlive = false;
-            lifeCycle.mTimeToRespawn = component::gBaseTimeToRespawn;
+        std::pair<std::vector<component::PlayerLifeCycle *>, int/*score*/> winners;
+        winners.second = -1;
 
-            removeRoundTransientPlayerComponent(destroyLevel, aHandle);
-            removeEntityFromScene(aHandle);
-        });
+        mPlayers.each(
+            [&destroyLevel, &winners]
+            (EntHandle aHandle, component::PlayerLifeCycle & lifeCycle) 
+            {
+                if(winners.second < lifeCycle.mScore)
+                {
+                    winners.first.clear();
+                    winners.first.push_back(&lifeCycle);
+                    winners.second = lifeCycle.mScore;
+                }
+                else if(winners.second == lifeCycle.mScore)
+                {
+                    winners.first.push_back(&lifeCycle);
+                }
+
+                removeRoundTransientPlayerComponent(destroyLevel, aHandle);
+                removeEntityFromScene(aHandle);
+                // Notably reset alive status so that player can be spawned
+                lifeCycle.resetBetweenRound();
+            });
+
+        for(auto & lifeCycle : winners.first)
+        {
+            ++(lifeCycle->mRoundsWon);
+        }
     };
 }
 

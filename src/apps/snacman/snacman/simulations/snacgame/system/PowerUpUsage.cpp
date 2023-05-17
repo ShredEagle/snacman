@@ -4,6 +4,7 @@
 #include "snacman/simulations/snacgame/component/SceneNode.h"
 #include "snacman/simulations/snacgame/component/Speed.h"
 #include "snacman/simulations/snacgame/GameParameters.h"
+#include <snacman/EntityUtilities.h>
 
 #include "../component/AllowedMovement.h"
 #include "../component/LevelData.h"
@@ -11,6 +12,8 @@
 #include "../component/PlayerLifeCycle.h"
 #include "../component/PlayerPowerUp.h"
 #include "../component/PowerUp.h"
+#include "../component/Text.h"
+
 #include "../Entities.h"
 #include "../InputConstants.h"
 #include "../SceneGraph.h"
@@ -28,6 +31,8 @@
 namespace ad {
 namespace snacgame {
 namespace system {
+
+
 void PowerUpUsage::update(float aDelta)
 {
     TIME_RECURRING_CLASSFUNC(Main);
@@ -63,7 +68,6 @@ void PowerUpUsage::update(float aDelta)
     // Powerup pickup phase
     mPlayers.each([&](EntHandle aPlayer,
                       const component::GlobalPose & aPlayerPose,
-                      component::PlayerHud & aHud,
                       const component::PlayerSlot & aSlot,
                       component::Collision aPlayerCol) {
         const Box_f playerHitbox = component::transformHitbox(
@@ -93,8 +97,7 @@ void PowerUpUsage::update(float aDelta)
                         createPlayerPowerUp(*mGameContext, aPowerup.mType);
                     component::PlayerPowerUp newPowerup = {
                         .mPowerUp = playerPowerup, .mType = aPowerup.mType};
-                    aHud.mPowerUpName = component::gPowerUpName.at(
-                        static_cast<std::size_t>(aPowerup.mType));
+                    
                     insertEntityInScene(playerPowerup,
                                         aPlayer.get(powerup)
                                             ->get<component::PlayerModel>()
@@ -375,6 +378,21 @@ void PowerUpUsage::update(float aDelta)
             math::Vec<3, float> mForward =
                 aGeo.mOrientation.rotate(math::Vec<3, float>{0.f, 1.f, 0.f});
             aSpeed.mSpeed = mForward * 2.f;
+    });
+
+                    
+    // Update power-up name in HUD
+    mPlayers.each([](ent::Handle<ent::Entity> aPlayer, component::PlayerLifeCycle & aLifeCycle)
+    {
+        // TODO code smell, this is defensive programming because sometimes we get there
+        // when the round monitor already removed the hud from the entitymanager
+        // (I suppose the correct logic would be not to execute this system on players between rounds)
+        if(aLifeCycle.mHud && aLifeCycle.mHud->isValid())
+        {
+            auto & playerHud = snac::getComponent<component::PlayerHud>(*aLifeCycle.mHud);
+            snac::getComponent<component::Text>(playerHud.mPowerupText)
+                    .mString = component::getPowerUpName(aPlayer);
+        }
     });
 }
 

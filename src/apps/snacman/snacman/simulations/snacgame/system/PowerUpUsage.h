@@ -50,7 +50,6 @@ private:
     ent::Query<component::GlobalPose,
                component::Geometry,
                component::PlayerSlot,
-               component::PlayerHud,
                component::Collision,
                component::PlayerLifeCycle>
         mPlayers;

@@ -1,6 +1,9 @@
 #pragma once
 
 
+#include <entity/Entity.h>
+
+
 namespace ad {
 namespace snacgame {
 namespace component {
@@ -12,13 +15,28 @@ constexpr float gBaseHitStunDuration = 2.f;
 
 struct PlayerLifeCycle
 {
-    int mPoints = 0;
+    void resetBetweenRound()
+    {
+        // Do not lose the hud reference nor the count of rounds won
+        mScore = 0;
+        mIsAlive = false;
+        mTimeToRespawn = 0;
+        mInvulFrameCounter = 0;
+        mHitStun = 0;
+    }
+
+    int mScore = 0;
     bool mIsAlive = false;
     float mTimeToRespawn = 0;
     float mInvulFrameCounter = 0;
-
     // Hit stun
-    float mHitStun = 0; 
+    float mHitStun = 0;
+
+    // Kept alive between rounds
+    int mRoundsWon = 0;
+
+    // The HUD showing player informations (score, power-up)
+    std::optional<ent::Handle<ent::Entity>> mHud;
 };
 
 
