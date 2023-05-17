@@ -34,7 +34,7 @@ TransformMatrix computeMatrix(const T_pose & aPoseComponent)
     // this allows for non uniform scaling of instance without
     // introducing skew in the transform matrix of the scene graph
     TransformMatrix localTranslate =
-        math::trans3d::translate(aPoseComponent.mPosition.as<math::Vec>());
+        math::trans3d::translate(aPoseComponent.mPosition.template as<math::Vec>());
     return localScaling * localRotate * localTranslate;
 }
 
