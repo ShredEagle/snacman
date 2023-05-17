@@ -143,6 +143,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
                            component::PlayerPowerUp & aPowerUp,
                            component::PlayerSlot & aPlayerSlot,
                            component::GlobalPose & aPlayerPose,
+                           component::PlayerModel & aPlayerModel,
                            const component::Controller & aController) {
         switch (aPowerUp.mType)
         {
@@ -205,6 +206,19 @@ void PowerUpUsage::update(const snac::Time & aTime)
                 info.mTargetArrow->get(usage)->erase();
                 aPowerUp.mPowerUp.get(usage)->erase();
                 aHandle.get(usage)->remove<component::PlayerPowerUp>();
+                if (aHandle.get()->has<component::PlayerPortalData>())
+                {
+                    component::PlayerPortalData & aPortalData = aHandle.get()->get<component::PlayerPortalData>();
+
+                    aPortalData.mCurrentPortal = -1;
+                    aPortalData.mDestinationPortal = -1;
+
+                    if (aPortalData.mPortalImage)
+                    {
+                        aPortalData.mPortalImage->get(usage)->erase();
+                        aPortalData.mPortalImage = std::nullopt;
+                    }
+                }
                 break;
             }
 
@@ -319,6 +333,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
                 component::Geometry & puGeo =
                     rootPowerupEnt.get<component::Geometry>();
                 rootPowerupEnt.remove<component::VisualModel>();
+                component::Geometry & playerModelGeo = aPlayerModel.mModel.get()->get<component::Geometry>();
                 Quat_f missileOrientation = puGeo.mOrientation;
 
                 // Transfer powerup to level node in scene graph
@@ -352,7 +367,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
                     addMeshGeoNode(*mGameContext, missileEnt, info.mPath,
                                    info.mProgPath, {0.f, 0.f, gPillHeight},
                                    info.mPlayerScaling,
-                                   info.mPlayerInstanceScale, missileOrientation);
+                                   info.mPlayerInstanceScale, playerModelGeo.mOrientation * missileOrientation);
                     missileEnt.add(component::LevelEntity{});
                 }
                 insertEntityInScene(missileModel, rootPowerup);
