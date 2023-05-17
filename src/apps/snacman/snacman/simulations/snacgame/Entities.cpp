@@ -145,8 +145,7 @@ createAnimatedTest(GameContext & aContext,
     auto handle = aContext.mWorld.addEntity();
     Entity entity = *handle.get(aPhase);
     std::shared_ptr<snac::Model> model = addMeshGeoNode(
-        aContext, entity, "models/anim/anim.gltf",
-        "effects/MeshRigging.sefx",
+        aContext, entity, "models/anim/anim.gltf", "effects/MeshRigging.sefx",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gLevelHeight},
         0.45f, lLevelElementScaling,
@@ -200,8 +199,7 @@ createPowerUp(GameContext & aContext,
     Entity powerUp = *handle.get(aPhase);
     component::PowerUpBaseInfo info =
         component::gPowerupInfoByType.at(static_cast<unsigned int>(aType));
-    addMeshGeoNode(aContext, powerUp, info.mPath,
-                   "effects/MeshTextures.sefx",
+    addMeshGeoNode(aContext, powerUp, info.mPath, "effects/MeshTextures.sefx",
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gPillHeight},
                    info.mLevelScaling, info.mLevelInstanceScale,
@@ -213,8 +211,8 @@ createPowerUp(GameContext & aContext,
                           .mAngle = math::Degree<float>{180.f}},
         })
         .add(component::PowerUp{
-                .mType = aType,
-                .mSwapPeriod = aSwapPeriod,
+            .mType = aType,
+            .mSwapPeriod = aSwapPeriod,
         })
         .add(component::Collision{component::gPowerUpHitbox})
         .add(component::LevelEntity{});
@@ -229,13 +227,11 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     Entity powerUp = *handle.get(init);
     component::PowerUpBaseInfo info =
         component::gPowerupInfoByType.at(static_cast<unsigned int>(aType));
-    addMeshGeoNode(aContext, powerUp, info.mPath,
-                   "effects/MeshTextures.sefx", {1.f, 1.f, 0.f},
-                   info.mPlayerScaling, info.mPlayerInstanceScale,
-                   info.mPlayerOrientation);
+    addMeshGeoNode(aContext, powerUp, info.mPath, "effects/MeshTextures.sefx",
+                   {1.f, 1.f, 0.f}, info.mPlayerScaling,
+                   info.mPlayerInstanceScale, info.mPlayerOrientation);
     return handle;
 }
-
 
 EntHandle createPathEntity(GameContext & aContext,
                            Phase & aPhase,
@@ -246,7 +242,6 @@ EntHandle createPathEntity(GameContext & aContext,
                        math::hdr::gWhite<float>);
     return handle;
 }
-
 
 ent::Handle<ent::Entity>
 createPortalEntity(GameContext & aContext,
@@ -262,22 +257,39 @@ createPortalEntity(GameContext & aContext,
     return handle;
 }
 
-
-void addPortalInfo(component::Portal & aPortal,
+void addPortalInfo(GameContext & aContext,
+                   component::Portal & aPortal,
                    const component::Geometry & aGeo,
                    Vec3 aDirection)
 {
     Box_f portalEntrance{component::gPortalHitbox};
     portalEntrance.mPosition += aDirection;
     Box_f portalExit{component::gPortalHitbox};
-    portalExit.mPosition -= aDirection;
+    portalExit.mPosition -= aDirection * 0.9f;
 
     Phase addHitboxPhase;
     aPortal.mEnterHitbox = portalEntrance;
     aPortal.mExitHitbox = portalExit;
     aPortal.mMirrorSpawnPosition = aGeo.mPosition + aDirection;
-}
 
+    auto model = aContext.mWorld.addEntity();
+    {
+        Phase portalModelPhase;
+        Entity modelEnt = *model.get(portalModelPhase);
+        addMeshGeoNode(
+            aContext, modelEnt, "models/portal/portal.gltf",
+            "effects/MeshTextures.sefx",
+            {aGeo.mPosition.x() + aDirection.x() * 1.3f, aGeo.mPosition.y(), 0.f},
+            0.2f, {1.f, 1.f, 1.f},
+            Quat_f{UnitVec3::MakeFromUnitLength({0.f, 0.f, 1.f}),
+                   Turn_f{(-aDirection.x() - 1.f) / 2.f * 0.5f}}
+                * Quat_f{UnitVec3::MakeFromUnitLength({1.f, 0.f, 0.f}),
+                         Turn_f{0.25f}});
+        modelEnt.add(component::LevelEntity{});
+    }
+    model.get()->get<component::SceneNode>().mName = "portal";
+    insertEntityInScene(model, *aContext.mLevel);
+}
 
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
@@ -289,7 +301,6 @@ createCopPenEntity(GameContext & aContext,
                        math::hdr::gYellow<float>);
     return handle;
 }
-
 
 ent::Handle<ent::Entity>
 createPlayerSpawnEntity(GameContext & aContext,
@@ -307,7 +318,6 @@ createPlayerSpawnEntity(GameContext & aContext,
     return spawner;
 }
 
-
 ent::Handle<ent::Entity>
 createHudBillpad(GameContext & aContext,
                  const component::PlayerSlot & aPlayerSlot,
@@ -319,17 +329,15 @@ createHudBillpad(GameContext & aContext,
 
         ent::Entity hud = *hudHandle.get(createHud);
         // Create the Hud common ancestor in the scene graph
-        addGeoNode(aContext,
-                   hud,
-                   component::gHudPositionsWorld[aPlayerSlot.mIndex],
-                   1.f,
-                   {1.f, 1.f , 1.f},
+        addGeoNode(aContext, hud,
+                   component::gHudPositionsWorld[aPlayerSlot.mIndex], 1.f,
+                   {1.f, 1.f, 1.f},
                    component::gHudOrientationsWorld[aPlayerSlot.mIndex]);
     }
 
     // The score text line
-    EntHandle scoreHandle =   aContext.mWorld.addEntity();
-    EntHandle roundHandle =   aContext.mWorld.addEntity();
+    EntHandle scoreHandle = aContext.mWorld.addEntity();
+    EntHandle roundHandle = aContext.mWorld.addEntity();
     EntHandle powerupHandle = aContext.mWorld.addEntity();
     EntHandle billpadHandle = aContext.mWorld.addEntity();
     {
@@ -340,14 +348,12 @@ createHudBillpad(GameContext & aContext,
         // Score
         {
             ent::Entity scoreText = *scoreHandle.get(createScore);
-            scoreText
-                .add(component::Text{
-                    .mString = std::to_string(aPlayerLifeCycle.mScore),
-                    .mFont = aContext.mResources.getFont(fontname, 100),
-                    //.mColor = playerSlot.mColor,
-                    .mColor = math::hdr::gBlack<float>,
-                })
-                ;
+            scoreText.add(component::Text{
+                .mString = std::to_string(aPlayerLifeCycle.mScore),
+                .mFont = aContext.mResources.getFont(fontname, 100),
+                //.mColor = playerSlot.mColor,
+                .mColor = math::hdr::gBlack<float>,
+            });
 
             addGeoNode(aContext, scoreText, {-1.7f, 0.6f, 0.f}, 1.f);
         }
@@ -355,14 +361,12 @@ createHudBillpad(GameContext & aContext,
         // Rounds
         {
             ent::Entity roundText = *roundHandle.get(createScore);
-            roundText
-                .add(component::Text{
-                    .mString = std::to_string(aPlayerLifeCycle.mRoundsWon),
-                    .mFont = aContext.mResources.getFont(fontname, 100),
-                    //.mColor = playerSlot.mColor,
-                    .mColor = math::hdr::gBlack<float>,
-                })
-                ;
+            roundText.add(component::Text{
+                .mString = std::to_string(aPlayerLifeCycle.mRoundsWon),
+                .mFont = aContext.mResources.getFont(fontname, 100),
+                //.mColor = playerSlot.mColor,
+                .mColor = math::hdr::gBlack<float>,
+            });
 
             addGeoNode(aContext, roundText, {0.5f, 0.3f, 0.f}, 1.1f);
         }
@@ -370,13 +374,11 @@ createHudBillpad(GameContext & aContext,
         // Power-up
         {
             ent::Entity powerupText = *powerupHandle.get(createScore);
-            powerupText 
-                .add(component::Text{
-                    .mFont = aContext.mResources.getFont(fontname, 100),
-                    //.mColor = playerSlot.mColor,
-                    .mColor = math::hdr::gBlack<float>,
-                })
-                ;
+            powerupText.add(component::Text{
+                .mFont = aContext.mResources.getFont(fontname, 100),
+                //.mColor = playerSlot.mColor,
+                .mColor = math::hdr::gBlack<float>,
+            });
             addGeoNode(aContext, powerupText, {-1.9f, -.7f, 0.f}, 0.5f);
         }
 
@@ -384,19 +386,13 @@ createHudBillpad(GameContext & aContext,
         {
             ent::Entity billpad = *billpadHandle.get(createScore);
             addMeshGeoNode(
-                aContext,
-                billpad,
-                "models/billpad/billpad.gltf", "effects/MeshTextures.sefx",
-                {0.f, 0.f, -0.30f},
-                8.f,
+                aContext, billpad, "models/billpad/billpad.gltf",
+                "effects/MeshTextures.sefx", {0.f, 0.f, -0.30f}, 8.f,
                 {1.f, 1.f, 1.f},
-                Quat_f{
-                    math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
-                    math::Turn<float>{0.25f}}
-                    * Quat_f{
-                        math::UnitVec<3, float>{{0.f, 1.f, 0.f}},
-                        math::Turn<float>{-0.25f}}
-                    ,
+                Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                       math::Turn<float>{0.25f}}
+                    * Quat_f{math::UnitVec<3, float>{{0.f, 1.f, 0.f}},
+                             math::Turn<float>{-0.25f}},
                 aPlayerSlot.mColor);
         }
     }
@@ -417,13 +413,11 @@ createHudBillpad(GameContext & aContext,
                 .mScoreText = scoreHandle,
                 .mRoundText = roundHandle,
                 .mPowerupText = powerupHandle,
-            })
-            ;
+            });
     }
 
     return hudHandle;
 }
-
 
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
                                             ControllerType aControllerType,
@@ -488,12 +482,10 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             .add(component::Controller{.mType = aControllerType,
                                        .mControllerId = aControllerId})
             .add(component::Collision{component::gPlayerHitbox})
-            .add(component::PlayerPortalData{})
-        ;
+            .add(component::PlayerPortalData{});
     }
     return aSlot;
 }
-
 
 std::optional<ent::Handle<ent::Entity>>
 findSlotAndBind(GameContext & aContext,
@@ -570,7 +562,6 @@ void swapPlayerPosition(Phase & aPhase, EntHandle aPlayer, EntHandle aOther)
 
     // Remove portal image if there is one
 }
-
 
 void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
 {
@@ -649,9 +640,9 @@ EntHandle createStageDecor(GameContext & aContext)
         Phase createStage;
         Entity stageEntity = *result.get(createStage);
 
-        addMeshGeoNode(aContext, stageEntity,
-                       "models/stage/stage.gltf", "effects/MeshTextures.sefx",
-                       {7.f, 7.f, -0.4f}, 1.f, {1.f, 1.f, 1.f},
+        addMeshGeoNode(aContext, stageEntity, "models/stage/stage.gltf",
+                       "effects/MeshTextures.sefx", {7.f, 7.f, -0.4f}, 1.f,
+                       {1.f, 1.f, 1.f},
                        Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                               math::Turn<float>{0.25f}}
                            * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
@@ -684,7 +675,8 @@ EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
 }
 
 EntHandle createExplosion(GameContext & aContext,
-                          math::Position<3, float> & aPos, const snac::Time & aTime)
+                          math::Position<3, float> & aPos,
+                          const snac::Time & aTime)
 {
     EntHandle explosion = aContext.mWorld.addEntity();
     {
