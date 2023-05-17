@@ -163,10 +163,14 @@ void LevelCreator::update()
                             *mGameContext,
                             createLevel,
                             tile.mPos);
+
+                        using component::PowerUpType;
                         createPowerUp(
                             *mGameContext,
                             createLevel,
-                            tile.mPos);
+                            tile.mPos,
+                            static_cast<PowerUpType>(mRandom() % static_cast<int>(PowerUpType::_End)),
+                            gMinPowerUpPeriod + (gMaxPowerUpPeriod - gMinPowerUpPeriod) * (mRandom() / (float)gMaxRand));
                         break;
                     }
                     case component::TileType::Portal:

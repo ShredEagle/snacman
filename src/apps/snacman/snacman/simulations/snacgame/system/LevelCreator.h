@@ -7,6 +7,8 @@
 
 #include <entity/Query.h>
 
+#include <handy/random.h>
+
 namespace ad {
 namespace snacgame {
 namespace system {
@@ -31,6 +33,12 @@ private:
         mCreatable;
     ent::Query<component::LevelEntity, component::SceneNode> mEntities;
     ent::Query<component::Portal, component::Geometry> mPortals;
+
+    static constexpr int gMaxRand = 65536;
+    Randomizer<> mRandom{0, gMaxRand};
+
+    static constexpr float gMinPowerUpPeriod = 0.4f;
+    static constexpr float gMaxPowerUpPeriod = 1.4f;
 };
 
 } // namespace system

@@ -192,13 +192,14 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
 ent::Handle<ent::Entity>
 createPowerUp(GameContext & aContext,
               Phase & aPhase,
-              const math::Position<2, float> & aGridPos)
+              const math::Position<2, float> & aGridPos,
+              const component::PowerUpType aType,
+              float aSwapPeriod)
 {
     auto handle = aContext.mWorld.addEntity();
     Entity powerUp = *handle.get(aPhase);
-    component::PowerUpType baseType = component::PowerUpType::Dog;
     component::PowerUpBaseInfo info =
-        component::gPowerupInfoByType.at(static_cast<unsigned int>(baseType));
+        component::gPowerupInfoByType.at(static_cast<unsigned int>(aType));
     addMeshGeoNode(aContext, powerUp, info.mPath,
                    "effects/MeshTextures.sefx",
                    {static_cast<float>(aGridPos.x()),
@@ -211,7 +212,10 @@ createPowerUp(GameContext & aContext,
                 AxisAngle{.mAxis = math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                           .mAngle = math::Degree<float>{180.f}},
         })
-        .add(component::PowerUp{.mType = component::PowerUpType::Dog})
+        .add(component::PowerUp{
+                .mType = aType,
+                .mSwapPeriod = aSwapPeriod,
+        })
         .add(component::Collision{component::gPowerUpHitbox})
         .add(component::LevelEntity{});
     return handle;

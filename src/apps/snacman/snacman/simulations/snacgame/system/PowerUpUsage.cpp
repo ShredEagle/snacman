@@ -48,7 +48,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
         }
         else
         {
-            aPowerUp.mSwapTimer = 1.f;
+            aPowerUp.mSwapTimer = aPowerUp.mSwapPeriod;
             // Loops powerup
             component::PowerUpType newType =
                 static_cast<component::PowerUpType>(

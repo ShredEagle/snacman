@@ -69,7 +69,8 @@ struct PowerUp
 {
     PowerUpType mType;
     bool mPickedUp = false;
-    float mSwapTimer = 1.f;
+    float mSwapPeriod = 1.f;
+    float mSwapTimer = mSwapPeriod;
 };
 
 } // namespace component

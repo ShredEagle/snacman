@@ -76,9 +76,12 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
 
 ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
                                        ent::Phase & aPhase,
-                                       const math::Position<2, float> & Pos);
+                                       const math::Position<2, float> & Pos,
+                                       const component::PowerUpType aType,
+                                       float aSwapPeriod);
 ent::Handle<ent::Entity>
-createPlayerPowerUp(GameContext & aContext, const component::PowerUpType aType);
+createPlayerPowerUp(GameContext & aContext, 
+                    const component::PowerUpType aType);
 
 ent::Handle<ent::Entity>
 createPathEntity(GameContext & aContext,
