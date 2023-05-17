@@ -441,7 +441,10 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                     .mColor = aGlobPose.mColor,
                     .mModel = aVisualModel.mModel,
                     .mRigging = std::move(skeletal),
+                    .mDisableInterpolation = aVisualModel.mDisableInterpolation,
                 });
+            // Note: Although it does not feel correct, this is a convenient place to reset this flag
+            aVisualModel.mDisableInterpolation = false;
         });
 
     //

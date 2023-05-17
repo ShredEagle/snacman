@@ -10,6 +10,7 @@
 #include "../component/SceneNode.h"
 
 #include <snacman/Profiling.h>
+#include <snacman/EntityUtilities.h>
 
 #include <math/Angle.h>
 #include <math/Homogeneous.h>
@@ -21,26 +22,30 @@ namespace snacgame {
 namespace system {
 
 namespace {
-TransformMatrix resolveGlobalPos(const component::Geometry & aLocalGeo,
-                                 const TransformMatrix & aParentTransform)
+
+
+template <class T_pose>
+TransformMatrix computeMatrix(const T_pose & aPoseComponent)
 {
-    ScaleMatrix localScaling = math::trans3d::scaleUniform(aLocalGeo.mScaling);
-    RotationMatrix localRotate = aLocalGeo.mOrientation.toRotationMatrix();
+    ScaleMatrix localScaling = math::trans3d::scaleUniform(aPoseComponent.mScaling);
+    RotationMatrix localRotate = aPoseComponent.mOrientation.toRotationMatrix();
 
     // We translate the child according to the instance scaling of it's parent
     // this allows for non uniform scaling of instance without
     // introducing skew in the transform matrix of the scene graph
     TransformMatrix localTranslate =
-        math::trans3d::translate(aLocalGeo.mPosition.as<math::Vec>());
-    TransformMatrix localMatrix = localScaling * localRotate * localTranslate;
-    TransformMatrix globalMatrix = localMatrix * aParentTransform;
+        math::trans3d::translate(aPoseComponent.mPosition.as<math::Vec>());
+    return localScaling * localRotate * localTranslate;
+}
 
-    return globalMatrix;
+TransformMatrix resolveGlobalPos(const component::Geometry & aLocalGeo,
+                                 const TransformMatrix & aParentTransform)
+{
+    return computeMatrix(aLocalGeo) * aParentTransform;
 }
 
 void depthFirstResolve(const component::SceneNode & aSceneNode,
-                       const TransformMatrix & aParentTransform,
-                       ent::Phase & aPhase)
+                       const TransformMatrix & aParentTransform)
 {
     // Lots of cache miss here which is not suprising but
     // It's it this load in particular that takes 10% of the run time of depthFirstResolve
@@ -55,11 +60,11 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
         {
             ent::Handle<ent::Entity> current = *prevNode->mNextChild;
             const component::SceneNode & node = 
-                current.get(aPhase)->get<component::SceneNode>();
+                current.get()->get<component::SceneNode>();
             const component::Geometry & geo =
-                current.get(aPhase)->get<component::Geometry>();
+                current.get()->get<component::Geometry>();
             component::GlobalPose & gPose =
-                current.get(aPhase)->get<component::GlobalPose>();
+                current.get()->get<component::GlobalPose>();
             TransformMatrix wTransform =
                 resolveGlobalPos(geo, aParentTransform);
 
@@ -69,7 +74,7 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
             gPose.mColor = geo.mColor;
             gPose.mInstanceScaling = geo.mInstanceScaling;
  
-            depthFirstResolve(node, wTransform, aPhase);
+            depthFirstResolve(node, wTransform);
 
             prevNode = &node;
         }
@@ -77,6 +82,23 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
 }
 
 } // namespace
+
+
+void updateGlobalPosition(const component::SceneNode & aSceneNode)
+{
+    if(aSceneNode.mParent) // otherwise root node
+    {
+        const auto & parentGlobalPose = snac::getComponent<component::GlobalPose>(*aSceneNode.mParent);
+        depthFirstResolve(
+            snac::getComponent<component::SceneNode>(*aSceneNode.mParent),
+            computeMatrix(parentGlobalPose));
+    }
+    else
+    {
+        depthFirstResolve(aSceneNode, gWorldCoordTo3dCoord);
+    }
+}
+
 
 SceneGraphResolver::SceneGraphResolver(GameContext & aGameContext,
                    ent::Handle<ent::Entity> aSceneRoot) :
@@ -93,10 +115,9 @@ SceneGraphResolver::SceneGraphResolver(GameContext & aGameContext,
 void SceneGraphResolver::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    ent::Phase resolve;
     component::SceneNode & rootNode =
-        mSceneRoot.get(resolve)->get<component::SceneNode>();
-    depthFirstResolve(rootNode, gWorldCoordTo3dCoord, resolve);
+        mSceneRoot.get()->get<component::SceneNode>();
+    depthFirstResolve(rootNode, gWorldCoordTo3dCoord);
 }
 
 } // namespace system

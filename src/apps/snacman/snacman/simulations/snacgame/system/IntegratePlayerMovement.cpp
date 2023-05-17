@@ -5,7 +5,9 @@
 #include "../typedef.h"
 
 #include "../component/LevelData.h"
+#include "../component/VisualModel.h"
 
+#include <snacman/EntityUtilities.h>
 #include <snacman/Profiling.h>
 
 #include <snac-renderer/Cube.h>
@@ -75,6 +77,9 @@ void IntegratePlayerMovement::update(float aDelta)
                     math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                     math::Turn<float>{0.25f}};
         }
+
+        snac::getComponent<component::VisualModel>(aModel.mModel)
+            .mDisableInterpolation = true;
     });
 }
 

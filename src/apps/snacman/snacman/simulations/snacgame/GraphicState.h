@@ -30,7 +30,7 @@ struct Entity
     math::Quaternion<float> mOrientation;
     math::hdr::Rgba_f mColor;
     std::shared_ptr<snac::Model> mModel;
-    
+
     // TODO #anim would be better to interpolate the animation time (Parameter)
     // between each GPU frame, instead of providing fixed parameter value
     // (cannot be inteprolated because of periodic behaviours).
@@ -42,20 +42,30 @@ struct Entity
         const snac::NodeAnimation * mAnimation = nullptr;
         double mParameterValue = 0.;
     } mRigging;
+
+    bool mDisableInterpolation = false;
 };
 
                     
 inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntity, float aInterpolant)
 {
-    return Entity{
-        math::lerp(aLeftEntity.mPosition_world, aRightEntity.mPosition_world,   aInterpolant),
-        math::lerp(aLeftEntity.mScaling,        aRightEntity.mScaling,          aInterpolant),
-        math::slerp(aLeftEntity.mOrientation,   aRightEntity.mOrientation,      aInterpolant),
-        math::lerp(aLeftEntity.mColor,          aRightEntity.mColor,            aInterpolant),
-        aRightEntity.mModel,
-        aRightEntity.mRigging,
-    };
+    if(aRightEntity.mDisableInterpolation)
+    {
+        return aRightEntity;
+    }
+    else
+    {
+        return Entity{
+            math::lerp(aLeftEntity.mPosition_world, aRightEntity.mPosition_world,   aInterpolant),
+            math::lerp(aLeftEntity.mScaling,        aRightEntity.mScaling,          aInterpolant),
+            math::slerp(aLeftEntity.mOrientation,   aRightEntity.mOrientation,      aInterpolant),
+            math::lerp(aLeftEntity.mColor,          aRightEntity.mColor,            aInterpolant),
+            aRightEntity.mModel,
+            aRightEntity.mRigging,
+        };
+    }
 }
+
 
 struct Text
 {

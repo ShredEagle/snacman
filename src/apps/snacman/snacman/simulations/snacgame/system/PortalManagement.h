@@ -4,6 +4,7 @@
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "snacman/simulations/snacgame/component/PlayerPortalData.h"
+#include "snacman/simulations/snacgame/component/SceneNode.h"
 #include "../GameContext.h"
 #include "../component/LevelTags.h"
 #include "../component/Geometry.h"
@@ -31,7 +32,13 @@ public:
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::GlobalPose, component::Collision, component::PlayerPortalData, component::Geometry, component::PlayerModel> mPlayer;
+    ent::Query<component::GlobalPose,
+               component::Collision,
+               component::PlayerPortalData,
+               component::Geometry,
+               component::PlayerModel,
+               component::SceneNode>
+        mPlayer;
     ent::Query<component::Portal, component::GlobalPose, component::Geometry> mPortals;
 };
 

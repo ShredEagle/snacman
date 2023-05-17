@@ -35,6 +35,11 @@ private:
                component::GlobalPose>
         mNodes;
 };
+
+
+void updateGlobalPosition(const component::SceneNode & aSceneNode);
+
+
 } // namespace system
 } // namespace snacgame
 } // namespace ad

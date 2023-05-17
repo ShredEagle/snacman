@@ -10,6 +10,7 @@ namespace component {
 struct VisualModel
 {
     std::shared_ptr<snac::Model> mModel;
+    bool mDisableInterpolation = false;
 };
 
 

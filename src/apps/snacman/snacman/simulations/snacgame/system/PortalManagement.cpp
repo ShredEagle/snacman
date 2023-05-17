@@ -1,8 +1,14 @@
 #include "PortalManagement.h"
 
+#include "SceneGraphResolver.h"
+
+#include "../component/VisualModel.h"
+
 #include "snacman/simulations/snacgame/component/PlayerModel.h"
 #include "snacman/simulations/snacgame/Entities.h"
 #include "snacman/simulations/snacgame/SceneGraph.h"
+
+#include <snacman/EntityUtilities.h>
 
 #include "../LevelHelper.h"
 #include "../typedef.h"
@@ -10,9 +16,12 @@
 #include <snacman/DebugDrawing.h>
 #include <snacman/Profiling.h>
 
+
 namespace ad {
 namespace snacgame {
 namespace system {
+
+
 void PortalManagement::preGraphUpdate()
 {
     TIME_RECURRING_CLASSFUNC(Main);
@@ -51,15 +60,6 @@ void PortalManagement::preGraphUpdate()
                     }
                     insertEntityInScene(newPortalImage, aPlayerHandle);
                 }
-
-                if (aPortalData.mCurrentPortal == -1
-                    && aPortalData.mDestinationPortal == -1
-                    && aPortalData.mPortalImage)
-                {
-                    Phase removePortalImage;
-                    aPortalData.mPortalImage->get(removePortalImage)->erase();
-                    aPortalData.mPortalImage = std::nullopt;
-                }
             });
         });
     }
@@ -81,15 +81,21 @@ void PortalManagement::postGraphUpdate()
                          const component::Collision & aPlayerCol,
                          component::Geometry & aPlayerGeo,
                          component::PlayerModel & aPlayerModel,
-                         component::PlayerPortalData & aPortalData) {
+                         component::PlayerPortalData & aPortalData,
+                         const component::SceneNode & aPlayerNode)
+        {
             aPortalData.mCurrentPortal = -1;
             aPortalData.mDestinationPortal = -1;
 
             Box_f playerHitbox = component::transformHitbox(
                 aPlayerPose.mPosition, aPlayerCol.mHitbox);
 
-            mPortals.each([&playerHitbox, &levelData, &aPortalData,
-                           &aPlayerGeo](
+            mPortals.each([&playerHitbox,
+                           &levelData,
+                           &aPortalData,
+                           &aPlayerGeo,
+                           &aPlayerModel,
+                           &aPlayerNode](
                               const component::Portal & aPortal,
                               const component::Geometry & aPortalGeo,
                               const component::GlobalPose & aPortalPose) {
@@ -159,8 +165,15 @@ void PortalManagement::postGraphUpdate()
                                                   playerPortalImageHitbox))
                     {
                         aPlayerGeo.mPosition = aPortalGeo.mPosition;
+                        updateGlobalPosition(aPlayerNode);
+                        snac::getComponent<component::VisualModel>(aPlayerModel.mModel)
+                            .mDisableInterpolation = true;
                         aPortalData.mCurrentPortal = -1;
                         aPortalData.mDestinationPortal = -1;
+
+                        ent::Phase removePortalImage;
+                        aPortalData.mPortalImage->get(removePortalImage)->erase();
+                        aPortalData.mPortalImage = std::nullopt;
                     }
 
                     if (component::collideWithSat(portalExitHitbox,
@@ -168,6 +181,10 @@ void PortalManagement::postGraphUpdate()
                     {
                         aPortalData.mCurrentPortal = -1;
                         aPortalData.mDestinationPortal = -1;
+
+                        ent::Phase removePortalImage;
+                        aPortalData.mPortalImage->get(removePortalImage)->erase();
+                        aPortalData.mPortalImage = std::nullopt;
                     }
                 }
             });
