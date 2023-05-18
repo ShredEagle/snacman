@@ -1,9 +1,11 @@
 #include "ConsolidateGridMovement.h"
 
-#include "../typedef.h"
+#include "math/VectorUtilities.h"
 
 #include "../component/PlayerLifeCycle.h"
+#include "../typedef.h"
 
+#include <snacman/DebugDrawing.h>
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
 
@@ -18,7 +20,7 @@ void ConsolidateGridMovement::update(float aDelta)
     mPlayer.each([](const component::AllowedMovement & aAllowedMovement,
                     component::Controller & aController,
                     component::PlayerMoveState & aMoveState,
-                    const component::PlayerLifeCycle & aLifeCycle ) {
+                    const component::PlayerLifeCycle & aLifeCycle) {
         int oldMoveState = aMoveState.mMoveState;
         int inputMoveFlag = gPlayerMoveFlagNone;
 
@@ -40,38 +42,51 @@ void ConsolidateGridMovement::update(float aDelta)
         aMoveState.mMoveState = inputMoveFlag;
     });
 
-    mPathfinder.each(
-        [aDelta](const component::AllowedMovement & aAllowedMovement,
-                 component::Geometry & aGeometry,
-                 component::PathToOnGrid & aPathfinder) {
-            if (aPathfinder.mTargetFound)
+    mPathfinder.each([aDelta](
+                         const component::AllowedMovement & aAllowedMovement,
+                         component::Geometry & aGeometry,
+                         component::PathToOnGrid & aPathfinder,
+                         component::GlobalPose & aPose) {
+        if (aPathfinder.mTargetFound)
+        {
+            Vec2 direction = Pos2{(float) aPathfinder.mCurrentTarget.x(),
+                                  (float) aPathfinder.mCurrentTarget.y()}
+                             - aGeometry.mPosition.xy();
+
+            if (direction.x() != 0.f || direction.y() != 0.f)
             {
-                Vec2 direction = Pos2{(float) aPathfinder.mCurrentTarget.x(),
-                                      (float) aPathfinder.mCurrentTarget.y()}
-                                 - aGeometry.mPosition.xy();
+                float distSquared = direction.getNormSquared();
+                Vec2 displacement =
+                    direction.normalize() * aDelta * gBaseDogSpeed;
 
-                if (direction.x() != 0.f || direction.y() != 0.f)
+                if (displacement.getNormSquared() < distSquared)
                 {
-                    float distSquared = direction.getNormSquared();
-                    Vec2 displacement = direction.normalize() * aDelta * gBaseDogSpeed;
+                    aGeometry.mPosition +=
+                        Vec3{displacement.x(), displacement.y(), 0.f};
 
-                    if (displacement.getNormSquared() < distSquared)
-                    {
-                        aGeometry.mPosition +=
-                            Vec3{displacement.x(), displacement.y(), 0.f};
-                    }
-                    else
-                    {
-                        aGeometry.mPosition = {
-                            aPathfinder.mCurrentTarget.x(),
-                            aPathfinder.mCurrentTarget.y(),
-                            aGeometry.mPosition.z(),
-                        };
-                    }
-                    
+                    math::Angle<float> dirAngle{
+                        (float) getOrientedAngle(Vec2{0.f, 1.f}, -displacement)
+                            .value()};
+                    /* aGeometry.mOrientation = */
+                    /*     Quat_f{UnitVec3{Vec3{0.f, 1.f, 0.f}}, dirAngle}; */
+                    aGeometry.mOrientation =
+                        Quat_f{UnitVec3{Vec3{1.f, 0.f, 0.f}}, Turn_f{0.25f}}
+                        * Quat_f{UnitVec3{Vec3{0.f, 1.f, 0.f}}, dirAngle};
+                    DBGDRAW_DEBUG(snac::gHitboxDrawer)
+                        .addBasis({.mPosition = aPose.mPosition,
+                                   .mOrientation = aPose.mOrientation});
+                }
+                else
+                {
+                    aGeometry.mPosition = {
+                        aPathfinder.mCurrentTarget.x(),
+                        aPathfinder.mCurrentTarget.y(),
+                        aGeometry.mPosition.z(),
+                    };
                 }
             }
-        });
+        }
+    });
 }
 } // namespace system
 } // namespace snacgame

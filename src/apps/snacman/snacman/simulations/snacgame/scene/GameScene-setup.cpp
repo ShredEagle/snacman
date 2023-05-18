@@ -50,6 +50,8 @@ void GameScene::setup(const Transition & aTransition, RawInput & aInput)
     mGameContext.mResources.getModel("models/teleport/teleport.gltf", "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/missile/missile.gltf", "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/boom/boom.gltf", "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/portal/portal.gltf", "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/dog/dog.gltf", "effects/MeshTextures.sefx");
     {
         Phase init;
         setupLevel(mGameContext, init);

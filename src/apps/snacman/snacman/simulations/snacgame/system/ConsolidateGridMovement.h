@@ -7,6 +7,7 @@
 #include "../component/PlayerMoveState.h"
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
+#include "../component/GlobalPose.h"
 #include "../component/LevelData.h"
 #include "../component/AllowedMovement.h"
 #include "../InputCommandConverter.h"
@@ -32,7 +33,7 @@ public:
 private:
     ent::Query<component::AllowedMovement, component::Controller, component::PlayerMoveState, component::PlayerLifeCycle>
         mPlayer;
-    ent::Query<component::AllowedMovement, component::Geometry, component::PathToOnGrid>
+    ent::Query<component::AllowedMovement, component::Geometry, component::PathToOnGrid, component::GlobalPose>
         mPathfinder;
 };
 

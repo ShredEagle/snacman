@@ -21,6 +21,7 @@ enum class PowerUpType : unsigned int
 struct PowerUpBaseInfo
 {
     const char * mPath = "";
+    const char * mPlayerPath = "";
     const char * mProgPath = "";
     const math::Quaternion<float> mLevelOrientation =
         math::Quaternion<float>::Identity();
@@ -31,6 +32,7 @@ struct PowerUpBaseInfo
     const float mLevelScaling = 1.f;
     const float mPlayerScaling = 1.f;
     const math::Vec<3, float> mPosOffset = math::Vec<3, float>::Zero();
+    const math::Vec<3, float> mPlayerPosOffset = math::Vec<3, float>::Zero();
 };
 
 constexpr float gMissileSpeed = 5.f;
@@ -45,18 +47,23 @@ constexpr std::array<PowerUpBaseInfo,
     gPowerupInfoByType{
         PowerUpBaseInfo{
             .mPath = "models/collar/collar.gltf",
+            .mPlayerPath = "models/dog/dog.gltf",
             .mProgPath = "effects/MeshTextures.sefx",
+            .mPlayerOrientation = math::Quaternion<float>{0.f, 0.707f, 0.f, 0.707f},
             .mLevelScaling = 0.2f,
-            .mPlayerScaling = 0.2f,
+            .mPlayerScaling = 0.03f,
+            .mPlayerPosOffset = {0.f, -1.f, 0.f},
         },
         PowerUpBaseInfo{
             .mPath = "models/teleport/teleport.gltf",
+            .mPlayerPath = "models/teleport/teleport.gltf",
             .mProgPath = "effects/MeshTextures.sefx",
             .mLevelScaling = 0.3f,
             .mPlayerScaling = 0.3f,
         },
         PowerUpBaseInfo{
             .mPath = "models/missile/missile.gltf",
+            .mPlayerPath = "models/missile/missile.gltf",
             .mProgPath = "effects/MeshTextures.sefx",
             .mPlayerOrientation = gBaseMissileOrientation,
             .mPlayerInstanceScale = {0.3f, 0.3f, 0.3f},
