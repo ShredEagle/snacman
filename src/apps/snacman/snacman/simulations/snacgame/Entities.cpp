@@ -227,9 +227,10 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     Entity powerUp = *handle.get(init);
     component::PowerUpBaseInfo info =
         component::gPowerupInfoByType.at(static_cast<unsigned int>(aType));
-    addMeshGeoNode(aContext, powerUp, info.mPlayerPath, "effects/MeshTextures.sefx",
-                   Pos3{1.f, 1.f, 0.f} + info.mPlayerPosOffset, info.mPlayerScaling,
-                   info.mPlayerInstanceScale, info.mPlayerOrientation);
+    addMeshGeoNode(
+        aContext, powerUp, info.mPlayerPath, "effects/MeshTextures.sefx",
+        Pos3{1.f, 1.f, 0.f} + info.mPlayerPosOffset, info.mPlayerScaling,
+        info.mPlayerInstanceScale, info.mPlayerOrientation);
     return handle;
 }
 
@@ -705,6 +706,8 @@ EntHandle createPortalImage(GameContext & aContext,
         Phase addPortalImage;
         component::Geometry modelGeo =
             aPlayerModel.mModel.get()->get<component::Geometry>();
+        component::RigAnimation animation =
+            aPlayerModel.mModel.get()->get<component::RigAnimation>();
         Entity portal = *newPortalImage.get(addPortalImage);
         Vec2 relativePos =
             aPortal.mMirrorSpawnPosition.xy() - aPortalData.mCurrentPortalPos;
@@ -713,7 +716,15 @@ EntHandle createPortalImage(GameContext & aContext,
                        {relativePos.x(), relativePos.y(), 0.f},
                        modelGeo.mScaling, modelGeo.mInstanceScaling,
                        modelGeo.mOrientation, modelGeo.mColor);
-        portal.add(component::Collision{component::gPlayerHitbox});
+        portal.add(component::Collision{component::gPlayerHitbox})
+            .add(component::RigAnimation{
+                .mAnimName = animation.mAnimName,
+                .mAnimation = animation.mAnimation,
+                .mStartTime = animation.mStartTime,
+                .mParameter =
+                    decltype(component::RigAnimation::mParameter){
+                        animation.mAnimation->mEndTime},
+            });
         aPortalData.mPortalImage = newPortalImage;
     }
 
