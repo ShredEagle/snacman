@@ -100,6 +100,15 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
             component::PlayerSlot{i, false, gSlotColors.at(i)});
     }
 
+    // Add permanent game title
+    makeText(mGameContext,
+             init,
+             "Snacman",
+             mGameContext.mResources.getFont("fonts/FredokaOne-Regular.ttf"),
+             math::hdr::gYellow<float>,
+             {-0.25f, 0.75f},
+             {1.8f, 1.8f});
+
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(scene::Transition{}, aInput);
 }
