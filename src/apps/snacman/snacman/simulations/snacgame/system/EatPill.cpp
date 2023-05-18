@@ -47,7 +47,7 @@ void EatPill::update()
             Box_f pillHitbox = component::transformHitbox(aPillGeo.mPosition,
                                                           aPillCol.mHitbox);
 
-            if (component::collideWithSat(pillHitbox, playerHitbox))
+            if (component::collideWithSat(pillHitbox, playerHitbox) && aLifeCycle.mInvulFrameCounter <= 0.f)
             {
                 aHandle.get(eatPillUpdate)->erase();
                 aLifeCycle.mScore += gPointPerPill;
