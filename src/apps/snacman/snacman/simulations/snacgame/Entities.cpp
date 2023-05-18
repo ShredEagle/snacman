@@ -413,10 +413,9 @@ createHudBillpad(GameContext & aContext,
         insertEntityInScene(billpadHandle, hudHandle);
 
         assert(aContext.mLevel);
-        // Insert the billpad into the root (hardcoded to level parent...)
+        // Insert the billpad into the root, not the level,
         // because the level scale changes depending on the tile dimensions.
-        insertEntityInScene(hudHandle,
-            *snac::getComponent<component::SceneNode>(*aContext.mLevel).mParent);
+        insertEntityInScene(hudHandle, *aContext.mRoot);
 
         hudHandle.get(completeSceneGraph)
             ->add(component::PlayerHud{

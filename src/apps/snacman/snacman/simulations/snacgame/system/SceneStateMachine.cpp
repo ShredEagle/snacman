@@ -37,6 +37,7 @@ SceneStateMachine::SceneStateMachine(ent::EntityManager & aWorld,
         sceneRoot.get(createRoot)->add(component::Geometry{});
         sceneRoot.get(createRoot)->add(component::GlobalPose{});
     }
+    aGameContext.mRoot = sceneRoot;
 
     for (auto sceneDesc : data)
     {

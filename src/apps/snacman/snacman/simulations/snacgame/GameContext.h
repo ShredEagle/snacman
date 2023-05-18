@@ -23,6 +23,7 @@ struct GameContext
     snac::RenderThread<Renderer> & mRenderThread;
     SimulationControl mSimulationControl;
     std::optional<ent::Handle<ent::Entity>> mLevel;
+    std::optional<ent::Handle<ent::Entity>> mRoot; // only because it cannot be assigned on construction, it should not change
 };
 
 
