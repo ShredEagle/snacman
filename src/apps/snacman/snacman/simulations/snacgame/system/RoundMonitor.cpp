@@ -31,8 +31,10 @@ void RoundMonitor::update()
         levelData.mTiles.clear(); // removes tiles
         levelData.mNodes.clear(); // removes pathfinding nodes
         levelData.mPortalIndex.clear(); // removes portal information
+        /* levelData.mFile = */
+        /*     mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml"; // choose right file */
         levelData.mFile =
-            mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml"; // choose right file
+            "snaclvl4.xml"; // choose right file
         level.get(destroyLevel)->remove<component::LevelCreated>();
         level.get(destroyLevel)->add(component::LevelToCreate{});
 

@@ -227,8 +227,8 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     Entity powerUp = *handle.get(init);
     component::PowerUpBaseInfo info =
         component::gPowerupInfoByType.at(static_cast<unsigned int>(aType));
-    addMeshGeoNode(aContext, powerUp, info.mPath, "effects/MeshTextures.sefx",
-                   {1.f, 1.f, 0.f}, info.mPlayerScaling,
+    addMeshGeoNode(aContext, powerUp, info.mPlayerPath, "effects/MeshTextures.sefx",
+                   Pos3{1.f, 1.f, 0.f} + info.mPlayerPosOffset, info.mPlayerScaling,
                    info.mPlayerInstanceScale, info.mPlayerOrientation);
     return handle;
 }
@@ -676,7 +676,7 @@ EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
 }
 
 EntHandle createExplosion(GameContext & aContext,
-                          math::Position<3, float> & aPos,
+                          const math::Position<3, float> & aPos,
                           const snac::Time & aTime)
 {
     EntHandle explosion = aContext.mWorld.addEntity();

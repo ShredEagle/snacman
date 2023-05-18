@@ -173,7 +173,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
 
                 puGeo.mPosition.x() = powerupPos.x();
                 puGeo.mPosition.y() = powerupPos.y();
-                puGeo.mPosition.z() = gPillHeight;
+                puGeo.mPosition.z() = 0.f;
 
                 aHandle.get(usage)->remove<component::PlayerPowerUp>();
             }
@@ -398,7 +398,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
     });
 
     Phase inGameDog;
-    mInGameDogPowerups.each([this, &inGameDog](
+    mInGameDogPowerups.each([this, &inGameDog, &aTime](
                                 EntHandle aPowerupHandle,
                                 const component::GlobalPose & aPowerupPose,
                                 const component::Geometry & aGeo,
@@ -406,7 +406,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
                                 component::InGamePowerup & aPowerup) {
         const Box_f powerupHitbox = component::transformHitbox(
             aPowerupPose.mPosition, aPowerupCol.mHitbox);
-        mPlayers.each([&aPowerup, powerupHitbox, &aPowerupHandle, &inGameDog](
+        mPlayers.each([&aPowerup, powerupHitbox, &aPowerupHandle, &inGameDog, &aGeo, this, &aTime](
                           EntHandle aPlayerHandle,
                           const component::GlobalPose & aPlayerPose,
                           const component::Collision & aPlayerCol,
@@ -424,6 +424,8 @@ void PowerUpUsage::update(const snac::Time & aTime)
                     aPlayerLifeCycle.mInvulFrameCounter =
                         component::gBaseHitStunDuration;
                     aPowerupHandle.get(inGameDog)->erase();
+                    EntHandle explosionHandle = createExplosion(*mGameContext, aGeo.mPosition, aTime);
+                    insertEntityInScene(explosionHandle, *mGameContext->mLevel);
                 }
             }
         });
