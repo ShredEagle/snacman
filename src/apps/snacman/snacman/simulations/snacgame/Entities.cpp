@@ -269,7 +269,7 @@ void addPortalInfo(GameContext & aContext,
     Box_f portalEntrance{component::gPortalHitbox};
     portalEntrance.mPosition += aDirection;
     Box_f portalExit{component::gPortalHitbox};
-    portalExit.mPosition -= aDirection * 0.9f;
+    portalExit.mPosition -= aDirection * 0.8f;
 
     Phase addHitboxPhase;
     aPortal.mEnterHitbox = portalEntrance;
