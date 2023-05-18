@@ -7,6 +7,7 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     DebugDrawing.h
+    DevmodeControl.h
     EntityUtilities.h
     GraphicState.h
     ImguiUtilities.h
@@ -160,6 +161,13 @@ cmc_target_current_include_directory(${TARGET_NAME} ADD_BINARY_DIR PRIVATE)
 set_target_properties(${TARGET_NAME} PROPERTIES
                       VERSION "${${PROJECT_NAME}_VERSION}"
 )
+
+option(BUILD_SNACMAN_DEVMODE "Build with all devmode features enabled." OFF)
+if(BUILD_SNACMAN_DEVMODE)
+    target_compile_definitions(${TARGET_NAME} PRIVATE "SNACMAN_DEVMODE")
+else()
+    target_compile_definitions(${TARGET_NAME} PRIVATE "DBGDRAW_ACTIVE_LEVEL=::ad::snac::DebugDrawer::Level::off")
+endif()
 
 cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsError})
 
