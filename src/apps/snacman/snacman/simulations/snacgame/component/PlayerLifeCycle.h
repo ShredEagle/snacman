@@ -28,7 +28,7 @@ struct PlayerLifeCycle
     int mScore = 0;
     bool mIsAlive = false;
     float mTimeToRespawn = 0;
-    float mInvulFrameCounter = 0;
+    float mInvulFrameCounter = gBaseInvulFrameDuration;
     // Hit stun
     float mHitStun = 0;
 
