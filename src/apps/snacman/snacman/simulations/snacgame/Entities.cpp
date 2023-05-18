@@ -325,8 +325,7 @@ createPlayerSpawnEntity(GameContext & aContext,
 
 ent::Handle<ent::Entity>
 createHudBillpad(GameContext & aContext,
-                 const component::PlayerSlot & aPlayerSlot,
-                 const component::PlayerLifeCycle & aPlayerLifeCycle)
+                 const component::PlayerSlot & aPlayerSlot)
 {
     EntHandle hudHandle = aContext.mWorld.addEntity();
     {
@@ -356,7 +355,7 @@ createHudBillpad(GameContext & aContext,
         {
             ent::Entity scoreText = *scoreHandle.get(createScore);
             scoreText.add(component::Text{
-                .mString = std::to_string(aPlayerLifeCycle.mScore),
+                .mString = "0",
                 .mFont = aContext.mResources.getFont(fontname, 100),
                 //.mColor = playerSlot.mColor,
                 .mColor = math::hdr::gBlack<float>,
@@ -369,7 +368,7 @@ createHudBillpad(GameContext & aContext,
         {
             ent::Entity roundText = *roundHandle.get(createScore);
             roundText.add(component::Text{
-                .mString = std::to_string(aPlayerLifeCycle.mRoundsWon),
+                .mString = "0",
                 .mFont = aContext.mResources.getFont(fontname, 100),
                 //.mColor = playerSlot.mColor,
                 .mColor = math::hdr::gBlack<float>,
@@ -486,10 +485,12 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             .mTimeToRespawn = component::gBaseTimeToRespawn,
         };
 
-        lifeCycle.mHud = createHudBillpad(aContext, playerSlot, lifeCycle);
-
         player.add(component::PlayerModel{.mModel = playerModel})
-            .add(lifeCycle)
+            .add(component::PlayerLifeCycle{
+                    .mIsAlive = false,
+                    .mTimeToRespawn = component::gBaseTimeToRespawn,
+                    .mHud = createHudBillpad(aContext, playerSlot),
+            })
             .add(component::PlayerMoveState{})
             .add(component::AllowedMovement{})
             .add(component::Controller{.mType = aControllerType,
