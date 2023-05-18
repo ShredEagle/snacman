@@ -138,9 +138,13 @@ void PortalManagement::postGraphUpdate()
                     {
                         aPlayerGeo.mPosition = aPortalGeo.mPosition;
                         updateGlobalPosition(aPlayerNode);
-                        snac::getComponent<component::VisualModel>(
-                            aPlayerModel.mModel)
-                            .mDisableInterpolation = true;
+                        // TODO: (franz) this can be removed once the models can be made transparent
+                        if (aPlayerModel.mModel.get()->has<component::VisualModel>())
+                        {
+                            snac::getComponent<component::VisualModel>(
+                                aPlayerModel.mModel)
+                                .mDisableInterpolation = true;
+                        }
                         aPortalData.mCurrentPortal = -1;
                         aPortalData.mDestinationPortal = -1;
 

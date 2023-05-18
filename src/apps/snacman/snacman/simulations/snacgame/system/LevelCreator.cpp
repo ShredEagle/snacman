@@ -28,15 +28,12 @@ void LevelCreator::update()
 
         interpreter.setup();
 
-        int stepPerformed = 0;
-
         // TODO: make this better and maybe a function in markov
         {
             TIME_SINGLE(Main, "Markov_steps");
-            while (interpreter.mCurrentBranch != nullptr && stepPerformed > -1)
+            while (interpreter.mCurrentBranch != nullptr)
             {
                 interpreter.runStep();
-                stepPerformed++;
             }
         }
 

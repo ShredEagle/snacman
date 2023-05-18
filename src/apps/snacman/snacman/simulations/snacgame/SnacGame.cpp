@@ -7,6 +7,7 @@
 #include "scene/Scene.h"
 #include "SimulationControl.h"
 #include "SceneGraph.h"
+#include "snacman/simulations/snacgame/component/LevelData.h"
 #include "snacman/simulations/snacgame/component/PlayerHud.h"
 #include "system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
@@ -133,6 +134,23 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         {
             mSceneEditor.showEditor(mStateMachine->getCurrentScene()->mSceneRoot);
         }
+        if (mImguiDisplays.mShowRoundInfo)
+        {
+            static ent::Query<component::Pill> pills{
+                mGameContext.mWorld};
+            ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
+            if (ImGui::Button("next round"))
+            {
+                ent::Phase pillRemove;
+                pills.each([&pillRemove](EntHandle aHandle, component::Pill &){
+                    aHandle.get(pillRemove)->erase();
+                });
+            }
+            if (mGameContext.mLevel && mGameContext.mLevel->get()->has<component::LevelData>())
+            {
+                ImGui::Text("%d", mGameContext.mLevel->get()->get<component::LevelData>().mSeed);
+            }
+        }
         if (mImguiDisplays.mShowPlayerInfo)
         {
             ent::Phase update;
@@ -140,7 +158,6 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 mGameContext.mWorld};
             static ent::Query<component::Controller> controllerQuery{
                 mGameContext.mWorld};
-            ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
             playerSlotQuery.each([&](EntHandle aPlayer,
                                      const component::PlayerSlot &
                                          aPlayerSlot) {

@@ -601,7 +601,8 @@ void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
         playerEntity.get<component::PlayerPortalData>()
             .mPortalImage->get(aPhase)
             ->erase();
-        aHandle.get(aPhase)->remove<component::PlayerPortalData>();
+        playerEntity.get<component::PlayerPortalData>().mCurrentPortal = -1;
+        playerEntity.get<component::PlayerPortalData>().mDestinationPortal = -1;
     }
 
     // Remove the whole hud subtree (billpad, texts, ...)
@@ -629,6 +630,7 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
 
     removeRoundTransientPlayerComponent(aPhase, aHandle);
 
+    playerEntity.remove<component::PlayerPortalData>();
     playerEntity.get<component::PlayerModel>().mModel.get(aPhase)->erase();
     playerEntity.remove<component::PlayerModel>();
 
