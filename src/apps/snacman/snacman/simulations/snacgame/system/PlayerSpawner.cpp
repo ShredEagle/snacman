@@ -21,7 +21,6 @@ void PlayerSpawner::update(float aDelta)
     mSpawnable.each([this, &aDelta](EntHandle aPlayerHandle,
                                     component::PlayerLifeCycle & aPlayer,
                                     component::PlayerMoveState & aMoveState,
-                                    component::PlayerSlot & aSlot,
                                     component::Geometry & aPlayerGeometry) 
     {
         if (!aPlayer.mIsAlive) {
@@ -30,7 +29,7 @@ void PlayerSpawner::update(float aDelta)
             } else {
                 // TODO: Needs an alg to choose the right spawner if there are
                 // many spawner
-                mSpawner.each([this, aPlayerHandle, &aPlayer, &aMoveState, &aSlot, &aPlayerGeometry]
+                mSpawner.each([this, aPlayerHandle, &aPlayer, &aMoveState, &aPlayerGeometry]
                               (component::Spawner & aSpawner) 
                 {
                     if (!aPlayer.mIsAlive && !aSpawner.mSpawnedPlayer) 

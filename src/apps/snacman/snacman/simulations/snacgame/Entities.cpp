@@ -480,11 +480,6 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             player.get<component::PlayerSlot>();
         playerSlot.mFilled = true;
 
-        component::PlayerLifeCycle lifeCycle{
-            .mIsAlive = false,
-            .mTimeToRespawn = component::gBaseTimeToRespawn,
-        };
-
         player.add(component::PlayerModel{.mModel = playerModel})
             .add(component::PlayerLifeCycle{
                     .mIsAlive = false,
