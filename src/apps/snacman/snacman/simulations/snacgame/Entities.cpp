@@ -325,8 +325,7 @@ createPlayerSpawnEntity(GameContext & aContext,
 
 ent::Handle<ent::Entity>
 createHudBillpad(GameContext & aContext,
-                 const component::PlayerSlot & aPlayerSlot,
-                 const component::PlayerLifeCycle & aPlayerLifeCycle)
+                 const component::PlayerSlot & aPlayerSlot)
 {
     EntHandle hudHandle = aContext.mWorld.addEntity();
     {
@@ -356,7 +355,7 @@ createHudBillpad(GameContext & aContext,
         {
             ent::Entity scoreText = *scoreHandle.get(createScore);
             scoreText.add(component::Text{
-                .mString = std::to_string(aPlayerLifeCycle.mScore),
+                .mString = "0",
                 .mFont = aContext.mResources.getFont(fontname, 100),
                 //.mColor = playerSlot.mColor,
                 .mColor = math::hdr::gBlack<float>,
@@ -369,7 +368,7 @@ createHudBillpad(GameContext & aContext,
         {
             ent::Entity roundText = *roundHandle.get(createScore);
             roundText.add(component::Text{
-                .mString = std::to_string(aPlayerLifeCycle.mRoundsWon),
+                .mString = "0",
                 .mFont = aContext.mResources.getFont(fontname, 100),
                 //.mColor = playerSlot.mColor,
                 .mColor = math::hdr::gBlack<float>,
@@ -413,10 +412,9 @@ createHudBillpad(GameContext & aContext,
         insertEntityInScene(billpadHandle, hudHandle);
 
         assert(aContext.mLevel);
-        // Insert the billpad into the root (hardcoded to level parent...)
+        // Insert the billpad into the root, not the level,
         // because the level scale changes depending on the tile dimensions.
-        insertEntityInScene(hudHandle,
-            *snac::getComponent<component::SceneNode>(*aContext.mLevel).mParent);
+        insertEntityInScene(hudHandle, *aContext.mRoot);
 
         hudHandle.get(completeSceneGraph)
             ->add(component::PlayerHud{
@@ -484,8 +482,9 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
 
         player.add(component::PlayerModel{.mModel = playerModel})
             .add(component::PlayerLifeCycle{
-                .mIsAlive = false,
-                .mTimeToRespawn = component::gBaseTimeToRespawn,
+                    .mIsAlive = false,
+                    .mTimeToRespawn = component::gBaseTimeToRespawn,
+                    .mHud = createHudBillpad(aContext, playerSlot),
             })
             .add(component::PlayerMoveState{})
             .add(component::AllowedMovement{})
@@ -612,23 +611,21 @@ void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
         playerEntity.get<component::PlayerPortalData>().mCurrentPortal = -1;
         playerEntity.get<component::PlayerPortalData>().mDestinationPortal = -1;
     }
+}
+
+EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
+{
+    Entity playerEntity = *aHandle.get(aPhase);
+    component::PlayerSlot & slot = playerEntity.get<component::PlayerSlot>();
+    slot.mFilled = false;
+
+    removeRoundTransientPlayerComponent(aPhase, aHandle);
 
     // Remove the whole hud subtree (billpad, texts, ...)
     assert(playerEntity.has<component::PlayerLifeCycle>());
     auto & lifeCycle = playerEntity.get<component::PlayerLifeCycle>();
     eraseEntityRecursive(*lifeCycle.mHud, aPhase);
     lifeCycle.mHud = std::nullopt;
-}
-
-EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
-{
-    component::PlayerSlot & slot =
-        aHandle.get(aPhase)->get<component::PlayerSlot>();
-    slot.mFilled = false;
-
-    removeRoundTransientPlayerComponent(aPhase, aHandle);
-
-    Entity playerEntity = *aHandle.get(aPhase);
 
     playerEntity.remove<component::Controller>();
     playerEntity.remove<component::PlayerLifeCycle>();
@@ -639,6 +636,7 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
     playerEntity.remove<component::Geometry>();
     playerEntity.remove<component::GlobalPose>();
     playerEntity.remove<component::PlayerPortalData>();
+
     playerEntity.remove<component::SceneNode>();
 
     return aHandle;

@@ -107,8 +107,7 @@ createPlayerSpawnEntity(GameContext & aContext,
 
 ent::Handle<ent::Entity>
 createHudBillpad(GameContext & aContext,
-                 const component::PlayerSlot & aPlayerSlot,
-                 const component::PlayerLifeCycle & aPlayerLifeCycle);
+                 const component::PlayerSlot & aPlayerSlot);
 
 ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
                                             ControllerType aControllerType,

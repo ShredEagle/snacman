@@ -52,20 +52,23 @@ void EatPill::update()
                 aHandle.get(eatPillUpdate)->erase();
                 aLifeCycle.mScore += gPointPerPill;
 
-                // Update the text showing the score in the hud.
-                // TODO code smell, this is defensive programming because sometimes we get there without the HUD
-                // (when the round monitor removed the hud but the spawner did not populate it yet)
-                // This is a great way to increase cyclomatic complexity
-                if(aLifeCycle.mHud && aLifeCycle.mHud->isValid())
-                {
-                    auto & playerHud = snac::getComponent<component::PlayerHud>(*aLifeCycle.mHud);
-                    snac::getComponent<component::Text>(playerHud.mScoreText)
-                            .mString = std::to_string(aLifeCycle.mScore);
-                    snac::getComponent<component::Text>(playerHud.mRoundText)
-                            .mString = std::to_string(aLifeCycle.mRoundsWon);
-                }
             }
         });
+
+        // TODO Should only happen on pill eating (collision),
+        // but it would show the previous round score until 1st pill of next round is eaten (stunfest Q&D)
+        // Update the text showing the score in the hud.
+        // TODO code smell, this is defensive programming because sometimes we get there without the HUD
+        // (when the round monitor removed the hud but the spawner did not populate it yet)
+        // This is a great way to increase cyclomatic complexity
+        if(aLifeCycle.mHud && aLifeCycle.mHud->isValid())
+        {
+            auto & playerHud = snac::getComponent<component::PlayerHud>(*aLifeCycle.mHud);
+            snac::getComponent<component::Text>(playerHud.mScoreText)
+                    .mString = std::to_string(aLifeCycle.mScore);
+            snac::getComponent<component::Text>(playerHud.mRoundText)
+                    .mString = std::to_string(aLifeCycle.mRoundsWon);
+        }
     });
 
     mPills.each([](const component::GlobalPose & aPillPose, const component::Collision & aPillCol) {
