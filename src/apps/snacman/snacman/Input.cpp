@@ -254,7 +254,8 @@ void HidManager::callbackKeyboardStroke(int key,
     {
         mKeyState.at(keyName[0]) = (action != GLFW_RELEASE);
     }
-    else
+    // Turns out double clicking "xbox button" on Windows ends up here with key == -1
+    else if (key >= 0)
     {
         mKeyState.at(key) = (action != GLFW_RELEASE);
     }
