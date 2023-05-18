@@ -9,7 +9,7 @@ namespace snacgame {
 namespace component {
 
 constexpr float gBaseTimeToRespawn = 2.f;
-constexpr float gBaseInvulFrameDuration = 2.f;
+constexpr float gBaseInvulFrameDuration = 0.5f;
 
 constexpr float gBaseHitStunDuration = 2.f;
 
@@ -20,9 +20,9 @@ struct PlayerLifeCycle
         // Do not lose the hud reference nor the count of rounds won
         mScore = 0;
         mIsAlive = false;
-        mTimeToRespawn = 0;
-        mInvulFrameCounter = 0;
-        mHitStun = 0;
+        mTimeToRespawn = 0.f;
+        mInvulFrameCounter = gBaseInvulFrameDuration;
+        mHitStun = 0.f;
     }
 
     int mScore = 0;

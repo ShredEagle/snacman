@@ -28,7 +28,7 @@ void ConsolidateGridMovement::update(float aDelta)
 
         inputMoveFlag &= aAllowedMovement.mAllowedMovement;
 
-        bool canMove = aLifeCycle.mHitStun <= 0.f;
+        bool canMove = aLifeCycle.mHitStun <= 0.f && aLifeCycle.mInvulFrameCounter <= 0.f;
 
         if (!canMove)
         {
