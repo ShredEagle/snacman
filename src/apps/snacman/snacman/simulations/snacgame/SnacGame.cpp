@@ -27,6 +27,7 @@
 #include "component/Text.h"
 #include "component/VisualModel.h"
 
+#include <snacman/DevmodeControl.h>
 #include <snacman/ImguiUtilities.h>
 #include <snacman/LoopSettings.h>
 #include <snacman/Profiling.h>
@@ -355,10 +356,13 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
 {
     snac::DebugDrawer::StartFrame();
 
-    mSystemOrbitalCamera->update(
-        aInput,
-        snac::Camera::gDefaults.vFov, // TODO Should be dynamic
-        mAppInterface->getWindowSize().height());
+    if constexpr(snac::isDevmode())
+    {
+        mSystemOrbitalCamera->update(
+            aInput,
+            snac::Camera::gDefaults.vFov, // TODO Should be dynamic
+            mAppInterface->getWindowSize().height());
+    }
 
     // If the simulation is paused and step was not pressed, return now
     // This avoids incrementing the simulation time, and does not call the systems update

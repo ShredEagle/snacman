@@ -1,4 +1,5 @@
 #include "DebugDrawing.h"
+#include "DevmodeControl.h"
 #include "Input.h"
 #include "Logging.h"
 #include "LoopSettings.h"
@@ -172,7 +173,17 @@ void runApplication()
 
         BEGIN_RECURRING(Main, "Step", stepRecurringScope);
 
-        simulation.drawDebugUi(configurableSettings, inhibiter, input);
+        if constexpr(isDevmode())
+        {
+            simulation.drawDebugUi(configurableSettings, inhibiter, input);
+        }
+        else
+        {
+            // Render empty frame, so renderthread can still call renderBackend()
+            std::lock_guard lock{imguiUi.mFrameMutex};
+            imguiUi.newFrame();
+            imguiUi.render();
+        }
 
         // Update input
         input = hid.read(input, inhibiter);
