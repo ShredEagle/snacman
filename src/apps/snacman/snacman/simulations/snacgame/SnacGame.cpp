@@ -138,7 +138,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         {
             static ent::Query<component::Pill> pills{
                 mGameContext.mWorld};
-            ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
+            ImGui::Begin("Round info", &mImguiDisplays.mShowPlayerInfo);
             if (ImGui::Button("next round"))
             {
                 ent::Phase pillRemove;
@@ -150,9 +150,11 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             {
                 ImGui::Text("%d", mGameContext.mLevel->get()->get<component::LevelData>().mSeed);
             }
+            ImGui::End();
         }
         if (mImguiDisplays.mShowPlayerInfo)
         {
+            ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
             ent::Phase update;
             static ent::Query<component::PlayerSlot> playerSlotQuery{
                 mGameContext.mWorld};
