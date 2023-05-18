@@ -233,6 +233,7 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
         aContext, powerUp, info.mPlayerPath, "effects/MeshTextures.sefx",
         Pos3{1.f, 1.f, 0.f} + info.mPlayerPosOffset, info.mPlayerScaling,
         info.mPlayerInstanceScale, info.mPlayerOrientation);
+    powerUp.add(component::LevelEntity{});
     return handle;
 }
 

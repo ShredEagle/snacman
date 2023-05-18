@@ -114,15 +114,18 @@ void GameScene::teardown(RawInput & aInput)
 {
     TIME_SINGLE(Main, "teardown game scene");
     {
+        Phase destroyPlayer;
+        mPlayers.each([&destroyPlayer](EntHandle aHandle,
+                                 component::PlayerSlot & aSlot,
+                                 component::Controller & aController) {
+            removePlayerFromGame(destroyPlayer, aHandle);
+        });
+
+    }
+    {
         Phase destroy;
 
         mStageDecor->get(destroy)->erase();
-
-        mPlayers.each([&destroy](EntHandle aHandle,
-                                 component::PlayerSlot & aSlot,
-                                 component::Controller & aController) {
-            removePlayerFromGame(destroy, aHandle);
-        });
 
         mTiles.each(
             [&destroy](EntHandle aHandle, const component::LevelEntity &) {
