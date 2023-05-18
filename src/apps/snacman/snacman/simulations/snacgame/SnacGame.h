@@ -50,6 +50,7 @@ struct ImguiDisplays
     bool mShowMappings = false;
     bool mShowSimulationDelta = false;
     bool mShowImguiDemo = false;
+    bool mShowRoundInfo = false;
     bool mShowLogLevel = false;
     bool mShowDebugDrawers = false;
     bool mShowMainProfiler = false;
@@ -72,6 +73,7 @@ struct ImguiDisplays
         ImGui::Checkbox("Main profiler",  &mShowMainProfiler);
         ImGui::Checkbox("Render profiler",  &mShowRenderProfiler);
         ImGui::Checkbox("Player info",  &mShowPlayerInfo);
+        ImGui::Checkbox("Round info",  &mShowRoundInfo);
         ImGui::Checkbox("Render controls",  &mShowRenderControls);
         ImGui::Checkbox("Pathfinding", &mPathfinding);
         ImGui::Checkbox("Game control", &mGameControl);
