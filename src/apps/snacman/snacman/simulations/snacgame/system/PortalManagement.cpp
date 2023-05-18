@@ -52,7 +52,7 @@ void PortalManagement::postGraphUpdate()
         const component::LevelData & levelData =
             level.get(portalPhase)->get<component::LevelData>();
 
-        mPlayer.each([&levelData, this](
+        mPlayer.each([&levelData, &portalPhase, this](
                          EntHandle aPlayerHandle,
                          component::GlobalPose & aPlayerPose,
                          const component::Collision & aPlayerCol,
@@ -67,7 +67,7 @@ void PortalManagement::postGraphUpdate()
                 aPlayerPose.mPosition, aPlayerCol.mHitbox);
 
             mPortals.each([&playerHitbox, &levelData, &aPortalData, &aPlayerGeo,
-                           &aPlayerModel, &aPlayerNode](
+                           &aPlayerModel, &aPlayerNode, &portalPhase](
                               const component::Portal & aPortal,
                               const component::Geometry & aPortalGeo,
                               const component::GlobalPose & aPortalPose) {
@@ -148,8 +148,7 @@ void PortalManagement::postGraphUpdate()
                         aPortalData.mCurrentPortal = -1;
                         aPortalData.mDestinationPortal = -1;
 
-                        ent::Phase removePortalImage;
-                        aPortalData.mPortalImage->get(removePortalImage)
+                        aPortalData.mPortalImage->get(portalPhase)
                             ->erase();
                         aPortalData.mPortalImage = std::nullopt;
                     }
@@ -160,8 +159,7 @@ void PortalManagement::postGraphUpdate()
                         aPortalData.mCurrentPortal = -1;
                         aPortalData.mDestinationPortal = -1;
 
-                        ent::Phase removePortalImage;
-                        aPortalData.mPortalImage->get(removePortalImage)
+                        aPortalData.mPortalImage->get(portalPhase)
                             ->erase();
                         aPortalData.mPortalImage = std::nullopt;
                     }
