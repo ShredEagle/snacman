@@ -53,8 +53,14 @@ resource::ResourceFinder makeResourceFinder()
             config.at("prefixes").begin(),
             config.at("prefixes").end()
         };
-        return resource::ResourceFinder(prefixes.begin(),
-                                        prefixes.end());
+        std::vector<std::filesystem::path> prefixPathes;
+        prefixPathes.reserve(prefixes.size());
+        for (auto & prefix : prefixes)
+        {
+            prefixPathes.push_back(std::filesystem::canonical(prefix));
+        }
+        return resource::ResourceFinder(prefixPathes.begin(),
+                                        prefixPathes.end());
     }
     else
     {
