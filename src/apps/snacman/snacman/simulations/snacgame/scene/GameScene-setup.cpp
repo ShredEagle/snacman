@@ -39,7 +39,7 @@ namespace {
         aGameContext.mLevel->get(aPhase)->add(component::SceneNode{});
         // This geometry applies to level elements, not stage decor
         aGameContext.mLevel->get(aPhase)->add(
-            component::Geometry{.mPosition = {-9.f, -9.f, 0.f}, .mScaling = 15.f/19.f});
+            component::Geometry{.mPosition = {-7.f, -7.f, 0.f}, .mScaling = 15.f/19.f});
         aGameContext.mLevel->get(aPhase)->add(component::GlobalPose{});
     }
 

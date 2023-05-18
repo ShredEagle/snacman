@@ -116,23 +116,23 @@ void GameScene::teardown(RawInput & aInput)
     {
         Phase destroy;
 
-        teardownLevel(mGameContext, destroy);
-
-        mSystems.get(destroy)->erase();
-        mSystems = mGameContext.mWorld.addEntity();
-
         mStageDecor->get(destroy)->erase();
-
-        mTiles.each(
-            [&destroy](EntHandle aHandle, const component::LevelEntity &) {
-                aHandle.get(destroy)->erase();
-            });
 
         mPlayers.each([&destroy](EntHandle aHandle,
                                  component::PlayerSlot & aSlot,
                                  component::Controller & aController) {
             removePlayerFromGame(destroy, aHandle);
         });
+
+        mTiles.each(
+            [&destroy](EntHandle aHandle, const component::LevelEntity &) {
+                aHandle.get(destroy)->erase();
+            });
+
+        teardownLevel(mGameContext, destroy);
+
+        mSystems.get(destroy)->erase();
+        mSystems = mGameContext.mWorld.addEntity();
     }
     {
         // TODO: (franz) remove this at some point

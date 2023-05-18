@@ -31,6 +31,8 @@
 #include "../../QueryManipulation.h"
 #include "../../Resources.h"
 
+#include <snacman/EntityUtilities.h>
+
 #include <algorithm>
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
@@ -332,7 +334,9 @@ createHudBillpad(GameContext & aContext,
         ent::Entity hud = *hudHandle.get(createHud);
         // Create the Hud common ancestor in the scene graph
         addGeoNode(aContext, hud,
-                   component::gHudPositionsWorld[aPlayerSlot.mIndex], 1.f,
+                    // TODO bake the -7 -7 into the hud positions.
+                   component::gHudPositionsWorld[aPlayerSlot.mIndex] + Vec3{-7.f, -7.f, 0.f},
+                   1.f,
                    {1.f, 1.f, 1.f},
                    component::gHudOrientationsWorld[aPlayerSlot.mIndex]);
     }
@@ -408,7 +412,10 @@ createHudBillpad(GameContext & aContext,
         insertEntityInScene(billpadHandle, hudHandle);
 
         assert(aContext.mLevel);
-        insertEntityInScene(hudHandle, *aContext.mLevel);
+        // Insert the billpad into the root (hardcoded to level parent...)
+        // because the level scale changes depending on the tile dimensions.
+        insertEntityInScene(hudHandle,
+            *snac::getComponent<component::SceneNode>(*aContext.mLevel).mParent);
 
         hudHandle.get(completeSceneGraph)
             ->add(component::PlayerHud{
@@ -618,21 +625,20 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
         aHandle.get(aPhase)->get<component::PlayerSlot>();
     slot.mFilled = false;
 
+    removeRoundTransientPlayerComponent(aPhase, aHandle);
+
     Entity playerEntity = *aHandle.get(aPhase);
 
     playerEntity.remove<component::Controller>();
-    playerEntity.remove<component::Geometry>();
     playerEntity.remove<component::PlayerLifeCycle>();
     playerEntity.remove<component::PlayerMoveState>();
     playerEntity.remove<component::VisualModel>();
-    playerEntity.remove<component::SceneNode>();
-    playerEntity.remove<component::GlobalPose>();
-
-    removeRoundTransientPlayerComponent(aPhase, aHandle);
-
-    playerEntity.remove<component::PlayerPortalData>();
     playerEntity.get<component::PlayerModel>().mModel.get(aPhase)->erase();
     playerEntity.remove<component::PlayerModel>();
+    playerEntity.remove<component::Geometry>();
+    playerEntity.remove<component::GlobalPose>();
+    playerEntity.remove<component::PlayerPortalData>();
+    playerEntity.remove<component::SceneNode>();
 
     return aHandle;
 }
@@ -645,8 +651,9 @@ EntHandle createStageDecor(GameContext & aContext)
         Entity stageEntity = *result.get(createStage);
 
         addMeshGeoNode(aContext, stageEntity, "models/stage/stage.gltf",
-                       "effects/MeshTextures.sefx", {7.f, 7.f, -0.4f}, 1.f,
-                       {1.f, 1.f, 1.f},
+                       "effects/MeshTextures.sefx", {0.f, 0.f, -0.4f}, 
+                       1.0f,
+                       {1.1f, 1.1f, 1.f},
                        Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                               math::Turn<float>{0.25f}}
                            * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
