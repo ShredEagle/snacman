@@ -266,12 +266,20 @@ void PowerUpUsage::update(const snac::Time & aTime)
                         mSortedPosition.begin(), mSortedPosition.end(),
                         [](const std::pair<Pos2, OptEntHandle> & aLhs,
                            const std::pair<Pos2, OptEntHandle> & aRhs) -> bool {
-                            return !aRhs.second
-                                   || (aLhs.second
-                                       && (aLhs.first.x() > aRhs.first.x()
-                                           || (aLhs.first.x() == aRhs.first.x()
-                                               && aRhs.first.y()
-                                                      > aLhs.first.y())));
+                            // In case the two are considered "equal", we must return false
+                            if (!aRhs.second && !aLhs.second)
+                            {
+                                return false;
+                            }
+                            else
+                            {
+                                return !aRhs.second
+                                    || (aLhs.second
+                                        && (aLhs.first.x() > aRhs.first.x()
+                                            || (aLhs.first.x() == aRhs.first.x()
+                                                && aRhs.first.y()
+                                                        > aLhs.first.y())));
+                            }
                         });
 
                     // Find the current target in the array
