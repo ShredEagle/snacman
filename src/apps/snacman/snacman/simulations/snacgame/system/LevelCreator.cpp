@@ -202,7 +202,6 @@ void LevelCreator::update()
         }
         } // end createLevel phase
 
-        createStageDecor(*mGameContext);
         mEntities.each([&aLevelHandle](EntHandle aHandle, const component::LevelEntity &) {
             insertEntityInScene(aHandle, aLevelHandle);
         });

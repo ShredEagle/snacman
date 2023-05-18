@@ -23,6 +23,8 @@
 
 #include "../typedef.h"
 
+#include "../Entities.h"
+
 
 namespace ad {
 namespace snacgame {
@@ -35,8 +37,9 @@ namespace {
     {
         aGameContext.mLevel->get(aPhase)->add(component::LevelToCreate{});
         aGameContext.mLevel->get(aPhase)->add(component::SceneNode{});
+        // This geometry applies to level elements, not stage decor
         aGameContext.mLevel->get(aPhase)->add(
-            component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
+            component::Geometry{.mPosition = {-9.f, -9.f, 0.f}, .mScaling = 15.f/19.f});
         aGameContext.mLevel->get(aPhase)->add(component::GlobalPose{});
     }
 
@@ -79,6 +82,9 @@ void GameScene::setup(const Transition & aTransition, RawInput & aInput)
     // Can't insert mLevel before the createLevel phase is over
     // otherwise mLevel does not have the correct component
     insertEntityInScene(*mGameContext.mLevel, mSceneRoot);
+
+    mStageDecor = createStageDecor(mGameContext);
+    insertEntityInScene(*mStageDecor, mSceneRoot);
 }
 
 

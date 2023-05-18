@@ -74,8 +74,9 @@ EntHandle createLevel(GameContext & aContext, const char * aLvlFile)
         Entity levelEntity = *level.get(createLevel);
         levelEntity.add(component::LevelData(aContext.mWorld,
                                              markovRoot.value(), aLvlFile,
-                                             {15, 15, 1}, 123123));
+                                             {19, 19, 1}, 123123));
         levelEntity.add(component::SceneNode{});
+        // TODO this might have not impact, since setupLevel() also add Geometry component
         levelEntity.add(component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
         levelEntity.add(component::GlobalPose{});
     }
@@ -119,6 +120,8 @@ void GameScene::teardown(RawInput & aInput)
 
         mSystems.get(destroy)->erase();
         mSystems = mGameContext.mWorld.addEntity();
+
+        mStageDecor->get(destroy)->erase();
 
         mTiles.each(
             [&destroy](EntHandle aHandle, const component::LevelEntity &) {

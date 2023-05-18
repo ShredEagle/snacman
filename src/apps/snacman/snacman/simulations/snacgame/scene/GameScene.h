@@ -49,6 +49,8 @@ private:
     ent::Query<component::PlayerSlot> mSlots;
     ent::Query<component::PlayerSlot, component::Controller> mPlayers;
     ent::Query<component::PathToOnGrid> mPathfinders;
+
+    std::optional<ent::Handle<ent::Entity>> mStageDecor;
 };
 
 } // namespace scene

@@ -140,8 +140,7 @@ EntHandle insertTransformNode(ent::EntityManager & aWorld,
 void insertEntityInScene(ent::Handle<ent::Entity> aHandle,
                          ent::Handle<ent::Entity> aParent)
 {
-    ent::Phase graphPhase;
-    Entity parentEntity = *aParent.get(graphPhase);
+    ent::Entity_view parentEntity = *aParent.get();
     // TODO Ad: Dayum, we need typed handles...
     assert(parentEntity.has<component::SceneNode>()
            && "Can't add a child to a parent if it does not have scene node");
@@ -149,7 +148,7 @@ void insertEntityInScene(ent::Handle<ent::Entity> aHandle,
            && "Can't add a child to a parent if it does not have geometry");
     assert(parentEntity.has<component::GlobalPose>()
            && "Can't add a child to a parent if it does not have global pose");
-    ent::Entity newChild = *aHandle.get(graphPhase);
+    ent::Entity_view newChild = *aHandle.get();
     assert(newChild.has<component::SceneNode>()
            && "Can't add a entity to the scene graph if it does not have a "
               "scene node");
@@ -170,7 +169,7 @@ void insertEntityInScene(ent::Handle<ent::Entity> aHandle,
     {
         EntHandle oldHandle = *parentNode.mFirstChild;
         component::SceneNode & oldNode =
-            oldHandle.get(graphPhase)->get<component::SceneNode>();
+            oldHandle.get()->get<component::SceneNode>();
         newNode.mNextChild = oldHandle;
         oldNode.mPrevChild = aHandle;
     }

@@ -651,7 +651,6 @@ EntHandle createStageDecor(GameContext & aContext)
                               math::Turn<float>{0.25f}}
                            * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                     math::Turn<float>{0.25f}});
-        stageEntity.add(component::LevelEntity{});
     }
     return result;
 }
