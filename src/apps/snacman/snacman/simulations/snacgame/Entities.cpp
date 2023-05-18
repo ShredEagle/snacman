@@ -481,11 +481,15 @@ ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
             player.get<component::PlayerSlot>();
         playerSlot.mFilled = true;
 
+        component::PlayerLifeCycle lifeCycle{
+            .mIsAlive = false,
+            .mTimeToRespawn = component::gBaseTimeToRespawn,
+        };
+
+        lifeCycle.mHud = createHudBillpad(aContext, playerSlot, lifeCycle);
+
         player.add(component::PlayerModel{.mModel = playerModel})
-            .add(component::PlayerLifeCycle{
-                .mIsAlive = false,
-                .mTimeToRespawn = component::gBaseTimeToRespawn,
-            })
+            .add(lifeCycle)
             .add(component::PlayerMoveState{})
             .add(component::AllowedMovement{})
             .add(component::Controller{.mType = aControllerType,
@@ -611,23 +615,21 @@ void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
         playerEntity.get<component::PlayerPortalData>().mCurrentPortal = -1;
         playerEntity.get<component::PlayerPortalData>().mDestinationPortal = -1;
     }
+}
+
+EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
+{
+    Entity playerEntity = *aHandle.get(aPhase);
+    component::PlayerSlot & slot = playerEntity.get<component::PlayerSlot>();
+    slot.mFilled = false;
+
+    removeRoundTransientPlayerComponent(aPhase, aHandle);
 
     // Remove the whole hud subtree (billpad, texts, ...)
     assert(playerEntity.has<component::PlayerLifeCycle>());
     auto & lifeCycle = playerEntity.get<component::PlayerLifeCycle>();
     eraseEntityRecursive(*lifeCycle.mHud, aPhase);
     lifeCycle.mHud = std::nullopt;
-}
-
-EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
-{
-    component::PlayerSlot & slot =
-        aHandle.get(aPhase)->get<component::PlayerSlot>();
-    slot.mFilled = false;
-
-    removeRoundTransientPlayerComponent(aPhase, aHandle);
-
-    Entity playerEntity = *aHandle.get(aPhase);
 
     playerEntity.remove<component::Controller>();
     playerEntity.remove<component::PlayerLifeCycle>();
@@ -638,6 +640,7 @@ EntHandle removePlayerFromGame(Phase & aPhase, EntHandle aHandle)
     playerEntity.remove<component::Geometry>();
     playerEntity.remove<component::GlobalPose>();
     playerEntity.remove<component::PlayerPortalData>();
+
     playerEntity.remove<component::SceneNode>();
 
     return aHandle;

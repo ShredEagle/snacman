@@ -38,7 +38,6 @@ void PlayerSpawner::update(float aDelta)
                         aPlayer.mIsAlive = true;
                         aPlayer.mTimeToRespawn = component::gBaseTimeToRespawn;
                         aPlayer.mInvulFrameCounter = component::gBaseInvulFrameDuration;
-                        aPlayer.mHud = createHudBillpad(*mGameContext, aSlot, aPlayer);
                         aPlayerGeometry.mPosition = aSpawner.mSpawnPosition;
                         aSpawner.mSpawnedPlayer = true;
                         aMoveState.mMoveState = gPlayerMoveFlagNone;
