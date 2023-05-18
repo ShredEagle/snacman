@@ -91,10 +91,15 @@ void runApplication()
     //BEGIN_SINGLE("App_initialization", appInitSingle);
 
     // Application and window initialization
+    graphics::ApplicationFlag glfwFlags = graphics::ApplicationFlag::None;
+    if(!isDevmode())
+    {
+        glfwFlags |= graphics::ApplicationFlag::Fullscreen;
+    }
     graphics::ApplicationGlfw glfwApp{
-        getVersionedName(), 1920, 1024
-        //, graphics::ApplicationFlag::Fullscreen // TODO handle via settings
-                                    // TODO, applicationFlags
+        getVersionedName(),
+        1920, 1024,
+        glfwFlags// TODO, handle applicationFlags via settings
     };
 
     // Ensures the messages are sent synchronously with the event triggering them
