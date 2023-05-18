@@ -484,11 +484,11 @@ void PowerUpUsage::update(const snac::Time & aTime)
             {
                 // Boom boom the missile
                 // Find all player within radius
-                mPlayers.each([&aPowerupPose, aOwner](EntHandle aOther, component::PlayerLifeCycle & aPlayerLifeCycle, component::GlobalPose & aPlayerPose)
+                mPlayers.each([&aPowerupPose](EntHandle aOther, component::PlayerLifeCycle & aPlayerLifeCycle, component::GlobalPose & aPlayerPose)
                 {
                     float distance = (aPowerupPose.mPosition - aPlayerPose.mPosition).getNormSquared();
 
-                    if (distance < 2.f * 2.f && aOwner != aOther)
+                    if (distance < 2.f * 2.f)
                     {
                         aPlayerLifeCycle.mHitStun = component::gBaseHitStunDuration;
                         aPlayerLifeCycle.mInvulFrameCounter = component::gBaseHitStunDuration;
