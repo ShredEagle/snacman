@@ -35,6 +35,10 @@ struct PlayerPowerUp
     std::variant<DogPowerUpInfo, TeleportPowerUpInfo, MissilePowerUpInfo> mInfo;
 };
 
+struct ControllingMissile
+{
+};
+
 struct InGameDog
 {
 };

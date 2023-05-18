@@ -73,11 +73,12 @@ void PowerUpUsage::update(const snac::Time & aTime)
     mPlayers.each([&](EntHandle aPlayer,
                       const component::GlobalPose & aPlayerPose,
                       const component::PlayerSlot & aSlot,
-                      component::Collision aPlayerCol) {
+                      component::Collision aPlayerCol,
+                      const component::PlayerLifeCycle & aLifeCycle) {
         const Box_f playerHitbox = component::transformHitbox(
             aPlayerPose.mPosition, aPlayerCol.mHitbox);
         Entity playerEnt = *aPlayer.get(pickup);
-        if (!playerEnt.has<component::PlayerPowerUp>())
+        if (!playerEnt.has<component::PlayerPowerUp>() && aLifeCycle.mInvulFrameCounter <= 0)
         {
             mPowerups.each([&](ent::Handle<ent::Entity> aHandle,
                                component::PowerUp & aPowerup,
@@ -145,6 +146,11 @@ void PowerUpUsage::update(const snac::Time & aTime)
                            component::GlobalPose & aPlayerPose,
                            component::PlayerModel & aPlayerModel,
                            const component::Controller & aController) {
+        if (aHandle.get()->has<component::ControllingMissile>())
+        {
+            return;
+        }
+
         switch (aPowerUp.mType)
         {
         case component::PowerUpType::Dog:
@@ -397,6 +403,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
                     .add(inGamePowerup);
 
                 aHandle.get(usage)->remove<component::PlayerPowerUp>();
+                aHandle.get(usage)->add(component::ControllingMissile{});
             }
             break;
         }
@@ -508,6 +515,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
                 missileInfo.mDamageArea.get(manageMissile)->erase();
                 missileInfo.mModel.get(manageMissile)->erase();
                 aPowerupHandle.get(manageMissile)->erase();
+                aOwner.get(manageMissile)->remove<component::ControllingMissile>();
 
                 EntHandle explosionHandle = createExplosion(*mGameContext, aGeo.mPosition, aTime);
                 insertEntityInScene(explosionHandle, *mGameContext->mLevel);
