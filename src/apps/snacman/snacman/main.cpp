@@ -99,7 +99,9 @@ void runApplication()
     graphics::ApplicationGlfw glfwApp{
         getVersionedName(),
         1920, 1024,
-        glfwFlags// TODO, handle applicationFlags via settings
+        glfwFlags,// TODO, handle applicationFlags via settings
+        4, 1,
+        { {GLFW_SAMPLES, 4} },
     };
 
     // Ensures the messages are sent synchronously with the event triggering them
