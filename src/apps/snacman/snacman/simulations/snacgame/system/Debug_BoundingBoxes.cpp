@@ -18,6 +18,12 @@ void Debug_BoundingBoxes::update()
 
     Level level = Level::off;
 
+// Clang is a little itch, it complains level is captured for no reason when DGBDRAW is disabled
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-lambda-capture"
+#endif
+
     auto addBox = [&level]
         (const component::GlobalPose & aGlobalPose, const component::VisualModel & aModel) 
         {
@@ -35,6 +41,10 @@ void Debug_BoundingBoxes::update()
     mPlayers.each(addBox);
     level = Level::trace;
     mPills.each(addBox);
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
     mPlayers.each(
         [](const component::GlobalPose & aGlobalPose)
