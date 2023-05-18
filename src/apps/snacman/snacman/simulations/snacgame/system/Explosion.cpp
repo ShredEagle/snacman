@@ -8,13 +8,13 @@ namespace snacgame {
 namespace system {
 void Explosion::update(const snac::Time & aTime)
 {
-    mExplosions.each([&aTime](EntHandle aHandle, component::Explosion & aExplosion, component::Geometry & aGeometry)
+    Phase removeExplosion;
+    mExplosions.each([&aTime, &removeExplosion](EntHandle aHandle, component::Explosion & aExplosion, component::Geometry & aGeometry)
     {
         float duration = (float)snac::asSeconds(aTime.mTimepoint - aExplosion.mStartTime);
 
         if (aExplosion.mParameter.isCompleted(duration))
         {
-            Phase removeExplosion;
             aHandle.get(removeExplosion)->erase();
         }
         else
