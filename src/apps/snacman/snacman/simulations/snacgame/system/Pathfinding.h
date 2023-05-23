@@ -27,10 +27,12 @@ public:
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::PathToOnGrid, component::Geometry> mPathfinder;
+    ent::Query<component::PathToOnGrid,
+               component::Geometry>
+        mPathfinder;
 };
 
-inline component::PathfindNode *
+inline component::PathfindNode
 pathfind(const math::Position<2, float> & aSource,
          const math::Position<2, float> & aTarget,
          std::vector<component::PathfindNode> & aNodes,
@@ -120,8 +122,8 @@ pathfind(const math::Position<2, float> & aSource,
         for (math::Vec<2, int> offset : gDirections)
         {
             component::PathfindNode & visitedNode =
-                aNodes.at(static_cast<size_t>((int)current->mIndex + offset.x()
-                                              + offset.y() * (int)stride));
+                aNodes.at(static_cast<size_t>((int) current->mIndex + offset.x()
+                                              + offset.y() * (int) stride));
             float distance = (visitedNode.mPos - current->mPos).getNorm();
             float newCost = current->mCost + distance;
 
@@ -136,7 +138,7 @@ pathfind(const math::Position<2, float> & aSource,
         }
     }
 
-    return closestNode;
+    return *closestNode;
 }
 
 } // namespace system

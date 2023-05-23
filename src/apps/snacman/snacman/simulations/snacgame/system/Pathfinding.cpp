@@ -28,7 +28,7 @@ void Pathfinding::update()
     const std::vector<component::PathfindNode> & nodes = levelData.mNodes;
     int stride = levelData.mSize.height();
 
-    mPathfinder.each([stride, &tiles, &pathfinding, nodes](
+    mPathfinder.each([stride, &tiles, &pathfinding, &nodes](
                          component::PathToOnGrid & aPathfinder,
                          const component::Geometry & aGeo) {
         EntHandle target = aPathfinder.mEntityTarget;
@@ -54,20 +54,20 @@ void Pathfinding::update()
         // We need a copy of nodes to make the calculation in place
         // so nodes is captured by value
         std::vector<component::PathfindNode> localNodes = nodes;
-        component::PathfindNode * closestNode = pathfind(aGeo.mPosition.xy(), targetPos, localNodes, stride);
+        component::PathfindNode closestNode = pathfind(aGeo.mPosition.xy(), targetPos, localNodes, stride);
 
         // There is two possible states
         // 1. The target and pathfinder are perfectly on the same tile -> there
         //    is only one node in the path
         // 2. All other case -> there is at least two node in the path and we
         //    want the second node in the path to be the target
-        while (closestNode->mPrev != nullptr
-               && closestNode->mPrev->mPrev != nullptr)
+        while (closestNode.mPrev != nullptr
+               && closestNode.mPrev->mPrev != nullptr)
         {
-            closestNode = closestNode->mPrev;
+            closestNode = *closestNode.mPrev;
         }
 
-        aPathfinder.mCurrentTarget = closestNode->mPos;
+        aPathfinder.mCurrentTarget = closestNode.mPos;
         aPathfinder.mTargetFound = true;
     });
 }
