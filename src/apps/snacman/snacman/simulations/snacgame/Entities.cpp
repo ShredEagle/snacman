@@ -575,6 +575,12 @@ void swapPlayerPosition(Phase & aPhase, EntHandle aPlayer, EntHandle aOther)
 void removeRoundTransientPlayerComponent(Phase & aPhase, EntHandle aHandle)
 {
     Entity playerEntity = *aHandle.get(aPhase);
+
+    if (playerEntity.has<component::ControllingMissile>())
+    {
+        playerEntity.remove<component::ControllingMissile>();
+    }
+
     if (playerEntity.has<component::PlayerPowerUp>())
     {
         component::PlayerPowerUp powerup =
