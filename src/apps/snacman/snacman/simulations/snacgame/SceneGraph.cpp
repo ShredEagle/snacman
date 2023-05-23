@@ -7,7 +7,6 @@
 #include "typedef.h"
 
 #include <snacman/EntityUtilities.h>
-#include <snacman/Logging.h>
 
 #include <entity/EntityManager.h>
 #include <math/Transformations.h>
