@@ -3,9 +3,11 @@
 #include "component/Geometry.h"
 #include "component/GlobalPose.h"
 #include "component/SceneNode.h"
+#include "entity/Entity.h"
 #include "typedef.h"
 
 #include <snacman/EntityUtilities.h>
+#include <snacman/Logging.h>
 
 #include <entity/EntityManager.h>
 #include <math/Transformations.h>
@@ -181,12 +183,11 @@ void insertEntityInScene(ent::Handle<ent::Entity> aHandle,
 
 void removeEntityFromScene(ent::Handle<ent::Entity> aHandle)
 {
-    ent::Phase graphPhase;
-    Entity removedChild = *aHandle.get(graphPhase);
+    ent::Entity_view removedChild = *aHandle.get();
     component::SceneNode & removedNode =
         removedChild.get<component::SceneNode>();
     assert(removedNode.mParent && "removed node does not have a parent");
-    Entity parentEntity = *removedNode.mParent->get(graphPhase);
+    ent::Entity_view parentEntity = *removedNode.mParent->get();
     component::SceneNode & parentNode =
         parentEntity.get<component::SceneNode>();
 
@@ -197,14 +198,14 @@ void removeEntityFromScene(ent::Handle<ent::Entity> aHandle)
 
     if (removedNode.mNextChild)
     {
-        removedNode.mNextChild->get(graphPhase)
+        removedNode.mNextChild->get()
             ->get<component::SceneNode>()
             .mPrevChild = removedNode.mPrevChild;
     }
 
     if (removedNode.mPrevChild)
     {
-        removedNode.mPrevChild->get(graphPhase)
+        removedNode.mPrevChild->get()
             ->get<component::SceneNode>()
             .mNextChild = removedNode.mNextChild;
     }
@@ -216,15 +217,14 @@ void removeEntityFromScene(ent::Handle<ent::Entity> aHandle)
 
 void transferEntity(EntHandle aHandle, EntHandle aNewParent)
 {
-    Phase transfer;
-    Entity parent = *aNewParent.get(transfer);
+    ent::Entity_view parent = *aNewParent.get();
     assert(parent.has<component::SceneNode>()
            && "Can't add a child to a parent if it does not have scene node");
     assert(parent.has<component::Geometry>()
            && "Can't add a child to a parent if it does not have geometry");
     assert(parent.has<component::GlobalPose>()
            && "Can't add a child to a parent if it does not have global pose");
-    Entity child = *aHandle.get(transfer);
+    ent::Entity_view child = *aHandle.get();
     assert(child.has<component::SceneNode>()
            && "Can't add a entity to the scene graph if it does not have a "
               "scene node");
