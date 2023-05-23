@@ -24,12 +24,11 @@ public:
         mSpawner{mGameContext->mWorld}
     {}
 
-    void update(float aDelta);
+    void update();
 
 private:
     GameContext * mGameContext;
     ent::Query<component::PlayerLifeCycle,
-               component::PlayerSlot,
                component::Geometry,
                component::PlayerMoveState> mSpawnable;
     ent::Query<component::Spawner> mSpawner;
