@@ -219,6 +219,11 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
         return Transition{.mTransitionName = "back"};
     }
 
+    //This should be divided in four phases right now
+    //The creation of the level
+    //Spawning the players
+    //The game phase
+    //The cleanup phase
     mSystems.get(update)->get<system::LevelCreator>().update();
 
     mSystems.get(update)->get<system::PlayerInvulFrame>().update((float)aTime.mDeltaSeconds);
@@ -239,7 +244,7 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
     mSystems.get(update)->get<system::EatPill>().update();
 
     mSystems.get(update)->get<system::RoundMonitor>().update();
-    mSystems.get(update)->get<system::PlayerSpawner>().update((float)aTime.mDeltaSeconds);
+    mSystems.get(update)->get<system::PlayerSpawner>().update();
 
     mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
 
