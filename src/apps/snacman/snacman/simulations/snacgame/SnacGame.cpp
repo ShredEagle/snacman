@@ -4,31 +4,32 @@
 #include "GameContext.h"
 #include "GameParameters.h"
 #include "InputConstants.h"
-#include "scene/Scene.h"
 #include "SimulationControl.h"
 #include "SceneGraph.h"
-#include "snacman/simulations/snacgame/component/LevelData.h"
-#include "snacman/simulations/snacgame/component/PlayerHud.h"
 #include "system/SceneStateMachine.h"
 #include "system/SystemOrbitalCamera.h"
 #include "typedef.h"
+
+#include "scene/Scene.h"
 
 #include "component/AllowedMovement.h"
 #include "component/Context.h"
 #include "component/Controller.h"
 #include "component/Geometry.h"
 #include "component/GlobalPose.h"
-#include "component/LevelTags.h"
-#include "component/PlayerMoveState.h"
+#include "component/LevelData.h"
 #include "component/PlayerSlot.h"
 #include "component/PathToOnGrid.h"
+#include "component/PlayerHud.h"
 #include "component/PoseScreenSpace.h"
 #include "component/RigAnimation.h"
 #include "component/SceneNode.h"
+#include "component/Tags.h"
 #include "component/Text.h"
 #include "component/VisualModel.h"
 
 #include <snacman/DevmodeControl.h>
+#include <snacman/RenderThread.h>
 #include <snacman/ImguiUtilities.h>
 #include <snacman/LoopSettings.h>
 #include <snacman/Profiling.h>
@@ -54,18 +55,7 @@
 namespace ad {
 struct RawInput;
 
-namespace snac {
-template <class T_renderer>
-class RenderThread;
-}
 namespace snacgame {
-
-std::array<math::hdr::Rgba_f, 4> gSlotColors{
-    math::hdr::Rgba_f{0.725f, 1.f, 0.718f, 1.f},
-    math::hdr::Rgba_f{0.949f, 0.251f, 0.506f, 1.f},
-    math::hdr::Rgba_f{0.961f, 0.718f, 0.f, 1.f},
-    math::hdr::Rgba_f{0.f, 0.631f, 0.894f, 1.f},
-};
 
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    snac::RenderThread<Renderer_t> & aRenderThread,
@@ -92,13 +82,6 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
-
-    // Creating the slot entity those will be used a player entities
-    for (int i = 0; i < gMaxPlayerSlots; ++i)
-    {
-        mGameContext.mWorld.addEntity().get(init)->add(
-            component::PlayerSlot{i, false, gSlotColors.at(i)});
-    }
 
     // Add permanent game title
     makeText(mGameContext,
@@ -155,9 +138,9 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                     aHandle.get(pillRemove)->erase();
                 });
             }
-            if (mGameContext.mLevel && mGameContext.mLevel->get()->has<component::LevelData>())
+            if (mGameContext.mLevelData)
             {
-                ImGui::Text("%d", mGameContext.mLevel->get()->get<component::LevelData>().mSeed);
+                ImGui::Text("%d", mGameContext.mLevelData->get().mSeed);
             }
             ImGui::End();
         }
@@ -179,7 +162,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 if (ImGui::CollapsingHeader(playerHeader))
                 {
                     // This is an assumption but currently player that have
-                    // a geometry should have a globalPose and a PlayerMoveState
+                    // a geometry should have a globalPose
                     if (aPlayer.get(update)->has<component::Geometry>())
                     {
                         Entity player = *aPlayer.get(update);
@@ -189,8 +172,6 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                             player.get<component::Controller>();
                         const component::GlobalPose & pose =
                             player.get<component::GlobalPose>();
-                        const component::PlayerMoveState & moveState =
-                            player.get<component::PlayerMoveState>();
 
                         ImGui::BeginChild("Action", ImVec2(200.f, 0.f), true);
                         if (controller.mType == ControllerType::Dummy)
@@ -213,7 +194,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                                         .mType = ControllerType::Dummy;
                                     oldController->get(update)
                                         ->get<component::Controller>()
-                                        .mControllerId = gDummyControllerIndex;
+                                        .mControllerId = aPlayerSlot.mIndex;
                                 }
                                 aPlayer.get(update)
                                     ->get<component::Controller>()
@@ -225,7 +206,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
                             if (ImGui::Button("Remove player"))
                             {
-                                removePlayerFromGame(update, aPlayer);
+                                eraseEntityRecursive(aPlayer, update);
                             }
                         }
                         ImGui::EndChild();
@@ -233,7 +214,6 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                         ImGui::BeginChild("Info");
                         geo.drawUi();
                         pose.drawUi();
-                        moveState.drawUi();
                         controller.drawUi();
                         ImGui::EndChild();
                     }
@@ -242,9 +222,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                         if (ImGui::Button("Create dummy player"))
                         {
                             {
-                                fillSlotWithPlayer(
-                                    mGameContext, ControllerType::Dummy,
-                                    aPlayer, gDummyControllerIndex);
+                                addPlayer(
+                                    mGameContext, aPlayerSlot.mIndex, ControllerType::Dummy);
                             }
                         }
                     }
@@ -402,15 +381,13 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
 
     mSimulationTime.advance(aUpdatePeriod / mGameContext.mSimulationControl.mSpeedRatio);
 
-    // mSystemMove.get(update)->get<system::Move>().update(aDelta);
     std::optional<scene::Transition> transition =
         mStateMachine->getCurrentScene()->update(mSimulationTime, aInput);
 
     if (transition)
     {
-        if (transition.value().mTransitionName.compare(
+        if (transition.value().mTransitionName ==
                 scene::gQuitTransitionName)
-            == 0)
         {
             return true;
         }

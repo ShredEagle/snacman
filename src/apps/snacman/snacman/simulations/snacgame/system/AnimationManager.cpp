@@ -1,22 +1,30 @@
 #include "AnimationManager.h"
 
-#include "snacman/simulations/snacgame/component/PlayerMoveState.h"
-#include "snacman/simulations/snacgame/component/RigAnimation.h"
-#include "snacman/simulations/snacgame/InputConstants.h"
+#include "../component/RigAnimation.h"
+#include "../component/PlayerRoundData.h"
+
+#include "../GameContext.h"
+#include "../InputConstants.h"
 #include "../typedef.h"
+
+#include <entity/EntityManager.h>
 #include <string>
 
 namespace ad {
 namespace snacgame {
 namespace system {
+AnimationManager::AnimationManager(GameContext & aGameContext) :
+    mGameContext{&aGameContext},
+    mAnimated{mGameContext->mWorld}
+{}
 
 void AnimationManager::update()
 {
-    mAnimated.each([](component::PlayerModel & aModel, const component::PlayerMoveState & aMoveState) {
+    mAnimated.each([](component::PlayerRoundData & aRoundData) {
         Phase animPhase;
         float animSpeed = 0.6f;
         std::string newAnimName = "idle";
-        if (aMoveState.mMoveState
+        if (aRoundData.mMoveState
             & (gPlayerMoveFlagUp | gPlayerMoveFlagDown | gPlayerMoveFlagRight
                | gPlayerMoveFlagLeft))
         {
@@ -24,7 +32,7 @@ void AnimationManager::update()
             animSpeed = 1.3f;
         }
 
-        component::RigAnimation & playerAnim = aModel.mModel.get(animPhase)->get<component::RigAnimation>();
+        component::RigAnimation & playerAnim = aRoundData.mModel.get(animPhase)->get<component::RigAnimation>();
 
         if (newAnimName != playerAnim.mAnimName)
         {

@@ -1,8 +1,18 @@
 #include "SystemOrbitalCamera.h"
 
+#include "../component/Geometry.h"
+
+#include <entity/EntityManager.h>
+
 namespace ad {
 namespace snacgame {
 namespace system {
+
+OrbitalCamera::OrbitalCamera(ent::EntityManager & aWorld) :
+    mCamera{aWorld, gInitialCameraSpherical.radius(),
+            gInitialCameraSpherical.polar(),
+            gInitialCameraSpherical.azimuthal()}
+{}
 
 
 void OrbitalCamera::update(const RawInput & aInput,

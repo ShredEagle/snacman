@@ -2,7 +2,6 @@
 
 #include "../scene/Scene.h"
 
-#include <string>
 #include <unordered_map>
 
 namespace ad {

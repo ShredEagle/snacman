@@ -1,5 +1,12 @@
 #include "Debug_BoundingBoxes.h"
-#include "snacman/simulations/snacgame/GameParameters.h"
+
+#include "../component/Tags.h"
+#include "../component/GlobalPose.h"
+#include "../component/VisualModel.h"
+#include "../component/PlayerRoundData.h"
+
+#include "../GameParameters.h"
+#include "../GameContext.h"
 
 #include <snacman/DebugDrawing.h>
 #include <snacman/Profiling.h>
@@ -8,6 +15,11 @@
 namespace ad {
 namespace snacgame {
 namespace system {
+
+Debug_BoundingBoxes::Debug_BoundingBoxes(GameContext & aGameContext) :
+    mPlayers{aGameContext.mWorld},
+    mPills{aGameContext.mWorld}
+{}
 
 
 void Debug_BoundingBoxes::update()

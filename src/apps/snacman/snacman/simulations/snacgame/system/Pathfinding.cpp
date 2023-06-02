@@ -2,7 +2,10 @@
 
 #include "../typedef.h"
 #include "../LevelHelper.h"
+#include "../GameContext.h"
 
+#include "../component/Geometry.h"
+#include "../component/PathToOnGrid.h"
 #include "../component/LevelData.h"
 
 #include <snacman/Logging.h>
@@ -16,6 +19,10 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
+Pathfinding::Pathfinding(GameContext & aGameContext) :
+    mGameContext{&aGameContext}, mPathfinder{mGameContext->mWorld}
+{}
+
 void Pathfinding::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
@@ -23,7 +30,7 @@ void Pathfinding::update()
     assert(level.isValid() && "Can't pathfind if there is no Level");
 
     ent::Phase pathfinding;
-    component::LevelData levelData = level.get(pathfinding)->get<component::LevelData>();
+    component::Level levelData = level.get(pathfinding)->get<component::Level>();
     const std::vector<component::Tile> & tiles = levelData.mTiles;
     const std::vector<component::PathfindNode> & nodes = levelData.mNodes;
     int stride = levelData.mSize.height();

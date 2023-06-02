@@ -1,25 +1,22 @@
 #pragma once
 
-#include "../GameContext.h"
-
-#include "../component/Geometry.h"
-#include "../component/MovementScreenSpace.h"
-#include "../component/PoseScreenSpace.h"
-#include "../component/Speed.h"
-
-#include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {
+struct GameContext;
+namespace component {
+struct Geometry;
+struct MovementScreenSpace;
+struct PoseScreenSpace;
+struct Speed;
+}
 namespace system {
 
 class MovementIntegration
 {
 public:
-    MovementIntegration(GameContext & aGameContext) :
-        mMovables{aGameContext.mWorld}, mScreenMovables{aGameContext.mWorld}
-    {}
+    MovementIntegration(GameContext & aGameContext);
 
     void update(float aDelta);
 

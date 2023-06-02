@@ -7,7 +7,16 @@
 #include "../scene/MenuScene.h"
 #include "../scene/SettingsScene.h"
 
+#include <entity/EntityManager.h>
 #include <entity/Entity.h>
+
+#include <platform/Filesystem.h>
+
+#include <nlohmann/json.hpp>
+
+#include <algorithm>
+#include <memory>
+#include <fstream>
 
 using json = nlohmann::json;
 
@@ -42,17 +51,17 @@ SceneStateMachine::SceneStateMachine(ent::EntityManager & aWorld,
     for (auto sceneDesc : data)
     {
         std::string name = sceneDesc["name"];
-        if (name.compare(gMainSceneName) == 0)
+        if (name == gMainSceneName)
         {
             mPossibleScene.push_back(
                 std::make_shared<MenuScene>(name, aGameContext, aContext, sceneRoot));
         }
-        else if (name.compare(gSettingsSceneName) == 0)
+        else if (name == gSettingsSceneName)
         {
             mPossibleScene.push_back(
                 std::make_shared<SettingsScene>(name, aGameContext, aContext, sceneRoot));
         }
-        else if (name.compare(gGameSceneName) == 0)
+        else if (name == gGameSceneName)
         {
             mPossibleScene.push_back(
                 std::make_shared<GameScene>(name, aGameContext, aContext, sceneRoot));

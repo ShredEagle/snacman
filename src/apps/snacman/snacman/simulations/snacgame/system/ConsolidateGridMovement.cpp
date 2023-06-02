@@ -2,7 +2,14 @@
 
 #include "math/VectorUtilities.h"
 
-#include "../component/PlayerLifeCycle.h"
+#include "../component/PathToOnGrid.h"
+#include "../component/PlayerRoundData.h"
+#include "../component/Controller.h"
+#include "../component/Geometry.h"
+#include "../component/GlobalPose.h"
+#include "../component/AllowedMovement.h"
+
+#include "../GameContext.h"
 #include "../typedef.h"
 
 #include <snacman/DebugDrawing.h>
@@ -14,21 +21,24 @@ namespace snacgame {
 namespace system {
 constexpr float gBaseDogSpeed = 8.f;
 
+ConsolidateGridMovement::ConsolidateGridMovement(GameContext & aGameContext) :
+    mPlayer{aGameContext.mWorld}, mPathfinder{aGameContext.mWorld}
+{}
+
 void ConsolidateGridMovement::update(float aDelta)
 {
     TIME_RECURRING_CLASSFUNC(Main);
     mPlayer.each([](const component::AllowedMovement & aAllowedMovement,
                     component::Controller & aController,
-                    component::PlayerMoveState & aMoveState,
-                    const component::PlayerLifeCycle & aLifeCycle) {
-        int oldMoveState = aMoveState.mMoveState;
+                    component::PlayerRoundData & aRoundData) {
+        int oldMoveState = aRoundData.mMoveState;
         int inputMoveFlag = gPlayerMoveFlagNone;
 
         inputMoveFlag = aController.mInput.mCommand;
 
         inputMoveFlag &= aAllowedMovement.mAllowedMovement;
 
-        bool canMove = aLifeCycle.mHitStun <= 0.f && aLifeCycle.mInvulFrameCounter <= 0.f;
+        bool canMove = aRoundData.mInvulFrameCounter <= 0.f;
 
         if (!canMove)
         {
@@ -39,7 +49,7 @@ void ConsolidateGridMovement::update(float aDelta)
             inputMoveFlag = oldMoveState & aAllowedMovement.mAllowedMovement;
         }
 
-        aMoveState.mMoveState = inputMoveFlag;
+        aRoundData.mMoveState = inputMoveFlag;
     });
 
     mPathfinder.each([aDelta](

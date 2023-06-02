@@ -6,17 +6,6 @@
 namespace ad {
 namespace snacgame {
 namespace component {
-struct Pill
-{};
-
-struct LevelEntity
-{};
-
-struct LevelToCreate
-{};
-
-struct LevelCreated
-{};
 //
 // This assume that portal are always on a boundary of the level
 // in the x coordinate

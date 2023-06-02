@@ -1,11 +1,19 @@
 #include "PortalManagement.h"
 
 #include "SceneGraphResolver.h"
-#include "snacman/simulations/snacgame/component/PlayerModel.h"
-#include "snacman/simulations/snacgame/Entities.h"
-#include "snacman/simulations/snacgame/SceneGraph.h"
 
+#include "../component/GlobalPose.h"
+#include "../component/Portal.h"
+#include "../component/PlayerRoundData.h"
+#include "../component/Collision.h"
+#include "../component/SceneNode.h"
+#include "../component/Geometry.h"
+#include "../component/LevelData.h"
 #include "../component/VisualModel.h"
+
+#include "../GameContext.h"
+#include "../Entities.h"
+#include "../SceneGraph.h"
 #include "../LevelHelper.h"
 #include "../typedef.h"
 
@@ -17,6 +25,12 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
+PortalManagement::PortalManagement(GameContext & aGameContext) :
+    mGameContext{&aGameContext},
+    mPlayer{mGameContext->mWorld},
+    mPortals{mGameContext->mWorld}
+{}
+
 void PortalManagement::preGraphUpdate()
 {
     TIME_RECURRING_CLASSFUNC(Main);
@@ -26,15 +40,14 @@ void PortalManagement::preGraphUpdate()
         ent::Phase portalPhase;
 
         mPlayer.each([this](EntHandle aPlayerHandle,
-                            component::PlayerModel & aPlayerModel,
-                            component::PlayerPortalData & aPortalData) {
-            mPortals.each([&aPortalData, &aPlayerHandle, &aPlayerModel,
+                            component::PlayerRoundData & aRoundData) {
+            mPortals.each([&aPlayerHandle, &aRoundData,
                            this](const component::Portal & aPortal) {
-                if (aPortal.portalIndex == aPortalData.mDestinationPortal
-                    && !aPortalData.mPortalImage)
+                if (aPortal.portalIndex == aRoundData.mDestinationPortal
+                    && !aRoundData.mPortalImage)
                 {
                     EntHandle newPortalImage = createPortalImage(
-                        *mGameContext, aPlayerModel, aPortal, aPortalData);
+                        *mGameContext, aRoundData, aPortal);
                     insertEntityInScene(newPortalImage, aPlayerHandle);
                 }
             });
@@ -49,25 +62,24 @@ void PortalManagement::postGraphUpdate()
     if (level.isValid())
     {
         ent::Phase portalPhase;
-        const component::LevelData & levelData =
-            level.get(portalPhase)->get<component::LevelData>();
+        const component::Level & levelData =
+            level.get(portalPhase)->get<component::Level>();
 
         mPlayer.each([&levelData, &portalPhase, this](
                          EntHandle aPlayerHandle,
                          component::GlobalPose & aPlayerPose,
                          const component::Collision & aPlayerCol,
                          component::Geometry & aPlayerGeo,
-                         component::PlayerModel & aPlayerModel,
-                         component::PlayerPortalData & aPortalData,
+                         component::PlayerRoundData & aRoundData,
                          const component::SceneNode & aPlayerNode) {
-            aPortalData.mCurrentPortal = -1;
-            aPortalData.mDestinationPortal = -1;
+            aRoundData.mCurrentPortal = -1;
+            aRoundData.mDestinationPortal = -1;
 
             Box_f playerHitbox = component::transformHitbox(
                 aPlayerPose.mPosition, aPlayerCol.mHitbox);
 
-            mPortals.each([&playerHitbox, &levelData, &aPortalData, &aPlayerGeo,
-                           &aPlayerModel, &aPlayerNode, &portalPhase](
+            mPortals.each([&playerHitbox, &levelData, &aPlayerGeo,
+                           &aRoundData, &aPlayerNode, &portalPhase](
                               const component::Portal & aPortal,
                               const component::Geometry & aPortalGeo,
                               const component::GlobalPose & aPortalPose) {
@@ -107,19 +119,19 @@ void PortalManagement::postGraphUpdate()
                         }
                     }
 
-                    aPortalData.mCurrentPortal = aPortal.portalIndex;
-                    aPortalData.mCurrentPortalPos = aPortalGeo.mPosition.xy();
-                    aPortalData.mDestinationPortal = destinationPortalIndex;
+                    aRoundData.mCurrentPortal = aPortal.portalIndex;
+                    aRoundData.mCurrentPortalPos = aPortalGeo.mPosition.xy();
+                    aRoundData.mDestinationPortal = destinationPortalIndex;
                 }
 
-                if (aPortalData.mPortalImage)
+                if (aRoundData.mPortalImage)
                 {
                     Phase handlePortalImage;
                     component::GlobalPose imagePose =
-                        aPortalData.mPortalImage->get(handlePortalImage)
+                        aRoundData.mPortalImage->get(handlePortalImage)
                             ->get<component::GlobalPose>();
                     component::Collision imageCollision =
-                        aPortalData.mPortalImage->get(handlePortalImage)
+                        aRoundData.mPortalImage->get(handlePortalImage)
                             ->get<component::Collision>();
                     Box_f playerPortalImageHitbox = component::transformHitbox(
                         imagePose.mPosition, imageCollision.mHitbox);
@@ -139,29 +151,29 @@ void PortalManagement::postGraphUpdate()
                         aPlayerGeo.mPosition = aPortalGeo.mPosition;
                         updateGlobalPosition(aPlayerNode);
                         // TODO: (franz) this can be removed once the models can be made transparent
-                        if (aPlayerModel.mModel.get()->has<component::VisualModel>())
+                        if (aRoundData.mModel.get()->has<component::VisualModel>())
                         {
                             snac::getComponent<component::VisualModel>(
-                                aPlayerModel.mModel)
+                                aRoundData.mModel)
                                 .mDisableInterpolation = true;
                         }
-                        aPortalData.mCurrentPortal = -1;
-                        aPortalData.mDestinationPortal = -1;
+                        aRoundData.mCurrentPortal = -1;
+                        aRoundData.mDestinationPortal = -1;
 
-                        aPortalData.mPortalImage->get(portalPhase)
+                        aRoundData.mPortalImage->get(portalPhase)
                             ->erase();
-                        aPortalData.mPortalImage = std::nullopt;
+                        aRoundData.mPortalImage = std::nullopt;
                     }
 
                     if (component::collideWithSat(portalExitHitbox,
                                                   playerHitbox))
                     {
-                        aPortalData.mCurrentPortal = -1;
-                        aPortalData.mDestinationPortal = -1;
+                        aRoundData.mCurrentPortal = -1;
+                        aRoundData.mDestinationPortal = -1;
 
-                        aPortalData.mPortalImage->get(portalPhase)
+                        aRoundData.mPortalImage->get(portalPhase)
                             ->erase();
-                        aPortalData.mPortalImage = std::nullopt;
+                        aRoundData.mPortalImage = std::nullopt;
                     }
                 }
             });

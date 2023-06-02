@@ -1,13 +1,21 @@
 #include "EatPill.h"
+#include "snacman/simulations/snacgame/component/PlayerGameData.h"
+#include "snacman/simulations/snacgame/component/Text.h"
 
-#include "snacman/simulations/snacgame/component/GlobalPose.h"
-#include "snacman/simulations/snacgame/component/PlayerHud.h"
-#include <snacman/EntityUtilities.h>
-
+#include "../component/GlobalPose.h"
+#include "../component/Collision.h"
+#include "../component/Tags.h"
+#include "../component/PlayerHud.h"
+#include "../component/PlayerRoundData.h"
 #include "../component/SceneNode.h"
+
 #include "../GameParameters.h"
 #include "../typedef.h"
+#include "../GameContext.h"
 
+#include <snacman/EntityUtilities.h>
+
+#include <entity/EntityManager.h>
 #include <entity/Entity.h>
 #include <math/Homogeneous.h>
 #include <math/Transformations.h>
@@ -19,13 +27,19 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
+EatPill::EatPill(GameContext & aGameContext) :
+    mPlayers{aGameContext.mWorld},
+    mPills{aGameContext.mWorld},
+    mHuds{aGameContext.mWorld}
+{}
+
 
 void EatPill::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
     mPlayers.each([this](const component::GlobalPose & aPlayerGeo,
                          component::Collision aPlayerCol,
-                         component::PlayerLifeCycle & aLifeCycle)
+                         component::PlayerRoundData & aLifeCycle)
     {
         ent::Phase eatPillUpdate;
         Box_f playerHitbox = component::transformHitbox(aPlayerGeo.mPosition,
@@ -50,24 +64,26 @@ void EatPill::update()
             if (component::collideWithSat(pillHitbox, playerHitbox) && aLifeCycle.mInvulFrameCounter <= 0.f)
             {
                 aHandle.get(eatPillUpdate)->erase();
-                aLifeCycle.mScore += gPointPerPill;
+                aLifeCycle.mRoundScore += gPointPerPill;
 
             }
         });
 
-        // TODO Should only happen on pill eating (collision),
+        // TODO: Should only happen on pill eating (collision),
         // but it would show the previous round score until 1st pill of next round is eaten (stunfest Q&D)
         // Update the text showing the score in the hud.
-        // TODO code smell, this is defensive programming because sometimes we get there without the HUD
+        // TODO: code smell, this is defensive programming because sometimes we get there without the HUD
         // (when the round monitor removed the hud but the spawner did not populate it yet)
         // This is a great way to increase cyclomatic complexity
-        if(aLifeCycle.mHud && aLifeCycle.mHud->isValid())
+        const component::PlayerGameData & playerData = aLifeCycle.mSlotHandle.get()->get<component::PlayerGameData>();
+        OptEntHandle hud = snac::getComponent<component::PlayerGameData>(aLifeCycle.mSlotHandle).mHud;
+        if(hud && hud->isValid())
         {
-            auto & playerHud = snac::getComponent<component::PlayerHud>(*aLifeCycle.mHud);
+            auto & playerHud = snac::getComponent<component::PlayerHud>(*hud);
             snac::getComponent<component::Text>(playerHud.mScoreText)
-                    .mString = std::to_string(aLifeCycle.mScore);
+                    .mString = std::to_string(aLifeCycle.mRoundScore);
             snac::getComponent<component::Text>(playerHud.mRoundText)
-                    .mString = std::to_string(aLifeCycle.mRoundsWon);
+                    .mString = std::to_string(playerData.mRoundsWon);
         }
     });
 

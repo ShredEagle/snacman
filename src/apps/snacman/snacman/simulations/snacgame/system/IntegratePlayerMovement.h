@@ -1,31 +1,25 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/component/PlayerModel.h"
-#include "snacman/simulations/snacgame/component/RigAnimation.h"
-#include "../GameContext.h"
-
-#include "../component/Geometry.h"
-#include "../component/LevelData.h"
-#include "../component/PlayerMoveState.h"
-
-#include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {
+struct GameContext;
+namespace component {
+struct Geometry;
+struct PlayerRoundData;
+}
 namespace system {
 
 class IntegratePlayerMovement
 {
 public:
-    IntegratePlayerMovement(GameContext & aGameContext) :
-        mPlayer{aGameContext.mWorld}
-    {}
+    IntegratePlayerMovement(GameContext & aGameContext);
 
     void update(float aDelta);
 
 private:
-    ent::Query<component::Geometry, component::PlayerMoveState, component::PlayerModel> mPlayer;
+    ent::Query<component::Geometry, component::PlayerRoundData> mPlayer;
 };
 
 } // namespace system

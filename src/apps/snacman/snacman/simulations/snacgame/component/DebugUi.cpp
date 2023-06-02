@@ -2,7 +2,6 @@
 #include "GlobalPose.h"
 #include "AllowedMovement.h"
 #include "Controller.h"
-#include "PlayerMoveState.h"
 
 #include "../typedef.h"
 #include "../InputConstants.h"
@@ -37,10 +36,6 @@ void GlobalPose::drawUi() const
                 mOrientation.x(), mOrientation.y(), mOrientation.z());
     ImGui::Text("Player global instance scaling: %f, %f %f", mInstanceScaling.width(),
                 mInstanceScaling.width(), mInstanceScaling.depth());
-}
-
-void PlayerMoveState::drawUi() const
-{
 }
 
 void AllowedMovement::drawUi() const

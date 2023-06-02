@@ -1,10 +1,10 @@
 #pragma once
 
-#include "LevelTags.h"
-#include "math/Vector.h"
+#include "Tags.h"
 #include "snacman/simulations/snacgame/LevelHelper.h"
 #include "../InputConstants.h"
 
+#include <math/Vector.h>
 #include <platform/Filesystem.h>
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
@@ -43,7 +43,7 @@ struct PathfindNode
     bool mOpened = false;
 };
 
-struct LevelData
+struct LevelSetupData
 {
     // Level grid stored as
     // 0 1 2 ... mColCount - 1 (0th row)
@@ -51,19 +51,23 @@ struct LevelData
     // ...
     // mColCount * (mRowCount - 1) ... (mColCount * mRowCount) - 1 (mRowCountth
     // row)
-    LevelData(ent::EntityManager & aWorld,
-              const filesystem::path & aAssetRoot,
+    LevelSetupData(const filesystem::path & aAssetRoot,
               const filesystem::path & aFile,
-              const math::Size<3, int> & aSize,
+              const std::vector<math::Size<3, int>> & aAvailableSizes,
               int aSeed) :
-        mAssetRoot{aAssetRoot}, mFile{aFile}, mSize{aSize}, mSeed{aSeed}
+        mAssetRoot{aAssetRoot}, mFile{aFile}, mAvailableSizes{aAvailableSizes}, mSeed{aSeed}
     {}
 
     filesystem::path mAssetRoot;
     filesystem::path mFile;
-    math::Size<3, int> mSize;
+    std::vector<math::Size<3, int>> mAvailableSizes;
     int mSeed;
 
+};
+
+struct Level
+{
+    math::Size<3, int> mSize;
     std::vector<Tile> mTiles;
     std::vector<PathfindNode> mNodes;
 

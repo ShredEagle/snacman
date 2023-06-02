@@ -1,38 +1,30 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/component/GlobalPose.h"
-#include "snacman/simulations/snacgame/component/PlayerHud.h"
-#include "../GameContext.h"
-
-#include "../component/Collision.h"
-#include "../component/Geometry.h"
-#include "../component/Text.h"
-#include "../component/LevelTags.h"
-#include "../component/PlayerLifeCycle.h"
-#include "../component/PlayerSlot.h"
-
-#include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {
+struct GameContext;
+namespace component {
+struct GlobalPose;
+struct Collision;
+struct PlayerRoundData;
+struct Pill;
+struct PlayerHud;
+}
 namespace system {
 
 class EatPill
 {
 public:
-    EatPill(GameContext & aGameContext) :
-        mPlayers{aGameContext.mWorld},
-        mPills{aGameContext.mWorld},
-        mHuds{aGameContext.mWorld}
-    {}
+    EatPill(GameContext & aGameContext);
 
     void update();
 
 private:
     ent::Query<component::GlobalPose,
                component::Collision,
-               component::PlayerLifeCycle>
+               component::PlayerRoundData>
         mPlayers;
     ent::Query<component::GlobalPose, component::Collision, component::Pill>
         mPills;

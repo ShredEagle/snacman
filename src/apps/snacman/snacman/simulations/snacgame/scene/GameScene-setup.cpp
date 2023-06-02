@@ -2,16 +2,36 @@
 // fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj
 
 #include "GameScene.h"
-#include "snacman/simulations/snacgame/system/AnimationManager.h"
-#include "snacman/simulations/snacgame/system/Explosion.h"
 
+#include "../component/Spawner.h"
+#include "../component/VisualModel.h"
+#include "../component/Collision.h"
+#include "../component/Portal.h"
+#include "../component/PlayerHud.h"
+#include "../component/PlayerRoundData.h"
+#include "../component/RigAnimation.h"
+#include "../component/Controller.h"
+#include "../component/AllowedMovement.h"
+#include "../component/SceneNode.h"
+#include "../component/PathToOnGrid.h"
+#include "../component/Explosion.h"
+#include "../component/Geometry.h"
+#include "../component/GlobalPose.h"
+#include "../component/PowerUp.h"
+#include "../component/MovementScreenSpace.h"
+#include "../component/PoseScreenSpace.h"
+#include "../component/Speed.h"
+#include "../component/Tags.h"
+
+#include "../system/AnimationManager.h"
+#include "../system/Explosion.h"
+#include "../system/LevelManager.h"
 #include "../system/AdvanceAnimations.h"
 #include "../system/AllowMovement.h"
 #include "../system/ConsolidateGridMovement.h"
 #include "../system/Debug_BoundingBoxes.h"
 #include "../system/EatPill.h"
 #include "../system/IntegratePlayerMovement.h"
-#include "../system/LevelCreator.h"
 #include "../system/MovementIntegration.h"
 #include "../system/Pathfinding.h"
 #include "../system/PlayerInvulFrame.h"
@@ -22,29 +42,13 @@
 #include "../system/SceneGraphResolver.h"
 
 #include "../typedef.h"
-
 #include "../Entities.h"
+#include "../SceneGraph.h"
 
 
 namespace ad {
 namespace snacgame {
 namespace scene {
-
-
-namespace {
-
-    void setupLevel(GameContext & aGameContext, Phase & aPhase)
-    {
-        aGameContext.mLevel->get(aPhase)->add(component::LevelToCreate{});
-        aGameContext.mLevel->get(aPhase)->add(component::SceneNode{});
-        // This geometry applies to level elements, not stage decor
-        aGameContext.mLevel->get(aPhase)->add(
-            component::Geometry{.mPosition = {-7.f, -7.f, 0.f}, .mScaling = 15.f/19.f});
-        aGameContext.mLevel->get(aPhase)->add(component::GlobalPose{});
-    }
-
-} // unnamed namespace
-
 
 void GameScene::setup(const Transition & aTransition, RawInput & aInput)
 {
@@ -55,9 +59,9 @@ void GameScene::setup(const Transition & aTransition, RawInput & aInput)
     mGameContext.mResources.getModel("models/boom/boom.gltf", "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/portal/portal.gltf", "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/dog/dog.gltf", "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/missile/area.gltf", "effects/MeshTextures.sefx");
     {
         Phase init;
-        setupLevel(mGameContext, init);
         mSystems.get(init)
             ->add(system::SceneGraphResolver{mGameContext, mSceneRoot})
             .add(system::PlayerSpawner{mGameContext})
@@ -67,7 +71,7 @@ void GameScene::setup(const Transition & aTransition, RawInput & aInput)
             .add(system::AllowMovement{mGameContext})
             .add(system::ConsolidateGridMovement{mGameContext})
             .add(system::IntegratePlayerMovement{mGameContext})
-            .add(system::LevelCreator{mGameContext})
+            .add(system::LevelManager{mGameContext})
             .add(system::MovementIntegration{mGameContext})
             .add(system::AdvanceAnimations{mGameContext})
             .add(system::AnimationManager{mGameContext})
@@ -81,7 +85,6 @@ void GameScene::setup(const Transition & aTransition, RawInput & aInput)
 
     // Can't insert mLevel before the createLevel phase is over
     // otherwise mLevel does not have the correct component
-    insertEntityInScene(*mGameContext.mLevel, mSceneRoot);
 
     mStageDecor = createStageDecor(mGameContext);
     insertEntityInScene(*mStageDecor, mSceneRoot);

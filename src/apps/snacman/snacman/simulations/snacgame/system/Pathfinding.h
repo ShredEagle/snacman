@@ -1,27 +1,28 @@
 #pragma once
 
-#include "../component/Geometry.h"
-#include "../component/LevelData.h"
-#include "../component/PathToOnGrid.h"
-#include "../GameContext.h"
 #include "../GameParameters.h"
 #include "../LevelHelper.h"
 
+#include "../component/LevelData.h"
+
 #include <entity/Entity.h>
-#include <entity/EntityManager.h>
 #include <entity/Query.h>
 #include <limits>
+#include <queue>
 
 namespace ad {
 namespace snacgame {
+struct GameContext;
+namespace component {
+struct Geometry;
+struct PathToOnGrid;
+}
 namespace system {
 
 class Pathfinding
 {
 public:
-    Pathfinding(GameContext & aGameContext) :
-        mGameContext{&aGameContext}, mPathfinder{mGameContext->mWorld}
-    {}
+    Pathfinding(GameContext & aGameContext);
 
     void update();
 

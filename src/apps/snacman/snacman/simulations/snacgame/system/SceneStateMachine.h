@@ -2,13 +2,11 @@
 
 #include "../scene/Scene.h"
 
-#include <entity/EntityManager.h>
-#include <platform/Filesystem.h>
+#include <string>
 
-#include <algorithm>
-#include <fstream>
-#include <memory>
-#include <nlohmann/json.hpp>
+namespace filesystem {
+class path;
+}
 
 namespace ad {
 namespace snacgame {

@@ -1,46 +1,51 @@
 #include "PlayerSpawner.h"
 
+#include "SceneGraphResolver.h"
+
 #include "../component/Spawner.h"
+#include "../component/PlayerRoundData.h"
+#include "../component/PlayerSlot.h"
+#include "../component/SceneNode.h"
+
+#include "../GameContext.h"
 #include "../Entities.h"
 #include "../SceneGraph.h"
 #include "../typedef.h"
 
-#include <math/Vector.h>
+#include <snacman/QueryManipulation.h>
 #include <snacman/Profiling.h>
+
+#include <math/Vector.h>
 
 namespace ad {
 namespace snacgame {
 namespace system {
 
-void PlayerSpawner::update()
+PlayerSpawner::PlayerSpawner(GameContext & aGameContext) :
+    mGameContext{&aGameContext},
+    mPlayers{mGameContext->mWorld},
+    mSpawner{mGameContext->mWorld}
+{}
+
+void PlayerSpawner::spawnPlayers()
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    mSpawnable.each([this](EntHandle aPlayerHandle,
-                           component::PlayerLifeCycle & aPlayer,
-                           component::PlayerMoveState & aMoveState,
-                           component::Geometry & aPlayerGeometry) {
-        if (!aPlayer.mIsAlive)
+    int playerJoinCount = mGameContext->mPlayerSlots.size();
+
+    const int currentPlayerCount = mPlayers.countMatches();
+
+    for (int index = currentPlayerCount; index < playerJoinCount; ++index)
+    {
+        OptEntHandle spawnHandle = snac::getFirstHandle(mSpawner, [](const component::Spawner & aSpawner) { return !aSpawner.mSpawnedPlayer;});
+        if (spawnHandle)
         {
-            // TODO: Needs an alg to choose the right spawner if there are
-            // many spawner
-            mSpawner.each([this, &aPlayerHandle, &aPlayer, &aMoveState,
-                           &aPlayerGeometry]
-                           (component::Spawner & aSpawner) {
-                if (!aPlayer.mIsAlive && !aSpawner.mSpawnedPlayer)
-                {
-                    aPlayer.mIsAlive = true;
-                    aPlayer.mTimeToRespawn = component::gBaseTimeToRespawn;
-                    aPlayer.mInvulFrameCounter =
-                        component::gBaseInvulFrameDuration;
-                    aPlayerGeometry.mPosition = aSpawner.mSpawnPosition;
-                    aSpawner.mSpawnedPlayer = true;
-                    aMoveState.mMoveState = gPlayerMoveFlagNone;
-                    insertEntityInScene(aPlayerHandle, *mGameContext->mLevel);
-                }
-            });
+            const component::Spawner & spawner = spawnHandle->get()->get<component::Spawner>();
+            EntHandle playerHandle = createInGamePlayer(*mGameContext, mGameContext->mPlayerSlots.at(index), spawner.mSpawnPosition);
+            insertEntityInScene(playerHandle, *mGameContext->mLevel);
+            updateGlobalPosition(playerHandle.get()->get<component::SceneNode>());
         }
-    });
+    }
 }
 
 } // namespace system

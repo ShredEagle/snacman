@@ -1,36 +1,26 @@
 #pragma once
 
-#include "../GameContext.h"
-#include "../component/PlayerLifeCycle.h"
-#include "../component/PlayerMoveState.h"
-#include "../component/PlayerSlot.h"
-#include "../component/Spawner.h"
-#include "../component/Geometry.h"
-
-#include <entity/Entity.h>
-#include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {
+struct GameContext;
+namespace component {
+struct PlayerRoundData;
+struct Spawner;
+}
 namespace system {
 
 class PlayerSpawner
 {
 public:
-    PlayerSpawner(GameContext & aGameContext) :
-        mGameContext{&aGameContext},
-        mSpawnable{mGameContext->mWorld},
-        mSpawner{mGameContext->mWorld}
-    {}
+    PlayerSpawner(GameContext & aGameContext);
 
-    void update();
+    void spawnPlayers();
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerLifeCycle,
-               component::Geometry,
-               component::PlayerMoveState> mSpawnable;
+    ent::Query<component::PlayerRoundData> mPlayers;
     ent::Query<component::Spawner> mSpawner;
 };
 

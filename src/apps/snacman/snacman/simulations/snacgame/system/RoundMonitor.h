@@ -1,32 +1,30 @@
 #pragma once
 
-#include "../GameContext.h"
-#include "../component/LevelData.h"
-#include "../component/PlayerLifeCycle.h"
-
-#include <entity/EntityManager.h>
+#include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {
+struct GameContext;
+namespace component {
+struct PlayerRoundData;
+struct Pill;
+struct LevelTile;
+}
 namespace system {
 
 class RoundMonitor
 {
 public:
-    RoundMonitor(GameContext & aGameContext) :
-        mGameContext{&aGameContext},
-        mPlayers{mGameContext->mWorld},
-        mPills{mGameContext->mWorld},
-        mLevelEntities{mGameContext->mWorld}
-    {}
+    RoundMonitor(GameContext & aGameContext);
 
-    void update();
+    bool isRoundOver();
+    void updateRoundScore();
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerLifeCycle> mPlayers;
+    ent::Query<component::PlayerRoundData> mPlayers;
     ent::Query<component::Pill>
         mPills;
-    ent::Query<component::LevelEntity> mLevelEntities;
+    ent::Query<component::LevelTile> mLevelEntities;
 };
 
 } // namespace system

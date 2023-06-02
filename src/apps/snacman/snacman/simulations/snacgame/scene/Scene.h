@@ -5,6 +5,8 @@
 
 #include "../component/SceneNode.h"
 
+#include <snacman/Timing.h>
+
 #include <markovjunior/Grid.h>
 
 #include <entity/Entity.h>
@@ -66,8 +68,8 @@ class Scene
 {
 public:
     //TODO :(franz) make a cpp file please
-    Scene(const std::string & aName,
-            GameContext & aGameContext,
+    Scene(std::string aName,
+          GameContext & aGameContext,
           EntityWrap<component::MappingContext> & aContext,
           ent::Handle<ent::Entity> aSceneRoot) :
         mName{aName},

@@ -42,13 +42,13 @@ const std::array<math::Quaternion<float>, 4> gHudOrientationsWorld{
     math::Quaternion<float>{axis, math::Degree<float>{-20.f}},
 };
 
-const std::array<const char *, static_cast<unsigned int>(PowerUpType::_End)> gPowerUpName{
+const std::array<std::string, static_cast<unsigned int>(PowerUpType::None)> gPowerUpName{
     "Seeking dog",
     "Donut swapper",
     "Controlled missile"
 };
 
-const char * getPowerUpName(ent::Handle<ent::Entity> aPlayer);
+std::string getPowerUpName(ent::Handle<ent::Entity> aPlayer);
 
 struct PlayerHud
 {

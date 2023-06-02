@@ -1,104 +1,60 @@
 #include "RoundMonitor.h"
 
-#include "snacman/simulations/snacgame/component/LevelData.h"
-#include "snacman/simulations/snacgame/Entities.h"
-#include "snacman/simulations/snacgame/SceneGraph.h"
-#include "snacman/simulations/snacgame/component/SceneNode.h"
+#include "../component/PlayerGameData.h"
+#include "../component/LevelData.h"
+#include "../component/PlayerRoundData.h"
+#include "../component/SceneNode.h"
 
+#include "../Entities.h"
+#include "../GameContext.h"
 #include "../typedef.h"
 
+#include <snacman/EntityUtilities.h>
 #include <snacman/Profiling.h>
 
 namespace ad {
 namespace snacgame {
 namespace system {
 
-void RoundMonitor::update()
+RoundMonitor::RoundMonitor(GameContext & aGameContext) :
+    mGameContext{&aGameContext},
+    mPlayers{mGameContext->mWorld},
+    mPills{mGameContext->mWorld},
+    mLevelEntities{mGameContext->mWorld}
+{}
+
+bool RoundMonitor::isRoundOver()
 {
-    TIME_RECURRING_CLASSFUNC(Main);
-
-    if (mPills.countMatches() == 0)
-    {
-        // Removing players
-        std::pair<std::vector<component::PlayerLifeCycle *>, int /*score*/>
-            winners;
-        winners.second = -1;
-        mPlayers.each([&winners](EntHandle aHandle,
-                                 component::PlayerLifeCycle & lifeCycle) {
-            if (winners.second < lifeCycle.mScore)
-            {
-                winners.first.clear();
-                winners.first.push_back(&lifeCycle);
-                winners.second = lifeCycle.mScore;
-            }
-            else if (winners.second == lifeCycle.mScore)
-            {
-                winners.first.push_back(&lifeCycle);
-            }
-        });
-
-        for (auto & lifeCycle : winners.first)
-        {
-            ++(lifeCycle->mRoundsWon);
-        }
-
-        {
-            ent::Phase destroyPlayer;
-            mPlayers.each(
-                [&destroyPlayer](EntHandle aHandle,
-                                 component::PlayerLifeCycle & lifeCycle) {
-                    removeRoundTransientPlayerComponent(destroyPlayer, aHandle);
-                    removeEntityFromScene(aHandle);
-                    // Notably reset alive status so that player can be spawned
-                    lifeCycle.resetBetweenRound();
-                });
-        }
-        {
-            ent::Phase destroyLevel;
-            mLevelEntities.each(
-                [&destroyLevel](ent::Handle<ent::Entity> aHandle) {
-                    aHandle.get(destroyLevel)->erase();
-                });
-        }
-
-        {
-            ent::Phase resetLevelValues;
-            // Tearing down level
-            EntHandle level = *mGameContext->mLevel;
-            component::LevelData & levelData =
-                level.get(resetLevelValues)->get<component::LevelData>();
-            levelData.mSeed++;              // update seed
-            levelData.mTiles.clear();       // removes tiles
-            levelData.mNodes.clear();       // removes pathfinding nodes
-            levelData.mPortalIndex.clear(); // removes portal information
-            /* levelData.mFile = */
-            /*     mPlayers.countMatches() == 4 ? "snaclvl4.xml" :
-             * "snaclvl3.xml"; // choose right file */
-            levelData.mFile = "snaclvl4.xml"; // choose right file
-            level.get(resetLevelValues)->remove<component::LevelCreated>();
-            level.get(resetLevelValues)->add(component::LevelToCreate{});
-        }
-
-        mPlayers.each(
-            [](EntHandle aHandle,
-                             component::PlayerLifeCycle & lifeCycle) {
-                assert(aHandle.get()->get<component::SceneNode>().mParent == std::nullopt);
-            });
-        mSpawnable.each(
-            [](EntHandle aHandle,
-                             component::PlayerLifeCycle & lifeCycle) {
-                assert(aHandle.get()->get<component::SceneNode>().mParent == std::nullopt);
-            });
-    };
-    mSpawnable.each(
-        [](EntHandle aHandle,
-                         component::PlayerLifeCycle & lifeCycle) {
-            if (!lifeCycle.mIsAlive) {
-                assert(aHandle.get()->get<component::SceneNode>().mParent == std::nullopt);
-            }
-        });
+    return mPills.countMatches() == 0;
 }
 
+void RoundMonitor::updateRoundScore()
+{
+    std::pair<std::vector<component::PlayerGameData *>, int /*score*/>
+        winners;
+    winners.second = -1;
+    mPlayers.each([&winners](EntHandle aHandle,
+                             component::PlayerRoundData & aRoundData) {
+        component::PlayerGameData & gameData = snac::getComponent<component::PlayerGameData>(aRoundData.mSlotHandle);
+        if (winners.second < aRoundData.mRoundScore)
+        {
+            
+            winners.first.clear();
+            winners.first.push_back(&gameData);
+            winners.second = aRoundData.mRoundScore;
+        }
+        else if (winners.second == aRoundData.mRoundScore)
+        {
+            winners.first.push_back(&gameData);
+        }
+    });
+
+    for (auto & lifeCycle : winners.first)
+    {
+        ++(lifeCycle->mRoundsWon);
+    }
+
+}
 } // namespace system
 } // namespace snacgame
 } // namespace ad

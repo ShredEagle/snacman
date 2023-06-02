@@ -34,6 +34,13 @@ struct EntityWrap
         return entity->get<T_wrapped>();
     }
 
+    T_wrapped & get() const
+    {
+        auto entity = mWrapped.get();
+        assert(entity);
+        return entity->get<T_wrapped>();
+    }
+
     T_wrapped & operator*() const
     {
         ent::Phase dummy;

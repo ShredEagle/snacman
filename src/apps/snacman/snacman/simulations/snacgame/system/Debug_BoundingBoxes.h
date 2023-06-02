@@ -1,32 +1,29 @@
 #pragma once
 
-#include "../component/GlobalPose.h"
-#include "../component/LevelTags.h"
-#include "../component/PlayerMoveState.h"
-#include "../component/VisualModel.h"
-
-#include <snacman/simulations/snacgame/GameContext.h>
-
 #include <entity/Query.h>
 
 
 namespace ad {
 namespace snacgame {
+struct GameContext;
+namespace component {
+struct GlobalPose;
+struct PlayerRoundData;
+struct VisualModel;
+struct Pill;
+}
 namespace system {
 
 
 class Debug_BoundingBoxes
 {
 public:
-    Debug_BoundingBoxes(GameContext & aGameContext) :
-        mPlayers{aGameContext.mWorld},
-        mPills{aGameContext.mWorld}
-    {}
+    Debug_BoundingBoxes(GameContext & aGameContext);
 
     void update();
 
 private:
-    ent::Query<component::GlobalPose, component::PlayerMoveState, component::VisualModel> mPlayers;
+    ent::Query<component::GlobalPose, component::PlayerRoundData, component::VisualModel> mPlayers;
     ent::Query<component::GlobalPose, component::Pill, component::VisualModel> mPills;
 };
 

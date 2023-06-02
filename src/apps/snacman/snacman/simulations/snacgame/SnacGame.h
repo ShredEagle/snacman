@@ -4,10 +4,9 @@
 #include "GameContext.h"
 #include "Renderer.h"
 #include "ImguiSceneEditor.h"
-#include "snacman/simulations/snacgame/component/PlayerHud.h"
-#include "snacman/simulations/snacgame/component/PlayerSlot.h"
 
-#include "../../Input.h"
+#include <snacman/Input.h>
+#include <snacman/Timing.h>
 
 #include <entity/Query.h>
 
@@ -37,6 +36,8 @@ struct MappingContext;
 struct PoseScreenSpace;
 struct Text;
 struct VisualModel;
+struct PlayerHud;
+struct PlayerSlot;
 }
 namespace system {
 class OrbitalCamera; 
