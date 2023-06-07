@@ -31,6 +31,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/InputConstants.h
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/LevelHelper.h
+    simulations/snacgame/PlayerSlotManager.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SceneGraph.h
     simulations/snacgame/SnacGame.h
@@ -99,6 +100,7 @@ set(${TARGET_NAME}_SOURCES
 
     simulations/snacgame/Entities.cpp
     simulations/snacgame/ImguiSceneEditor.cpp
+    simulations/snacgame/PlayerSlotManager.cpp
     simulations/snacgame/Renderer.cpp
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SimulationControl.cpp

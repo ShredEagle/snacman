@@ -6,7 +6,8 @@ namespace ad {
 namespace snacgame {
 struct GameContext;
 namespace component {
-struct PlayerRoundData;
+struct Unspawned;
+struct PlayerSlot;
 struct Spawner;
 }
 namespace system {
@@ -20,7 +21,7 @@ public:
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerRoundData> mPlayers;
+    ent::Query<component::PlayerSlot, component::Unspawned> mUnspawnedPlayers;
     ent::Query<component::Spawner> mSpawner;
 };
 

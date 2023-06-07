@@ -109,7 +109,7 @@ createMenuItem(GameContext & aContext,
                const math::Size<2, float> & aScale = {1.f, 1.f});
 
 // Player utils
-bool addPlayer(GameContext & aContext, const int aControllerIndex, const ControllerType aControllerType);
+bool addPlayer(GameContext & aContext, const int aControllerIndex);
 ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
                                             ent::Handle<ent::Entity> & aSlotHandle,
                                             const math::Position<3, float> & aPosition);

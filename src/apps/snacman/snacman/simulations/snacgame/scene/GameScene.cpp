@@ -80,6 +80,7 @@ GameScene::GameScene(std::string aName,
     mTiles{mGameContext.mWorld},
     mRoundTransients{mGameContext.mWorld},
     mSlots{mGameContext.mWorld},
+    mHuds{mGameContext.mWorld},
     mPlayers{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
@@ -95,6 +96,11 @@ void GameScene::teardown(RawInput & aInput)
     TIME_SINGLE(Main, "teardown game scene");
     {
         Phase destroyPlayer;
+        mSlots.each([&destroyPlayer](EntHandle aHandle, component::PlayerSlot &)
+                    { aHandle.get(destroyPlayer)->erase(); });
+        // Delet hud
+        mHuds.each([&destroyPlayer](EntHandle aHandle, component::PlayerHud &)
+                    {eraseEntityRecursive(aHandle, destroyPlayer);});
         mPlayers.each(
             [&destroyPlayer](EntHandle aHandle, component::Controller &)
             { eraseEntityRecursive(aHandle, destroyPlayer); });
@@ -159,10 +165,10 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime,
         quit |= static_cast<bool>(aController.mInput.mCommand & gQuitCommand);
     });
 
-    // This works because gKeyboardControllerIndex is -1
+    // This works because gKeyboardControllerIndex is aInput.mGamepads.size() + 1
     // So this is a bit janky but it unifies the player join code
-    for (int controlIndex = gKeyboardControllerIndex;
-         controlIndex < (int) aInput.mGamepads.size(); ++controlIndex)
+    for (int controlIndex = 0;
+         controlIndex < (int) aInput.mGamepads.size() + 1; ++controlIndex)
     {
         if (std::find(boundControllers.begin(), boundControllers.end(),
                       controlIndex)
@@ -186,9 +192,7 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime,
 
             if (input.mCommand & gJoin)
             {
-                addPlayer(mGameContext, controlIndex,
-                          controllerIsKeyboard ? ControllerType::Keyboard
-                                               : ControllerType::Gamepad);
+                addPlayer(mGameContext, controlIndex);
             }
         }
     }
@@ -233,16 +237,11 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime,
         insertEntityInScene(*mGameContext.mLevel, mSceneRoot);
     }
 
-    int playerJoinCount = mGameContext.mPlayerSlots.size();
-
     // TODO: (franz) maybe at some point it would be better to
     // spawn player between rounds
     // This however needs to be thought through (like if someone starts
     // a game alone, should we spawn someone during the round in that case)
-    if (playerJoinCount > mPlayers.countMatches())
-    {
-        mSystems.get(update)->get<system::PlayerSpawner>().spawnPlayers();
-    }
+    mSystems.get(update)->get<system::PlayerSpawner>().spawnPlayers();
     // The creation of the level
     // Spawning the players
     //  if there is an unspawned player and is there room in the map

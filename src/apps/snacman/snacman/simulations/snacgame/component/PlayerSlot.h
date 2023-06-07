@@ -7,12 +7,16 @@ namespace ad {
 namespace snacgame {
 namespace component {
 
+struct Unspawned
+{};
+
 struct PlayerSlot
 {
-    int mIndex;
+    unsigned int mSlotIndex;
+    unsigned int mControllerIndex;
     ControllerType mControllerType;
 };
 
-}
+} // namespace component
 } // namespace snacgame
 } // namespace ad

@@ -122,7 +122,7 @@ std::optional<Transition> MenuScene::update(const snac::Time & aTime,
     std::optional<Transition> menuTransition = std::nullopt;
 
     mItems.each(
-        [this, &menuTransition, accumulatedCommand, &controllerCommandList,
+        [&menuTransition, accumulatedCommand, &controllerCommandList,
          filteredForMenuCommand, &newItem]
         (component::MenuItem & aItem, component::Text & aText)
     {
@@ -140,9 +140,8 @@ std::optional<Transition> MenuScene::update(const snac::Time & aTime,
                 {
                     if (command.mInput.mCommand & gSelectItem)
                     {
-                        addPlayer(mGameContext,
-                                        command.mId, command.mControllerType);
                         menuTransition = aItem.mTransition;
+                        menuTransition->mTransitionControllerId = command.mId;
                     }
                 }
             }

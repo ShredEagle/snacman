@@ -1,42 +1,64 @@
 #include "PlayerSlotManager.h"
 
+#include "GameContext.h"
+#include "Entities.h"
+#include "typedef.h"
+
 #include "component/PlayerGameData.h"
 #include "component/PlayerSlot.h"
 
 namespace ad {
 namespace snacgame {
 
-bool PlayerSlotManager::addPlayer(ent::Handle<ent::Entity> aPlayer,
+const std::set<unsigned int> gFreeIndicesSet = {1, 2, 3, 4};
+constexpr int gNoSlotAvailable = -1;
+
+PlayerSlotManager::PlayerSlotManager(GameContext * aContext) :
+    mPlayerSlots{aContext->mWorld}
+{}
+
+bool PlayerSlotManager::addPlayer(GameContext & aContext, EntHandle aPlayer,
                                   unsigned int aControllerIndex)
 {
     ent::Phase addPlayer;
     if (mPlayerSlots.countMatches() < gMaxPlayerSlots)
     {
-        unsigned int slotIndex = findAvailableSlotIndex(aControllerIndex);
-        aPlayer.get(addPlayer)
-            ->add(component::PlayerSlot{})
-            .add(component::PlayerGameData{});
-        return true;
+        int slotIndex = findAvailableSlotIndex(aControllerIndex);
+
+        if (slotIndex > -1)
+        {
+            aPlayer.get(addPlayer)
+                ->add(component::PlayerSlot{
+                        .mSlotIndex = (unsigned int)slotIndex,
+                        .mControllerIndex = aControllerIndex,
+                        .mControllerType = aControllerIndex == gKeyboardControllerIndex ? ControllerType::Keyboard : ControllerType::Gamepad
+                        })
+                .add(component::Unspawned{})
+                .add(component::PlayerGameData{
+                        .mHud = createHudBillpad(aContext, slotIndex),
+                        });
+            return true;
+        }
     }
 
     return false;
 }
 
-unsigned int PlayerSlotManager::findAvailableSlotIndex(unsigned int aIndex)
+int PlayerSlotManager::findAvailableSlotIndex(unsigned int aControllerId)
 {
-    unsigned int lastUsedIndex = aIndex;
+    unsigned int lastUsedIndex = aControllerId % gMaxPlayerSlots;
     bool lastUsedIndexAvailable = true;
 
-    if (mControllerIndexLastUsedSlot.contains(aIndex))
+    if (mControllerIndexLastUsedSlot.contains(aControllerId))
     {
-        lastUsedIndex = mControllerIndexLastUsedSlot.at(aIndex);
+        lastUsedIndex = mControllerIndexLastUsedSlot.at(aControllerId);
     }
 
     mPlayerSlots.each(
         [lastUsedIndex,
          &lastUsedIndexAvailable](const component::PlayerSlot & aSlot)
         {
-        lastUsedIndexAvailable &= lastUsedIndex != aSlot.mIndex;
+        lastUsedIndexAvailable &= lastUsedIndex != aSlot.mSlotIndex;
     });
 
     if (lastUsedIndexAvailable)
@@ -44,21 +66,22 @@ unsigned int PlayerSlotManager::findAvailableSlotIndex(unsigned int aIndex)
         return lastUsedIndex;
     }
     
-    unsigned int freeIndex;
+    std::set<unsigned int> freeIndices = gFreeIndicesSet;
 
-    for (unsigned int i = 0; i < gMaxPlayerSlots; ++i)
+    mPlayerSlots.each(
+        [&freeIndices](const component::PlayerSlot & aSlot)
+        {
+        freeIndices.erase(aSlot.mSlotIndex);
+    });
+
+    if (freeIndices.size() > 0)
     {
-        mPlayerSlots.each(
-            [lastUsedIndex,
-             &lastUsedIndexAvailable](const component::PlayerSlot & aSlot)
-            {
-            lastUsedIndexAvailable &= lastUsedIndex != aSlot.mIndex;
-        });
+        unsigned int freeIndex = *freeIndices.begin();
+        mControllerIndexLastUsedSlot.insert({aControllerId, freeIndex});
+        return freeIndex;
     }
 
-    mControllerIndexLastUsedSlot.insert({aIndex, freeIndex});
-
-    return freeIndex;
+    return gNoSlotAvailable;
 }
 
 } // namespace snacgame

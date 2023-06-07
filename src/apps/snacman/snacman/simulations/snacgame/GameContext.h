@@ -3,6 +3,7 @@
 #include "EntityWrap.h"
 #include "GameParameters.h"
 #include "SimulationControl.h"
+#include "PlayerSlotManager.h"
 
 #include <entity/Entity.h>
 #include <entity/Query.h>
@@ -28,6 +29,12 @@ class Renderer;
 
 struct GameContext
 {
+    GameContext(snac::Resources aResources, snac::RenderThread<Renderer> & aRenderThread) :
+        mResources{aResources},
+        mRenderThread{aRenderThread},
+        mSlotManager(this)
+    {};
+
     snac::Resources mResources;
     ent::EntityManager mWorld;
     snac::RenderThread<Renderer> & mRenderThread;

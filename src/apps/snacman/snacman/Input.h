@@ -26,7 +26,7 @@ constexpr float gJoystickDeadzone = 0.4f;
 constexpr float gTriggerDeadzone = 0.1f;
 
 // This can't be between 0 and 15 (those are controller index)
-constexpr int gKeyboardControllerIndex = 4;
+constexpr int gKeyboardControllerIndex = GLFW_JOYSTICK_LAST + 1;
 
 using ButtonEnum_t = std::int8_t;
 

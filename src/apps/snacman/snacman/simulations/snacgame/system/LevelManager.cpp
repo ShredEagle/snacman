@@ -189,6 +189,7 @@ LevelManager::createLevel(const component::LevelSetupData & aSetupData)
 
         levelData.mTiles = std::move(tiles);
         levelData.mNodes = std::move(nodes);
+        levelData.mPortalIndex = std::move(portalIndices);
 
         level.get(createLevel)
             ->add(levelData)

@@ -1,13 +1,5 @@
 #include "Entities.h"
 
-#include "GameContext.h"
-#include "SceneGraph.h"
-#include "GameParameters.h"
-#include "snacman/simulations/snacgame/scene/MenuScene.h"
-#include "typedef.h"
-
-#include "component/PlayerGameData.h"
-
 #include "component/AllowedMovement.h"
 #include "component/Collision.h"
 #include "component/Controller.h"
@@ -15,6 +7,7 @@
 #include "component/Geometry.h"
 #include "component/GlobalPose.h"
 #include "component/MenuItem.h"
+#include "component/PlayerGameData.h"
 #include "component/PlayerHud.h"
 #include "component/PlayerRoundData.h"
 #include "component/PlayerSlot.h"
@@ -28,9 +21,11 @@
 #include "component/Tags.h"
 #include "component/Text.h"
 #include "component/VisualModel.h"
-
-#include <snacman/QueryManipulation.h>
-#include <snacman/Resources.h>
+#include "GameContext.h"
+#include "GameParameters.h"
+#include "SceneGraph.h"
+#include "snacman/simulations/snacgame/scene/MenuScene.h"
+#include "typedef.h"
 
 #include <algorithm>
 #include <entity/Entity.h>
@@ -45,6 +40,8 @@
 #include <ostream>
 #include <snacman/EntityUtilities.h>
 #include <snacman/Input.h>
+#include <snacman/QueryManipulation.h>
+#include <snacman/Resources.h>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -447,7 +444,7 @@ ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
             aContext, model, "models/donut/donut.gltf",
             "effects/MeshRiggingTextures.sefx", Pos3::Zero(), 1.f,
             gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation,
-            gSlotColors.at(slot.mIndex));
+            gSlotColors.at(slot.mSlotIndex));
 
         std::string animName = "idle";
         const snac::NodeAnimation & animation =
@@ -467,7 +464,7 @@ ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
                                             .mSlotHandle = aSlotHandle})
             .add(component::AllowedMovement{})
             .add(component::Controller{.mType = slot.mControllerType,
-                                       .mControllerId = slot.mIndex})
+                                       .mControllerId = slot.mControllerIndex})
             .add(component::Collision{component::gPlayerHitbox});
     }
 
@@ -477,17 +474,11 @@ ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
 }
 
 bool addPlayer(GameContext & aContext,
-               const int aControllerIndex,
-               ControllerType aControllerType)
+               const int aControllerIndex)
 {
-    Phase createPlayer;
     EntHandle playerSlot = aContext.mWorld.addEntity();
-    playerSlot.get(createPlayer)
-        ->add(component::PlayerSlot{.mIndex = aControllerIndex})
-        .add(component::PlayerGameData{
-            .mHud = createHudBillpad(aContext, aControllerIndex),
-        });
-    return aContext.addPlayer(playerSlot);
+    return aContext.mSlotManager.addPlayer(
+        aContext, playerSlot, aControllerIndex);
 }
 
 ent::Handle<ent::Entity>

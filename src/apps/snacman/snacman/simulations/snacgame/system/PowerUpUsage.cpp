@@ -217,7 +217,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
                 if (firstTarget)
                 {
                     EntHandle arrowHandle = createTargetArrow(
-                        *mGameContext, gSlotColors.at(playerSlot.mIndex));
+                        *mGameContext, gSlotColors.at(playerSlot.mSlotIndex));
                     insertEntityInScene(arrowHandle, *firstTarget);
 
                     info.mCurrentTarget = firstTarget;
@@ -401,7 +401,7 @@ void PowerUpUsage::update(const snac::Time & aTime)
                                    {0.f, 0.f, 0.f}, 3.f, {1.f, 1.f, 1.f},
                                    Quat_f{UnitVec3{Vec3{1.f, 0.f, 0.f}},
                                           Turn_f{0.25f}},
-                                   gSlotColors.at(playerSlot.mIndex));
+                                   gSlotColors.at(playerSlot.mSlotIndex));
                     ringEnt.add(component::RoundTransient{});
                 }
 

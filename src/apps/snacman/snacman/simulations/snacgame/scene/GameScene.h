@@ -21,6 +21,7 @@ template <class T_wrapped> struct EntityWrap;
 namespace component {
 struct MappingContext;
 struct PlayerSlot;
+struct PlayerHud;
 struct PlayerRoundData;
 struct Controller;
 struct PathToOnGrid;
@@ -51,6 +52,7 @@ private:
     ent::Query<component::LevelTile> mTiles;
     ent::Query<component::RoundTransient> mRoundTransients;
     ent::Query<component::PlayerSlot> mSlots;
+    ent::Query<component::PlayerHud> mHuds;
     ent::Query<component::PlayerRoundData, component::Controller> mPlayers;
     ent::Query<component::PathToOnGrid> mPathfinders;
 

@@ -28,6 +28,7 @@ const inline std::string gQuitTransitionName = "quit";
 struct Transition
 {
     std::string mTransitionName;
+    int mTransitionControllerId = -1;
     bool shouldTeardown = true;
     bool shouldSetup = true;
 
