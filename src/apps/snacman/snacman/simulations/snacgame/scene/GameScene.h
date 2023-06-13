@@ -2,14 +2,16 @@
 
 #include "Scene.h"
 
-#include <snacman/Timing.h>
-
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 #include <string>
 
 namespace ad {
+
+namespace snac {
+struct Time;
+}
 
 struct RawInput;
 

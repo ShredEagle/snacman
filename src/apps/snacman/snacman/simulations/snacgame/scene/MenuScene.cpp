@@ -16,9 +16,10 @@
 #include "../InputCommandConverter.h"
 #include "../SnacGame.h"
 
-#include <cstring>
+#include <string>
 #include <optional>
 #include <snacman/Input.h>
+#include <snacman/Timing.h>
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
 

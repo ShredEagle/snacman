@@ -5,8 +5,6 @@
 
 #include "../component/SceneNode.h"
 
-#include <snacman/Timing.h>
-
 #include <markovjunior/Grid.h>
 
 #include <entity/Entity.h>
@@ -16,8 +14,6 @@
 #include <string>
 
 namespace ad {
-
-struct RawInput;
 
 namespace snacgame {
     namespace component { struct MappingContext; }
@@ -54,10 +50,15 @@ struct hash<ad::snacgame::scene::Transition>
 }; // namespace std
 
 namespace ad {
+
+namespace snac {
+struct Time;
+}
+
+struct RawInput;
+
 namespace snacgame {
-
 namespace scene {
-
 
 struct SceneId
 {

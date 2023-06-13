@@ -2,13 +2,11 @@
 
 #include "Scene.h"
 
-#include <snacman/Timing.h>
-#include <snacman/Input.h>
-
 #include <math/Color.h>
 #include <entity/Query.h>
 
 namespace ad {
+
 namespace snacgame {
 namespace component {
 struct MenuItem;
