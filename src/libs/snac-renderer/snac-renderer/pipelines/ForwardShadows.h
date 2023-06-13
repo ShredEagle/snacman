@@ -4,7 +4,7 @@
 #include "../LoadInterface.h"
 #include "../Render.h"
 
-#include <handy/MovableAtomic.h>
+#include <handy/AtomicVariations.h>
 #include <handy/StringId.h>
 
 #include <math/Vector.h>
