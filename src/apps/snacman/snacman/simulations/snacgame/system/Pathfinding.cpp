@@ -61,7 +61,11 @@ void Pathfinding::update()
         // We need a copy of nodes to make the calculation in place
         // so nodes is captured by value
         std::vector<component::PathfindNode> localNodes = nodes;
-        component::PathfindNode closestNode = pathfind(aGeo.mPosition.xy(), targetPos, localNodes, stride);
+        // We need to create the startNode locally because it can be pointed to
+        // by the resulting pathfind node and would be unstacked if it's created inside
+        // pathfind
+        component::PathfindNode startNode = createStartPathfindNode(aGeo.mPosition.xy(), targetPos, stride);
+        component::PathfindNode closestNode = pathfind(startNode, targetPos,  localNodes, stride);
 
         // There is two possible states
         // 1. The target and pathfinder are perfectly on the same tile -> there

@@ -439,6 +439,8 @@ void PowerUpUsage::update(const snac::Time & aTime)
 
                 aHandle.get(usage)->remove<component::PlayerPowerUp>();
                 aHandle.get(usage)->add(component::ControllingMissile{});
+
+                aRoundData.mType = component::PowerUpType::None;
             }
             break;
         }
@@ -616,8 +618,14 @@ PowerUpUsage::getDogPlacementTile(EntHandle aHandle,
                 // We need a copy of nodes to make the calculation in place
                 // so nodes is captured by value
                 std::vector<component::PathfindNode> localNodes = nodes;
+
+                // We need to create the startNode locally because it can be pointed to
+                // by the resulting pathfind node and would be unstacked if it's created inside
+                // pathfind
+                component::PathfindNode startNode = createStartPathfindNode(
+                        aGeo.mPosition.xy(), aOtherGeo.mPosition.xy(), stride);
                 component::PathfindNode targetNode =
-                    pathfind(aGeo.mPosition.xy(), aOtherGeo.mPosition.xy(),
+                    pathfind(startNode, aOtherGeo.mPosition.xy(),
                              localNodes, stride);
 
                 unsigned int newDepth = 0;

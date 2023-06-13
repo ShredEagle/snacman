@@ -33,8 +33,25 @@ private:
         mPathfinder;
 };
 
+inline component::PathfindNode createStartPathfindNode(const math::Position<2, float> & aSource,
+         const math::Position<2, float> & aTarget,
+         size_t stride
+)
+{
+    math::Position<2, float> startPos = getLevelPosition(aSource);
+    component::PathfindNode start{
+        .mReducedCost = manhattan(aSource, aTarget),
+        .mCost = 0,
+        .mIndex = (size_t) startPos.x() + (size_t) startPos.y() * stride,
+        .mPos = aSource,
+        .mOpened = true,
+    };
+
+    return start;
+}
+
 inline component::PathfindNode
-pathfind(const math::Position<2, float> & aSource,
+pathfind(component::PathfindNode & aStartNode,
          const math::Position<2, float> & aTarget,
          std::vector<component::PathfindNode> & aNodes,
          size_t stride)
@@ -67,27 +84,18 @@ pathfind(const math::Position<2, float> & aSource,
             }
         };
 
-    // Setup opened node with the start position and the node
+    // setup opened node with the start position and the node
     // where the pathfinder is residing so that when we try to path
     // so that the residing node is a possible destination
-
-    math::Position<2, float> startPos = getLevelPosition(aSource);
 
     // Since priority do not have a clear() method we need to reinstantiate
     // a priority queue for all pathfinder
     PathfindingQueue openedNode(comparator);
-    component::PathfindNode start{
-        .mReducedCost = manhattan(aSource, aTarget),
-        .mCost = 0,
-        .mIndex = (size_t) startPos.x() + (size_t) startPos.y() * stride,
-        .mPos = aSource,
-        .mOpened = true,
-    };
-    openedNode.push(&start);
+    openedNode.push(&aStartNode);
 
-    component::PathfindNode & startTile = aNodes.at(start.mIndex);
-    startTile.mCost = (aSource - startTile.mPos).getNorm();
-    startTile.mPrev = &start;
+    component::PathfindNode & startTile = aNodes.at(aStartNode.mIndex);
+    startTile.mCost = (aStartNode.mPos - startTile.mPos).getNorm();
+    startTile.mPrev = &aStartNode;
     startTile.mReducedCost =
         startTile.mCost + manhattan(startTile.mPos, aTarget);
 
