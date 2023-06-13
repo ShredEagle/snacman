@@ -31,6 +31,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/InputConstants.h
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/LevelHelper.h
+    simulations/snacgame/PlayerSlotManager.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SceneGraph.h
     simulations/snacgame/SnacGame.h
@@ -44,21 +45,20 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/Geometry.h
     simulations/snacgame/component/GlobalPose.h
     simulations/snacgame/component/LevelData.h
-    simulations/snacgame/component/LevelTags.h
     simulations/snacgame/component/MenuItem.h
     simulations/snacgame/component/MovementScreenSpace.h
     simulations/snacgame/component/PathToOnGrid.h
-    simulations/snacgame/component/PlayerLifeCycle.h
-    simulations/snacgame/component/PlayerModel.h
     simulations/snacgame/component/PlayerHud.h
-    simulations/snacgame/component/PlayerMoveState.h
-    simulations/snacgame/component/PlayerPortalData.h
     simulations/snacgame/component/PlayerSlot.h
-    simulations/snacgame/component/PlayerPowerUp.h
-    simulations/snacgame/component/RigAnimation.h
+    simulations/snacgame/component/PlayerGameData.h
+    simulations/snacgame/component/PlayerRoundData.h
+    simulations/snacgame/component/Portal.h
+    simulations/snacgame/component/PoseScreenSpace.h
     simulations/snacgame/component/PowerUp.h
+    simulations/snacgame/component/RigAnimation.h
     simulations/snacgame/component/SceneNode.h
     simulations/snacgame/component/Spawner.h
+    simulations/snacgame/component/Tags.h
     simulations/snacgame/component/Text.h
     simulations/snacgame/component/VisualModel.h
 
@@ -76,7 +76,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/Explosion.h
     simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/MovementIntegration.h
-    simulations/snacgame/system/LevelCreator.h
+    simulations/snacgame/system/LevelManager.h
     simulations/snacgame/system/Pathfinding.h
     simulations/snacgame/system/PlayerSpawner.h
     simulations/snacgame/system/PlayerInvulFrame.h
@@ -99,7 +99,9 @@ set(${TARGET_NAME}_SOURCES
     Resources.cpp
 
     simulations/snacgame/Entities.cpp
+    simulations/snacgame/GameContext.cpp
     simulations/snacgame/ImguiSceneEditor.cpp
+    simulations/snacgame/PlayerSlotManager.cpp
     simulations/snacgame/Renderer.cpp
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SimulationControl.cpp
@@ -109,6 +111,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/component/DebugUi.cpp
     simulations/snacgame/component/PlayerHud.cpp
 
+    simulations/snacgame/scene/Scene.cpp
     simulations/snacgame/scene/GameScene.cpp
     simulations/snacgame/scene/GameScene-setup.cpp
     simulations/snacgame/scene/MenuScene.cpp
@@ -123,7 +126,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/Explosion.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
     simulations/snacgame/system/MovementIntegration.cpp
-    simulations/snacgame/system/LevelCreator.cpp
+    simulations/snacgame/system/LevelManager.cpp
     simulations/snacgame/system/SystemOrbitalCamera.cpp
     simulations/snacgame/system/Pathfinding.cpp
     simulations/snacgame/system/PlayerSpawner.cpp

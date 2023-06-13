@@ -1,18 +1,22 @@
 #pragma once
 
-#include "math/Color.h"
+#include <math/Color.h>
+#include <snacman/Input.h>
 
 namespace ad {
 namespace snacgame {
 namespace component {
 
+struct Unspawned
+{};
+
 struct PlayerSlot
 {
-    int mIndex;
-    bool mFilled;
-    math::hdr::Rgba_f mColor;
+    unsigned int mSlotIndex;
+    unsigned int mControllerIndex;
+    ControllerType mControllerType;
 };
 
-}
+} // namespace component
 } // namespace snacgame
 } // namespace ad

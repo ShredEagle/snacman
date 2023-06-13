@@ -28,6 +28,7 @@ using Pos2_i = math::Position<2, int>;
 using Vec2_i = math::Vec<2, int>;
 using UnitVec3 = math::UnitVec<3, float>;
 using Size3 = math::Size<3, float>;
+using Size3_i = math::Size<3, int>;
 using Turn_f = math::Turn<float>;
 using Rad_f = math::Radian<float>;
 using Quat_f = math::Quaternion<float>;

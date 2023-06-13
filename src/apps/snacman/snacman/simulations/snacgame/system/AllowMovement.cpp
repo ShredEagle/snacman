@@ -2,13 +2,20 @@
 
 #include "../LevelHelper.h"
 #include "../typedef.h"
+#include "../GameContext.h"
+#include "../InputCommandConverter.h"
 
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
+#include "../component/Geometry.h"
 #include "../component/AllowedMovement.h"
 #include "../component/LevelData.h"
 
 #include <snacman/Input.h>
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
+
+#include <entity/EntityManager.h>
 
 #include <math/Color.h>
 
@@ -18,13 +25,19 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
+AllowMovement::AllowMovement(GameContext & aGameContext) :
+    mGameContext{&aGameContext},
+    mMover{mGameContext->mWorld}
+{}
+
+
 void AllowMovement::update()
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
     ent::Phase nomutation;
 
-    component::LevelData & aLevelData = mGameContext->mLevel->get(nomutation)->get<component::LevelData>();
+    component::Level & aLevelData = mGameContext->mLevel->get(nomutation)->get<component::Level>();
     auto tiles = aLevelData.mTiles;
     if (tiles.size() == 0) [[unlikely]]
     {

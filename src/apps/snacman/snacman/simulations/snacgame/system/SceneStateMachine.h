@@ -2,13 +2,13 @@
 
 #include "../scene/Scene.h"
 
-#include <entity/EntityManager.h>
-#include <platform/Filesystem.h>
+#include <string>
 
-#include <algorithm>
-#include <fstream>
-#include <memory>
-#include <nlohmann/json.hpp>
+namespace std {
+namespace filesystem {
+class path;
+}
+}
 
 namespace ad {
 namespace snacgame {
@@ -22,7 +22,7 @@ class SceneStateMachine
 {
 public:
     SceneStateMachine(ent::EntityManager & aWorld,
-                      const filesystem::path & aPath,
+                      const std::filesystem::path & aPath,
                       EntityWrap<component::MappingContext> & aContext,
                       GameContext & aGameContext);
     void changeState(GameContext & aContext, scene::Transition & aTransition, RawInput & aInput);

@@ -1,22 +1,16 @@
 #pragma once
 
-#include "component/GlobalPose.h"
-#include "entity/Entity.h"
-#include "entity/Query.h"
 #include "GameParameters.h"
-#include "snacman/simulations/snacgame/component/Geometry.h"
-#include "snacman/simulations/snacgame/component/LevelTags.h"
-#include "snacman/simulations/snacgame/component/PlayerModel.h"
-#include "snacman/simulations/snacgame/component/PlayerPortalData.h"
-#include "snacman/simulations/snacgame/component/PowerUp.h"
+#include "component/PowerUp.h"
 
+#include <snacman/Timing.h>
+
+#include <entity/Entity.h>
+#include <entity/Query.h>
 #include <math/Color.h>
 #include <math/Quaternion.h>
 #include <math/Vector.h>
 #include <memory>
-#include <snacman/simulations/snacgame/component/Geometry.h>
-#include <snacman/simulations/snacgame/component/LevelTags.h>
-#include <snacman/Timing.h>
 #include <string>
 #include <unordered_map>
 
@@ -33,8 +27,11 @@ struct Model;
 namespace snacgame {
 
 namespace component {
-struct PlayerLifeCycle;
+struct PlayerRoundData;
 struct PlayerSlot;
+struct Portal;
+struct Geometry;
+struct GlobalPose;
 } // namespace component
 namespace scene {
 struct Transition;
@@ -42,6 +39,7 @@ struct Transition;
 
 struct GameContext;
 
+//Scene graph component utils
 void addGeoNode(
     GameContext & aContext,
     ent::Entity & aEnt,
@@ -50,7 +48,6 @@ void addGeoNode(
     math::Size<3, float> aInstanceScale = {1.f, 1.f, 1.f},
     math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
     math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
-
 std::shared_ptr<snac::Model> addMeshGeoNode(
     GameContext & aContext,
     ent::Entity & aEnt,
@@ -62,41 +59,14 @@ std::shared_ptr<snac::Model> addMeshGeoNode(
     math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
     math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
 
-ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
-                                         std::string aText,
-                                         component::GlobalPose aPose);
-
-ent::Handle<ent::Entity>
-createAnimatedTest(GameContext & aContext,
-                   ent::Phase & aPhase,
-                   snac::Clock::time_point aStartTime,
-                   const math::Position<2, float> & aGridPos);
-
+// Level utils
 ent::Handle<ent::Entity> createPill(GameContext & aContext,
                                     ent::Phase & aPhase,
                                     const math::Position<2, float> & Pos);
-
-ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
-                                       ent::Phase & aPhase,
-                                       const math::Position<2, float> & Pos,
-                                       const component::PowerUpType aType,
-                                       float aSwapPeriod);
-ent::Handle<ent::Entity>
-createPlayerPowerUp(GameContext & aContext, const component::PowerUpType aType);
-
 ent::Handle<ent::Entity>
 createPathEntity(GameContext & aContext,
                  ent::Phase & aPhase,
                  const math::Position<2, float> & aPos);
-ent::Handle<ent::Entity>
-createPortalEntity(GameContext & aContext,
-                   ent::Phase & aPhase,
-                   const math::Position<2, float> & aPos,
-                   int aPortalIndex);
-void addPortalInfo(GameContext & aContext,
-                   component::Portal & aPortal,
-                   const component::Geometry & aGeo,
-                   math::Vec<3, float> aDirection);
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
                    const math::Position<2, float> & aPos);
@@ -104,18 +74,19 @@ ent::Handle<ent::Entity>
 createPlayerSpawnEntity(GameContext & aContext,
                         ent::Phase & aPhase,
                         const math::Position<2, float> & aPos);
-
 ent::Handle<ent::Entity>
-createHudBillpad(GameContext & aContext,
-                 const component::PlayerSlot & aPlayerSlot);
-
-ent::Handle<ent::Entity> fillSlotWithPlayer(GameContext & aContext,
-                                            ControllerType aControllerType,
-                                            ent::Handle<ent::Entity> aSlot,
-                                            int aControllerId = 0);
-
+createPortalEntity(GameContext & aContext,
+                   ent::Phase & aPhase,
+                   const math::Position<2, float> & aPos,
+                   int aPortalIndex);
+void addPortalInfo(GameContext & aContext,
+                   ent::Handle<ent::Entity> aLevel,
+                   component::Portal & aPortal,
+                   const component::Geometry & aGeo,
+                   math::Vec<3, float> aDirection);
 ent::Handle<ent::Entity> createStageDecor(GameContext & aContext);
 
+// Text utils
 ent::Handle<ent::Entity>
 makeText(GameContext & aContext,
          ent::Phase & aPhase,
@@ -125,6 +96,7 @@ makeText(GameContext & aContext,
          const math::Position<2, float> & aPosition_unitscreen,
          const math::Size<2, float> & aScale = {1.f, 1.f});
 
+// Menu utils
 ent::Handle<ent::Entity>
 createMenuItem(GameContext & aContext,
                ent::Phase & aInit,
@@ -136,32 +108,53 @@ createMenuItem(GameContext & aContext,
                bool aSelected = false,
                const math::Size<2, float> & aScale = {1.f, 1.f});
 
-std::optional<ent::Handle<ent::Entity>>
-findSlotAndBind(GameContext & aContext,
-                ent::Query<component::PlayerSlot> & aSlots,
-                ControllerType aType,
-                int aIndex);
-
+// Player utils
+bool addPlayer(GameContext & aContext, const int aControllerIndex);
+ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
+                                            ent::Handle<ent::Entity> & aSlotHandle,
+                                            const math::Position<3, float> & aPosition);
 void swapPlayerPosition(ent::Phase & aPhase,
                         ent::Handle<ent::Entity> aPlayer,
                         ent::Handle<ent::Entity> aOther);
-void removeRoundTransientPlayerComponent(ent::Phase & aPhase,
-                                         ent::Handle<ent::Entity> aHandle);
-ent::Handle<ent::Entity> removePlayerFromGame(ent::Phase & aPhase,
-                                              ent::Handle<ent::Entity> aHandle);
 
 ent::Handle<ent::Entity> createTargetArrow(GameContext & aContext,
                                            const math::hdr::Rgba_f & aColor);
+ent::Handle<ent::Entity>
+createHudBillpad(GameContext & aContext,
+                 const int aPlayerIndex);
 
-ent::Handle<ent::Entity> createExplosion(GameContext & aContext,
-                                         const math::Position<3, float> & aPosition,
-                                         const snac::Time & aTime);
+
+
+// Powerup utils
+ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
+                                       ent::Phase & aPhase,
+                                       const math::Position<2, float> & Pos,
+                                       const component::PowerUpType aType,
+                                       float aSwapPeriod);
+ent::Handle<ent::Entity>
+createPlayerPowerUp(GameContext & aContext, const component::PowerUpType aType);
 
 ent::Handle<ent::Entity>
-createPortalImage(GameContext & aContext,
-                  component::PlayerModel & aPlayerModel,
-                  const component::Portal & aPortal,
-                  component::PlayerPortalData & aPortalData);
+createExplosion(GameContext & aContext,
+                const math::Position<3, float> & aPosition,
+                const snac::Time & aTime);
 
+// Portal utils
+ent::Handle<ent::Entity>
+createPortalImage(GameContext & aContext,
+                  component::PlayerRoundData & aPlayerRoundData,
+                  const component::Portal & aPortal);
+
+
+// Test entity utils
+ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
+                                         std::string aText,
+                                         const component::GlobalPose & aPose);
+
+ent::Handle<ent::Entity>
+createAnimatedTest(GameContext & aContext,
+                   ent::Phase & aPhase,
+                   snac::Clock::time_point aStartTime,
+                   const math::Position<2, float> & aGridPos);
 } // namespace snacgame
 } // namespace ad

@@ -1,16 +1,20 @@
 #include "SceneGraphResolver.h"
 
-#include "../SceneGraph.h"
 #include "../GameParameters.h"
-#include "../SceneGraph.h"
 #include "../typedef.h"
+#include "../GameContext.h"
+#include "../SceneGraph.h"
 
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
 #include "../component/SceneNode.h"
+#include "../component/PlayerSlot.h"
+#include "../component/PlayerGameData.h"
 
 #include <snacman/Profiling.h>
 #include <snacman/EntityUtilities.h>
+
+#include <entity/EntityManager.h>
 
 #include <math/Angle.h>
 #include <math/Homogeneous.h>

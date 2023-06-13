@@ -1,43 +1,31 @@
 #pragma once
 
-#include "snacman/Timing.h"
-#include "snacman/simulations/snacgame/component/Geometry.h"
-#include "snacman/simulations/snacgame/component/GlobalPose.h"
-#include "snacman/simulations/snacgame/component/PlayerHud.h"
-#include "snacman/simulations/snacgame/component/PlayerModel.h"
-#include "snacman/simulations/snacgame/component/Speed.h"
-#include "snacman/simulations/snacgame/component/VisualModel.h"
+#include <snacman/Timing.h>
 
-#include "../component/Collision.h"
-#include "../component/Controller.h"
-#include "../component/LevelTags.h"
-#include "../component/PlayerLifeCycle.h"
-#include "../component/PlayerModel.h"
-#include "../component/PlayerPowerUp.h"
-#include "../component/PlayerSlot.h"
-#include "../component/PowerUp.h"
-#include "../GameContext.h"
-
-#include <entity/EntityManager.h>
 #include <entity/Query.h>
 #include <math/Vector.h>
 #include <utility>
 
 namespace ad {
 namespace snacgame {
+struct GameContext;
+namespace component {
+struct GlobalPose;
+struct Geometry;
+struct PlayerRoundData;
+struct Collision;
+struct Controller;
+struct PowerUp;
+struct VisualModel;
+struct InGamePowerup;
+struct Speed;
+}
 namespace system {
 
 class PowerUpUsage
 {
 public:
-    PowerUpUsage(GameContext & aGameContext) :
-        mGameContext{&aGameContext},
-        mPlayers{mGameContext->mWorld},
-        mPowUpPlayers{mGameContext->mWorld},
-        mPowerups{mGameContext->mWorld},
-        mInGameDogPowerups(mGameContext->mWorld),
-        mInGameMissilePowerups(mGameContext->mWorld)
-    {}
+    PowerUpUsage(GameContext & aGameContext);
 
     void update(const snac::Time & aTime);
 
@@ -52,35 +40,29 @@ private:
     GameContext * mGameContext;
     ent::Query<component::GlobalPose,
                component::Geometry,
-               component::PlayerSlot,
                component::Collision,
-               component::PlayerLifeCycle>
+               component::PlayerRoundData>
         mPlayers;
     ent::Query<component::Geometry,
-               component::PlayerPowerUp,
-               component::PlayerSlot,
+               component::PlayerRoundData,
                component::GlobalPose,
-               component::PlayerModel,
                component::Controller>
         mPowUpPlayers;
     ent::Query<component::GlobalPose,
                component::Geometry,
                component::PowerUp,
                component::Collision,
-               component::VisualModel,
-               component::LevelEntity>
+               component::VisualModel>
         mPowerups;
     ent::Query<component::GlobalPose,
                component::InGamePowerup,
                component::Collision,
-               component::Geometry,
-               component::LevelEntity>
+               component::Geometry>
         mInGameDogPowerups;
     ent::Query<component::GlobalPose,
                component::InGamePowerup,
                component::Speed,
-               component::Geometry,
-               component::LevelEntity>
+               component::Geometry>
         mInGameMissilePowerups;
 };
 

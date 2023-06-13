@@ -1,11 +1,25 @@
 #include "MovementIntegration.h"
 
+#include "../GameContext.h"
+
+#include "../component/Geometry.h"
+#include "../component/MovementScreenSpace.h"
+#include "../component/PoseScreenSpace.h"
+#include "../component/Speed.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
+
 #include <snacman/Profiling.h>
+
+#include <entity/EntityManager.h>
 
 namespace ad {
 namespace snacgame {
 namespace system {
 
+MovementIntegration::MovementIntegration(GameContext & aGameContext) :
+    mMovables{aGameContext.mWorld}, mScreenMovables{aGameContext.mWorld}
+{}
 
 void MovementIntegration::update(float aDelta)
 {

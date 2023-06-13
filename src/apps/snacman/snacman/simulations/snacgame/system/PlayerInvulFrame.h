@@ -1,29 +1,25 @@
 #pragma once
 
-#include "snacman/simulations/snacgame/component/PlayerModel.h"
-#include "../component/PlayerLifeCycle.h"
-#include "../component/VisualModel.h"
-#include "../GameContext.h"
-
-#include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {
+struct GameContext;
+namespace component {
+struct PlayerRoundData;
+}
 namespace system {
 
 class PlayerInvulFrame
 {
 public:
-    PlayerInvulFrame(GameContext & aGameContext) :
-        mGameContext{&aGameContext}, mPlayer{mGameContext->mWorld}
-    {}
+    PlayerInvulFrame(GameContext & aGameContext);
 
     void update(float aDelta);
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerLifeCycle, component::PlayerModel> mPlayer;
+    ent::Query<component::PlayerRoundData> mPlayer;
 };
 
 } // namespace system

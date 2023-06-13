@@ -11,7 +11,6 @@
 
 #include "simulations/snacgame/SnacGame.h"
 
-
 // TODO we should not include something from detail.
 // So either move it out of detail, either use nholmann directly
 #include <arte/detail/Json.h>

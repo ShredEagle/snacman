@@ -1,5 +1,7 @@
 #pragma once
 
+#include <entity/Entity.h>
+
 #include <math/Quaternion.h>
 #include <math/Vector.h>
 
@@ -15,7 +17,8 @@ enum class PowerUpType : unsigned int
     Dog,
     Teleport,
     Missile,
-    _End,
+    None,
+    _End = None,
 };
 
 struct PowerUpBaseInfo
@@ -69,7 +72,7 @@ constexpr std::array<PowerUpBaseInfo,
             .mPlayerInstanceScale = {0.3f, 0.3f, 0.3f},
             .mLevelScaling = 0.3f,
             .mPlayerScaling = 1.f
-        },
+        }
     };
 
 struct PowerUp
@@ -78,6 +81,27 @@ struct PowerUp
     bool mPickedUp = false;
     float mSwapPeriod = 1.f;
     float mSwapTimer = mSwapPeriod;
+};
+
+struct InGameDog
+{
+};
+
+constexpr float gMissileDelayFlashing = 4.f;
+constexpr float gMissileDelayExplosion = 5.f;
+
+struct InGameMissile
+{
+    ent::Handle<ent::Entity> mModel;
+    ent::Handle<ent::Entity> mDamageArea;
+    float mDelayExplosion = gMissileDelayExplosion;
+};
+
+struct InGamePowerup
+{
+    ent::Handle<ent::Entity> mOwner;
+    PowerUpType mType;
+    std::variant<InGameMissile, InGameDog> mInfo;
 };
 
 } // namespace component

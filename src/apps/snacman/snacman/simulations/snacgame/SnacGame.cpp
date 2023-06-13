@@ -1,38 +1,31 @@
 #include "SnacGame.h"
 
-#include "Entities.h"
-#include "GameContext.h"
-#include "GameParameters.h"
-#include "InputConstants.h"
-#include "scene/Scene.h"
-#include "SimulationControl.h"
-#include "SceneGraph.h"
-#include "snacman/simulations/snacgame/component/LevelData.h"
-#include "snacman/simulations/snacgame/component/PlayerHud.h"
-#include "system/SceneStateMachine.h"
-#include "system/SystemOrbitalCamera.h"
-#include "typedef.h"
-
 #include "component/AllowedMovement.h"
 #include "component/Context.h"
 #include "component/Controller.h"
 #include "component/Geometry.h"
 #include "component/GlobalPose.h"
-#include "component/LevelTags.h"
-#include "component/PlayerMoveState.h"
-#include "component/PlayerSlot.h"
+#include "component/LevelData.h"
 #include "component/PathToOnGrid.h"
+#include "component/PlayerHud.h"
+#include "component/PlayerSlot.h"
+#include "component/PlayerGameData.h"
 #include "component/PoseScreenSpace.h"
 #include "component/RigAnimation.h"
 #include "component/SceneNode.h"
+#include "component/Tags.h"
 #include "component/Text.h"
 #include "component/VisualModel.h"
-
-#include <snacman/DevmodeControl.h>
-#include <snacman/ImguiUtilities.h>
-#include <snacman/LoopSettings.h>
-#include <snacman/Profiling.h>
-#include <snacman/QueryManipulation.h>
+#include "Entities.h"
+#include "GameContext.h"
+#include "GameParameters.h"
+#include "InputConstants.h"
+#include "scene/Scene.h"
+#include "SceneGraph.h"
+#include "SimulationControl.h"
+#include "system/SceneStateMachine.h"
+#include "system/SystemOrbitalCamera.h"
+#include "typedef.h"
 
 #include <algorithm>
 #include <array>
@@ -46,6 +39,12 @@
 #include <math/Color.h>
 #include <mutex>
 #include <optional>
+#include <snacman/DevmodeControl.h>
+#include <snacman/ImguiUtilities.h>
+#include <snacman/LoopSettings.h>
+#include <snacman/Profiling.h>
+#include <snacman/QueryManipulation.h>
+#include <snacman/RenderThread.h>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -54,18 +53,7 @@
 namespace ad {
 struct RawInput;
 
-namespace snac {
-template <class T_renderer>
-class RenderThread;
-}
 namespace snacgame {
-
-std::array<math::hdr::Rgba_f, 4> gSlotColors{
-    math::hdr::Rgba_f{0.725f, 1.f, 0.718f, 1.f},
-    math::hdr::Rgba_f{0.949f, 0.251f, 0.506f, 1.f},
-    math::hdr::Rgba_f{0.961f, 0.718f, 0.f, 1.f},
-    math::hdr::Rgba_f{0.f, 0.631f, 0.894f, 1.f},
-};
 
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    snac::RenderThread<Renderer_t> & aRenderThread,
@@ -74,11 +62,9 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    arte::Freetype & aFreetype,
                    RawInput & aInput) :
     mAppInterface{&aAppInterface},
-    mGameContext{
-        .mResources = snac::Resources{std::move(aResourceFinder), aFreetype,
-                                      aRenderThread},
-        .mRenderThread = aRenderThread,
-    },
+    mGameContext(
+        snac::Resources{std::move(aResourceFinder), aFreetype, aRenderThread},
+        aRenderThread),
     mMappingContext{mGameContext.mWorld, mGameContext.mResources},
     mStateMachine{
         mGameContext.mWorld, mGameContext.mWorld,
@@ -93,21 +79,10 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
 {
     ent::Phase init;
 
-    // Creating the slot entity those will be used a player entities
-    for (int i = 0; i < gMaxPlayerSlots; ++i)
-    {
-        mGameContext.mWorld.addEntity().get(init)->add(
-            component::PlayerSlot{i, false, gSlotColors.at(i)});
-    }
-
     // Add permanent game title
-    makeText(mGameContext,
-             init,
-             "Snacman",
+    makeText(mGameContext, init, "Snacman",
              mGameContext.mResources.getFont("fonts/FredokaOne-Regular.ttf"),
-             math::hdr::gYellow<float>,
-             {-0.25f, 0.75f},
-             {1.8f, 1.8f});
+             math::hdr::gYellow<float>, {-0.25f, 0.75f}, {1.8f, 1.8f});
 
     scene::Scene * scene = mStateMachine->getCurrentScene();
     scene->setup(scene::Transition{}, aInput);
@@ -141,23 +116,22 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
         if (mImguiDisplays.mShowSceneEditor)
         {
-            mSceneEditor.showEditor(mStateMachine->getCurrentScene()->mSceneRoot);
+            mSceneEditor.showEditor(
+                mStateMachine->getCurrentScene()->mSceneRoot);
         }
         if (mImguiDisplays.mShowRoundInfo)
         {
-            static ent::Query<component::Pill> pills{
-                mGameContext.mWorld};
+            static ent::Query<component::Pill> pills{mGameContext.mWorld};
             ImGui::Begin("Round info", &mImguiDisplays.mShowPlayerInfo);
             if (ImGui::Button("next round"))
             {
                 ent::Phase pillRemove;
-                pills.each([&pillRemove](EntHandle aHandle, component::Pill &){
-                    aHandle.get(pillRemove)->erase();
-                });
+                pills.each([&pillRemove](EntHandle aHandle, component::Pill &)
+                           { aHandle.get(pillRemove)->erase(); });
             }
-            if (mGameContext.mLevel && mGameContext.mLevel->get()->has<component::LevelData>())
+            if (mGameContext.mLevelData)
             {
-                ImGui::Text("%d", mGameContext.mLevel->get()->get<component::LevelData>().mSeed);
+                ImGui::Text("%d", mGameContext.mLevelData->get().mSeed);
             }
             ImGui::End();
         }
@@ -169,17 +143,18 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 mGameContext.mWorld};
             static ent::Query<component::Controller> controllerQuery{
                 mGameContext.mWorld};
-            playerSlotQuery.each([&](EntHandle aPlayer,
-                                     const component::PlayerSlot &
-                                         aPlayerSlot) {
-                ImGui::PushID(aPlayerSlot.mIndex);
+            playerSlotQuery.each(
+                [&](EntHandle aPlayer,
+                    const component::PlayerSlot & aPlayerSlot)
+                {
+                ImGui::PushID(aPlayerSlot.mSlotIndex);
                 char playerHeader[64];
                 std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader),
-                              "Player %d", aPlayerSlot.mIndex + 1);
+                              "Player %d", aPlayerSlot.mSlotIndex + 1);
                 if (ImGui::CollapsingHeader(playerHeader))
                 {
                     // This is an assumption but currently player that have
-                    // a geometry should have a globalPose and a PlayerMoveState
+                    // a geometry should have a globalPose
                     if (aPlayer.get(update)->has<component::Geometry>())
                     {
                         Entity player = *aPlayer.get(update);
@@ -189,8 +164,6 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                             player.get<component::Controller>();
                         const component::GlobalPose & pose =
                             player.get<component::GlobalPose>();
-                        const component::PlayerMoveState & moveState =
-                            player.get<component::PlayerMoveState>();
 
                         ImGui::BeginChild("Action", ImVec2(200.f, 0.f), true);
                         if (controller.mType == ControllerType::Dummy)
@@ -202,8 +175,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                                         controllerQuery,
                                         [](const component::Controller &
                                                aController) {
-                                            return aController.mType
-                                                   == ControllerType::Keyboard;
+                                    return aController.mType
+                                           == ControllerType::Keyboard;
                                         });
 
                                 if (oldController)
@@ -213,7 +186,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                                         .mType = ControllerType::Dummy;
                                     oldController->get(update)
                                         ->get<component::Controller>()
-                                        .mControllerId = gDummyControllerIndex;
+                                        .mControllerId = aPlayerSlot.mSlotIndex;
                                 }
                                 aPlayer.get(update)
                                     ->get<component::Controller>()
@@ -225,7 +198,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
                             if (ImGui::Button("Remove player"))
                             {
-                                removePlayerFromGame(update, aPlayer);
+                                eraseEntityRecursive(aPlayer, update);
                             }
                         }
                         ImGui::EndChild();
@@ -233,7 +206,6 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                         ImGui::BeginChild("Info");
                         geo.drawUi();
                         pose.drawUi();
-                        moveState.drawUi();
                         controller.drawUi();
                         ImGui::EndChild();
                     }
@@ -242,9 +214,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                         if (ImGui::Button("Create dummy player"))
                         {
                             {
-                                fillSlotWithPlayer(
-                                    mGameContext, ControllerType::Dummy,
-                                    aPlayer, gDummyControllerIndex);
+                                /* addPlayer(mGameContext, aPlayerSlot.mIndex, */
+                                /*           ControllerType::Dummy); */
                             }
                         }
                     }
@@ -259,7 +230,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         }
         if (mImguiDisplays.mShowDebugDrawers)
         {
-            snac::imguiDebugDrawerLevelSection(&mImguiDisplays.mShowDebugDrawers);
+            snac::imguiDebugDrawerLevelSection(
+                &mImguiDisplays.mShowDebugDrawers);
         }
         if (mImguiDisplays.mShowMappings)
         {
@@ -322,7 +294,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         if (mImguiDisplays.mShowRenderControls)
         {
             // TODO This should be an easier raii object
-            ImGui::Begin("Render controls", &mImguiDisplays.mShowRenderControls);
+            ImGui::Begin("Render controls",
+                         &mImguiDisplays.mShowRenderControls);
             Guard endGuard{[]() { ImGui::End(); }};
             recompileShaders = ImGui::Button("Recompile shaders");
 
@@ -334,10 +307,9 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             if (ImGui::Button("End round"))
             {
                 Phase destroy;
-                ent::Query<component::Pill>{mGameContext.mWorld}.each([&destroy](EntHandle aHandle, const component::Pill &){
-                    aHandle.get(destroy)->erase();
-                });
-
+                ent::Query<component::Pill>{mGameContext.mWorld}.each(
+                    [&destroy](EntHandle aHandle, const component::Pill &)
+                    { aHandle.get(destroy)->erase(); });
             }
             ImGui::End();
         }
@@ -353,12 +325,9 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 {
                     Phase pathfinding;
                     Entity pEntity = *pathfinder.get(pathfinding);
-                    addMeshGeoNode(mGameContext,
-                                   pEntity, 
-                                   "CUBE", "effects/Mesh.sefx",
-                                   {7.f, 7.f, gPillHeight},
-                                   1.f,
-                                   {0.5f, 0.5f, 0.5f});
+                    addMeshGeoNode(mGameContext, pEntity, "CUBE",
+                                   "effects/Mesh.sefx", {7.f, 7.f, gPillHeight},
+                                   1.f, {0.5f, 0.5f, 0.5f});
                     pEntity.add(component::AllowedMovement{
                         .mWindow = gOtherTurningZoneHalfWidth});
                     pEntity.add(component::PathToOnGrid{player});
@@ -384,7 +353,7 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
 {
     snac::DebugDrawer::StartFrame();
 
-    if constexpr(snac::isDevmode())
+    if constexpr (snac::isDevmode())
     {
         mSystemOrbitalCamera->update(
             aInput,
@@ -393,24 +362,23 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
     }
 
     // If the simulation is paused and step was not pressed, return now
-    // This avoids incrementing the simulation time, and does not call the systems update
+    // This avoids incrementing the simulation time, and does not call the
+    // systems update
     if (!mGameContext.mSimulationControl.mPlaying
         && !mGameContext.mSimulationControl.mStep)
     {
         return false;
     }
 
-    mSimulationTime.advance(aUpdatePeriod / mGameContext.mSimulationControl.mSpeedRatio);
+    mSimulationTime.advance(aUpdatePeriod
+                            / mGameContext.mSimulationControl.mSpeedRatio);
 
-    // mSystemMove.get(update)->get<system::Move>().update(aDelta);
     std::optional<scene::Transition> transition =
         mStateMachine->getCurrentScene()->update(mSimulationTime, aInput);
 
     if (transition)
     {
-        if (transition.value().mTransitionName.compare(
-                scene::gQuitTransitionName)
-            == 0)
+        if (transition.value().mTransitionName == scene::gQuitTransitionName)
         {
             return true;
         }
@@ -426,8 +394,10 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
         TIME_RECURRING(Main, "Save state");
         mGameContext.mSimulationControl.saveState(
             mGameContext.mWorld.saveState(),
-            std::chrono::duration_cast<std::chrono::milliseconds>(aUpdatePeriod),
-            std::chrono::duration_cast<std::chrono::milliseconds>(mSimulationTime.mDeltaDuration));
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                aUpdatePeriod),
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                mSimulationTime.mDeltaDuration));
     }
 
     return false;
@@ -445,94 +415,100 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
     // Worldspace models
     //
     mQueryRenderable.get(nomutation)
-        .each([&state](ent::Handle<ent::Entity> aHandle,
-                       const component::GlobalPose & aGlobPose,
-                       // TODO #anim restore this constness (for the moment, animation mutate the rig's scene)
-                       /*const*/ component::VisualModel & aVisualModel)
-        {
-            // Note: This feels bad to test component presence here
-            // but we do not want to handle VisualModel the same way depending on the presence of RigAnimation
-            // (and we do not have "negation" on Queries, to separately get VisualModels without RigAnimation)
-            visu::Entity::SkeletalAnimation skeletal;
-            if(auto entity = *aHandle.get(); entity.has<component::RigAnimation>())
+        .each(
+            [&state](ent::Handle<ent::Entity> aHandle,
+                     const component::GlobalPose & aGlobPose,
+                     // TODO #anim restore this constness (for the moment,
+                     // animation mutate the rig's scene)
+                     /*const*/ component::VisualModel & aVisualModel)
             {
-                const auto & rigAnimation = aHandle.get()->get<component::RigAnimation>();
-                skeletal = visu::Entity::SkeletalAnimation{
-                    .mRig = &aVisualModel.mModel->mRig,
-                    .mAnimation = rigAnimation.mAnimation,
-                    .mParameterValue = rigAnimation.mParameterValue,
-                };
-            }
-            state->mEntities.insert(
-                aHandle.id(),
-                visu::Entity{
-                    .mPosition_world = aGlobPose.mPosition,
-                    .mScaling = aGlobPose.mInstanceScaling *
-                                    aGlobPose.mScaling,
-                    .mOrientation = aGlobPose.mOrientation,
-                    .mColor = aGlobPose.mColor,
-                    .mModel = aVisualModel.mModel,
-                    .mRigging = std::move(skeletal),
-                    .mDisableInterpolation = aVisualModel.mDisableInterpolation,
-                });
-            // Note: Although it does not feel correct, this is a convenient place to reset this flag
-            aVisualModel.mDisableInterpolation = false;
+        // Note: This feels bad to test component presence here
+        // but we do not want to handle VisualModel the same way depending on
+        // the presence of RigAnimation (and we do not have "negation" on
+        // Queries, to separately get VisualModels without RigAnimation)
+        visu::Entity::SkeletalAnimation skeletal;
+        if (auto entity = *aHandle.get(); entity.has<component::RigAnimation>())
+        {
+            const auto & rigAnimation =
+                aHandle.get()->get<component::RigAnimation>();
+            skeletal = visu::Entity::SkeletalAnimation{
+                .mRig = &aVisualModel.mModel->mRig,
+                .mAnimation = rigAnimation.mAnimation,
+                .mParameterValue = rigAnimation.mParameterValue,
+            };
+        }
+        state->mEntities.insert(
+            aHandle.id(),
+            visu::Entity{
+                .mPosition_world = aGlobPose.mPosition,
+                .mScaling = aGlobPose.mInstanceScaling * aGlobPose.mScaling,
+                .mOrientation = aGlobPose.mOrientation,
+                .mColor = aGlobPose.mColor,
+                .mModel = aVisualModel.mModel,
+                .mRigging = std::move(skeletal),
+                .mDisableInterpolation = aVisualModel.mDisableInterpolation,
+            });
+        // Note: Although it does not feel correct, this is a convenient place
+        // to reset this flag
+        aVisualModel.mDisableInterpolation = false;
         });
 
     //
     // Worldspace Text
     //
     mQueryTextWorld.get(nomutation)
-        .each([&state](ent::Handle<ent::Entity> aHandle,
-                       component::Text & aText,
-                       component::GlobalPose & aGlobPose) 
-        {
-            state->mTextWorldEntities.insert(
-                aHandle.id(),
-                visu::Text{
-                    .mPosition_world = aGlobPose.mPosition,
-                    // TODO remove the hardcoded value of 100
-                    // Note hardcoded 100 scale down. Because I'd like a value of 1 for the scale of the component
-                    // to still mean "about visible".
-                    .mScaling = aGlobPose.mInstanceScaling 
-                                * aGlobPose.mScaling / 100.f,
-                    .mOrientation = aGlobPose.mOrientation,
-                    .mString = aText.mString,
-                    .mFont = aText.mFont,
-                    .mColor = aText.mColor,
-                });
+        .each(
+            [&state](ent::Handle<ent::Entity> aHandle, component::Text & aText,
+                     component::GlobalPose & aGlobPose)
+            {
+        state->mTextWorldEntities.insert(
+            aHandle.id(),
+            visu::Text{
+                .mPosition_world = aGlobPose.mPosition,
+                // TODO remove the hardcoded value of 100
+                // Note hardcoded 100 scale down. Because I'd like a value of 1
+                // for the scale of the component to still mean "about visible".
+                .mScaling =
+                    aGlobPose.mInstanceScaling * aGlobPose.mScaling / 100.f,
+                .mOrientation = aGlobPose.mOrientation,
+                .mString = aText.mString,
+                .mFont = aText.mFont,
+                .mColor = aText.mColor,
+            });
         });
 
     //
     // Screenspace Text
     //
     mQueryTextScreen.get(nomutation)
-        .each([&state, this](ent::Handle<ent::Entity> aHandle,
-                             component::Text & aText,
-                             component::PoseScreenSpace & aPose) 
-        {
+        .each(
+            [&state, this](ent::Handle<ent::Entity> aHandle,
+                           component::Text & aText,
+                           component::PoseScreenSpace & aPose)
+            {
+        math::Position<3, float> position_screenPix{
+            aPose.mPosition_u.cwMul(
+                // TODO this multiplication should be done once and cached
+                // but it should be refreshed on framebuffer resizing.
+                static_cast<math::Position<2, GLfloat>>(
+                    this->mAppInterface->getFramebufferSize())
+                / 2.f),
+            0.f};
 
-            math::Position<3, float> position_screenPix{
-                aPose.mPosition_u.cwMul(
-                    // TODO this multiplication should be done once and cached
-                    // but it should be refreshed on framebuffer resizing.
-                    static_cast<math::Position<2, GLfloat>>(this->mAppInterface->getFramebufferSize())/2.f),
-                    0.f
-            };
-
-            state->mTextScreenEntities.insert(
-                aHandle.id(),
-                visu::Text{
-                    .mPosition_world = position_screenPix,
-                    .mScaling = math::Size<3, float>{aPose.mScale, 1.f}, 
-                    .mOrientation = math::Quaternion{
-                                                math::UnitVec<3, float>::MakeFromUnitLength({0.f, 0.f, 1.f}),
-                                                aPose.mRotationCCW
-                                            },
-                    .mString = aText.mString,
-                    .mFont = aText.mFont,
-                    .mColor = aText.mColor,
-                });
+        state->mTextScreenEntities.insert(
+            aHandle.id(),
+            visu::Text{
+                .mPosition_world = position_screenPix,
+                .mScaling = math::Size<3, float>{aPose.mScale, 1.f},
+                .mOrientation =
+                    math::Quaternion{
+                        math::UnitVec<3, float>::MakeFromUnitLength(
+                            {0.f, 0.f, 1.f}),
+                        aPose.mRotationCCW},
+                .mString = aText.mString,
+                .mFont = aText.mFont,
+                .mColor = aText.mColor,
+            });
         });
 
     auto font =

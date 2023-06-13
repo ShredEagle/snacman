@@ -1,11 +1,24 @@
 #include "Explosion.h"
+
+#include "../component/Explosion.h"
+#include "../component/Geometry.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
+
+#include "../GameContext.h"
+
 #include "../typedef.h"
-#include "snacman/simulations/snacgame/component/Explosion.h"
-#include "snacman/simulations/snacgame/component/Geometry.h"
+
+#include <entity/EntityManager.h>
 
 namespace ad {
 namespace snacgame {
 namespace system {
+
+Explosion::Explosion(GameContext & aGameContext) :
+    mExplosions(aGameContext.mWorld)
+{}
+
 void Explosion::update(const snac::Time & aTime)
 {
     Phase removeExplosion;

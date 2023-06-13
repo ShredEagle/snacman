@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../EntityWrap.h"
-#include "../GameContext.h"
 
 #include "../component/SceneNode.h"
 
@@ -15,8 +14,6 @@
 
 namespace ad {
 
-struct RawInput;
-
 namespace snacgame {
     namespace component { struct MappingContext; }
 namespace scene {
@@ -26,6 +23,7 @@ const inline std::string gQuitTransitionName = "quit";
 struct Transition
 {
     std::string mTransitionName;
+    int mTransitionControllerId = -1;
     bool shouldTeardown = true;
     bool shouldSetup = true;
 
@@ -51,10 +49,18 @@ struct hash<ad::snacgame::scene::Transition>
 }; // namespace std
 
 namespace ad {
+
+namespace snac {
+struct Time;
+}
+
+struct RawInput;
+
 namespace snacgame {
 
-namespace scene {
+struct GameContext;
 
+namespace scene {
 
 struct SceneId
 {
@@ -66,16 +72,10 @@ class Scene
 {
 public:
     //TODO :(franz) make a cpp file please
-    Scene(const std::string & aName,
-            GameContext & aGameContext,
+    Scene(std::string aName,
+          GameContext & aGameContext,
           EntityWrap<component::MappingContext> & aContext,
-          ent::Handle<ent::Entity> aSceneRoot) :
-        mName{aName},
-        mSceneRoot{aSceneRoot},
-        mGameContext{aGameContext},
-        mSystems{mGameContext.mWorld.addEntity()},
-        mContext{aContext}
-    {}
+          ent::Handle<ent::Entity> aSceneRoot);
     Scene(const Scene &) = default;
     Scene(Scene &&) = delete;
     Scene & operator=(const Scene &) = delete;

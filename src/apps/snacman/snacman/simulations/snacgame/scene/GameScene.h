@@ -2,18 +2,16 @@
 
 #include "Scene.h"
 
-#include "../component/Controller.h"
-#include "../component/LevelTags.h"
-#include "../component/PathToOnGrid.h"
-#include "../component/PlayerHud.h"
-#include "../component/PlayerSlot.h"
-
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 #include <string>
 
 namespace ad {
+
+namespace snac {
+struct Time;
+}
 
 struct RawInput;
 
@@ -24,6 +22,14 @@ template <class T_wrapped> struct EntityWrap;
 
 namespace component {
 struct MappingContext;
+struct PlayerSlot;
+struct PlayerHud;
+struct PlayerRoundData;
+struct Controller;
+struct PathToOnGrid;
+struct LevelTile;
+struct RoundTransient;
+struct LevelSetupData;
 }
 
 namespace scene {
@@ -31,7 +37,7 @@ namespace scene {
 class GameScene : public Scene
 {
 public:
-    GameScene(const std::string & aName,
+    GameScene(std::string aName,
             GameContext & aGameContext,
               EntityWrap<component::MappingContext> & aContext,
               ent::Handle<ent::Entity> aSceneRoot
@@ -45,9 +51,11 @@ public:
     void teardown(RawInput & aInput) override;
 
 private:
-    ent::Query<component::LevelEntity> mTiles;
+    ent::Query<component::LevelTile> mTiles;
+    ent::Query<component::RoundTransient> mRoundTransients;
     ent::Query<component::PlayerSlot> mSlots;
-    ent::Query<component::PlayerSlot, component::Controller> mPlayers;
+    ent::Query<component::PlayerHud> mHuds;
+    ent::Query<component::PlayerRoundData, component::Controller> mPlayers;
     ent::Query<component::PathToOnGrid> mPathfinders;
 
     std::optional<ent::Handle<ent::Entity>> mStageDecor;

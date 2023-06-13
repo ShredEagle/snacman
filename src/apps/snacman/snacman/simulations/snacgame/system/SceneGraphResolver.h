@@ -1,18 +1,13 @@
 #pragma once
 
-
-#include "../GameContext.h"
-#include "../SceneGraph.h"
-
 #include <snacman/Logging.h>
 
 #include <entity/Entity.h>
-#include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 namespace ad {
 namespace snacgame {
-
+struct GameContext;
 namespace component {
 struct GlobalPose;
 struct SceneNode;

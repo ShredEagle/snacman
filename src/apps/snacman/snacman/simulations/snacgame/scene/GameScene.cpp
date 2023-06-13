@@ -1,31 +1,50 @@
 // Splitted between two-files because there was an error on Windows:
-// fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj
+// fatal  error C1128: number of sections exceeded object file format limit:
+// compile with /bigobj
 
 #include "GameScene.h"
-#include "snacman/simulations/snacgame/system/AnimationManager.h"
-#include "snacman/simulations/snacgame/system/Explosion.h"
 
+#include "snacman/EntityUtilities.h"
+
+#include "../component/AllowedMovement.h"
+#include "../component/Collision.h"
 #include "../component/Context.h"
 #include "../component/Controller.h"
+#include "../component/Explosion.h"
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
 #include "../component/LevelData.h"
-#include "../component/LevelTags.h" // for Level...
-#include "../component/PlayerLifeCycle.h"
-#include "../component/PlayerMoveState.h"
-#include "../component/PlayerSlot.h" // for Playe...
+#include "../component/MovementScreenSpace.h"
+#include "../component/PathToOnGrid.h"
+#include "../component/PlayerHud.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerRoundData.h"
+#include "../component/PlayerSlot.h"
+#include "../component/Portal.h"
 #include "../component/PoseScreenSpace.h"
+#include "../component/RigAnimation.h"
+#include "../component/Spawner.h"
 #include "../component/Speed.h"
+#include "../component/Tags.h"
 #include "../component/Text.h"
 #include "../component/VisualModel.h"
-
+#include "../Entities.h"
+#include "../EntityWrap.h" 
+#include "../GameContext.h"
+#include "../GameParameters.h"
+#include "../InputCommandConverter.h"
+#include "../InputConstants.h"
+#include "../scene/Scene.h"
+#include "../SceneGraph.h"
 #include "../system/AdvanceAnimations.h"
 #include "../system/AllowMovement.h"
+#include "../system/AnimationManager.h"
 #include "../system/ConsolidateGridMovement.h"
 #include "../system/Debug_BoundingBoxes.h"
 #include "../system/EatPill.h"
+#include "../system/Explosion.h"
 #include "../system/IntegratePlayerMovement.h"
-#include "../system/LevelCreator.h"
+#include "../system/LevelManager.h"
 #include "../system/MovementIntegration.h"
 #include "../system/Pathfinding.h"
 #include "../system/PlayerInvulFrame.h"
@@ -34,15 +53,6 @@
 #include "../system/PowerUpUsage.h"
 #include "../system/RoundMonitor.h"
 #include "../system/SceneGraphResolver.h"
-
-#include "../Entities.h"
-#include "../EntityWrap.h"  // for Entit...
-#include "../GameContext.h" // for GameC...
-#include "../GameParameters.h"
-#include "../InputCommandConverter.h"
-#include "../InputConstants.h" // for gJoin
-#include "../scene/Scene.h"    // for Trans...
-#include "../SceneGraph.h"
 #include "../typedef.h"
 
 #include <snacman/Input.h>
@@ -54,6 +64,7 @@
 #include <array>   // for array
 #include <cstddef> // for size_t
 #include <map>     // for opera...
+#include <string>
 #include <tuple>  // for get
 #include <vector> // for vector
 
@@ -63,51 +74,23 @@ namespace scene {
 
 const char * const gMarkovRoot{"markov/"};
 
-namespace {
-
-EntHandle createLevel(GameContext & aContext, const char * aLvlFile)
-{
-    EntHandle level = aContext.mWorld.addEntity();
-    {
-        Phase createLevel;
-        auto markovRoot = aContext.mResources.find(gMarkovRoot);
-        Entity levelEntity = *level.get(createLevel);
-        levelEntity.add(component::LevelData(aContext.mWorld,
-                                             markovRoot.value(), aLvlFile,
-                                             {19, 19, 1}, 123123));
-        levelEntity.add(component::SceneNode{});
-        // TODO this might have not impact, since setupLevel() also add Geometry component
-        levelEntity.add(component::Geometry{.mPosition = {-7.f, -7.f, 0.f}});
-        levelEntity.add(component::GlobalPose{});
-    }
-    aContext.mLevel = level;
-    return level;
-}
-
-void teardownLevel(GameContext & aGameContext, Phase & aPhase)
-{
-    aGameContext.mLevel->get(aPhase)->remove<component::SceneNode>();
-    aGameContext.mLevel->get(aPhase)->remove<component::LevelCreated>();
-    aGameContext.mLevel->get(aPhase)->remove<component::Geometry>();
-    aGameContext.mLevel->get(aPhase)->remove<component::GlobalPose>();
-}
-
-} // unnamed namespace
-
-GameScene::GameScene(const std::string & aName,
+GameScene::GameScene(std::string aName,
                      GameContext & aGameContext,
                      EntityWrap<component::MappingContext> & aContext,
                      EntHandle aSceneRoot) :
     Scene(aName, aGameContext, aContext, aSceneRoot),
     mTiles{mGameContext.mWorld},
+    mRoundTransients{mGameContext.mWorld},
     mSlots{mGameContext.mWorld},
+    mHuds{mGameContext.mWorld},
     mPlayers{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
-    /* createLevel(mGameContext, */
-    /*             mPlayers.countMatches() == 4 ? "snaclvl4.xml" : "snaclvl3.xml"); */
-    createLevel(mGameContext,
-                "snaclvl4.xml");
+    mGameContext.mLevelData = EntityWrap<component::LevelSetupData>(
+        mGameContext.mWorld,
+        component::LevelSetupData(
+            mGameContext.mResources.find(gMarkovRoot).value(), "snaclvl4.xml",
+            {Size3_i{19, 19, 1}}, 123123));
 }
 
 void GameScene::teardown(RawInput & aInput)
@@ -115,24 +98,28 @@ void GameScene::teardown(RawInput & aInput)
     TIME_SINGLE(Main, "teardown game scene");
     {
         Phase destroyPlayer;
-        mPlayers.each([&destroyPlayer](EntHandle aHandle,
-                                 component::PlayerSlot & aSlot,
-                                 component::Controller & aController) {
-            removePlayerFromGame(destroyPlayer, aHandle);
-        });
-
+        mSlots.each([&destroyPlayer](EntHandle aHandle, component::PlayerSlot &)
+                    { aHandle.get(destroyPlayer)->erase(); });
+        // Delet hud
+        mHuds.each([&destroyPlayer](EntHandle aHandle, component::PlayerHud &)
+                    {eraseEntityRecursive(aHandle, destroyPlayer);});
+        mPlayers.each(
+            [&destroyPlayer](EntHandle aHandle, component::Controller &)
+            { eraseEntityRecursive(aHandle, destroyPlayer); });
     }
     {
         Phase destroy;
 
         mStageDecor->get(destroy)->erase();
 
-        mTiles.each(
-            [&destroy](EntHandle aHandle, const component::LevelEntity &) {
-                aHandle.get(destroy)->erase();
-            });
+        mTiles.each([&destroy](EntHandle aHandle, const component::LevelTile &)
+                    { aHandle.get(destroy)->erase(); });
+        // Destroy round transient and components
+        mRoundTransients.each(
+            [&destroy](EntHandle aHandle, component::RoundTransient &)
+            { aHandle.get(destroy)->erase(); });
 
-        teardownLevel(mGameContext, destroy);
+        mGameContext.mLevel->get(destroy)->erase();
 
         mSystems.get(destroy)->erase();
         mSystems = mGameContext.mWorld.addEntity();
@@ -140,14 +127,14 @@ void GameScene::teardown(RawInput & aInput)
     {
         // TODO: (franz) remove this at some point
         Phase debugDestroy;
-        mPathfinders.each([&debugDestroy](EntHandle aHandle,
-                                          const component::PathToOnGrid &) {
-            aHandle.get(debugDestroy)->erase();
-        });
+        mPathfinders.each(
+            [&debugDestroy](EntHandle aHandle, const component::PathToOnGrid &)
+            { aHandle.get(debugDestroy)->erase(); });
     }
 }
 
-std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput & aInput)
+std::optional<Transition> GameScene::update(const snac::Time & aTime,
+                                            RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
 
@@ -157,8 +144,9 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
 
     std::vector<int> boundControllers;
 
-    mPlayers.each([&](component::PlayerSlot & aPlayerSlot,
-                      component::Controller & aController) {
+    mPlayers.each(
+        [&](component::PlayerRoundData &, component::Controller & aController)
+        {
         switch (aController.mType)
         {
         case ControllerType::Keyboard:
@@ -179,10 +167,10 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
         quit |= static_cast<bool>(aController.mInput.mCommand & gQuitCommand);
     });
 
-    // This works because gKeyboardControllerIndex is -1
+    // This works because gKeyboardControllerIndex is aInput.mGamepads.size() + 1
     // So this is a bit janky but it unifies the player join code
-    for (int controlIndex = gKeyboardControllerIndex;
-         controlIndex < (int) aInput.mGamepads.size(); ++controlIndex)
+    for (int controlIndex = 0;
+         controlIndex < (int) aInput.mGamepads.size() + 1; ++controlIndex)
     {
         if (std::find(boundControllers.begin(), boundControllers.end(),
                       controlIndex)
@@ -195,21 +183,18 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
             if (controllerIsKeyboard)
             {
                 input = convertKeyboardInput("unbound", aInput.mKeyboard,
-                                               mContext->mKeyboardMapping);
+                                             mContext->mKeyboardMapping);
             }
             else
             {
                 GamepadState & rawGamepad = aInput.mGamepads.at(controlIndex);
                 input = convertGamepadInput("unbound", rawGamepad,
-                                              mContext->mGamepadMapping);
+                                            mContext->mGamepadMapping);
             }
 
             if (input.mCommand & gJoin)
             {
-                findSlotAndBind(mGameContext, mSlots,
-                                controllerIsKeyboard ? ControllerType::Keyboard
-                                                     : ControllerType::Gamepad,
-                                static_cast<int>(controlIndex));
+                addPlayer(mGameContext, controlIndex);
             }
         }
     }
@@ -219,13 +204,64 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
         return Transition{.mTransitionName = "back"};
     }
 
-    mSystems.get(update)->get<system::LevelCreator>().update();
+    // This should be divided in four phases right now
+    // The cleanup phase
 
-    mSystems.get(update)->get<system::PlayerInvulFrame>().update((float)aTime.mDeltaSeconds);
+    if (mGameContext.mLevel && mGameContext.mLevel->isValid()
+        && mSystems.get(update)->get<system::RoundMonitor>().isRoundOver())
+    {
+        Phase cleanup;
+        component::LevelSetupData & data = mGameContext.mLevelData->get();
+
+        mSystems.get(update)->get<system::RoundMonitor>().updateRoundScore();
+        // Destroy level tiles
+        mSystems.get(update)
+            ->get<system::LevelManager>()
+            .destroyTilesEntities();
+
+        data.mSeed += 1;
+
+        // Destroy the level entity
+        mGameContext.mLevel->get(cleanup)->erase();
+
+        // Destroy round transient and components
+        mRoundTransients.each(
+            [&cleanup](EntHandle aHandle, component::RoundTransient &)
+            { aHandle.get(cleanup)->erase(); });
+        // Remove the player from the scene graph
+    }
+
+    if (!mGameContext.mLevel || !mGameContext.mLevel->isValid())
+    {
+        const component::LevelSetupData & data = mGameContext.mLevelData->get();
+        mGameContext.mLevel =
+            mSystems.get(update)->get<system::LevelManager>().createLevel(data);
+        insertEntityInScene(*mGameContext.mLevel, mSceneRoot);
+    }
+
+    // TODO: (franz) maybe at some point it would be better to
+    // spawn player between rounds
+    // This however needs to be thought through (like if someone starts
+    // a game alone, should we spawn someone during the round in that case)
+    mSystems.get(update)->get<system::PlayerSpawner>().spawnPlayers();
+    // The creation of the level
+    // Spawning the players
+    //  if there is an unspawned player and is there room in the map
+    //  spawn the player
+    //  else
+    //  put the player in a queue for the next round
+    //  Add all spawned player to the scene graph
+    // The game phase
+
+    mSystems.get(update)->get<system::PlayerInvulFrame>().update(
+        (float) aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::AllowMovement>().update();
-    mSystems.get(update)->get<system::ConsolidateGridMovement>().update((float)aTime.mDeltaSeconds);
-    mSystems.get(update)->get<system::IntegratePlayerMovement>().update((float)aTime.mDeltaSeconds);
-    mSystems.get(update)->get<system::MovementIntegration>().update((float)aTime.mDeltaSeconds);
+    mSystems.get(update)->get<system::ConsolidateGridMovement>().update(
+        (float) aTime.mDeltaSeconds);
+    mSystems.get(update)->get<system::IntegratePlayerMovement>().update(
+        (float) aTime.mDeltaSeconds);
+    mSystems.get(update)->get<system::MovementIntegration>().update(
+        (float) aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::AnimationManager>().update();
     mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
     mSystems.get(update)->get<system::Pathfinding>().update();
@@ -237,9 +273,6 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime, RawInput &
     mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate();
     mSystems.get(update)->get<system::PowerUpUsage>().update(aTime);
     mSystems.get(update)->get<system::EatPill>().update();
-
-    mSystems.get(update)->get<system::RoundMonitor>().update();
-    mSystems.get(update)->get<system::PlayerSpawner>().update((float)aTime.mDeltaSeconds);
 
     mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
 

@@ -1,24 +1,30 @@
 #pragma once
 
-#include "../GameContext.h"
-
-#include "../component/RigAnimation.h"
 
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
 
 
 namespace ad {
+
+namespace snac {
+struct Time;
+}
+
 namespace snacgame {
+
+struct GameContext;
+
+namespace component {
+struct RigAnimation;
+}
+
 namespace system {
 
 class AdvanceAnimations
 {
 public:
-    AdvanceAnimations(GameContext & aGameContext) :
-        mAnimations{aGameContext.mWorld}
-    {}
-
+    AdvanceAnimations(GameContext & aGameContext);
     void update(const snac::Time & aSimulationTime);
 
 private:

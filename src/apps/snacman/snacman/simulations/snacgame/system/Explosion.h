@@ -1,19 +1,23 @@
 #pragma once
 
-#include "entity/Query.h"
-#include "snacman/Timing.h"
-#include "snacman/simulations/snacgame/GameContext.h"
-#include "snacman/simulations/snacgame/component/Explosion.h"
-#include "snacman/simulations/snacgame/component/Geometry.h"
+#include <snacman/Timing.h>
+
+#include <entity/Query.h>
+
 namespace ad {
 namespace snacgame {
+struct GameContext;
+
+namespace component {
+struct Explosion;
+struct Geometry;
+}
+
 namespace system {
 class Explosion
 {
 public:
-    Explosion(GameContext & aGameContext) :
-        mExplosions(aGameContext.mWorld)
-    {}
+    Explosion(GameContext & aGameContext);
 
     void update(const snac::Time & aTime);
 private:
