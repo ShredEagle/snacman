@@ -4,8 +4,10 @@
 
 #include <string>
 
+namespace std {
 namespace filesystem {
 class path;
+}
 }
 
 namespace ad {
@@ -20,7 +22,7 @@ class SceneStateMachine
 {
 public:
     SceneStateMachine(ent::EntityManager & aWorld,
-                      const filesystem::path & aPath,
+                      const std::filesystem::path & aPath,
                       EntityWrap<component::MappingContext> & aContext,
                       GameContext & aGameContext);
     void changeState(GameContext & aContext, scene::Transition & aTransition, RawInput & aInput);

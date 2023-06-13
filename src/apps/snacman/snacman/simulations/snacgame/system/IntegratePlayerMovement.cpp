@@ -10,6 +10,8 @@
 #include "../component/RigAnimation.h"
 #include "../component/LevelData.h"
 #include "../component/VisualModel.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include <snacman/EntityUtilities.h>
 #include <snacman/Profiling.h>

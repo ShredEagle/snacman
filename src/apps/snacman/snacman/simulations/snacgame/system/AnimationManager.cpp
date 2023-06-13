@@ -2,6 +2,8 @@
 
 #include "../component/RigAnimation.h"
 #include "../component/PlayerRoundData.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include "../GameContext.h"
 #include "../InputConstants.h"

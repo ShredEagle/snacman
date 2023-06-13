@@ -1,7 +1,18 @@
 #include "SceneStateMachine.h"
 
+#include "../GameContext.h"
+
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
+#include "../component/PlayerSlot.h"
+#include "../component/PlayerHud.h"
+#include "../component/PlayerRoundData.h"
+#include "../component/Controller.h"
+#include "../component/PathToOnGrid.h"
+#include "../component/MenuItem.h"
+#include "../component/Text.h"
+#include "../component/Tags.h"
+#include "../component/PlayerGameData.h"
 
 #include "../scene/GameScene.h"
 #include "../scene/MenuScene.h"

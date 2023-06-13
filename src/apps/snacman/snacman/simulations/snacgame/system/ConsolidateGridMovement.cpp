@@ -8,6 +8,8 @@
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
 #include "../component/AllowedMovement.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include "../GameContext.h"
 #include "../typedef.h"

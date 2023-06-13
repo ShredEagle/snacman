@@ -99,6 +99,7 @@ set(${TARGET_NAME}_SOURCES
     Resources.cpp
 
     simulations/snacgame/Entities.cpp
+    simulations/snacgame/GameContext.cpp
     simulations/snacgame/ImguiSceneEditor.cpp
     simulations/snacgame/PlayerSlotManager.cpp
     simulations/snacgame/Renderer.cpp
@@ -110,6 +111,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/component/DebugUi.cpp
     simulations/snacgame/component/PlayerHud.cpp
 
+    simulations/snacgame/scene/Scene.cpp
     simulations/snacgame/scene/GameScene.cpp
     simulations/snacgame/scene/GameScene-setup.cpp
     simulations/snacgame/scene/MenuScene.cpp

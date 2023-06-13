@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../EntityWrap.h"
-#include "../GameContext.h"
 
 #include "../component/SceneNode.h"
 
@@ -58,6 +57,9 @@ struct Time;
 struct RawInput;
 
 namespace snacgame {
+
+struct GameContext;
+
 namespace scene {
 
 struct SceneId
@@ -73,13 +75,7 @@ public:
     Scene(std::string aName,
           GameContext & aGameContext,
           EntityWrap<component::MappingContext> & aContext,
-          ent::Handle<ent::Entity> aSceneRoot) :
-        mName{aName},
-        mSceneRoot{aSceneRoot},
-        mGameContext{aGameContext},
-        mSystems{mGameContext.mWorld.addEntity()},
-        mContext{aContext}
-    {}
+          ent::Handle<ent::Entity> aSceneRoot);
     Scene(const Scene &) = default;
     Scene(Scene &&) = delete;
     Scene & operator=(const Scene &) = delete;

@@ -9,6 +9,7 @@
 #include "component/PathToOnGrid.h"
 #include "component/PlayerHud.h"
 #include "component/PlayerSlot.h"
+#include "component/PlayerGameData.h"
 #include "component/PoseScreenSpace.h"
 #include "component/RigAnimation.h"
 #include "component/SceneNode.h"

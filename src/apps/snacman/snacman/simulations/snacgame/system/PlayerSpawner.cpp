@@ -3,7 +3,9 @@
 #include "SceneGraphResolver.h"
 
 #include "../component/PlayerSlot.h"
+#include "../component/PlayerGameData.h"
 #include "../component/SceneNode.h"
+#include "../component/GlobalPose.h"
 #include "../component/Spawner.h"
 #include "../Entities.h"
 #include "../GameContext.h"

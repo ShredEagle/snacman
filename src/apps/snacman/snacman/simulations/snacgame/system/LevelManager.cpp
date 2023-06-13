@@ -5,6 +5,8 @@
 #include "../component/Portal.h"
 #include "../component/SceneNode.h"
 #include "../component/Tags.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include "../Entities.h"
 #include "../GameContext.h"
@@ -125,15 +127,15 @@ LevelManager::createLevel(const component::LevelSetupData & aSetupData)
                             mRandom() % static_cast<int>(PowerUpType::None)),
                         gMinPowerUpPeriod
                             + (gMaxPowerUpPeriod - gMinPowerUpPeriod)
-                                  * (mRandom() / (float) gMaxRand));
+                                  * ((float)mRandom() / (float) gMaxRand));
                     break;
                 }
                 case 'K':
                 {
                     type = component::TileType::Portal;
-                    portalIndices.push_back(flatIndex);
+                    portalIndices.push_back((int)flatIndex);
                     createPortalEntity(*mGameContext, createLevel, tilePos,
-                                       flatIndex);
+                                       (int)flatIndex);
                     break;
                 }
                 case 'F':

@@ -1,6 +1,8 @@
 #include "AdvanceAnimations.h"
 
 #include "../GameContext.h"
+#include "../component/PlayerSlot.h"
+#include "../component/PlayerGameData.h"
 #include "../component/RigAnimation.h"
 
 #include <snacman/Timing.h>

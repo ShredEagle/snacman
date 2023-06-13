@@ -8,6 +8,8 @@
 #include "../component/PlayerHud.h"
 #include "../component/PlayerRoundData.h"
 #include "../component/SceneNode.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include "../GameParameters.h"
 #include "../typedef.h"

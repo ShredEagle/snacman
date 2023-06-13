@@ -5,6 +5,8 @@
 #include "../GameContext.h"
 #include "../InputCommandConverter.h"
 
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 #include "../component/Geometry.h"
 #include "../component/AllowedMovement.h"
 #include "../component/LevelData.h"

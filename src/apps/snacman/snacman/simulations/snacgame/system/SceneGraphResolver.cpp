@@ -8,6 +8,8 @@
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
 #include "../component/SceneNode.h"
+#include "../component/PlayerSlot.h"
+#include "../component/PlayerGameData.h"
 
 #include <snacman/Profiling.h>
 #include <snacman/EntityUtilities.h>

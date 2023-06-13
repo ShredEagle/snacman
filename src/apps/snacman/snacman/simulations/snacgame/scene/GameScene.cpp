@@ -17,23 +17,24 @@
 #include "../component/MovementScreenSpace.h"
 #include "../component/PathToOnGrid.h"
 #include "../component/PlayerHud.h"
+#include "../component/PlayerGameData.h"
 #include "../component/PlayerRoundData.h"
-#include "../component/PlayerSlot.h" // for Playe...
+#include "../component/PlayerSlot.h"
 #include "../component/Portal.h"
 #include "../component/PoseScreenSpace.h"
 #include "../component/RigAnimation.h"
 #include "../component/Spawner.h"
 #include "../component/Speed.h"
-#include "../component/Tags.h" // for Level...
+#include "../component/Tags.h"
 #include "../component/Text.h"
 #include "../component/VisualModel.h"
 #include "../Entities.h"
-#include "../EntityWrap.h"  // for Entit...
-#include "../GameContext.h" // for GameC...
+#include "../EntityWrap.h" 
+#include "../GameContext.h"
 #include "../GameParameters.h"
 #include "../InputCommandConverter.h"
-#include "../InputConstants.h" // for gJoin
-#include "../scene/Scene.h"    // for Trans...
+#include "../InputConstants.h"
+#include "../scene/Scene.h"
 #include "../SceneGraph.h"
 #include "../system/AdvanceAnimations.h"
 #include "../system/AllowMovement.h"
@@ -54,14 +55,15 @@
 #include "../system/SceneGraphResolver.h"
 #include "../typedef.h"
 
-#include <algorithm>
-#include <array>   // for array
-#include <cstddef> // for size_t
-#include <map>     // for opera...
 #include <snacman/Input.h>
 #include <snacman/Profiling.h>
 #include <snacman/QueryManipulation.h>
 #include <snacman/Resources.h>
+
+#include <algorithm>
+#include <array>   // for array
+#include <cstddef> // for size_t
+#include <map>     // for opera...
 #include <string>
 #include <tuple>  // for get
 #include <vector> // for vector

@@ -3,6 +3,8 @@
 #include "../component/PlayerRoundData.h"
 #include "../component/RigAnimation.h"
 #include "../component/VisualModel.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include "../typedef.h"
 #include "../GameContext.h"

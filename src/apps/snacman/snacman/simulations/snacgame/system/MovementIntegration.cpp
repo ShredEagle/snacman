@@ -6,6 +6,8 @@
 #include "../component/MovementScreenSpace.h"
 #include "../component/PoseScreenSpace.h"
 #include "../component/Speed.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include <snacman/Profiling.h>
 

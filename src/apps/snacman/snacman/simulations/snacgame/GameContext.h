@@ -29,11 +29,7 @@ class Renderer;
 
 struct GameContext
 {
-    GameContext(snac::Resources aResources, snac::RenderThread<Renderer> & aRenderThread) :
-        mResources{aResources},
-        mRenderThread{aRenderThread},
-        mSlotManager(this)
-    {};
+    GameContext(snac::Resources aResources, snac::RenderThread<Renderer> & aRenderThread);
 
     snac::Resources mResources;
     ent::EntityManager mWorld;

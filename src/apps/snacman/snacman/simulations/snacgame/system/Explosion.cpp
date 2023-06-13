@@ -2,6 +2,8 @@
 
 #include "../component/Explosion.h"
 #include "../component/Geometry.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include "../GameContext.h"
 

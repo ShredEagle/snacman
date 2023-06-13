@@ -7,6 +7,8 @@
 #include "../component/Geometry.h"
 #include "../component/PathToOnGrid.h"
 #include "../component/LevelData.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>

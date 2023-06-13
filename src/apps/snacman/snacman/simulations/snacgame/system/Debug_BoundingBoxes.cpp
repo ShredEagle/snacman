@@ -4,6 +4,8 @@
 #include "../component/GlobalPose.h"
 #include "../component/VisualModel.h"
 #include "../component/PlayerRoundData.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerSlot.h"
 
 #include "../GameParameters.h"
 #include "../GameContext.h"

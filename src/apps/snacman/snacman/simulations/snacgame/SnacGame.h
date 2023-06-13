@@ -5,6 +5,9 @@
 #include "Renderer.h"
 #include "ImguiSceneEditor.h"
 
+#include "component/PlayerSlot.h"
+#include "component/PlayerGameData.h"
+
 #include <snacman/Input.h>
 #include <snacman/Timing.h>
 
@@ -37,7 +40,6 @@ struct PoseScreenSpace;
 struct Text;
 struct VisualModel;
 struct PlayerHud;
-struct PlayerSlot;
 }
 namespace system {
 class OrbitalCamera; 

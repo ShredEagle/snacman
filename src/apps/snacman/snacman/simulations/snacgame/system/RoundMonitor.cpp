@@ -4,6 +4,7 @@
 #include "../component/LevelData.h"
 #include "../component/PlayerRoundData.h"
 #include "../component/SceneNode.h"
+#include "../component/PlayerSlot.h"
 
 #include "../Entities.h"
 #include "../GameContext.h"

@@ -10,6 +10,8 @@
 #include "../component/Geometry.h"
 #include "../component/LevelData.h"
 #include "../component/VisualModel.h"
+#include "../component/PlayerSlot.h"
+#include "../component/PlayerGameData.h"
 
 #include "../GameContext.h"
 #include "../Entities.h"
