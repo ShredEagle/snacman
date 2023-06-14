@@ -427,8 +427,24 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
     return hudHandle;
 }
 
-// TODO: (franz) does not need the slot handle just the index
-EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
+ent::Handle<ent::Entity> createCrown(GameContext & aContext)
+{
+    Phase createCrown;
+    EntHandle crownHandle = aContext.mWorld.addEntity();
+    Entity crown = *crownHandle.get(createCrown);
+
+    std::shared_ptr<snac::Model> crownData = addMeshGeoNode(
+        aContext, crown, "models/crown/crown.gltf",
+        "effects/MeshTextures.sefx", Pos3::Zero(), 1.f,
+        gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation);
+
+    return crownHandle;
+}
+
+
+ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
+                                            EntHandle & aSlotHandle,
+                                            const Pos3 & aPosition)
 {
     const component::PlayerSlot & slot =
         aSlotHandle.get()->get<component::PlayerSlot>();
