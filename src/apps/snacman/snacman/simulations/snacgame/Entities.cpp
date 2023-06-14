@@ -435,8 +435,8 @@ ent::Handle<ent::Entity> createCrown(GameContext & aContext)
 
     std::shared_ptr<snac::Model> crownData = addMeshGeoNode(
         aContext, crown, "models/crown/crown.gltf",
-        "effects/MeshTextures.sefx", Pos3::Zero(), 1.f,
-        gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation);
+        "effects/MeshTextures.sefx", gBaseCrownPosition, 1.f,
+        gBaseCrownInstanceScaling, gBaseCrownOrientation);
 
     return crownHandle;
 }
