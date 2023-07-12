@@ -17,7 +17,6 @@ set(${TARGET_NAME}_HEADERS
     Rigging.h
     Semantic.h
     SetupDrawing.h
-    ShaderResource.h
     StackRepository.h
     UniformParameters.h
 
@@ -48,7 +47,6 @@ set(${TARGET_NAME}_SOURCES
     Rigging.cpp
     Semantic.cpp
     SetupDrawing.cpp
-    ShaderResource.cpp
 
     3rdparty/nvpro/Profiler.cpp
     3rdparty/nvpro/Profiler_gl.cpp

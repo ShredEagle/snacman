@@ -163,8 +163,8 @@ std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::Resource
         aOut << " at location " << aResource.mLocation;
     }
 
-    return aOut << " has type " << graphics::to_string(getResourceComponentType(aResource.mType))
-                << " and dimension " << getResourceDimension(aResource.mType)
+    return aOut << " has type " << graphics::to_string(graphics::getResourceComponentType(aResource.mType))
+                << " and dimension " << graphics::getResourceDimension(aResource.mType)
                 << "."
                 ;
 }
@@ -279,7 +279,7 @@ graphics::ShaderParameter IntrospectProgram::Attribute::toShaderParameter() cons
 {
     graphics::ShaderParameter result{
         (GLuint)mLocation,
-        getResourceShaderAccess(mType)
+        graphics::getResourceShaderAccess(mType)
     };
     result.mNormalize = isNormalized(mSemantic);
     return result;

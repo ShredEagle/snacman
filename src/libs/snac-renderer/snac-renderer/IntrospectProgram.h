@@ -1,11 +1,10 @@
 #pragma once
 
 
-#include "ShaderResource.h"
-
+#include <renderer/BufferIndexedBinding.h>
+#include <renderer/ShaderVertexAttribute.h>
 #include <renderer/Shading.h>
 #include <renderer/VertexSpecification.h>
-#include <renderer/BufferIndexedBinding.h>
 
 #include <iosfwd>
 #include <string>
@@ -43,10 +42,10 @@ struct IntrospectProgram
         std::string mName; // To ease debugger inspection, we only need the semantic
 
         graphics::AttributeDimension dimension() const
-        { return getResourceDimension(mType); }
+        { return graphics::getResourceDimension(mType); }
 
         GLenum componentType() const
-        { return getResourceComponentType(mType); }
+        { return graphics::getResourceComponentType(mType); }
     };
 
     struct Attribute : public Resource

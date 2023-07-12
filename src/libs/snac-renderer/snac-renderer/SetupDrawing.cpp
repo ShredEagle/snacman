@@ -151,7 +151,7 @@ void setUniforms(const UniformRepository & aUniforms,
 {
     for (const IntrospectProgram::Resource & shaderUniform : aProgram.mUniforms)
     {
-        if (!isResourceSamplerType(shaderUniform.mType))
+        if (!graphics::isResourceSamplerType(shaderUniform.mType))
         {
             if(auto found = aUniforms.find(shaderUniform.mSemantic);
                found != aUniforms.end())
@@ -199,7 +199,7 @@ void setTextures(const TextureRepository & aTextures,
     GLint textureImageUnit = 0;
     for (const IntrospectProgram::Resource & shaderUniform : aProgram.mUniforms)
     {
-        if (isResourceSamplerType(shaderUniform.mType))
+        if (graphics::isResourceSamplerType(shaderUniform.mType))
         {
             if(auto found = aTextures.find(shaderUniform.mSemantic);
                found != aTextures.end())
