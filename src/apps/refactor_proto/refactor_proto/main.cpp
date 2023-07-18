@@ -61,10 +61,12 @@ void runApplication()
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME;
+        PROFILER_BEGIN_SECTION("frame", renderer::CpuTime);
 
         renderGraph.render();
         glfwApp.swapBuffers();
 
+        PROFILER_END_SECTION;
         PROFILER_END_FRAME;
 
         std::cout << renderer::getGlobalProfiler().prettyPrint();

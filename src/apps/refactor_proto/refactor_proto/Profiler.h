@@ -39,11 +39,21 @@ class ProviderInterface
 public:
     using EntryIndex = std::size_t;
 
+    ProviderInterface(const char * aQuantityName, const char * aUnit) :
+        mQuantityName{aQuantityName},
+        mUnit{aUnit}
+    {}
+
+    virtual ~ProviderInterface() = default;
+
     virtual void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
     virtual void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
 
     // TODO make generic regarding provided type
     virtual bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) = 0;
+
+    const char * mQuantityName = "quantity";
+    const char * mUnit = "u";
 };
 
 
@@ -52,24 +62,38 @@ class Profiler
 public:
     inline static constexpr std::size_t gInitialEntries{64};
     inline static constexpr std::size_t gMaxSamples{128};
+    inline static constexpr std::size_t gMaxMetricsPerSection{16};
     inline static constexpr std::uint32_t gFrameDelay{3};
 
     using EntryIndex = ProviderInterface::EntryIndex;
+    using ProviderIndex = std::size_t;
 
     Profiler();
 
     void beginFrame();
     void endFrame();
 
-    EntryIndex beginSection(const char * aName);
+    EntryIndex beginSection(const char * aName, std::initializer_list<ProviderIndex> aProvider);
     void endSection(EntryIndex aIndex);
 
-    //struct [[nodiscard]] Section
-    //{
-    //    
-    //};
-    //
-    //Section measure(GLenum aQueryTarget);
+    struct [[nodiscard]] SectionGuard
+    {
+        ~SectionGuard()
+        {
+            mProfiler->endSection(mEntry);
+        }
+
+        Profiler * mProfiler;
+        EntryIndex mEntry;
+    };
+    
+    SectionGuard scopeSection(const char * aName, std::initializer_list<ProviderIndex> aProviders)
+    { 
+        return {
+            .mProfiler = this,
+            .mEntry = beginSection(aName, std::move(aProviders))
+        };
+    }
 
     std::string prettyPrint() const;
 
@@ -106,28 +130,54 @@ private:
     template <class T_value, class T_average = T_value>
     struct Metric
     {
-        using ProviderFunction = std::function<bool(uint32_t /*aQueryFrame*/, T_value & /*aSampleResult*/)>;
-
         //std::string mName;
+        ProviderIndex mProviderIndex;
         Values<T_value, T_average> mValues;
-        //std::array<ProviderFunction, gFrameDelay> providersBuffer{nullptr};
     };
 
     struct Entry
     {
         const char * mName;
         unsigned int mLevel = 0;
-        Metric<GLuint> mCpuDurations;
-        Metric<GLuint> mPrimitivesGenerated;
+        std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
+        std::size_t mActiveMetrics = 0;
     };
+
+    ProviderInterface & getProvider(const Metric<GLuint> & aMetric);
+    const ProviderInterface & getProvider(const Metric<GLuint> & aMetric) const;
 
     std::vector<Entry> mEntries{gInitialEntries};
     std::size_t mNextEntry{0};
     unsigned int mCurrentLevel{0};
     unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
 
-    std::unique_ptr<ProviderInterface> mDurationsProvider;
-    std::unique_ptr<ProviderInterface> mPrimitivesProvider;
+    std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
+};
+
+
+struct ProviderCPUTime : public ProviderInterface
+{
+    ProviderCPUTime() : 
+        ProviderInterface{"CPU time", "us"}
+    {}
+
+    using Clock = std::chrono::high_resolution_clock;
+
+    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+
+    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
+
+    //////
+    struct TimeInterval
+    {
+        Clock::time_point mBegin;
+        Clock::time_point mEnd;
+    };
+
+    TimeInterval & getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame);
+
+    std::array<TimeInterval, Profiler::gInitialEntries * Profiler::gFrameDelay> mTimePoints;
 };
 
 
@@ -149,31 +199,6 @@ struct ProviderGL : public ProviderInterface
 
     bool mActive{false}; // There can be at most 1 query active per target (per index, for indexed targets)
 };
-
-
-struct ProviderCPUTime : public ProviderInterface
-{
-    using Clock = std::chrono::high_resolution_clock;
-
-    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-
-    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
-
-    //////
-    struct TimeInterval
-    {
-        Clock::time_point mBegin;
-        Clock::time_point mEnd;
-    };
-
-    TimeInterval & getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame);
-
-    std::array<TimeInterval, Profiler::gInitialEntries * Profiler::gFrameDelay> mTimePoints;
-};
-
-
-
 
 
 } // namespace ad::renderer

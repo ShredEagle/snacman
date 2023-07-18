@@ -8,10 +8,24 @@
 namespace ad::renderer {
 
 
-Profiler::Profiler() :
-    mDurationsProvider{std::make_unique<ProviderCPUTime>()},
-    mPrimitivesProvider{std::make_unique<ProviderGL>()}
-{}
+Profiler::Profiler()
+{
+    mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
+    mMetricProviders.push_back(std::make_unique<ProviderGL>());
+}
+
+
+ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric)
+{
+    return *mMetricProviders.at(aMetric.mProviderIndex);
+}
+
+
+const ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric) const
+{
+    return *mMetricProviders.at(aMetric.mProviderIndex);
+}
+
 
 void Profiler::beginFrame()
 {
@@ -36,28 +50,43 @@ void Profiler::endFrame()
         std::uint32_t queryFrame = (mFrameNumber + 1) % gFrameDelay;
 
         GLuint result;
-        if(mPrimitivesProvider->provide(i, queryFrame, result))
+        for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
         {
-            entry.mPrimitivesGenerated.mValues.record(result);
+            if(getProvider(entry.mMetrics[i]).provide(i, queryFrame, result))
+            {
+                entry.mMetrics[i].mValues.record(result);
+            }
+            else
+            {
+                SELOG(error)("A provider result was not available when queried, it is discarded.");
+            }
         }
-        else
-        {
-            SELOG(error)("An OpenGL Query result was not available, it is discarded.");
-        }
-
-        mDurationsProvider->provide(i, queryFrame, result);
-        entry.mCpuDurations.mValues.record(result);
     }
 }
 
-Profiler::EntryIndex Profiler::beginSection(const char * aName)
+Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer_list<ProviderIndex> aProvider)
 {
+    // TODO Section identity is much more subtle than that
+    // It should be robust to changing the structure of sections (loop variance, and logical structure)
+    // and handle change in providers somehow.
+
     Entry & entry = mEntries[mNextEntry];
     entry.mLevel = mCurrentLevel++;
     entry.mName = aName;
+    if(entry.mActiveMetrics == 0)
+    {
+        for(const ProviderIndex providerIndex : aProvider)
+        {
+            entry.mMetrics.at(entry.mActiveMetrics++).mProviderIndex = providerIndex;
+        }
+    }
 
-    mDurationsProvider->beginSection(mNextEntry, mFrameNumber % gFrameDelay);
-    mPrimitivesProvider->beginSection(mNextEntry, mFrameNumber % gFrameDelay);
+    assert(aProvider.size() > 0 && entry.mActiveMetrics == mProviders.size());
+
+    for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
+    {
+        getProvider(entry.mMetrics[i]).beginSection(mNextEntry, mFrameNumber % gFrameDelay);
+    }
 
     return mNextEntry++;
 }
@@ -65,8 +94,11 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName)
 
 void Profiler::endSection(EntryIndex aIndex)
 {
-    mDurationsProvider->endSection(aIndex, mFrameNumber % gFrameDelay);
-    mPrimitivesProvider->endSection(aIndex, mFrameNumber % gFrameDelay);
+    Entry & entry = mEntries.at(aIndex);
+    for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
+    {
+        getProvider(entry.mMetrics[i]).endSection(aIndex, mFrameNumber % gFrameDelay);
+    }
     --mCurrentLevel;
 }
 
@@ -79,10 +111,19 @@ std::string Profiler::prettyPrint() const
     {
         const Entry & entry = mEntries[i];
 
-        oss << std::string(entry.mLevel * 2, ' ') 
-            << entry.mName << ": " << entry.mCpuDurations.mValues.average() << " µs, "  
-            << entry.mPrimitivesGenerated.mValues.average() << " primitives generated.\n"
+        oss << std::string(entry.mLevel * 2, ' ') << entry.mName << ":" 
             ;
+        
+        for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
+        {
+            const ProviderInterface & provider = getProvider(entry.mMetrics[i]);
+            oss << " " << provider.mQuantityName << " " 
+                << entry.mMetrics[i].mValues.average() 
+                << " " << provider.mUnit << ","
+                ;
+        }
+
+        oss << "\n";
     }
 
     return oss.str();
@@ -90,6 +131,7 @@ std::string Profiler::prettyPrint() const
 
 
 ProviderGL::ProviderGL() :
+    ProviderInterface{"GPU generated", "primitive(s)"},
     mQueriesPool{gInitialQueriesInPool}
 {}
 
