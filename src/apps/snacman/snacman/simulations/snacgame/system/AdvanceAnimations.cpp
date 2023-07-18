@@ -8,6 +8,7 @@
 #include <snacman/Timing.h>
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
+#include <snac-renderer/Camera.h>
 
 
 namespace ad {

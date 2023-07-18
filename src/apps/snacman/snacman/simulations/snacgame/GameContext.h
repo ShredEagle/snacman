@@ -4,6 +4,9 @@
 #include "SimulationControl.h"
 #include "PlayerSlotManager.h"
 
+#include "component/PlayerGameData.h"
+#include "component/PlayerSlot.h"
+
 #include "handy/Guard.h"
 #include "snacman/EntityUtilities.h"
 #include "system/SceneStack.h"
@@ -15,6 +18,7 @@
 
 #include <resource/ResourceFinder.h>
 #include <snacman/Resources.h>
+#include <snac-renderer/Camera.h>
 
 namespace ad {
 

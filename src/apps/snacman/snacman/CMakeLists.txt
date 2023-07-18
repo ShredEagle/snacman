@@ -117,7 +117,6 @@ set(${TARGET_NAME}_SOURCES
 
     simulations/snacgame/scene/Scene.cpp
     simulations/snacgame/scene/GameScene.cpp
-    simulations/snacgame/scene/GameScene-setup.cpp
     simulations/snacgame/scene/JoinGameScene.cpp
     simulations/snacgame/scene/MenuScene.cpp
     simulations/snacgame/scene/SettingsScene.cpp

@@ -20,6 +20,7 @@
 #include "../component/PathToOnGrid.h"
 #include "../component/PlayerGameData.h"
 #include "../component/PlayerHud.h"
+#include "../component/MenuItem.h"
 #include "../component/PlayerRoundData.h"
 #include "../component/PlayerSlot.h"
 #include "../component/Portal.h"
@@ -134,6 +135,15 @@ GameScene::GameScene(GameContext & aGameContext,
             .add(system::Debug_BoundingBoxes{mGameContext});
     }
 }
+
+void GameScene::onEnter(Transition aTransition)
+{
+    EntHandle camera = snac::getFirstHandle(mCameraQuery);
+    snac::Orbital & camOrbital = camera.get()->get<snac::Orbital>();
+    camOrbital.mSpherical.polar() = gInitialCameraSpherical.polar();
+    camOrbital.mSpherical.radius() = gInitialCameraSpherical.radius();
+}
+
 
 void GameScene::onExit(Transition aTransition)
 {

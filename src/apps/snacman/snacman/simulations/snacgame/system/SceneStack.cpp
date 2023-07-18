@@ -1,6 +1,6 @@
 #include "SceneStack.h"
 
-#include "snacman/simulations/snacgame/scene/GameScene.h"
+#include <snac-renderer/Camera.h>
 
 namespace ad {
 namespace snacgame {

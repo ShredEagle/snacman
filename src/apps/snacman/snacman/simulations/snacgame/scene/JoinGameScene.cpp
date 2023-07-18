@@ -5,6 +5,12 @@
 #include "../GameContext.h"
 
 #include "../component/PlayerSlot.h"
+#include "../component/PlayerGameData.h"
+#include "../component/PlayerHud.h"
+#include "../component/PathToOnGrid.h"
+#include "../component/MenuItem.h"
+#include "../component/Text.h"
+#include "../component/Tags.h"
 #include "../component/GlobalPose.h"
 #include "../component/Geometry.h"
 #include "../component/SceneNode.h"

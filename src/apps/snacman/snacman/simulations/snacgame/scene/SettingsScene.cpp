@@ -1,5 +1,7 @@
 #include "SettingsScene.h"
 
+#include <snac-renderer/Camera.h>
+
 namespace ad {
 namespace snacgame {
 namespace scene {

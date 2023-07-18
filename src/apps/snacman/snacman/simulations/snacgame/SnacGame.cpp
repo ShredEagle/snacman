@@ -8,6 +8,8 @@
 #include "component/LevelData.h"
 #include "component/PathToOnGrid.h"
 #include "component/PlayerGameData.h"
+#include "component/PlayerRoundData.h"
+#include "component/MenuItem.h"
 #include "component/PlayerHud.h"
 #include "component/PlayerSlot.h"
 #include "component/PoseScreenSpace.h"
