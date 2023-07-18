@@ -160,7 +160,7 @@ RenderGraph::RenderGraph()
 
 void RenderGraph::render()
 {
-    PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuPrimitiveGen);
+    PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
     for(const auto & instance : mScene)
     {
         // TODO replace with some form a render list generation, abstracting material/program selection

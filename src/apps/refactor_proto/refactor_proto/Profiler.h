@@ -73,7 +73,7 @@ public:
     void beginFrame();
     void endFrame();
 
-    EntryIndex beginSection(const char * aName, std::initializer_list<ProviderIndex> aProvider);
+    EntryIndex beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders);
     void endSection(EntryIndex aIndex);
 
     struct [[nodiscard]] SectionGuard
@@ -200,5 +200,33 @@ struct ProviderGL : public ProviderInterface
     bool mActive{false}; // There can be at most 1 query active per target (per index, for indexed targets)
 };
 
+
+struct ProviderGLTime : public ProviderInterface
+{
+    enum class Event
+    {
+        Begin,
+        End,
+    };
+
+    ProviderGLTime() :
+        ProviderInterface{"GPU time", "us"}
+    {}
+
+    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+
+    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
+
+    //////
+    graphics::Query & getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame, Event aEvent);
+
+    // TODO Have a dynamic allocation size
+    // This is currently very conservative, having enough queries to recorded begin/end time for each section
+    // in each "frame delay slot".
+    inline static constexpr std::size_t gInitialQueriesInPool{2 * Profiler::gInitialEntries * Profiler::gFrameDelay};
+
+    std::vector<graphics::Query> mQueriesPool{gInitialQueriesInPool};
+};
 
 } // namespace ad::renderer

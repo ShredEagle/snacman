@@ -17,7 +17,8 @@ inline Profiler & getGlobalProfiler()
 enum 
 {
     CpuTime = 0,
-    GpuPrimitiveGen = 1,
+    GpuTime,
+    GpuPrimitiveGen,
 };
 
 #define PROFILER_BEGIN_FRAME ::ad::renderer::getGlobalProfiler().beginFrame()

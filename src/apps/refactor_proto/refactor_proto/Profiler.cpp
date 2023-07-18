@@ -11,6 +11,7 @@ namespace ad::renderer {
 Profiler::Profiler()
 {
     mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
+    mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
     mMetricProviders.push_back(std::make_unique<ProviderGL>());
 }
 
@@ -50,11 +51,11 @@ void Profiler::endFrame()
         std::uint32_t queryFrame = (mFrameNumber + 1) % gFrameDelay;
 
         GLuint result;
-        for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
+        for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
         {
-            if(getProvider(entry.mMetrics[i]).provide(i, queryFrame, result))
+            if(getProvider(entry.mMetrics[metricIdx]).provide(i, queryFrame, result))
             {
-                entry.mMetrics[i].mValues.record(result);
+                entry.mMetrics[metricIdx].mValues.record(result);
             }
             else
             {
@@ -64,7 +65,7 @@ void Profiler::endFrame()
     }
 }
 
-Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer_list<ProviderIndex> aProvider)
+Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders)
 {
     // TODO Section identity is much more subtle than that
     // It should be robust to changing the structure of sections (loop variance, and logical structure)
@@ -75,13 +76,13 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     entry.mName = aName;
     if(entry.mActiveMetrics == 0)
     {
-        for(const ProviderIndex providerIndex : aProvider)
+        for(const ProviderIndex providerIndex : aProviders)
         {
             entry.mMetrics.at(entry.mActiveMetrics++).mProviderIndex = providerIndex;
         }
     }
 
-    assert(aProvider.size() > 0 && entry.mActiveMetrics == mProviders.size());
+    assert(aProviders.size() > 0 && entry.mActiveMetrics == aProviders.size());
 
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
@@ -130,6 +131,38 @@ std::string Profiler::prettyPrint() const
 }
 
 
+///////////////
+// Providers //
+///////////////
+
+ProviderCPUTime::TimeInterval & ProviderCPUTime::getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+{
+    return mTimePoints[aEntryIndex * Profiler::gFrameDelay + aCurrentFrame];
+}
+
+
+void ProviderCPUTime::beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+{
+    getInterval(aEntryIndex, aCurrentFrame).mBegin = Clock::now();
+}
+
+
+void ProviderCPUTime::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+{
+    getInterval(aEntryIndex, aCurrentFrame).mEnd = Clock::now();
+}
+
+
+bool ProviderCPUTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
+{
+    using std::chrono::microseconds;
+    const auto & interval = getInterval(aEntryIndex, aQueryFrame);
+    // TODO address this cast
+    aSampleResult = (GLuint)std::chrono::duration_cast<microseconds>(interval.mEnd - interval.mBegin).count();
+    return true;
+}
+
+
 ProviderGL::ProviderGL() :
     ProviderInterface{"GPU generated", "primitive(s)"},
     mQueriesPool{gInitialQueriesInPool}
@@ -157,47 +190,60 @@ void ProviderGL::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 }
 
 
-bool ProviderGL::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
+template <class T_result>
+bool getGLQueryResult(const graphics::Query & aQuery, T_result & aResult)
 {
-    auto & query = getQuery(aEntryIndex, aQueryFrame);
-
     GLuint available;
-    glGetQueryObjectuiv(query, GL_QUERY_RESULT_AVAILABLE, &available);
+    glGetQueryObjectuiv(aQuery, GL_QUERY_RESULT_AVAILABLE, &available);
 
     if(available)
     {
-        glGetQueryObjectuiv(query, GL_QUERY_RESULT, &aSampleResult);
+        if constexpr(std::is_same_v<T_result, GLuint>)
+        {
+            glGetQueryObjectuiv(aQuery, GL_QUERY_RESULT, &aResult);
+        }
+        else if constexpr(std::is_same_v<T_result, GLuint64>)
+        {
+            glGetQueryObjectui64v(aQuery, GL_QUERY_RESULT, &aResult);
+        }
     }
 
     return available != GL_FALSE;
 }
 
 
-ProviderCPUTime::TimeInterval & ProviderCPUTime::getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+bool ProviderGL::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
 {
-    return mTimePoints[aEntryIndex * Profiler::gFrameDelay + aCurrentFrame];
+    return getGLQueryResult(getQuery(aEntryIndex, aQueryFrame), aSampleResult);
 }
 
 
-void ProviderCPUTime::beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+graphics::Query & ProviderGLTime::getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame, Event aEvent)
 {
-    getInterval(aEntryIndex, aCurrentFrame).mBegin = Clock::now();
+    return mQueriesPool[2 * (aEntryIndex * Profiler::gFrameDelay + aCurrentFrame) 
+                        + (aEvent == Event::Begin ? 0 : 1)];
+}
+
+void ProviderGLTime::beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+{
+    glQueryCounter(getQuery(aEntryIndex, aCurrentFrame, Event::Begin), GL_TIMESTAMP);
 }
 
 
-void ProviderCPUTime::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+void ProviderGLTime::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
-    getInterval(aEntryIndex, aCurrentFrame).mEnd = Clock::now();
+    glQueryCounter(getQuery(aEntryIndex, aCurrentFrame, Event::End), GL_TIMESTAMP);
 }
 
 
-bool ProviderCPUTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
+bool ProviderGLTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
 {
-    using std::chrono::microseconds;
-    const auto & interval = getInterval(aEntryIndex, aQueryFrame);
-    // TODO address this cast
-    aSampleResult = (GLuint)std::chrono::duration_cast<microseconds>(interval.mEnd - interval.mBegin).count();
-    return true;
+    GLuint64 beginTime, endTime; 
+    bool available = getGLQueryResult(getQuery(aEntryIndex, aQueryFrame, Event::Begin), beginTime);
+    available &= getGLQueryResult(getQuery(aEntryIndex, aQueryFrame, Event::End), endTime);
+
+    aSampleResult = static_cast<GLuint>((endTime - beginTime) / 1000);
+    return available;
 }
 
 
