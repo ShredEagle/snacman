@@ -17,10 +17,10 @@ class SettingsScene : public Scene
 public:
     using Scene::Scene;
 
-    std::optional<Transition> update(const snac::Time & aTime,
+    void update(const snac::Time & aTime,
                                      RawInput & aInput) override;
-    void setup(const Transition & Transition, RawInput & aInput) override;
-    void teardown(RawInput & aInput) override;
+    void onEnter(Transition Transition) override;
+    void onExit(Transition aTransition) override;
 };
 
 } // namespace scene

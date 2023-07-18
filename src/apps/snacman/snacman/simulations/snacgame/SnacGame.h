@@ -12,6 +12,7 @@
 #include <snacman/Timing.h>
 
 #include <entity/Query.h>
+#include <entity/Wrap.h>
 
 #include <resource/ResourceFinder.h>
 
@@ -43,7 +44,7 @@ struct PlayerHud;
 }
 namespace system {
 class OrbitalCamera; 
-class SceneStateMachine;
+struct SceneStack;
 }
 namespace visu { struct GraphicState; }
 
@@ -137,8 +138,7 @@ private:
     GameContext mGameContext;
     
     // TODO use the ent::Wrap
-    EntityWrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
-    EntityWrap<system::SceneStateMachine> mStateMachine;
+    ent::Wrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
     EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
 
     EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;

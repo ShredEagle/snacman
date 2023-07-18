@@ -16,6 +16,7 @@ struct GameContext;
 namespace component {
 struct Geometry;
 struct PathToOnGrid;
+struct Level;
 }
 namespace system {
 
@@ -24,7 +25,7 @@ class Pathfinding
 public:
     Pathfinding(GameContext & aGameContext);
 
-    void update();
+    void update(component::Level & aLevelData);
 
 private:
     GameContext * mGameContext;

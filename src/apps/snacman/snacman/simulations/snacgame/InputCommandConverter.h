@@ -94,6 +94,7 @@ const inline BidirectionalMap<std::string, int> gCommandFlags{
     {"gPlayerMoveFlagLeft", gPlayerMoveFlagLeft},
     {"gPlayerMoveFlagRight", gPlayerMoveFlagRight},
     {"gPlayerUsePowerup", gPlayerUsePowerup | gPositiveEdge},
+    {"gPlayerSelect", gPlayerSelect | gPositiveEdge},
 
     {"gRightJoyUp", gRightJoyUp},
     {"gRightJoyDown", gRightJoyDown},
@@ -273,6 +274,7 @@ struct ControllerCommand
     int mId;
     ControllerType mControllerType;
     GameInput mInput;
+    bool mBound;
 };
 
 inline GameInput convertKeyboardInput(const std::string & aGroup,

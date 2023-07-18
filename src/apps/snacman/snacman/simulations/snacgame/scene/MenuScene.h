@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Scene.h"
+#include "snac-renderer/Camera.h"
 
 #include <math/Color.h>
 #include <entity/Query.h>
+#include <entity/Wrap.h>
 
 namespace ad {
 
@@ -20,17 +22,14 @@ inline const math::hdr::Rgba_f gColorItemSelected = math::hdr::gCyan<float>;
 class MenuScene : public Scene
 {
 public:
-    MenuScene(std::string aName,
-            GameContext & aGameContext,
-              EntityWrap<component::MappingContext> & aContext,
-              ent::Handle<ent::Entity> aSceneRoot);
+    MenuScene(GameContext & aGameContext,
+              ent::Wrap<component::MappingContext> & aContext);
 
-    std::optional<Transition> update(const snac::Time & aTime, RawInput & aInput) override;
+    void update(const snac::Time & aTime, RawInput & aInput) override;
 
-    void setup(const Transition & aTransition,
-               RawInput & aInput) override;
+    void onEnter(Transition aTransition) override;
 
-    void teardown(RawInput & aInput) override;
+    void onExit(Transition aTransition) override;
 
 private:
     ent::Query<component::MenuItem, component::Text> mItems;

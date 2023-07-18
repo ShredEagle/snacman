@@ -41,7 +41,8 @@ void EatPill::update()
     TIME_RECURRING_CLASSFUNC(Main);
     mPlayers.each([this](const component::GlobalPose & aPlayerGeo,
                          component::Collision aPlayerCol,
-                         component::PlayerRoundData & aLifeCycle)
+                         component::PlayerRoundData & aRoundData,
+                         const component::PlayerGameData & aGameData)
     {
         ent::Phase eatPillUpdate;
         Box_f playerHitbox = component::transformHitbox(aPlayerGeo.mPosition,
@@ -55,7 +56,7 @@ void EatPill::update()
             playerHitbox
         );
 
-        mPills.each([&eatPillUpdate, &playerHitbox, &aLifeCycle]
+        mPills.each([&eatPillUpdate, &playerHitbox, &aRoundData]
                     (ent::Handle<ent::Entity> aHandle,
                      const component::GlobalPose & aPillGeo,
                      const component::Collision & aPillCol) 
@@ -63,10 +64,10 @@ void EatPill::update()
             Box_f pillHitbox = component::transformHitbox(aPillGeo.mPosition,
                                                           aPillCol.mHitbox);
 
-            if (component::collideWithSat(pillHitbox, playerHitbox) && aLifeCycle.mInvulFrameCounter <= 0.f)
+            if (component::collideWithSat(pillHitbox, playerHitbox) && aRoundData.mInvulFrameCounter <= 0.f)
             {
                 aHandle.get(eatPillUpdate)->erase();
-                aLifeCycle.mRoundScore += gPointPerPill;
+                aRoundData.mRoundScore += gPointPerPill;
 
             }
         });
@@ -77,15 +78,14 @@ void EatPill::update()
         // TODO: code smell, this is defensive programming because sometimes we get there without the HUD
         // (when the round monitor removed the hud but the spawner did not populate it yet)
         // This is a great way to increase cyclomatic complexity
-        const component::PlayerGameData & playerData = aLifeCycle.mSlotHandle.get()->get<component::PlayerGameData>();
-        OptEntHandle hud = snac::getComponent<component::PlayerGameData>(aLifeCycle.mSlotHandle).mHud;
-        if(hud && hud->isValid())
+        EntHandle hud = aGameData.mHud;
+        if(hud.isValid())
         {
-            auto & playerHud = snac::getComponent<component::PlayerHud>(*hud);
+            auto & playerHud = snac::getComponent<component::PlayerHud>(hud);
             snac::getComponent<component::Text>(playerHud.mScoreText)
-                    .mString = std::to_string(aLifeCycle.mRoundScore);
+                    .mString = std::to_string(aRoundData.mRoundScore);
             snac::getComponent<component::Text>(playerHud.mRoundText)
-                    .mString = std::to_string(playerData.mRoundsWon);
+                    .mString = std::to_string(aGameData.mRoundsWon);
         }
     });
 

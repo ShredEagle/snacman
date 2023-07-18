@@ -16,7 +16,7 @@ public:
 private:
     void presentNode(ent::Handle<ent::Entity> aEntityHandle);
 
-    std::optional<ent::Handle<ent::Entity>> mSelected;
+    ent::Handle<ent::Entity> mSelected;
 };
 
 

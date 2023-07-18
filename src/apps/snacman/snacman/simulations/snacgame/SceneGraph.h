@@ -38,9 +38,10 @@ decomposeMatrix(const math::AffineMatrix<4, float> & aDecomposableMatrix, T_pose
 {
     // We only use uniform scaling for our heritable transform matrix
     // So no skew in here
-    assert(aDecomposableMatrix.at(0, 3) == 0.f && "Can't decompose a transform matrix with skew");
-    assert(aDecomposableMatrix.at(1, 3) == 0.f && "Can't decompose a transform matrix with skew");
-    assert(aDecomposableMatrix.at(2, 3) == 0.f && "Can't decompose a transform matrix with skew");
+    assert(aDecomposableMatrix.at(0, 3) == 0.f
+            && aDecomposableMatrix.at(1, 3) == 0.f
+            && aDecomposableMatrix.at(2, 3) == 0.f
+            && "Can't decompose a transform matrix with skew");
 
     aGlobPose.mPosition = getTranslation(aDecomposableMatrix);
     aGlobPose.mScaling = getUniformScale(aDecomposableMatrix);

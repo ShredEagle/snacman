@@ -31,6 +31,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/InputConstants.h
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/LevelHelper.h
+    simulations/snacgame/ModelInfos.h
     simulations/snacgame/PlayerSlotManager.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/SceneGraph.h
@@ -64,6 +65,8 @@ set(${TARGET_NAME}_HEADERS
 
     simulations/snacgame/scene/GameScene.h
     simulations/snacgame/scene/MenuScene.h
+    simulations/snacgame/scene/JoinGameScene.h
+    simulations/snacgame/scene/DataScene.h
     simulations/snacgame/scene/Scene.h
     simulations/snacgame/scene/SettingsScene.h
 
@@ -74,6 +77,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/Debug_BoundingBoxes.h
     simulations/snacgame/system/EatPill.h
     simulations/snacgame/system/Explosion.h
+    simulations/snacgame/system/InputProcessor.h
     simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/MovementIntegration.h
     simulations/snacgame/system/LevelManager.h
@@ -85,7 +89,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/RoundMonitor.h
     simulations/snacgame/system/SystemOrbitalCamera.h
     simulations/snacgame/system/SceneGraphResolver.h
-    simulations/snacgame/system/SceneStateMachine.h
+    simulations/snacgame/system/SceneStack.h
 
     detail/Logger.h
 )
@@ -114,6 +118,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/scene/Scene.cpp
     simulations/snacgame/scene/GameScene.cpp
     simulations/snacgame/scene/GameScene-setup.cpp
+    simulations/snacgame/scene/JoinGameScene.cpp
     simulations/snacgame/scene/MenuScene.cpp
     simulations/snacgame/scene/SettingsScene.cpp
 
@@ -124,6 +129,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/Debug_BoundingBoxes.cpp
     simulations/snacgame/system/EatPill.cpp
     simulations/snacgame/system/Explosion.cpp
+    simulations/snacgame/system/InputProcessor.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
     simulations/snacgame/system/MovementIntegration.cpp
     simulations/snacgame/system/LevelManager.cpp
@@ -135,7 +141,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/PowerUpUsage.cpp
     simulations/snacgame/system/RoundMonitor.cpp
     simulations/snacgame/system/SceneGraphResolver.cpp
-    simulations/snacgame/system/SceneStateMachine.cpp
+    simulations/snacgame/system/SceneStack.cpp
 
     detail/Logger.cpp
 )

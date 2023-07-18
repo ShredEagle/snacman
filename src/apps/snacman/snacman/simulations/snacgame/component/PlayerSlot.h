@@ -13,8 +13,6 @@ struct Unspawned
 struct PlayerSlot
 {
     unsigned int mSlotIndex;
-    unsigned int mControllerIndex;
-    ControllerType mControllerType;
 };
 
 } // namespace component

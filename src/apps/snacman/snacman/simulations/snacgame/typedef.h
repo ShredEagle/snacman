@@ -10,7 +10,6 @@ namespace ad {
 namespace snacgame {
 // Entity typedefs
 using EntHandle = ent::Handle<ent::Entity>;
-using OptEntHandle = std::optional<ent::Handle<ent::Entity>>;
 using Entity = ent::Entity;
 using Phase = ent::Phase;
 

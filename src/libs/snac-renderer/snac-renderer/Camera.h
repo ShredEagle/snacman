@@ -95,9 +95,10 @@ public:
 
     math::AffineMatrix<4, float> getParentToLocal() const;
 
+    math::Spherical<float> mSpherical;
+
 private:
     math::Position<3, float> mSphericalOrigin;
-    math::Spherical<float> mSpherical;
 };
 
 

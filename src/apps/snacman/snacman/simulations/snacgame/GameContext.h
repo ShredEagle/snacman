@@ -1,13 +1,17 @@
 #pragma once
 
-#include "EntityWrap.h"
 #include "GameParameters.h"
 #include "SimulationControl.h"
 #include "PlayerSlotManager.h"
 
+#include "handy/Guard.h"
+#include "snacman/EntityUtilities.h"
+#include "system/SceneStack.h"
+
 #include <entity/Entity.h>
 #include <entity/Query.h>
 #include <entity/EntityManager.h>
+#include <entity/Wrap.h>
 
 #include <resource/ResourceFinder.h>
 #include <snacman/Resources.h>
@@ -36,15 +40,8 @@ struct GameContext
     snac::RenderThread<Renderer> & mRenderThread;
     SimulationControl mSimulationControl;
 
-    // The level entity is not stored anymore between rounds
-    // so we need something else to store the level data
-    // (markov file, asset root, seed) which is not really
-    // not data that the Level should own
-    std::optional<EntityWrap<component::LevelSetupData>> mLevelData;
-    std::optional<ent::Handle<ent::Entity>> mLevel;
-    std::optional<ent::Handle<ent::Entity>>
-        mRoot; // only because it cannot be assigned on construction, it should
-               // not change
+    ent::Wrap<system::SceneStack> mSceneStack;
+    ent::Handle<ent::Entity> mSceneRoot;
     PlayerSlotManager mSlotManager;
 };
 

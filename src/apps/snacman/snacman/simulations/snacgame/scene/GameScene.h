@@ -2,9 +2,11 @@
 
 #include "Scene.h"
 
+#include <snac-renderer/Camera.h>
+
 #include <entity/EntityManager.h>
 #include <entity/Query.h>
-
+#include <entity/Wrap.h>
 #include <string>
 
 namespace ad {
@@ -18,7 +20,8 @@ struct RawInput;
 namespace snacgame {
 
 struct GameContext;
-template <class T_wrapped> struct EntityWrap;
+template <class T_wrapped>
+struct EntityWrap;
 
 namespace component {
 struct MappingContext;
@@ -30,26 +33,23 @@ struct PathToOnGrid;
 struct LevelTile;
 struct RoundTransient;
 struct LevelSetupData;
-}
+} // namespace component
 
 namespace scene {
 
 class GameScene : public Scene
 {
 public:
-    GameScene(std::string aName,
-            GameContext & aGameContext,
-              EntityWrap<component::MappingContext> & aContext,
-              ent::Handle<ent::Entity> aSceneRoot
-              );
+    GameScene(GameContext & aGameContext,
+              ent::Wrap<component::MappingContext> & aContext);
 
-    std::optional<Transition> update(const snac::Time & aTime,
-                                     RawInput & aInput) override;
+    void update(const snac::Time & aTime, RawInput & aInput) override;
 
-    void setup(const Transition & aTransition, RawInput & aInput) override;
+    void onEnter(Transition aTransition) override;
 
-    void teardown(RawInput & aInput) override;
+    void onExit(Transition aTransition) override;
 
+    ent::Wrap<component::LevelSetupData> mLevelData;
 private:
     ent::Query<component::LevelTile> mTiles;
     ent::Query<component::RoundTransient> mRoundTransients;
@@ -57,8 +57,7 @@ private:
     ent::Query<component::PlayerHud> mHuds;
     ent::Query<component::PlayerRoundData, component::Controller> mPlayers;
     ent::Query<component::PathToOnGrid> mPathfinders;
-
-    std::optional<ent::Handle<ent::Entity>> mStageDecor;
+    ent::Handle<ent::Entity> mLevel;
 };
 
 } // namespace scene

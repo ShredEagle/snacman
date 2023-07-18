@@ -4,39 +4,40 @@
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
+#include "../component/MenuItem.h"
 #include "../component/PlayerSlot.h"
 #include "../component/SceneNode.h"
-#include "../component/MenuItem.h"
 #include "../component/Text.h"
-
-#include "../system/SceneGraphResolver.h"
-
-#include "../SceneGraph.h"
 #include "../Entities.h"
+#include "../GameParameters.h"
 #include "../InputCommandConverter.h"
+#include "../scene/DataScene.h"
+#include "../scene/GameScene.h"
+#include "../scene/JoinGameScene.h"
+#include "../SceneGraph.h"
 #include "../SnacGame.h"
+#include "../system/SceneGraphResolver.h"
+#include "../typedef.h"
 
-#include <string>
+#include <entity/EntityManager.h>
 #include <optional>
+#include <snacman/EntityUtilities.h>
 #include <snacman/Input.h>
-#include <snacman/Timing.h>
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
+#include <snacman/QueryManipulation.h>
+#include <snacman/Timing.h>
+#include <string>
 
 namespace ad {
 namespace snacgame {
 namespace scene {
 
-MenuScene::MenuScene(std::string aName,
-        GameContext & aGameContext,
-          EntityWrap<component::MappingContext> & aContext,
-          ent::Handle<ent::Entity> aSceneRoot) :
-    Scene(aName, aGameContext, aContext, aSceneRoot), mItems{mGameContext.mWorld}
-{}
-
-void MenuScene::setup(const Transition & Transition, RawInput & aInput)
+MenuScene::MenuScene(GameContext & aGameContext,
+                     ent::Wrap<component::MappingContext> & aContext) :
+    Scene(gMenuSceneName, aGameContext, aContext), mItems{mGameContext.mWorld}
 {
-    auto font = mGameContext.mResources.getFont("fonts/FredokaOne-Regular.ttf");
+    auto font = mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf");
 
     ent::Phase init;
     auto startHandle = createMenuItem(
@@ -45,9 +46,11 @@ void MenuScene::setup(const Transition & Transition, RawInput & aInput)
         {
             {gGoDown, "quit"},
         },
-        scene::Transition{.mTransitionName = "start"}, true, {1.5f, 1.5f});
+        scene::Transition{.mTransitionName =
+                              JoinGameScene::sFromMenuTransition},
+        true, {1.5f, 1.5f});
     auto quitHandle = createMenuItem(
-        mGameContext, init, "quit", font,
+        mGameContext, init, "Quit", font,
         math::Position<2, float>{-0.55f, -0.3f},
         {
             {gGoUp, "Start"},
@@ -58,14 +61,20 @@ void MenuScene::setup(const Transition & Transition, RawInput & aInput)
     mOwnedEntities.push_back(startHandle);
     mOwnedEntities.push_back(quitHandle);
     mSystems.get(init)->add(
-        system::SceneGraphResolver{mGameContext, mSceneRoot});
+        system::SceneGraphResolver{mGameContext, mGameContext.mSceneRoot});
 
     ent::Handle<ent::Entity> background = createStageDecor(mGameContext);
     mOwnedEntities.push_back(background);
-    insertEntityInScene(background, mSceneRoot);
+    insertEntityInScene(background, mGameContext.mSceneRoot);
+
+    EntHandle camera = snac::getFirstHandle(mCameraQuery);
+    snac::Orbital & camOrbital = snac::getComponent<snac::Orbital>(camera);
+    camOrbital.mSpherical = gInitialCameraSpherical;
 }
 
-void MenuScene::teardown(RawInput & aInput)
+void MenuScene::onEnter(Transition aTransition) {}
+
+void MenuScene::onExit(Transition aTransition)
 {
     ent::Phase destroy;
 
@@ -79,8 +88,7 @@ void MenuScene::teardown(RawInput & aInput)
     mSystems = mGameContext.mWorld.addEntity();
 }
 
-std::optional<Transition> MenuScene::update(const snac::Time & aTime,
-                                            RawInput & aInput)
+void MenuScene::update(const snac::Time & aTime, RawInput & aInput)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
@@ -90,7 +98,7 @@ std::optional<Transition> MenuScene::update(const snac::Time & aTime,
         .mId = gKeyboardControllerIndex,
         .mControllerType = ControllerType::Keyboard,
         .mInput = convertKeyboardInput("menu", aInput.mKeyboard,
-                                       mContext->mKeyboardMapping),
+                                       mMappingContext->mKeyboardMapping),
     };
 
     int accumulatedCommand = keyboardCommand.mInput.mCommand;
@@ -104,15 +112,16 @@ std::optional<Transition> MenuScene::update(const snac::Time & aTime,
             .mId = static_cast<int>(index),
             .mControllerType = ControllerType::Gamepad,
             .mInput = convertGamepadInput("menu", rawGamepad,
-                                          mContext->mGamepadMapping),
+                                          mMappingContext->mGamepadMapping),
         };
         accumulatedCommand |= gamepadCommand.mInput.mCommand;
         controllerCommandList.push_back(gamepadCommand);
     }
 
+    bool quit = false;
     if (accumulatedCommand & gQuitCommand)
     {
-        return Transition{.mTransitionName = gQuitTransitionName};
+        quit = true;
     }
 
     std::string newItem;
@@ -120,41 +129,50 @@ std::optional<Transition> MenuScene::update(const snac::Time & aTime,
     int filteredForMenuCommand =
         accumulatedCommand & (gGoUp | gGoDown | gGoLeft | gGoRight);
 
-    std::optional<Transition> menuTransition = std::nullopt;
+    EntHandle selectedItemHandle = snac::getFirstHandle(
+        mItems, [](component::MenuItem & aItem) { return aItem.mSelected; });
+    component::MenuItem & menuItem =
+        snac::getComponent<component::MenuItem>(selectedItemHandle);
+    component::Text & text =
+        snac::getComponent<component::Text>(selectedItemHandle);
 
-    mItems.each(
-        [&menuTransition, accumulatedCommand, &controllerCommandList,
-         filteredForMenuCommand, &newItem]
-        (component::MenuItem & aItem, component::Text & aText)
+    if (menuItem.mNeighbors.contains(filteredForMenuCommand))
     {
-        if (aItem.mSelected)
+        newItem = menuItem.mNeighbors.at(filteredForMenuCommand);
+        menuItem.mSelected = false;
+        text.mColor = gColorItemUnselected;
+    }
+    else if (menuItem.mTransition.mTransitionName
+             == JoinGameScene::sFromMenuTransition)
+    {
+        for (auto command : controllerCommandList)
         {
-            if (aItem.mNeighbors.contains(filteredForMenuCommand))
+            if (command.mInput.mCommand & gSelectItem)
             {
-                newItem = aItem.mNeighbors.at(filteredForMenuCommand);
-                aItem.mSelected = false;
-                aText.mColor = gColorItemUnselected;
-            }
-            else if (aItem.mTransition.mTransitionName == "start")
-            {
-                for (auto command : controllerCommandList)
-                {
-                    if (command.mInput.mCommand & gSelectItem)
-                    {
-                        menuTransition = aItem.mTransition;
-                        menuTransition->mTransitionControllerId = command.mId;
-                    }
-                }
-            }
-            if (aItem.mTransition.mTransitionName == "quit")
-            {
-                if (accumulatedCommand & gSelectItem)
-                {
-                    menuTransition = aItem.mTransition;
-                }
+                Transition menuTransition = menuItem.mTransition;
+                menuTransition.mSceneInfo = {JoinGameSceneInfo{command.mId}};
+                // Menu pops itself from the stack
+                mGameContext.mSceneStack->popScene();
+                mGameContext.mSceneStack->pushScene(
+                    std::make_shared<JoinGameScene>(mGameContext,
+                                                    mMappingContext),
+                    menuTransition);
+                return;
             }
         }
-    });
+    }
+    else if (menuItem.mTransition.mTransitionName == "quit")
+    {
+        quit = true;
+    }
+
+    if (quit)
+    {
+        // Menu pops itself from the stack
+        mGameContext.mSceneStack->popScene(
+            Transition{.mTransitionName = StageDecorScene::sQuitTransition});
+        return;
+    }
 
     bool newItemFound = false;
     mItems.each(
@@ -177,7 +195,7 @@ std::optional<Transition> MenuScene::update(const snac::Time & aTime,
 
     mSystems.get()->get<system::SceneGraphResolver>().update();
 
-    return menuTransition;
+    return;
 }
 
 } // namespace scene

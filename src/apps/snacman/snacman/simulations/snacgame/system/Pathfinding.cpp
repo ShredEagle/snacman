@@ -25,17 +25,14 @@ Pathfinding::Pathfinding(GameContext & aGameContext) :
     mGameContext{&aGameContext}, mPathfinder{mGameContext->mWorld}
 {}
 
-void Pathfinding::update()
+void Pathfinding::update(component::Level & aLevelData)
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    EntHandle level = *mGameContext->mLevel;
-    assert(level.isValid() && "Can't pathfind if there is no Level");
 
     ent::Phase pathfinding;
-    component::Level levelData = level.get(pathfinding)->get<component::Level>();
-    const std::vector<component::Tile> & tiles = levelData.mTiles;
-    const std::vector<component::PathfindNode> & nodes = levelData.mNodes;
-    int stride = levelData.mSize.height();
+    const std::vector<component::Tile> & tiles = aLevelData.mTiles;
+    const std::vector<component::PathfindNode> & nodes = aLevelData.mNodes;
+    int stride = aLevelData.mSize.height();
 
     mPathfinder.each([stride, &tiles, &pathfinding, &nodes](
                          component::PathToOnGrid & aPathfinder,

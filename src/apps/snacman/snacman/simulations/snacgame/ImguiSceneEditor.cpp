@@ -132,9 +132,9 @@ void SceneEditor::showEditor(ent::Handle<ent::Entity> aSceneRoot)
 
     // Note: when changing scene, selected node might become invalid.
     // Address it naively by testing.
-    if(mSelected && mSelected->isValid())
+    if(mSelected.isValid())
     {
-        presentPoseEditor(*mSelected);
+        presentPoseEditor(mSelected);
     }
 
     ImGui::End();
@@ -160,11 +160,11 @@ void SceneEditor::presentNode(ent::Handle<ent::Entity> aEntityHandle)
 
     if(opened)
     {
-        for(std::optional<ent::Handle<ent::Entity>> child = sceneNode.mFirstChild;
-            child.has_value();
-            child = getNode(*child).mNextChild)
+        for(ent::Handle<ent::Entity> child = sceneNode.mFirstChild;
+            child.isValid();
+            child = getNode(child).mNextChild)
         {
-            presentNode(*child);
+            presentNode(child);
         }
         ImGui::TreePop();
     }

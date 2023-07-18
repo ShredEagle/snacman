@@ -11,6 +11,7 @@ struct Collision;
 struct PlayerRoundData;
 struct Pill;
 struct PlayerHud;
+struct PlayerGameData;
 }
 namespace system {
 
@@ -24,7 +25,8 @@ public:
 private:
     ent::Query<component::GlobalPose,
                component::Collision,
-               component::PlayerRoundData>
+               component::PlayerRoundData,
+               component::PlayerGameData>
         mPlayers;
     ent::Query<component::GlobalPose, component::Collision, component::Pill>
         mPills;

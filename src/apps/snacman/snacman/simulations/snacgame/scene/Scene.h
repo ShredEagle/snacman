@@ -1,31 +1,45 @@
 #pragma once
 
-#include "../EntityWrap.h"
-
+#include "entity/Query.h"
 #include "../component/SceneNode.h"
-
-#include <markovjunior/Grid.h>
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
+#include <entity/Wrap.h>
+
 #include <map>
+#include <markovjunior/Grid.h>
 #include <optional>
 #include <string>
+#include <variant>
 
 namespace ad {
 
 namespace snacgame {
-    namespace component { struct MappingContext; }
+namespace component {
+struct MappingContext;
+}
 namespace scene {
 
 const inline std::string gQuitTransitionName = "quit";
 
+struct MenuSceneInfo
+{};
+
+struct JoinGameSceneInfo
+{
+    int mTransitionControllerId = -1;
+};
+
+struct GameSceneInfo
+{};
+
 struct Transition
 {
     std::string mTransitionName;
-    int mTransitionControllerId = -1;
     bool shouldTeardown = true;
     bool shouldSetup = true;
+    std::variant<MenuSceneInfo, JoinGameSceneInfo, GameSceneInfo> mSceneInfo;
 
     bool operator==(const Transition & aRhs) const
     {
@@ -52,6 +66,7 @@ namespace ad {
 
 namespace snac {
 struct Time;
+class Orbital;
 }
 
 struct RawInput;
@@ -62,42 +77,32 @@ struct GameContext;
 
 namespace scene {
 
-struct SceneId
-{
-    std::size_t mIndexInPossibleState;
-};
-
-
 class Scene
 {
 public:
-    //TODO :(franz) make a cpp file please
+    // TODO :(franz) make a cpp file please
     Scene(std::string aName,
           GameContext & aGameContext,
-          EntityWrap<component::MappingContext> & aContext,
-          ent::Handle<ent::Entity> aSceneRoot);
+          ent::Wrap<component::MappingContext> & aContext);
     Scene(const Scene &) = default;
-    Scene(Scene &&) = delete;
+    Scene(Scene && aScene) noexcept;
+
     Scene & operator=(const Scene &) = delete;
     Scene & operator=(Scene &&) = delete;
     virtual ~Scene() = default;
 
-    virtual std::optional<Transition> update(const snac::Time & aTime,
-                                             RawInput & aInput) = 0;
-
-    virtual void setup(const Transition & aTransition, RawInput & aInput) = 0;
-
-    virtual void teardown(RawInput & aInput) = 0;
+    virtual void onExit(Transition aTransition) = 0;
+    virtual void onEnter(Transition aTransition) = 0;
+    virtual void update(const snac::Time & aTime, RawInput & aInput) = 0;
 
     std::string mName;
-    std::unordered_map<Transition, SceneId> mStateTransition;
-    ent::Handle<ent::Entity> mSceneRoot;
 
 protected:
     GameContext & mGameContext;
     ent::Handle<ent::Entity> mSystems;
     std::vector<ent::Handle<ent::Entity>> mOwnedEntities;
-    EntityWrap<component::MappingContext> & mContext;
+    ent::Wrap<component::MappingContext> & mMappingContext;
+    ent::Query<snac::Orbital> mCameraQuery;
 };
 
 } // namespace scene

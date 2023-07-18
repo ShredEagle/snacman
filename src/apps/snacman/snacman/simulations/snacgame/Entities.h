@@ -109,10 +109,15 @@ createMenuItem(GameContext & aContext,
                const math::Size<2, float> & aScale = {1.f, 1.f});
 
 // Player utils
-bool addPlayer(GameContext & aContext, const int aControllerIndex);
+ent::Handle<ent::Entity> addPlayer(GameContext & aContext, const int aControllerIndex);
 ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
-                                            ent::Handle<ent::Entity> & aSlotHandle,
+                                            ent::Handle<ent::Entity> aSlotHandle,
                                             const math::Position<3, float> & aPosition);
+void removePlayerFromGame(ent::Handle<ent::Entity> aSlotHandle);
+ent::Handle<ent::Entity> createJoinGamePlayer(GameContext & aContext,
+                                            ent::Handle<ent::Entity> aSlotHandle, int aSlotIndex);
+void preparePlayerForGame(GameContext & aContext, ent::Handle<ent::Entity> aSlotHandle);
+void addBillpadHud(GameContext & aContext, ent::Handle<ent::Entity> aSlotHandle);
 void swapPlayerPosition(ent::Phase & aPhase,
                         ent::Handle<ent::Entity> aPlayer,
                         ent::Handle<ent::Entity> aOther);
