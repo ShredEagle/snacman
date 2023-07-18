@@ -9,6 +9,8 @@ set(${TARGET_NAME}_HEADERS
     IntrospectProgram.h
     Logging.h
     Model.h
+    Profiler.h
+    Profiling.h
     RenderGraph.h
     SetupVertexAttributes.h
 )
@@ -18,6 +20,7 @@ set(${TARGET_NAME}_SOURCES
 
     IntrospectProgram.cpp
     Logging.cpp
+    Profiler.cpp
     RenderGraph.cpp
     SetupVertexAttributes.cpp
 )

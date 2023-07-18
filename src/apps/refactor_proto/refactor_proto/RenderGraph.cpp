@@ -1,5 +1,6 @@
 #include "RenderGraph.h"
 
+#include "Profiling.h"
 #include "SetupVertexAttributes.h"
 
 #include <handy/vector_utils.h>
@@ -159,21 +160,13 @@ RenderGraph::RenderGraph()
 
 void RenderGraph::render()
 {
-    graphics::Query query;
-    glBeginQueryIndexed(GL_PRIMITIVES_GENERATED, 0, query);
-
+    PROFILER_BEGIN_SECTION("draw_instances");
     for(const auto & instance : mScene)
     {
         // TODO replace with some form a render list generation, abstracting material/program selection
         draw(instance);
     }
-
-    glEndQueryIndexed(GL_PRIMITIVES_GENERATED, 0);
-    GLuint available, a2, primitivesGenerated;
-    glGetQueryObjectuiv(query, GL_QUERY_RESULT_AVAILABLE, &available);
-    glGetQueryObjectuiv(query, GL_QUERY_RESULT, &primitivesGenerated);
-    glGetQueryObjectuiv(query, GL_QUERY_RESULT_AVAILABLE, &a2);
-    std::cerr << "Primitives generated: " << primitivesGenerated << ". Available: " << available << " " << a2 << "\n";
+    PROFILER_END_SECTION;
 }
 
 

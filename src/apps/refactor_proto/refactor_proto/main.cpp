@@ -1,4 +1,5 @@
 #include "Logging.h"
+#include "Profiling.h"
 #include "RenderGraph.h"
 
 #include <build_info.h>
@@ -59,8 +60,14 @@ void runApplication()
 
     while (glfwApp.handleEvents())
     {
+        PROFILER_BEGIN_FRAME;
+
         renderGraph.render();
         glfwApp.swapBuffers();
+
+        PROFILER_END_FRAME;
+
+        std::cout << renderer::getGlobalProfiler().prettyPrint();
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }
