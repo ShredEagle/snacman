@@ -70,8 +70,17 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     // TODO Section identity is much more subtle than that
     // It should be robust to changing the structure of sections (loop variance, and logical structure)
     // and handle change in providers somehow.
+    // For the moment, make a few assertions that will trip the program as soon as it becomes more dynamic.
 
+    // There must be a number of provider in [1, maxMetricsPerSection]
+    assert(aProviders.size() > 0 && aProviders.size() <= gMaxMetricsPerSection);
+    
     Entry & entry = mEntries[mNextEntry];
+
+    // Because we do not track identity, we hope it matches
+    assert(entry.mName == nullptr || entry.mName == aName);
+    assert(entry.mLevel == Entry::gInvalidLevel || entry.mName == aName);
+
     entry.mLevel = mCurrentLevel++;
     entry.mName = aName;
     if(entry.mActiveMetrics == 0)
@@ -82,7 +91,8 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
         }
     }
 
-    assert(aProviders.size() > 0 && entry.mActiveMetrics == aProviders.size());
+    // Also part of identity, a logical section should always be given the exact same list of providers.
+    assert(entry.mActiveMetrics == aProviders.size());
 
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {

@@ -1,4 +1,4 @@
-#include "SetupVertexAttributes.h"
+#include "SetupDrawing.h"
 
 #include "Logging.h"
 #include "Model.h"
@@ -108,6 +108,30 @@ graphics::VertexArrayObject prepareVAO(const VertexStream & aVertices,
     SELOG(info)("Configured a new VAO.");
 
     return vertexArray;
+}
+
+
+void setBufferBackedBlocks(const RepositoryUBO & aUniformBufferObjects,
+                           const IntrospectProgram & aProgram)
+{
+    for (const IntrospectProgram::UniformBlock & shaderBlock : aProgram.mUniformBlocks)
+    {
+        if(auto found = aUniformBufferObjects.find(shaderBlock.mSemantic);
+           found != aUniformBufferObjects.end())
+        {
+            bind(found->second, shaderBlock.mBindingIndex);
+        }
+        else
+        {
+            // TODO since this function is currently called before each draw
+            // this is much too verbose for a warning...
+            SELOG(warn)(
+                "{}: Could not find an a block uniform for block semantic '{}' in program '{}'.", 
+                __func__,
+                to_string(shaderBlock.mSemantic),
+                aProgram.name());
+        }
+    }
 }
 
 

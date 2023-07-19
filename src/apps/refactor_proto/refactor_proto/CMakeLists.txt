@@ -6,13 +6,15 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     Commons.h
+    Cube.h
     IntrospectProgram.h
     Logging.h
     Model.h
     Profiler.h
     Profiling.h
     RenderGraph.h
-    SetupVertexAttributes.h
+    Repositories.h
+    SetupDrawing.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -21,8 +23,9 @@ set(${TARGET_NAME}_SOURCES
     IntrospectProgram.cpp
     Logging.cpp
     Profiler.cpp
+    Profiling.cpp
     RenderGraph.cpp
-    SetupVertexAttributes.cpp
+    SetupDrawing.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -39,7 +42,7 @@ add_executable(${TARGET_NAME}
 )
 
 if(MSVC)
-    # Otherwise GameScene-setup.cpp errors:
+    # Otherwise big object files might error with:
     # "fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj"
     target_compile_options(${TARGET_NAME} PRIVATE "/bigobj")
 endif()

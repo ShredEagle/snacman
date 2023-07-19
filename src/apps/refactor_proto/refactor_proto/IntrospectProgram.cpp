@@ -147,7 +147,7 @@ namespace {
             throw std::logic_error{
                 "Unable to map shader block name '" + std::string{aBlockName} + "' to a semantic, arrays of blocks are not supported."};
         }
-        else if(aBlockName.ends_with("block"))
+        else if(aBlockName.ends_with("Block"))
         {
             aBlockName.remove_suffix(5);
             return std::string{aBlockName};
@@ -215,17 +215,8 @@ std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::UniformB
     aOut << aBlock.mName 
          // TODO add block semantic output
          //<< " (" << to_string(aResource.mSemantic) << ")"
-         << " at binding index " << aBlock.mBindingIndex
-         << " has " << aBlock.mUniforms.size() << " active uniform variable(s):"
+         << " at binding index " << aBlock.mBindingIndex << "."
          ;
-
-    for (const auto & resource : aBlock.mUniforms)
-    {
-        // TODO Address the dirty encoding of two tabs
-        // (because we currently intend to use it under the IntrospectProgram output operator)
-        aOut << "\n\t\t*" << resource;
-    }
-
     return aOut;
 }
 

@@ -1,12 +1,15 @@
 #include "RenderGraph.h"
 
+#include "Cube.h"
 #include "Profiling.h"
-#include "SetupVertexAttributes.h"
+#include "SetupDrawing.h"
 
 #include <handy/vector_utils.h>
 
+#include <math/Transformations.h>
 #include <math/Vector.h>
 
+#include <renderer/BufferLoad.h>
 #include <renderer/Query.h>
 #include <renderer/ScopeGuards.h>
 
@@ -21,9 +24,14 @@ const char * gVertexShader = R"#(
 
     in vec3 v_Position_clip;
 
+    layout(std140) uniform InstancePoseBlock
+    {
+        mat4 localToWorld;
+    };
+
     void main()
     {
-        gl_Position = vec4(v_Position_clip, 1.f);
+        gl_Position = localToWorld * vec4(v_Position_clip, 1.f);
     }
 )#";
 
@@ -60,19 +68,13 @@ namespace {
         return vbo;
     }
 
-
-    VertexStream makeTriangle(Storage & aStorage)
+    VertexStream makeFromPositions(Storage & aStorage, std::span<math::Position<3, GLfloat>> aPositions)
     {
-        std::array<math::Position<3, GLfloat>, 3> vertices{{
-            { 1.f, -1.f, 0.f},
-            { 0.f,  1.f, 0.f},
-            {-1.f, -1.f, 0.f},
-        }};
-        aStorage.mVertexBuffers.push_back(makeMutableBuffer(std::span{vertices}, GL_STATIC_DRAW));
+        aStorage.mVertexBuffers.push_back(makeMutableBuffer(aPositions, GL_STATIC_DRAW));
 
         VertexBufferView vboView{
             .mGLBuffer = &aStorage.mVertexBuffers.back(),
-            .mStride = sizeof(decltype(vertices)::value_type),
+            .mStride = sizeof(decltype(aPositions)::value_type),
             .mOffset = 0,
         };
 
@@ -91,11 +93,26 @@ namespace {
                     }
                 },
             },
-            .mVertexCount = (GLsizei)std::size(vertices),
+            .mVertexCount = (GLsizei)std::size(aPositions),
             .mPrimitiveMode = GL_TRIANGLES,
         };
     }
 
+    VertexStream makeTriangle(Storage & aStorage)
+    {
+        std::array<math::Position<3, GLfloat>, 3> vertices{{
+            { 1.f, -1.f, 0.f},
+            { 0.f,  1.f, 0.f},
+            {-1.f, -1.f, 0.f},
+        }};
+        return makeFromPositions(aStorage, std::span{vertices});
+    }
+
+    VertexStream makeCube(Storage & aStorage)
+    {
+        auto cubeVertices = getExpandedCubeVertices<math::Position<3, GLfloat>>();
+        return makeFromPositions(aStorage, std::span{cubeVertices});
+    }
 
     Material makeWhiteMaterial(Storage & aStorage)
     {
@@ -122,16 +139,38 @@ namespace {
 
     void draw(const Instance & aInstance)
     {
+        RepositoryUBO ubos;
+        {
+            PROFILER_SCOPE_SECTION("prepare_UBO", CpuTime, GpuTime);
+
+            graphics::UniformBufferObject ubo;
+            math::AffineMatrix<4, GLfloat> modelTransformation = 
+                math::trans3d::scaleUniform(aInstance.mPose.mUniformScale)
+                * math::trans3d::translate(aInstance.mPose.mPosition)
+                ;
+            graphics::load(ubo,
+                           std::span{&modelTransformation, 1}, 
+                           graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
+            ubos.emplace("InstancePose", std::move(ubo));
+        }
+
         for(const Part & part : aInstance.mObject->mParts)
         {
             // TODO replace program selection with something not hardcoded, this is a quick test
-            // (Ideally, a shader system with some form a render list)
+            // (Ideally, a shader system with some form of render list)
             assert(part.mMaterial.mEffect->mTechniques.size() == 1);
             const IntrospectProgram & selectedProgram = part.mMaterial.mEffect->mTechniques.at(0).mProgram;
 
             // TODO cache VAO
+            PROFILER_BEGIN_SECTION("prepare_VAO", CpuTime);
             graphics::VertexArrayObject vao = prepareVAO(part.mVertexStream, selectedProgram);
+            PROFILER_END_SECTION;
             graphics::ScopedBind vaoScope{vao};
+            
+            {
+                PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
+                setBufferBackedBlocks(ubos, selectedProgram);
+            }
 
             graphics::ScopedBind programScope{selectedProgram};
 
@@ -145,6 +184,10 @@ namespace {
 
 RenderGraph::RenderGraph()
 {
+    // TODO replace use of pointers into the storage (which are invalidated on vector resize)
+    // with some form of handle
+    mStorage.mVertexBuffers.reserve(16);
+
     static Object triangle;
     triangle.mParts.push_back(Part{
         .mVertexStream = makeTriangle(mStorage),
@@ -153,7 +196,25 @@ RenderGraph::RenderGraph()
 
     mScene.push_back(Instance{
         .mObject = &triangle,
-        //.mPose
+        .mPose = {
+            .mPosition = {-0.5f, 0.f, 0.f},
+            .mUniformScale = 0.3f,
+        }
+    });
+
+    // TODO cache materials
+    static Object cube;
+    cube.mParts.push_back(Part{
+        .mVertexStream = makeCube(mStorage),
+        .mMaterial = triangle.mParts[0].mMaterial,
+    });
+
+    mScene.push_back(Instance{
+        .mObject = &cube,
+        .mPose = {
+            .mPosition = {0.5f, 0.f, 0.f},
+            .mUniformScale = 0.3f,
+        }
     });
 }
 

@@ -30,6 +30,8 @@
 //   * The metrics should be user-extensible
 //   * Restriction: a given logical section should list the same exact metrics at each frame.
 //     * What should profiler do if it does not?
+// * TODO Some section are not recurring each frame, but are considered single shot events.
+//   * They should not be discarded at the end of a frame, but only via explicit user request.
 
 namespace ad::renderer {
 
@@ -137,8 +139,10 @@ private:
 
     struct Entry
     {
+        inline static constexpr unsigned int gInvalidLevel = -1;
+
         const char * mName;
-        unsigned int mLevel = 0;
+        unsigned int mLevel = gInvalidLevel;
         std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
         std::size_t mActiveMetrics = 0;
     };

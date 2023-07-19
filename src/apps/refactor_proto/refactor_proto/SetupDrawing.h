@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "Repositories.h"
+
 #include <renderer/VertexSpecification.h>
 
 
@@ -15,6 +17,10 @@ struct IntrospectProgram;
 graphics::VertexArrayObject prepareVAO(const VertexStream & aVertices,
                                        //const InstanceStream & aInstances,
                                        const IntrospectProgram & aProgram);
+
+
+void setBufferBackedBlocks(const RepositoryUBO & aUniformBufferObjects,
+                           const IntrospectProgram & aProgram);
 
 
 } // namespace ad::renderer

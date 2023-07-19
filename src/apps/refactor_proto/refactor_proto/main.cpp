@@ -56,12 +56,14 @@ void runApplication()
         4, 1,
     };
 
+    auto scopeProfiler = renderer::scopeGlobalProfiler();
+
     renderer::RenderGraph renderGraph;
 
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME;
-        PROFILER_BEGIN_SECTION("frame", renderer::CpuTime);
+        PROFILER_BEGIN_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
 
         renderGraph.render();
         glfwApp.swapBuffers();

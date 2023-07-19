@@ -269,7 +269,7 @@ void setBlocks(const UniformBlocks & aUniformBlocks, const IntrospectProgram & a
         else
         {
             // TODO since this function is currently called before each draw
-            // this is much to verbose for a warning...
+            // this is much too verbose for a warning...
             SELOG(warn)(
                 "{}: Could not find an a block uniform for block semantic '{}' in program '{}'.", 
                 __func__,

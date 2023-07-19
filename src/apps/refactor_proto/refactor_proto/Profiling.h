@@ -3,23 +3,35 @@
 
 #include "Profiler.h"
 
+#include <handy/Guard.h>
+
 
 namespace ad::renderer {
 
 
+extern std::unique_ptr<Profiler> globalProfiler;
+
+
+// Because some providers within the profiler require to destory GL objects,
+// we ask the client to explicitly scope the global profiler where the GL context is valid.
+Guard scopeGlobalProfiler();
+
+
 inline Profiler & getGlobalProfiler()
 {
-    static Profiler globalProfiler;
-    return globalProfiler;
+    return *globalProfiler;
 }
 
-// Note: Hardcoded for the moment, knowing in which order Providers are pushed into the Profiler.
+
+// Note: Hardcoded lit of available providers for the moment,
+// as we know in which order Providers are pushed into the Profiler.
 enum 
 {
     CpuTime = 0,
     GpuTime,
     GpuPrimitiveGen,
 };
+
 
 #define PROFILER_BEGIN_FRAME ::ad::renderer::getGlobalProfiler().beginFrame()
 #define PROFILER_END_FRAME ::ad::renderer::getGlobalProfiler().endFrame()
@@ -31,5 +43,6 @@ enum
 
 #define PROFILER_SCOPE_SECTION(name, ...) \
     auto profilerScopedSection = ::ad::renderer::getGlobalProfiler().scopeSection(name, {__VA_ARGS__})
+
 
 } // namespace ad::renderer

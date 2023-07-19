@@ -95,6 +95,7 @@ struct Object
 struct Pose
 {
     math::Vec<3, float> mPosition;
+    float mUniformScale;
 };
 
 

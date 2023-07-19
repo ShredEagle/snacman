@@ -60,7 +60,7 @@ struct IntrospectProgram
         BlockSemantic mSemantic;
         std::string mName;
         // TODO do we want to use another type that does not have a location data member?
-        std::vector<Resource> mUniforms;
+        //std::vector<Resource> mUniforms; // Uniform blocks contain uniform variables
     };
 
     graphics::Program mProgram;
