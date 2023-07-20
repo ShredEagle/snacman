@@ -27,6 +27,8 @@ struct BufferView
     // This way the buffer can store heterogeneous elements.
     GLsizei mStride;
     GLintptr mOffset;
+    GLsizeiptr mSize; // The size (in bytes) this buffer view has access to, starting from mOffset.
+                      // Intended to be used for safety checks.
 };
 
 
@@ -67,17 +69,32 @@ struct AttributeAccessor
 {
     std::vector<VertexBufferView>::size_type mBufferViewIndex;
     graphics::ClientAttribute mClientDataFormat;
+    GLuint mInstanceDivisor = 0;
 };
 
 
-struct VertexStream
+#define SEMANTIC_BUFFER_MEMBERS \
+std::vector<VertexBufferView> mBufferViews; \
+std::map<Semantic, AttributeAccessor> mSemanticToAttribute;
+
+/// \note Intermediary class that holds a collection of buffer views,
+/// with associated semantic and client format description.
+struct SemanticBufferViews
 {
-    std::vector<VertexBufferView> mBufferViews;
-    std::map<Semantic, AttributeAccessor> mSemanticToAttribute;
+    SEMANTIC_BUFFER_MEMBERS                 
+};
+
+
+// Not using inheritance, since it does allow designated initializers
+struct VertexStream /*: public SemanticBufferViews*/
+{
+    SEMANTIC_BUFFER_MEMBERS                 
     IndexBufferView mIndexBufferView;
     GLsizei mVertexCount = 0;
     GLenum mPrimitiveMode = NULL;
 };
+
+#undef SEMANTIC_BUFFER_MEMBERS
 
 struct Part
 {

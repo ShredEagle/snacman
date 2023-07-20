@@ -64,9 +64,9 @@ namespace {
 } // unnamed namespace
 
 
-graphics::VertexArrayObject prepareVAO(const VertexStream & aVertices,
-                                       //const InstanceStream & aInstances,
-                                       const IntrospectProgram & aProgram)
+graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
+                                       const VertexStream & aVertices,
+                                       std::initializer_list<const SemanticBufferViews *> aExtraVertexAttributes)
 {
     graphics::VertexArrayObject vertexArray;
     graphics::ScopedBind scopedVao{vertexArray};
@@ -87,21 +87,39 @@ graphics::VertexArrayObject prepareVAO(const VertexStream & aVertices,
             const AttributeAccessor & accessor = found->second;
             const VertexBufferView & bufferView = 
                 aVertices.mBufferViews.at(accessor.mBufferViewIndex);
-            attachAttribute(shaderAttribute, accessor.mClientDataFormat, bufferView, 0, aProgram.name());
+            assert(accessor.mInstanceDivisor == 0); // should always be 0 for the VertexStream it seems
+            attachAttribute(shaderAttribute,
+                            accessor.mClientDataFormat,
+                            bufferView,
+                            accessor.mInstanceDivisor,
+                            aProgram.name());
         }
-        //else if (auto found = aInstances.mAttributes.find(shaderAttribute.mSemantic);
-        //         found != aInstances.mAttributes.end())
-        //{
-        //    const graphics::ClientAttribute & client = found->second;
-        //    attachAttribute(shaderAttribute, client, aInstances.mInstanceBuffer, 1, aProgram.name());
-        //}
         else
         {
-            SELOG(warn)(
-                "{}: Could not find an a vertex array buffer for semantic '{}' in program '{}'.", 
-                __func__,
-                to_string(shaderAttribute.mSemantic),
-                aProgram.name());
+            // TODO I do not like this repetition, this should be factorized with first step.
+            // And the overall flow of control could be less convoluted.
+            for(const SemanticBufferViews * semanticBufferView : aExtraVertexAttributes)
+            {
+                if (auto found = semanticBufferView->mSemanticToAttribute.find(shaderAttribute.mSemantic);
+                    found != semanticBufferView->mSemanticToAttribute.end())
+                {
+                    const AttributeAccessor & accessor = found->second;
+                    const VertexBufferView & bufferView = 
+                        semanticBufferView->mBufferViews.at(accessor.mBufferViewIndex);
+                    attachAttribute(shaderAttribute,
+                                    accessor.mClientDataFormat,
+                                    bufferView,
+                                    accessor.mInstanceDivisor,
+                                    aProgram.name());
+                    continue; // Move to the next program attribute since we found a match.
+                }
+
+                SELOG(warn)(
+                    "{}: Could not find an a vertex array buffer for semantic '{}' in program '{}'.", 
+                    __func__,
+                    to_string(shaderAttribute.mSemantic),
+                    aProgram.name());
+            }
         }
     }
 
@@ -111,8 +129,8 @@ graphics::VertexArrayObject prepareVAO(const VertexStream & aVertices,
 }
 
 
-void setBufferBackedBlocks(const RepositoryUBO & aUniformBufferObjects,
-                           const IntrospectProgram & aProgram)
+void setBufferBackedBlocks(const IntrospectProgram & aProgram,
+                           const RepositoryUBO & aUniformBufferObjects)
 {
     for (const IntrospectProgram::UniformBlock & shaderBlock : aProgram.mUniformBlocks)
     {

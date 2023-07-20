@@ -15,6 +15,7 @@ struct RenderGraph
 
     Storage mStorage;
     std::vector<Instance> mScene;
+    SemanticBufferViews mInstanceStream;
 };
 
 

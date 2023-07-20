@@ -6,6 +6,7 @@
 #include <iterator>
 #include <memory>
 #include <ostream>
+#include <set>
 #include <string>
 
 #include <cassert>
@@ -268,9 +269,28 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
                 .mName = it->mName,
             });
         }
+
+        // Note: When uniform blocks are not explicitly assigned a binding index
+        // there tends to be a lot of collisions.
+        // TODO Understand why, unlike for generic vertex attributes, automatic indices
+        // are not working for uniform blocks.
+        auto checkDuplicateIndex = [](const std::vector<UniformBlock> & aBlocks) -> bool
+        {
+            std::set<graphics::BindingIndex> boundIndices;
+            for(const auto & block : aBlocks)
+            {
+                if (boundIndices.contains(block.mBindingIndex))
+                {
+                    return false;
+                }
+                boundIndices.insert(block.mBindingIndex);
+            }
+            return true;
+        };
+        assert(checkDuplicateIndex(mUniformBlocks));
     }
 
-    // All uniforms (from uniform blocks, and not)
+    // All uniforms ("normal" non-block uniforms, as well as within uniform blocks)
     {
         using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE, GL_ARRAY_SIZE, GL_BLOCK_INDEX>;
         for (auto it = Iterator(mProgram, GL_UNIFORM);

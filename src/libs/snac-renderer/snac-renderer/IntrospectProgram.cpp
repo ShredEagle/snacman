@@ -232,7 +232,7 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
         }
     }
 
-    // All uniforms (from uniform blocks, and not)
+    // All uniforms ("normal" non-block uniforms, as well as within uniform blocks)
     {
         using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE, GL_ARRAY_SIZE, GL_BLOCK_INDEX>;
         for (auto it = Iterator(mProgram, GL_UNIFORM);

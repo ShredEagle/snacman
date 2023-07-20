@@ -12,15 +12,16 @@ namespace ad::renderer {
 struct VertexStream;
 struct InstanceStream;
 struct IntrospectProgram;
+struct SemanticBufferViews;
 
 
-graphics::VertexArrayObject prepareVAO(const VertexStream & aVertices,
-                                       //const InstanceStream & aInstances,
-                                       const IntrospectProgram & aProgram);
+graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
+                                       const VertexStream & aVertices,
+                                       std::initializer_list<const SemanticBufferViews *> aExtraVertexAttributes = {});
 
 
-void setBufferBackedBlocks(const RepositoryUBO & aUniformBufferObjects,
-                           const IntrospectProgram & aProgram);
+void setBufferBackedBlocks(const IntrospectProgram & aProgram,
+                           const RepositoryUBO & aUniformBufferObjects);
 
 
 } // namespace ad::renderer

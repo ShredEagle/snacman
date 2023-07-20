@@ -20,62 +20,93 @@ namespace ad::renderer {
 
 
 const char * gVertexShader = R"#(
-    #version 410
+    #version 420
 
     in vec3 v_Position_clip;
 
-    layout(std140) uniform InstancePoseBlock
-    {
-        mat4 localToWorld;
-    };
+    in mat4 i_ModelTransform;
 
     void main()
     {
-        gl_Position = localToWorld * vec4(v_Position_clip, 1.f);
+        gl_Position = i_ModelTransform * vec4(v_Position_clip, 1.f);
     }
 )#";
 
 const char * gFragmentShader = R"#(
-    #version 410
+    #version 420
+
+    layout(std140, binding = 2) uniform FrameBlock
+    {
+        float time;
+    };
 
     out vec4 color;
 
     void main()
     {
-        color = vec4(1.0, 0.5, 0.25, 1.f);
+        color = vec4(1.0, 0.5, 0.25, 1.f) * vec4(mod(time, 1.0));
     }
 )#";
 
 
+struct InstanceData
+{
+    math::AffineMatrix<4, GLfloat> mModelTransform;
+};
+
+
 namespace semantic
 {
-    const std::string gPosition{"Position"};
+    const Semantic gPosition{"Position"};
+    const Semantic gModelTransform{"ModelTransform"};
+
+    const BlockSemantic gFrame{"Frame"};
 } // namespace semantic
 
 
 namespace {
 
-    template <class T_data, std::size_t N_extent>
-    graphics::VertexBufferObject makeMutableBuffer(std::span<T_data, N_extent> aInitialData, GLenum aHint)
+    template <class T_data>
+    std::pair<graphics::VertexBufferObject, GLsizeiptr>
+    makeMutableBuffer(std::size_t aInstanceCount, GLenum aHint)
     {
         graphics::VertexBufferObject vbo; // glGenBuffers()
         graphics::ScopedBind boundVBO{vbo}; // glBind()
+        const GLsizeiptr size = sizeof(T_data) * aInstanceCount;
         glBufferData(
             vbo.GLTarget_v,
-            aInitialData.size_bytes(),
+            size,
+            nullptr,
+            aHint);
+        return std::make_pair(std::move(vbo), size);
+    }
+
+
+    template <class T_data, std::size_t N_extent>
+    std::pair<graphics::VertexBufferObject, GLsizeiptr>
+    makeMutableBuffer(std::span<T_data, N_extent> aInitialData, GLenum aHint)
+    {
+        graphics::VertexBufferObject vbo; // glGenBuffers()
+        graphics::ScopedBind boundVBO{vbo}; // glBind()
+        const GLsizeiptr size = aInitialData.size_bytes();
+        glBufferData(
+            vbo.GLTarget_v,
+            size,
             aInitialData.data(),
             aHint);
-        return vbo;
+        return std::make_pair(std::move(vbo), size);
     }
 
     VertexStream makeFromPositions(Storage & aStorage, std::span<math::Position<3, GLfloat>> aPositions)
     {
-        aStorage.mVertexBuffers.push_back(makeMutableBuffer(aPositions, GL_STATIC_DRAW));
+        auto [vbo, size] = makeMutableBuffer(aPositions, GL_STATIC_DRAW);
+        aStorage.mVertexBuffers.push_back(std::move(vbo));
 
         VertexBufferView vboView{
             .mGLBuffer = &aStorage.mVertexBuffers.back(),
             .mStride = sizeof(decltype(aPositions)::value_type),
             .mOffset = 0,
+            .mSize = size, // The view has access to the whole buffer
         };
 
         return VertexStream{
@@ -136,22 +167,67 @@ namespace {
         };
     }
 
-
-    void draw(const Instance & aInstance)
+    SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
     {
-        RepositoryUBO ubos;
-        {
-            PROFILER_SCOPE_SECTION("prepare_UBO", CpuTime, GpuTime);
+        auto [vbo, size] = makeMutableBuffer<InstanceData>(aInstanceCount, GL_STREAM_DRAW);
+        aStorage.mVertexBuffers.push_back(std::move(vbo));
 
-            graphics::UniformBufferObject ubo;
+        VertexBufferView vboView{
+            .mGLBuffer = &aStorage.mVertexBuffers.back(),
+            .mStride = sizeof(InstanceData),
+            .mOffset = 0,
+            .mSize = size, // The view has access to the whole buffer
+        };
+
+        return SemanticBufferViews{
+            .mBufferViews = { vboView, },
+            .mSemanticToAttribute{
+                {
+                    semantic::gModelTransform,
+                    AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = {4, 4},
+                            .mOffset = 0,
+                            .mComponentType = GL_FLOAT
+                        },
+                        .mInstanceDivisor = 1,
+                    }
+                },
+            }
+        };
+    }
+
+
+    void draw(const Instance & aInstance,
+              const SemanticBufferViews & aInstanceBufferView)
+    {
+        // TODO should be done ahead of the draw call, at once for all instances.
+        {
             math::AffineMatrix<4, GLfloat> modelTransformation = 
                 math::trans3d::scaleUniform(aInstance.mPose.mUniformScale)
                 * math::trans3d::translate(aInstance.mPose.mPosition)
                 ;
-            graphics::load(ubo,
-                           std::span{&modelTransformation, 1}, 
-                           graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
-            ubos.emplace("InstancePose", std::move(ubo));
+            
+            graphics::replaceSubset(
+                *aInstanceBufferView.mBufferViews.at(0).mGLBuffer,
+                0, /*offset*/
+                std::span{&modelTransformation, 1}
+            );
+        }
+
+        RepositoryUBO ubos;
+        {
+            PROFILER_SCOPE_SECTION("prepare_UBO", CpuTime, GpuTime);
+            {
+                graphics::UniformBufferObject ubo;
+                GLfloat time =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 1000.f;
+                graphics::loadSingle(ubo, time, 
+                                     graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
+                ubos.emplace(semantic::gFrame, std::move(ubo));
+            }
         }
 
         for(const Part & part : aInstance.mObject->mParts)
@@ -163,18 +239,19 @@ namespace {
 
             // TODO cache VAO
             PROFILER_BEGIN_SECTION("prepare_VAO", CpuTime);
-            graphics::VertexArrayObject vao = prepareVAO(part.mVertexStream, selectedProgram);
+            graphics::VertexArrayObject vao = prepareVAO(selectedProgram, part.mVertexStream, {&aInstanceBufferView});
             PROFILER_END_SECTION;
             graphics::ScopedBind vaoScope{vao};
             
             {
                 PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
-                setBufferBackedBlocks(ubos, selectedProgram);
+                setBufferBackedBlocks(selectedProgram, ubos);
             }
 
             graphics::ScopedBind programScope{selectedProgram};
 
-            glDrawArrays(part.mVertexStream.mPrimitiveMode, 0, part.mVertexStream.mVertexCount);
+            // TODO multi draw
+            glDrawArraysInstanced(part.mVertexStream.mPrimitiveMode, 0, part.mVertexStream.mVertexCount, 1);
         }
     }
 
@@ -216,6 +293,9 @@ RenderGraph::RenderGraph()
             .mUniformScale = 0.3f,
         }
     });
+
+    // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
+    mInstanceStream = makeInstanceStream(mStorage, 1);
 }
 
 
@@ -225,7 +305,7 @@ void RenderGraph::render()
     for(const auto & instance : mScene)
     {
         // TODO replace with some form a render list generation, abstracting material/program selection
-        draw(instance);
+        draw(instance, mInstanceStream);
     }
 }
 
