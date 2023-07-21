@@ -3,6 +3,8 @@
 
 #include "Model.h"
 
+#include <graphics/ApplicationGlfw.h>
+
 
 namespace ad::renderer {
 
@@ -11,7 +13,7 @@ struct RenderGraph
 {
     RenderGraph();
 
-    void render();
+    void render(const graphics::ApplicationGlfw & aGlfwApp);
 
     Storage mStorage;
     std::vector<Instance> mScene;

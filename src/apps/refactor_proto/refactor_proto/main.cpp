@@ -65,7 +65,7 @@ void runApplication()
         PROFILER_BEGIN_FRAME;
         PROFILER_BEGIN_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
 
-        renderGraph.render();
+        renderGraph.render(glfwApp);
         glfwApp.swapBuffers();
 
         PROFILER_END_SECTION;

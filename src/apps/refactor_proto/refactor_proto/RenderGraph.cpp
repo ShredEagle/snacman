@@ -4,6 +4,8 @@
 #include "Profiling.h"
 #include "SetupDrawing.h"
 
+#include <graphics/CameraUtilities.h>
+
 #include <handy/vector_utils.h>
 
 #include <math/Transformations.h>
@@ -27,9 +29,14 @@ const char * gVertexShader = R"#(
 
     in mat4 i_ModelTransform;
 
+    layout(std140, binding = 1) uniform ViewBlock
+    {
+        mat4 viewingProjection;
+    };
+
     void main()
     {
-        gl_Position = i_ModelTransform * vec4(v_Position_clip, 1.f);
+        gl_Position = viewingProjection * i_ModelTransform * vec4(v_Position_clip, 1.f);
     }
 )#";
 
@@ -62,6 +69,7 @@ namespace semantic
     const Semantic gModelTransform{"ModelTransform"};
 
     const BlockSemantic gFrame{"Frame"};
+    const BlockSemantic gView{"View"};
 } // namespace semantic
 
 
@@ -276,8 +284,12 @@ namespace {
 
 
     void draw(const Instance & aInstance,
-              const SemanticBufferViews & aInstanceBufferView)
+              const SemanticBufferViews & aInstanceBufferView,
+              math::Size<2, int> aFramebufferResolution)
     {
+        // TODO should be done once per viewport
+        glViewport(0, 0, aFramebufferResolution.width(), aFramebufferResolution.height());
+
         // TODO should be done ahead of the draw call, at once for all instances.
         {
             math::AffineMatrix<4, GLfloat> modelTransformation = 
@@ -303,6 +315,21 @@ namespace {
                 graphics::loadSingle(ubo, time, 
                                      graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
                 ubos.emplace(semantic::gFrame, std::move(ubo));
+            }
+            {
+                graphics::UniformBufferObject ubo;
+                math::Box<GLfloat> viewVolume = 
+                    graphics::getViewVolumeRightHanded(aFramebufferResolution,
+                                                       2.f,
+                                                       -0.1f,
+                                                       10.f);
+        
+                math::AffineMatrix<4, GLfloat> viewingProjection = 
+                    math::trans3d::translate<GLfloat>({0.f, 0.f, -2.f})
+                    * math::trans3d::orthographicProjection(viewVolume);
+                graphics::loadSingle(ubo, viewingProjection, 
+                                     graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
+                ubos.emplace(semantic::gView, std::move(ubo));
             }
         }
 
@@ -408,13 +435,15 @@ RenderGraph::RenderGraph()
 }
 
 
-void RenderGraph::render()
+void RenderGraph::render(const graphics::ApplicationGlfw & aGlfwApp)
 {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
     for(const auto & instance : mScene)
     {
         // TODO replace with some form a render list generation, abstracting material/program selection
-        draw(instance, mInstanceStream);
+        draw(instance, mInstanceStream, aGlfwApp.getAppInterface()->getFramebufferSize());
     }
 }
 
