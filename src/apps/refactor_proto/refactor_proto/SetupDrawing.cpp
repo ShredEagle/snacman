@@ -20,7 +20,7 @@ namespace {
     /// (dimensions, etc.)
     void attachAttribute(const IntrospectProgram::Attribute & aShaderAttribute,
                          const graphics::ClientAttribute & aClientAttribute,
-                         const VertexBufferView & aView,
+                         const BufferView & aVertexBufferView,
                          GLuint aInstanceDivisor,
                          std::string_view aProgramName /* for log messages */)
     {
@@ -53,10 +53,10 @@ namespace {
                 );
             }
 
-            graphics::ScopedBind scopeVertexBuffer{*aView.mGLBuffer};
+            graphics::ScopedBind scopeVertexBuffer{*aVertexBufferView.mGLBuffer, graphics::BufferType::Array};
             graphics::attachBoundVertexBuffer(
                 {aShaderAttribute.toShaderParameter(), aClientAttribute},
-                aView.mStride,
+                aVertexBufferView.mStride,
                 aInstanceDivisor);
     }
 
@@ -71,12 +71,12 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
     graphics::VertexArrayObject vertexArray;
     graphics::ScopedBind scopedVao{vertexArray};
 
-    if (const graphics::IndexBufferObject * ibo = aVertices.mIndexBufferView.mGLBuffer;
+    if (const graphics::BufferAny * ibo = aVertices.mIndexBufferView.mGLBuffer;
         ibo != nullptr)
     {
         // Now that the VAO is bound, it can store the index buffer binding.
         // Note that this binding is permanent, no need to scope it.
-        graphics::bind(*ibo);
+        graphics::bind(*ibo, graphics::BufferType::ElementArray);
     }
 
     for (const IntrospectProgram::Attribute & shaderAttribute : aProgram.mAttributes)
@@ -85,12 +85,12 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
            found != aVertices.mSemanticToAttribute.end())
         {
             const AttributeAccessor & accessor = found->second;
-            const VertexBufferView & bufferView = 
-                aVertices.mBufferViews.at(accessor.mBufferViewIndex);
+            const BufferView & vertexBufferView = 
+                aVertices.mVertexBufferViews.at(accessor.mBufferViewIndex);
             assert(accessor.mInstanceDivisor == 0); // should always be 0 for the VertexStream it seems
             attachAttribute(shaderAttribute,
                             accessor.mClientDataFormat,
-                            bufferView,
+                            vertexBufferView,
                             accessor.mInstanceDivisor,
                             aProgram.name());
         }
@@ -104,11 +104,11 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
                     found != semanticBufferView->mSemanticToAttribute.end())
                 {
                     const AttributeAccessor & accessor = found->second;
-                    const VertexBufferView & bufferView = 
-                        semanticBufferView->mBufferViews.at(accessor.mBufferViewIndex);
+                    const BufferView & vertexBufferView = 
+                        semanticBufferView->mVertexBufferViews.at(accessor.mBufferViewIndex);
                     attachAttribute(shaderAttribute,
                                     accessor.mClientDataFormat,
-                                    bufferView,
+                                    vertexBufferView,
                                     accessor.mInstanceDivisor,
                                     aProgram.name());
                     continue; // Move to the next program attribute since we found a match.

@@ -19,10 +19,9 @@ namespace ad::renderer {
 // GL coupled (low level)
 //
 
-template <graphics::BufferType N_type>
 struct BufferView
 {
-    graphics::Buffer<N_type> * mGLBuffer;
+    graphics::BufferAny * mGLBuffer;
     // The stride is at the view level (not buffer).
     // This way the buffer can store heterogeneous elements.
     GLsizei mStride;
@@ -30,10 +29,6 @@ struct BufferView
     GLsizeiptr mSize; // The size (in bytes) this buffer view has access to, starting from mOffset.
                       // Intended to be used for safety checks.
 };
-
-
-using VertexBufferView = BufferView<graphics::BufferType::Array>;
-using IndexBufferView = BufferView<graphics::BufferType::ElementArray>;
 
 
 //
@@ -67,14 +62,14 @@ struct Material
 
 struct AttributeAccessor
 {
-    std::vector<VertexBufferView>::size_type mBufferViewIndex;
+    std::vector<BufferView>::size_type mBufferViewIndex;
     graphics::ClientAttribute mClientDataFormat;
     GLuint mInstanceDivisor = 0;
 };
 
 
 #define SEMANTIC_BUFFER_MEMBERS \
-std::vector<VertexBufferView> mBufferViews; \
+std::vector<BufferView> mVertexBufferViews; \
 std::map<Semantic, AttributeAccessor> mSemanticToAttribute;
 
 /// \note Intermediary class that holds a collection of buffer views,
@@ -89,9 +84,11 @@ struct SemanticBufferViews
 struct VertexStream /*: public SemanticBufferViews*/
 {
     SEMANTIC_BUFFER_MEMBERS                 
-    IndexBufferView mIndexBufferView;
     GLsizei mVertexCount = 0;
     GLenum mPrimitiveMode = NULL;
+    BufferView mIndexBufferView;
+    GLenum mIndicesType = NULL;
+    GLsizei mIndicesCount = 0;
 };
 
 #undef SEMANTIC_BUFFER_MEMBERS
@@ -109,6 +106,18 @@ struct Object
 };
 
 
+// Loosely inspired by Godot data model, this class should not exist in the library
+struct Storage
+{
+    std::vector<graphics::BufferAny> mBuffers;
+    std::vector<Effect> mEffects;
+};
+
+
+///
+/// Client side
+///
+
 struct Pose
 {
     math::Vec<3, float> mPosition;
@@ -123,12 +132,10 @@ struct Instance
 };
 
 
-// Loosely inspired by Godot data model, this class should not exist in the library
-struct Storage
+struct Node
 {
-    std::vector<graphics::VertexBufferObject> mVertexBuffers;
-    std::vector<Effect> mEffects;
+    Instance mInstance;
+    std::vector<Node> mChildren;
 };
-
 
 } // namespace ad::renderer

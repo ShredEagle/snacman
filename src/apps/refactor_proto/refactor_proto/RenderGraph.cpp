@@ -14,6 +14,7 @@
 #include <renderer/ScopeGuards.h>
 
 #include <array>
+#include <fstream>
 
 
 namespace ad::renderer {
@@ -67,50 +68,55 @@ namespace semantic
 namespace {
 
     template <class T_data>
-    std::pair<graphics::VertexBufferObject, GLsizeiptr>
+    std::pair<graphics::BufferAny, GLsizeiptr>
     makeMutableBuffer(std::size_t aInstanceCount, GLenum aHint)
     {
-        graphics::VertexBufferObject vbo; // glGenBuffers()
-        graphics::ScopedBind boundVBO{vbo}; // glBind()
+        graphics::BufferAny buffer; // glGenBuffers()
+        // Note: Using a random target, the underlying buffer objects are all identical.
+        constexpr auto target = graphics::BufferType::Array;
+        graphics::ScopedBind boundBuffer{buffer, target}; // glBind()
         const GLsizeiptr size = sizeof(T_data) * aInstanceCount;
         glBufferData(
-            vbo.GLTarget_v,
+            static_cast<GLenum>(target),
             size,
             nullptr,
             aHint);
-        return std::make_pair(std::move(vbo), size);
+        return std::make_pair(std::move(buffer), size);
     }
 
 
     template <class T_data, std::size_t N_extent>
-    std::pair<graphics::VertexBufferObject, GLsizeiptr>
+    std::pair<graphics::BufferAny, GLsizeiptr>
     makeMutableBuffer(std::span<T_data, N_extent> aInitialData, GLenum aHint)
     {
-        graphics::VertexBufferObject vbo; // glGenBuffers()
-        graphics::ScopedBind boundVBO{vbo}; // glBind()
+        graphics::BufferAny buffer; // glGenBuffers()
+        // Note: Using a random target, the underlying buffer objects are all identical.
+        constexpr auto target = graphics::BufferType::Array;
+        graphics::ScopedBind boundBuffer{buffer, target}; // glBind()
         const GLsizeiptr size = aInitialData.size_bytes();
+        // TODO enable GL 4.5+, here used for DSA
         glBufferData(
-            vbo.GLTarget_v,
+            static_cast<GLenum>(target),
             size,
             aInitialData.data(),
             aHint);
-        return std::make_pair(std::move(vbo), size);
+        return std::make_pair(std::move(buffer), size);
     }
 
     VertexStream makeFromPositions(Storage & aStorage, std::span<math::Position<3, GLfloat>> aPositions)
     {
         auto [vbo, size] = makeMutableBuffer(aPositions, GL_STATIC_DRAW);
-        aStorage.mVertexBuffers.push_back(std::move(vbo));
+        aStorage.mBuffers.push_back(std::move(vbo));
 
-        VertexBufferView vboView{
-            .mGLBuffer = &aStorage.mVertexBuffers.back(),
+        BufferView vboView{
+            .mGLBuffer = &aStorage.mBuffers.back(),
             .mStride = sizeof(decltype(aPositions)::value_type),
             .mOffset = 0,
             .mSize = size, // The view has access to the whole buffer
         };
 
         return VertexStream{
-            .mBufferViews{ vboView, },
+            .mVertexBufferViews{ vboView, },
             .mSemanticToAttribute{
                 {
                     semantic::gPosition,
@@ -128,6 +134,76 @@ namespace {
             .mPrimitiveMode = GL_TRIANGLES,
         };
     }
+
+
+    // IMPORTANT: for the moment, just load the first vertex stream in the file
+    // has to be extended to actually load complex models.
+    VertexStream loadBinary(Storage & aStorage, std::istream & aBinaryStream)
+    {
+        // TODO we need a unified design where the load code does not duplicate the type of the write.
+        unsigned int verticesCount;
+        aBinaryStream.read((char *)&verticesCount, sizeof(verticesCount));
+
+        constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
+        std::size_t positionBufferSize = verticesCount * gPositionSize;
+        std::unique_ptr<char[]> positionBuffer{new char[positionBufferSize]};
+        aBinaryStream.read(positionBuffer.get(), positionBufferSize);
+
+        auto [vbo, sizeVbo] = 
+            makeMutableBuffer(std::span{positionBuffer.get(), positionBufferSize}, GL_STATIC_DRAW);
+
+        aStorage.mBuffers.push_back(std::move(vbo));
+
+        BufferView vboView{
+            .mGLBuffer = &aStorage.mBuffers.back(),
+            .mStride = gPositionSize,
+            .mOffset = 0,
+            .mSize = sizeVbo, // The view has access to the whole buffer
+        };
+
+        unsigned int primitiveCount;
+        aBinaryStream.read((char *)&primitiveCount, sizeof(primitiveCount));
+        const unsigned int indicesCount = 3 * primitiveCount;
+
+        constexpr auto gIndexSize = 3 * sizeof(unsigned int);
+        const std::size_t indexBufferSize = indicesCount * gIndexSize;
+        std::unique_ptr<char[]> indexBuffer{new char[indexBufferSize]};
+        aBinaryStream.read(indexBuffer.get(), indexBufferSize);
+
+        auto [ibo, sizeIbo] = 
+            makeMutableBuffer(std::span{indexBuffer.get(), indexBufferSize}, GL_STATIC_DRAW);
+
+        aStorage.mBuffers.push_back(std::move(ibo));
+
+        BufferView iboView{
+            .mGLBuffer = &aStorage.mBuffers.back(),
+            .mOffset = 0,
+            .mSize = sizeIbo, // The view has access to the whole buffer
+        };
+
+        return VertexStream{
+            .mVertexBufferViews{ vboView, },
+            .mSemanticToAttribute{
+                {
+                    semantic::gPosition,
+                    AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 3,
+                            .mOffset = 0,
+                            .mComponentType = GL_FLOAT
+                        }
+                    }
+                },
+            },
+            .mVertexCount = (GLsizei)verticesCount,
+            .mPrimitiveMode = GL_TRIANGLES,
+            .mIndexBufferView = iboView,
+            .mIndicesType = GL_UNSIGNED_INT,
+            .mIndicesCount = (GLsizei)indicesCount,
+        };
+    }
+
 
     VertexStream makeTriangle(Storage & aStorage)
     {
@@ -170,17 +246,17 @@ namespace {
     SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
     {
         auto [vbo, size] = makeMutableBuffer<InstanceData>(aInstanceCount, GL_STREAM_DRAW);
-        aStorage.mVertexBuffers.push_back(std::move(vbo));
+        aStorage.mBuffers.push_back(std::move(vbo));
 
-        VertexBufferView vboView{
-            .mGLBuffer = &aStorage.mVertexBuffers.back(),
+        BufferView vboView{
+            .mGLBuffer = &aStorage.mBuffers.back(),
             .mStride = sizeof(InstanceData),
             .mOffset = 0,
             .mSize = size, // The view has access to the whole buffer
         };
 
         return SemanticBufferViews{
-            .mBufferViews = { vboView, },
+            .mVertexBufferViews = { vboView, },
             .mSemanticToAttribute{
                 {
                     semantic::gModelTransform,
@@ -210,7 +286,7 @@ namespace {
                 ;
             
             graphics::replaceSubset(
-                *aInstanceBufferView.mBufferViews.at(0).mGLBuffer,
+                *aInstanceBufferView.mVertexBufferViews.at(0).mGLBuffer,
                 0, /*offset*/
                 std::span{&modelTransformation, 1}
             );
@@ -237,9 +313,11 @@ namespace {
             assert(part.mMaterial.mEffect->mTechniques.size() == 1);
             const IntrospectProgram & selectedProgram = part.mMaterial.mEffect->mTechniques.at(0).mProgram;
 
+            const VertexStream & vertexStream = part.mVertexStream;
+
             // TODO cache VAO
             PROFILER_BEGIN_SECTION("prepare_VAO", CpuTime);
-            graphics::VertexArrayObject vao = prepareVAO(selectedProgram, part.mVertexStream, {&aInstanceBufferView});
+            graphics::VertexArrayObject vao = prepareVAO(selectedProgram, vertexStream, {&aInstanceBufferView});
             PROFILER_END_SECTION;
             graphics::ScopedBind vaoScope{vao};
             
@@ -251,7 +329,23 @@ namespace {
             graphics::ScopedBind programScope{selectedProgram};
 
             // TODO multi draw
-            glDrawArraysInstanced(part.mVertexStream.mPrimitiveMode, 0, part.mVertexStream.mVertexCount, 1);
+            if(vertexStream.mIndicesType == NULL)
+            {
+                glDrawArraysInstanced(
+                    vertexStream.mPrimitiveMode,
+                    0,
+                    vertexStream.mVertexCount,
+                    1);
+            }
+            else
+            {
+                glDrawElementsInstanced(
+                    vertexStream.mPrimitiveMode,
+                    vertexStream.mIndicesCount,
+                    vertexStream.mIndicesType,
+                    (const void *)vertexStream.mIndexBufferView.mOffset,
+                    1);
+            }
         }
     }
 
@@ -263,7 +357,7 @@ RenderGraph::RenderGraph()
 {
     // TODO replace use of pointers into the storage (which are invalidated on vector resize)
     // with some form of handle
-    mStorage.mVertexBuffers.reserve(16);
+    mStorage.mBuffers.reserve(16);
 
     static Object triangle;
     triangle.mParts.push_back(Part{
@@ -274,7 +368,7 @@ RenderGraph::RenderGraph()
     mScene.push_back(Instance{
         .mObject = &triangle,
         .mPose = {
-            .mPosition = {-0.5f, 0.f, 0.f},
+            .mPosition = {-0.5f, -0.2f, 0.f},
             .mUniformScale = 0.3f,
         }
     });
@@ -289,8 +383,23 @@ RenderGraph::RenderGraph()
     mScene.push_back(Instance{
         .mObject = &cube,
         .mPose = {
-            .mPosition = {0.5f, 0.f, 0.f},
+            .mPosition = {0.5f, -0.2f, 0.f},
             .mUniformScale = 0.3f,
+        }
+    });
+
+    static Object teapot;
+    std::ifstream teapotStream{"D:/projects/Gamedev/2/proto-assets/teapot/teapot.seum", std::ios::binary};
+    teapot.mParts.push_back(Part{
+        .mVertexStream = loadBinary(mStorage, teapotStream),
+        .mMaterial = triangle.mParts[0].mMaterial,
+    });
+
+    mScene.push_back(Instance{
+        .mObject = &teapot,
+        .mPose = {
+            .mPosition = {0.0f, 0.2f, 0.f},
+            .mUniformScale = 0.005f,
         }
     });
 
