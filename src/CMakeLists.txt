@@ -3,6 +3,7 @@ add_subdirectory(libs/scene-renderer/scene-renderer)
 
 #add_subdirectory(apps/snac-viewer/snac-viewer)
 add_subdirectory(apps/snacman/snacman)
+add_subdirectory(apps/asset_processor/asset_processor)
 
 option (BUILD_tests "Build 'tests' application" true)
 if(BUILD_tests)

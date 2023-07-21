@@ -28,6 +28,7 @@ class SnacmanConan(ConanFile):
         ("math/06fe2ee25c@adnn/develop"),
         ("MarkovJunior.cpp/01458bc65b@adnn/develop"),
 
+        ("assimp/5.2.2"),
         ("spdlog/1.11.0"),
         ("nlohmann_json/3.11.2"),
     )
