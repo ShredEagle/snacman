@@ -111,6 +111,16 @@ GameScene::GameScene(GameContext & aGameContext,
                                      "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/square_biscuit/square_biscuit.gltf",
                                      "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/burger/burger.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/portal/portal.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/billpad/billpad.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/donut/donut.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/arrow/arrow.gltf",
+                                     "effects/MeshTextures.sefx");
     {
         Phase init;
         mSystems.get(init)
