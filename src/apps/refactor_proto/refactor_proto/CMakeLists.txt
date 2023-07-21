@@ -5,9 +5,11 @@ set(REPO_FOLDER ${PROJECT_SOURCE_DIR})
 configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
+    BinaryArchive.h
     Commons.h
     Cube.h
     IntrospectProgram.h
+    Loader.h
     Logging.h
     Model.h
     Profiler.h
@@ -21,6 +23,7 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     IntrospectProgram.cpp
+    Loader.cpp
     Logging.cpp
     Profiler.cpp
     Profiling.cpp
