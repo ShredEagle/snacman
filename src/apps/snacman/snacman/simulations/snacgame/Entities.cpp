@@ -25,6 +25,7 @@
 #include "GameParameters.h"
 #include "SceneGraph.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
+#include "ModelInfos.h"
 #include "typedef.h"
 
 #include <algorithm>
@@ -123,7 +124,7 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
     Entity text = *handle.get(init);
 
     auto font =
-        aContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120);
+        aContext.mResources.getFont("fonts/TitanOne-Regular.ttf", 120);
 
     text.add(component::Text{
                  .mString{std::move(aText)},
@@ -197,13 +198,13 @@ createPowerUp(GameContext & aContext,
 {
     auto handle = aContext.mWorld.addEntity();
     Entity powerUp = *handle.get(aPhase);
-    component::PowerUpBaseInfo info =
-        component::gPowerupInfoByType.at(static_cast<unsigned int>(aType));
-    addMeshGeoNode(aContext, powerUp, info.mPath, "effects/MeshTextures.sefx",
+    ModelInfo info =
+        gLevelPowerupInfoByType.at(static_cast<unsigned int>(aType));
+    addMeshGeoNode(aContext, powerUp, info.mPath, info.mProgPath,
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gPillHeight},
-                   info.mLevelScaling, info.mLevelInstanceScale,
-                   component::gLevelBasePowerupQuat * info.mLevelOrientation);
+                   info.mScaling, info.mInstanceScale,
+                   gLevelBasePowerupQuat * info.mOrientation);
     powerUp
         .add(component::Speed{
             .mRotation =
@@ -225,12 +226,12 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     ent::Phase init;
     auto handle = aContext.mWorld.addEntity();
     Entity powerUp = *handle.get(init);
-    component::PowerUpBaseInfo info =
-        component::gPowerupInfoByType.at(static_cast<unsigned int>(aType));
+    ModelInfo info =
+        gPlayerPowerupInfoByType.at(static_cast<unsigned int>(aType));
     addMeshGeoNode(
-        aContext, powerUp, info.mPlayerPath, "effects/MeshTextures.sefx",
-        Pos3{1.f, 1.f, 0.f} + info.mPlayerPosOffset, info.mPlayerScaling,
-        info.mPlayerInstanceScale, info.mPlayerOrientation);
+        aContext, powerUp, info.mPath, info.mProgPath,
+        Pos3{1.f, 1.f, 0.f} + info.mPosOffset, info.mScaling,
+        info.mInstanceScale, info.mOrientation);
     powerUp.add(component::RoundTransient{});
     return handle;
 }
@@ -409,10 +410,11 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
         insertEntityInScene(powerupHandle, hudHandle);
         insertEntityInScene(billpadHandle, hudHandle);
 
-        assert(aContext.mRoot);
+        assert(aContext.mSceneRoot.isValid());
+        EntHandle root = aContext.mSceneRoot;
         // Insert the billpad into the root, not the level,
         // because the level scale changes depending on the tile dimensions.
-        insertEntityInScene(hudHandle, *aContext.mRoot);
+        insertEntityInScene(hudHandle, root);
 
         hudHandle.get(completeSceneGraph)
             ->add(component::PlayerHud{
@@ -425,21 +427,16 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
     return hudHandle;
 }
 
-ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
-                                            EntHandle & aSlotHandle,
-                                            const Pos3 & aPosition)
+// TODO: (franz) does not need the slot handle just the index
+EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
 {
     const component::PlayerSlot & slot =
         aSlotHandle.get()->get<component::PlayerSlot>();
-    EntHandle playerHandle = aContext.mWorld.addEntity();
     EntHandle playerModelHandle = aContext.mWorld.addEntity();
-
     {
-        Phase sceneInit;
-        Entity player = *playerHandle.get(sceneInit);
-        Entity model = *playerModelHandle.get(sceneInit);
+        Phase createModel;
+        Entity model = *playerModelHandle.get(createModel);
 
-        addGeoNode(aContext, player, aPosition);
         std::shared_ptr<snac::Model> modelData = addMeshGeoNode(
             aContext, model, "models/donut/donut.gltf",
             "effects/MeshRiggingTextures.sefx", Pos3::Zero(), 1.f,
@@ -458,13 +455,74 @@ ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
                 decltype(component::RigAnimation::mParameter){
                     animation.mEndTime},
         });
+    }
 
+    return playerModelHandle;
+}
+
+// TODO: (franz) does not need the slot handle just the index
+EntHandle createJoinGamePlayer(GameContext & aContext, EntHandle aSlotHandle, int aSlotIndex)
+{
+    EntHandle playerModelHandle = createPlayerModel(aContext, aSlotHandle);
+    EntHandle numberHandle = aContext.mWorld.addEntity();
+
+    component::Geometry & aGeo =
+        snac::getComponent<component::Geometry>(playerModelHandle);
+    aGeo.mOrientation = Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+                               math::Turn<float>{-0.25f}}
+                        * Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                                 math::Turn<float>{0.25f}};
+    aGeo.mPosition = Pos3{
+        -4.5f + 3.f * (float)aSlotIndex,
+        -5.f,
+        0.f
+    };
+
+    {
+        Phase createNumber;
+        Entity number = *numberHandle.get(createNumber);
+        ModelInfo info =
+            gSlotNumbers.at(aSlotIndex);
+        addMeshGeoNode(aContext, number, info.mPath, info.mProgPath,
+                       info.mPosOffset.as<math::Position>(),
+                       info.mScaling, info.mInstanceScale,
+                       info.mOrientation, gSlotColors.at(aSlotIndex));
+    }
+
+    assert(aContext.mSceneRoot.isValid());
+
+    insertEntityInScene(numberHandle, playerModelHandle);
+
+    return playerModelHandle;
+}
+
+void preparePlayerForGame(GameContext & aContext, EntHandle aSlotHandle)
+{
+    component::SceneNode & node = snac::getComponent<component::SceneNode>(aSlotHandle);
+    
+    while(node.mFirstChild.isValid())
+    {
+        Phase destroyChild;
+        eraseEntityRecursive(node.mFirstChild, destroyChild);
+    }
+}
+
+EntHandle createInGamePlayer(GameContext & aContext,
+                             EntHandle aSlotHandle,
+                             const Pos3 & aPosition)
+{
+    EntHandle playerModelHandle = createPlayerModel(aContext, aSlotHandle);
+    EntHandle playerHandle = aContext.mWorld.addEntity();
+
+    {
+        Phase sceneInit;
+        Entity player = *playerHandle.get(sceneInit);
+        addGeoNode(aContext, player, aPosition);
+        component::Controller controller = snac::getComponent<component::Controller>(aSlotHandle);
         player
-            .add(component::PlayerRoundData{.mModel = playerModelHandle,
-                                            .mSlotHandle = aSlotHandle})
+            .add(component::PlayerRoundData{.mModel = playerModelHandle, .mSlot = aSlotHandle})
+            .add(controller)
             .add(component::AllowedMovement{})
-            .add(component::Controller{.mType = slot.mControllerType,
-                                       .mControllerId = slot.mControllerIndex})
             .add(component::Collision{component::gPlayerHitbox});
     }
 
@@ -473,12 +531,29 @@ ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
     return playerHandle;
 }
 
-bool addPlayer(GameContext & aContext,
-               const int aControllerIndex)
+EntHandle addPlayer(GameContext & aContext, const int aControllerIndex)
 {
     EntHandle playerSlot = aContext.mWorld.addEntity();
-    return aContext.mSlotManager.addPlayer(
-        aContext, playerSlot, aControllerIndex);
+    if (aContext.mSlotManager.addPlayer(aContext, playerSlot, aControllerIndex))
+    {
+        return playerSlot;
+    }
+    else
+    {
+        Phase destroy;
+        playerSlot.get(destroy)->erase();
+        return EntHandle{};
+    }
+}
+
+void addBillpadHud(GameContext & aContext, EntHandle aSlotHandle)
+{
+    const component::PlayerSlot & slot =
+        aSlotHandle.get()->get<component::PlayerSlot>();
+    component::PlayerGameData & gameData =
+        aSlotHandle.get()->get<component::PlayerGameData>();
+
+    gameData.mHud = createHudBillpad(aContext, slot.mSlotIndex);
 }
 
 ent::Handle<ent::Entity>

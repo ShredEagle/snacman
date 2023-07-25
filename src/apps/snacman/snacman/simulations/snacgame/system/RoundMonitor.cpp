@@ -36,7 +36,8 @@ void RoundMonitor::updateRoundScore()
     winners.second = -1;
     mPlayers.each([&winners](EntHandle aHandle,
                              component::PlayerRoundData & aRoundData) {
-        component::PlayerGameData & gameData = snac::getComponent<component::PlayerGameData>(aRoundData.mSlotHandle);
+
+        component::PlayerGameData & gameData = snac::getComponent<component::PlayerGameData>(aRoundData.mSlot);
         if (winners.second < aRoundData.mRoundScore)
         {
             
@@ -50,9 +51,9 @@ void RoundMonitor::updateRoundScore()
         }
     });
 
-    for (auto & lifeCycle : winners.first)
+    for (component::PlayerGameData * gameData : winners.first)
     {
-        ++(lifeCycle->mRoundsWon);
+        ++(gameData->mRoundsWon);
     }
 
 }

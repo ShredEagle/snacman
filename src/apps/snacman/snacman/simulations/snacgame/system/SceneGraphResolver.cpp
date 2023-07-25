@@ -53,16 +53,16 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
 {
     // Lots of cache miss here which is not suprising but
     // It's it this load in particular that takes 10% of the run time of depthFirstResolve
-    if (aSceneNode.mFirstChild)
+    if (aSceneNode.mFirstChild.isValid())
     {
         const component::SceneNode fakePrevNode{
-            .mNextChild = *aSceneNode.mFirstChild,
+            .mNextChild = aSceneNode.mFirstChild,
         };
         const component::SceneNode * prevNode = &fakePrevNode;
 
-        while (prevNode->mNextChild)
+        while (prevNode->mNextChild.isValid())
         {
-            ent::Handle<ent::Entity> current = *prevNode->mNextChild;
+            ent::Handle<ent::Entity> current = prevNode->mNextChild;
             const component::SceneNode & node = 
                 current.get()->get<component::SceneNode>();
             const component::Geometry & geo =
@@ -90,11 +90,11 @@ void depthFirstResolve(const component::SceneNode & aSceneNode,
 
 void updateGlobalPosition(const component::SceneNode & aSceneNode)
 {
-    if(aSceneNode.mParent) // otherwise root node
+    if(aSceneNode.mParent.isValid()) // otherwise root node
     {
-        const auto & parentGlobalPose = snac::getComponent<component::GlobalPose>(*aSceneNode.mParent);
+        const auto & parentGlobalPose = snac::getComponent<component::GlobalPose>(aSceneNode.mParent);
         depthFirstResolve(
-            snac::getComponent<component::SceneNode>(*aSceneNode.mParent),
+            snac::getComponent<component::SceneNode>(aSceneNode.mParent),
             computeMatrix(parentGlobalPose));
     }
     else

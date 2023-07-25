@@ -5,6 +5,8 @@
 #include "GameScene.h"
 
 #include "snacman/EntityUtilities.h"
+#include "snacman/simulations/snacgame/scene/MenuScene.h"
+#include "snacman/simulations/snacgame/system/InputProcessor.h"
 
 #include "../component/AllowedMovement.h"
 #include "../component/Collision.h"
@@ -16,8 +18,9 @@
 #include "../component/LevelData.h"
 #include "../component/MovementScreenSpace.h"
 #include "../component/PathToOnGrid.h"
-#include "../component/PlayerHud.h"
 #include "../component/PlayerGameData.h"
+#include "../component/PlayerHud.h"
+#include "../component/MenuItem.h"
 #include "../component/PlayerRoundData.h"
 #include "../component/PlayerSlot.h"
 #include "../component/Portal.h"
@@ -29,7 +32,7 @@
 #include "../component/Text.h"
 #include "../component/VisualModel.h"
 #include "../Entities.h"
-#include "../EntityWrap.h" 
+#include "../EntityWrap.h"
 #include "../GameContext.h"
 #include "../GameParameters.h"
 #include "../InputCommandConverter.h"
@@ -55,15 +58,16 @@
 #include "../system/SceneGraphResolver.h"
 #include "../typedef.h"
 
+#include <algorithm>
+#include <array>   // for array
+#include <cstddef> // for size_t
+#include <entity/EntityManager.h>
+#include <map> // for opera...
+#include <memory>
 #include <snacman/Input.h>
 #include <snacman/Profiling.h>
 #include <snacman/QueryManipulation.h>
 #include <snacman/Resources.h>
-
-#include <algorithm>
-#include <array>   // for array
-#include <cstddef> // for size_t
-#include <map>     // for opera...
 #include <string>
 #include <tuple>  // for get
 #include <vector> // for vector
@@ -74,11 +78,15 @@ namespace scene {
 
 const char * const gMarkovRoot{"markov/"};
 
-GameScene::GameScene(std::string aName,
-                     GameContext & aGameContext,
-                     EntityWrap<component::MappingContext> & aContext,
-                     EntHandle aSceneRoot) :
-    Scene(aName, aGameContext, aContext, aSceneRoot),
+GameScene::GameScene(GameContext & aGameContext,
+                     ent::Wrap<component::MappingContext> & aContext) :
+    Scene(gGameSceneName, aGameContext, aContext),
+    mLevelData{mGameContext.mWorld,
+               component::LevelSetupData(
+                   mGameContext.mResources.find(gMarkovRoot).value(),
+                   "snaclvl4.xml",
+                   {Size3_i{19, 19, 1}},
+                   123123)},
     mTiles{mGameContext.mWorld},
     mRoundTransients{mGameContext.mWorld},
     mSlots{mGameContext.mWorld},
@@ -86,42 +94,98 @@ GameScene::GameScene(std::string aName,
     mPlayers{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
-    mGameContext.mLevelData = EntityWrap<component::LevelSetupData>(
-        mGameContext.mWorld,
-        component::LevelSetupData(
-            mGameContext.mResources.find(gMarkovRoot).value(), "snaclvl4.xml",
-            {Size3_i{19, 19, 1}}, 123123));
+    // Preload models to avoid loading time when they first appear in the game
+    mGameContext.mResources.getModel("models/collar/collar.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/teleport/teleport.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/missile/missile.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/boom/boom.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/portal/portal.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/dog/dog.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/missile/area.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/square_biscuit/square_biscuit.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/burger/burger.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/portal/portal.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/billpad/billpad.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/donut/donut.gltf",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/arrow/arrow.gltf",
+                                     "effects/MeshTextures.sefx");
+    {
+        Phase init;
+        mSystems.get(init)
+            ->add(system::SceneGraphResolver{mGameContext,
+                                             mGameContext.mSceneRoot})
+            .add(system::InputProcessor{mGameContext, mMappingContext})
+            .add(system::PlayerSpawner{mGameContext})
+            .add(system::RoundMonitor{mGameContext})
+            .add(system::PlayerInvulFrame{mGameContext})
+            .add(system::Explosion{mGameContext})
+            .add(system::AllowMovement{mGameContext})
+            .add(system::ConsolidateGridMovement{mGameContext})
+            .add(system::IntegratePlayerMovement{mGameContext})
+            .add(system::LevelManager{mGameContext})
+            .add(system::MovementIntegration{mGameContext})
+            .add(system::AdvanceAnimations{mGameContext})
+            .add(system::AnimationManager{mGameContext})
+            .add(system::EatPill{mGameContext})
+            .add(system::PortalManagement{mGameContext})
+            .add(system::PowerUpUsage{mGameContext})
+            .add(system::Pathfinding{mGameContext})
+            .add(system::Debug_BoundingBoxes{mGameContext});
+    }
+
+    EntHandle camera = snac::getFirstHandle(mCameraQuery);
+    snac::Orbital & camOrbital = camera.get()->get<snac::Orbital>();
+    camOrbital.mSpherical.polar() = gInitialCameraSpherical.polar();
+    camOrbital.mSpherical.radius() = gInitialCameraSpherical.radius();
+
+    mSlots.each([this](EntHandle aHandle, const component::PlayerSlot &) {
+        addBillpadHud(mGameContext, aHandle);
+    });
 }
 
-void GameScene::teardown(RawInput & aInput)
+void GameScene::onEnter(Transition aTransition)
+{
+}
+
+
+void GameScene::onExit(Transition aTransition)
 {
     TIME_SINGLE(Main, "teardown game scene");
     {
         Phase destroyPlayer;
-        mSlots.each([&destroyPlayer](EntHandle aHandle, component::PlayerSlot &)
-                    { aHandle.get(destroyPlayer)->erase(); });
-        // Delet hud
-        mHuds.each([&destroyPlayer](EntHandle aHandle, component::PlayerHud &)
-                    {eraseEntityRecursive(aHandle, destroyPlayer);});
-        mPlayers.each(
-            [&destroyPlayer](EntHandle aHandle, component::Controller &)
-            { eraseEntityRecursive(aHandle, destroyPlayer); });
+        mSlots.each([&destroyPlayer](EntHandle aHandle, const component::PlayerSlot &)
+                    { eraseEntityRecursive(aHandle, destroyPlayer); });
+        mPlayers.each([&destroyPlayer](EntHandle aHandle, const component::PlayerRoundData &)
+                    { eraseEntityRecursive(aHandle, destroyPlayer); });
+        // Delete hud
+        mHuds.each([&destroyPlayer](EntHandle aHandle, const component::PlayerHud &)
+                   { eraseEntityRecursive(aHandle, destroyPlayer); });
     }
     {
-        Phase destroy;
+        Phase destroyEnvironment;
 
-        mStageDecor->get(destroy)->erase();
-
-        mTiles.each([&destroy](EntHandle aHandle, const component::LevelTile &)
-                    { aHandle.get(destroy)->erase(); });
+        mTiles.each([&destroyEnvironment](EntHandle aHandle, const component::LevelTile &)
+                    { aHandle.get(destroyEnvironment)->erase(); });
         // Destroy round transient and components
         mRoundTransients.each(
-            [&destroy](EntHandle aHandle, component::RoundTransient &)
-            { aHandle.get(destroy)->erase(); });
+            [&destroyEnvironment](EntHandle aHandle, component::RoundTransient &)
+            { aHandle.get(destroyEnvironment)->erase(); });
 
-        mGameContext.mLevel->get(destroy)->erase();
+        mLevel.get(destroyEnvironment)->erase();
 
-        mSystems.get(destroy)->erase();
+        mSystems.get(destroyEnvironment)->erase();
         mSystems = mGameContext.mWorld.addEntity();
     }
     {
@@ -133,8 +197,7 @@ void GameScene::teardown(RawInput & aInput)
     }
 }
 
-std::optional<Transition> GameScene::update(const snac::Time & aTime,
-                                            RawInput & aInput)
+void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
 
@@ -142,108 +205,68 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime,
 
     bool quit = false;
 
-    std::vector<int> boundControllers;
+    std::vector<ControllerCommand> controllers =
+        mSystems.get()->get<system::InputProcessor>().mapControllersInput(
+            aInput);
 
-    mPlayers.each(
-        [&](component::PlayerRoundData &, component::Controller & aController)
-        {
-        switch (aController.mType)
-        {
-        case ControllerType::Keyboard:
-            aController.mInput = convertKeyboardInput(
-                "player", aInput.mKeyboard, mContext->mKeyboardMapping);
-            break;
-        case ControllerType::Gamepad:
-            aController.mInput = convertGamepadInput(
-                "player", aInput.mGamepads.at(aController.mControllerId),
-                mContext->mGamepadMapping);
-            break;
-        default:
-            break;
-        }
-
-        boundControllers.push_back(aController.mControllerId);
-
-        quit |= static_cast<bool>(aController.mInput.mCommand & gQuitCommand);
-    });
-
-    // This works because gKeyboardControllerIndex is aInput.mGamepads.size() + 1
-    // So this is a bit janky but it unifies the player join code
-    for (int controlIndex = 0;
-         controlIndex < (int) aInput.mGamepads.size() + 1; ++controlIndex)
+    for (auto controller : controllers)
     {
-        if (std::find(boundControllers.begin(), boundControllers.end(),
-                      controlIndex)
-            == boundControllers.end())
+        if (controller.mBound)
         {
-            GameInput input{.mCommand = gNoCommand};
-            const bool controllerIsKeyboard =
-                (int) controlIndex == gKeyboardControllerIndex;
-
-            if (controllerIsKeyboard)
+            quit |= controller.mInput.mCommand == gQuitCommand;
+        }
+        else
+        {
+            if (controller.mInput.mCommand & gJoin)
             {
-                input = convertKeyboardInput("unbound", aInput.mKeyboard,
-                                             mContext->mKeyboardMapping);
-            }
-            else
-            {
-                GamepadState & rawGamepad = aInput.mGamepads.at(controlIndex);
-                input = convertGamepadInput("unbound", rawGamepad,
-                                            mContext->mGamepadMapping);
-            }
-
-            if (input.mCommand & gJoin)
-            {
-                addPlayer(mGameContext, controlIndex);
+                EntHandle slot = addPlayer(mGameContext, controller.mId);
+                addBillpadHud(mGameContext, slot);
             }
         }
     }
 
     if (quit)
     {
-        return Transition{.mTransitionName = "back"};
+        mGameContext.mSceneStack->popScene();
+        mGameContext.mSceneStack->pushScene(
+            std::make_shared<MenuScene>(mGameContext, mMappingContext));
+        return;
     }
 
     // This should be divided in four phases right now
     // The cleanup phase
 
-    if (mGameContext.mLevel && mGameContext.mLevel->isValid()
+    if (mLevel.isValid()
         && mSystems.get(update)->get<system::RoundMonitor>().isRoundOver())
     {
-        Phase cleanup;
-        component::LevelSetupData & data = mGameContext.mLevelData->get();
-
-        mSystems.get(update)->get<system::RoundMonitor>().updateRoundScore();
-        // Destroy level tiles
-        mSystems.get(update)
-            ->get<system::LevelManager>()
-            .destroyTilesEntities();
-
+        component::LevelSetupData & data = *mLevelData;
         data.mSeed += 1;
 
-        // Destroy the level entity
-        mGameContext.mLevel->get(cleanup)->erase();
+        mSystems.get(update)->get<system::RoundMonitor>().updateRoundScore();
 
-        // Destroy round transient and components
-        mRoundTransients.each(
-            [&cleanup](EntHandle aHandle, component::RoundTransient &)
-            { aHandle.get(cleanup)->erase(); });
-        // Remove the player from the scene graph
+        std::vector<unsigned int> playerControllerIndices;
+        {
+            Phase cleanup;
+            // This removes everything from the level players included
+            eraseEntityRecursive(mLevel, cleanup);
+        }
     }
 
-    if (!mGameContext.mLevel || !mGameContext.mLevel->isValid())
+    if (!mLevel.isValid())
     {
-        const component::LevelSetupData & data = mGameContext.mLevelData->get();
-        mGameContext.mLevel =
+        const component::LevelSetupData & data = *mLevelData;
+        mLevel =
             mSystems.get(update)->get<system::LevelManager>().createLevel(data);
-        insertEntityInScene(*mGameContext.mLevel, mSceneRoot);
+        insertEntityInScene(mLevel, mGameContext.mSceneRoot);
     }
+
+    auto level = snac::getComponent<component::Level>(mLevel);
 
     // TODO: (franz) maybe at some point it would be better to
     // spawn player between rounds
     // This however needs to be thought through (like if someone starts
     // a game alone, should we spawn someone during the round in that case)
-    mSystems.get(update)->get<system::PlayerSpawner>().spawnPlayers();
+    mSystems.get(update)->get<system::PlayerSpawner>().spawnPlayers(mLevel);
     // The creation of the level
     // Spawning the players
     //  if there is an unspawned player and is there room in the map
@@ -255,7 +278,7 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime,
 
     mSystems.get(update)->get<system::PlayerInvulFrame>().update(
         (float) aTime.mDeltaSeconds);
-    mSystems.get(update)->get<system::AllowMovement>().update();
+    mSystems.get(update)->get<system::AllowMovement>().update(level);
     mSystems.get(update)->get<system::ConsolidateGridMovement>().update(
         (float) aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::IntegratePlayerMovement>().update(
@@ -264,19 +287,17 @@ std::optional<Transition> GameScene::update(const snac::Time & aTime,
         (float) aTime.mDeltaSeconds);
     mSystems.get(update)->get<system::AnimationManager>().update();
     mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
-    mSystems.get(update)->get<system::Pathfinding>().update();
+    mSystems.get(update)->get<system::Pathfinding>().update(level);
     mSystems.get(update)->get<system::PortalManagement>().preGraphUpdate();
     mSystems.get(update)->get<system::Explosion>().update(aTime);
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
 
-    mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate();
-    mSystems.get(update)->get<system::PowerUpUsage>().update(aTime);
+    mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate(level);
+    mSystems.get(update)->get<system::PowerUpUsage>().update(aTime, mLevel);
     mSystems.get(update)->get<system::EatPill>().update();
 
     mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
-
-    return std::nullopt;
 }
 
 } // namespace scene

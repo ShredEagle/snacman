@@ -17,11 +17,11 @@ class PlayerSpawner
 public:
     PlayerSpawner(GameContext & aGameContext);
 
-    void spawnPlayers();
+    void spawnPlayers(ent::Handle<ent::Entity> aLevel);
 
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerSlot, component::Unspawned> mUnspawnedPlayers;
+    ent::Query<component::PlayerSlot> mPlayerSlots;
     ent::Query<component::Spawner> mSpawner;
 };
 

@@ -96,7 +96,7 @@ public:
     /// It is used as a parameter to the addXxx() methods in DebugDrawer. 
     struct Entry
     {
-        math::Position<3, float> mPosition;
+        math::Position<3, float> mPosition = math::Position<3, float>::Zero();
         math::Size<3, float> mScaling{1.f, 1.f, 1.f};
         math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
         math::hdr::Rgba_f mColor = math::hdr::gMagenta<float>;

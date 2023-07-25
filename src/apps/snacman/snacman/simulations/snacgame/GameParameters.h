@@ -1,5 +1,6 @@
 #pragma once
 
+#include "math/Spherical.h"
 #include <math/Angle.h>
 #include <math/Color.h>
 #include <math/Quaternion.h>
@@ -7,6 +8,14 @@
 
 namespace ad {
 namespace snacgame {
+
+constexpr const char * gMenuSceneName = "Menu";
+constexpr const char * gGameSceneName = "Game";
+constexpr const char * gJoinGameSceneName = "JoinGame";
+
+constexpr math::Spherical<float> gInitialCameraSpherical{
+    20.f, math::Turn<float>{0.075f},
+    math::Turn<float>{0.f}};
 
 constexpr std::array<math::hdr::Rgba_f, 5> gSlotColors{
     math::hdr::Rgba_f{1.f, 1.f, 1.f, 1.f},

@@ -7,9 +7,11 @@
 #include "component/GlobalPose.h"
 #include "component/LevelData.h"
 #include "component/PathToOnGrid.h"
+#include "component/PlayerGameData.h"
+#include "component/PlayerRoundData.h"
+#include "component/MenuItem.h"
 #include "component/PlayerHud.h"
 #include "component/PlayerSlot.h"
-#include "component/PlayerGameData.h"
 #include "component/PoseScreenSpace.h"
 #include "component/RigAnimation.h"
 #include "component/SceneNode.h"
@@ -20,10 +22,14 @@
 #include "GameContext.h"
 #include "GameParameters.h"
 #include "InputConstants.h"
+#include "scene/GameScene.h"
 #include "scene/Scene.h"
 #include "SceneGraph.h"
 #include "SimulationControl.h"
-#include "system/SceneStateMachine.h"
+#include "snacman/EntityUtilities.h"
+#include "scene/MenuScene.h"
+#include "scene/DataScene.h"
+#include "system/SceneStack.h"
 #include "system/SystemOrbitalCamera.h"
 #include "typedef.h"
 
@@ -37,6 +43,7 @@
 #include <imguiui/ImguiUi.h>
 #include <map>
 #include <math/Color.h>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <snacman/DevmodeControl.h>
@@ -55,6 +62,12 @@ struct RawInput;
 
 namespace snacgame {
 
+/* namespace { */
+/*     EntityWrap<SceneStack> createSceneStateMachine() */
+/*     { */
+/*     } */
+/* } */
+
 SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                    snac::RenderThread<Renderer_t> & aRenderThread,
                    imguiui::ImguiUi & aImguiUi,
@@ -66,10 +79,6 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         snac::Resources{std::move(aResourceFinder), aFreetype, aRenderThread},
         aRenderThread),
     mMappingContext{mGameContext.mWorld, mGameContext.mResources},
-    mStateMachine{
-        mGameContext.mWorld, mGameContext.mWorld,
-        *mGameContext.mResources.find("scenes/scene_description.json"),
-        mMappingContext, mGameContext},
     mSystemOrbitalCamera{mGameContext.mWorld, mGameContext.mWorld},
     mQueryRenderable{mGameContext.mWorld, mGameContext.mWorld},
     mQueryTextWorld{mGameContext.mWorld, mGameContext.mWorld},
@@ -81,11 +90,13 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
 
     // Add permanent game title
     makeText(mGameContext, init, "Snacman",
-             mGameContext.mResources.getFont("fonts/FredokaOne-Regular.ttf"),
+             mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf"),
              math::hdr::gYellow<float>, {-0.25f, 0.75f}, {1.8f, 1.8f});
 
-    scene::Scene * scene = mStateMachine->getCurrentScene();
-    scene->setup(scene::Transition{}, aInput);
+    mGameContext.mSceneStack->pushScene(
+        std::make_shared<scene::StageDecorScene>(mGameContext, mMappingContext));
+    mGameContext.mSceneStack->pushScene(
+        std::make_shared<scene::MenuScene>(mGameContext, mMappingContext));
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
@@ -117,9 +128,10 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         if (mImguiDisplays.mShowSceneEditor)
         {
             mSceneEditor.showEditor(
-                mStateMachine->getCurrentScene()->mSceneRoot);
+                mGameContext.mSceneRoot);
         }
-        if (mImguiDisplays.mShowRoundInfo)
+        scene::Scene * scene = mGameContext.mSceneStack->getActiveScene();
+        if (mImguiDisplays.mShowRoundInfo && scene->mName == "game")
         {
             static ent::Query<component::Pill> pills{mGameContext.mWorld};
             ImGui::Begin("Round info", &mImguiDisplays.mShowPlayerInfo);
@@ -129,16 +141,14 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 pills.each([&pillRemove](EntHandle aHandle, component::Pill &)
                            { aHandle.get(pillRemove)->erase(); });
             }
-            if (mGameContext.mLevelData)
-            {
-                ImGui::Text("%d", mGameContext.mLevelData->get().mSeed);
-            }
+            scene::GameScene * gameScene = (scene::GameScene *) scene;
+            component::LevelSetupData levelData = *gameScene->mLevelData;
+            ImGui::Text("%d", levelData.mSeed);
             ImGui::End();
         }
         if (mImguiDisplays.mShowPlayerInfo)
         {
             ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
-            ent::Phase update;
             static ent::Query<component::PlayerSlot> playerSlotQuery{
                 mGameContext.mWorld};
             static ent::Query<component::Controller> controllerQuery{
@@ -155,9 +165,9 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 {
                     // This is an assumption but currently player that have
                     // a geometry should have a globalPose
-                    if (aPlayer.get(update)->has<component::Geometry>())
+                    if (aPlayer.get()->has<component::Geometry>())
                     {
-                        Entity player = *aPlayer.get(update);
+                        ent::Entity_view player = *aPlayer.get();
                         const component::Geometry & geo =
                             player.get<component::Geometry>();
                         const component::Controller & controller =
@@ -170,34 +180,34 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                         {
                             if (ImGui::Button("Bind to keyboard"))
                             {
-                                OptEntHandle oldController =
-                                    snac::getFirstHandle(
-                                        controllerQuery,
-                                        [](const component::Controller &
-                                               aController) {
+                                EntHandle oldController = snac::getFirstHandle(
+                                    controllerQuery,
+                                    [](const component::Controller &
+                                           aController) {
                                     return aController.mType
                                            == ControllerType::Keyboard;
-                                        });
+                                    });
 
-                                if (oldController)
+                                if (oldController.isValid())
                                 {
-                                    oldController->get(update)
+                                    oldController.get()
                                         ->get<component::Controller>()
                                         .mType = ControllerType::Dummy;
-                                    oldController->get(update)
+                                    oldController.get()
                                         ->get<component::Controller>()
                                         .mControllerId = aPlayerSlot.mSlotIndex;
                                 }
-                                aPlayer.get(update)
+                                aPlayer.get()
                                     ->get<component::Controller>()
                                     .mType = ControllerType::Keyboard;
-                                aPlayer.get(update)
+                                aPlayer.get()
                                     ->get<component::Controller>()
                                     .mControllerId = gKeyboardControllerIndex;
                             }
 
                             if (ImGui::Button("Remove player"))
                             {
+                                Phase update;
                                 eraseEntityRecursive(aPlayer, update);
                             }
                         }
@@ -214,7 +224,8 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                         if (ImGui::Button("Create dummy player"))
                         {
                             {
-                                /* addPlayer(mGameContext, aPlayerSlot.mIndex, */
+                                /* addPlayer(mGameContext, aPlayerSlot.mIndex,
+                                 */
                                 /*           ControllerType::Dummy); */
                             }
                         }
@@ -319,9 +330,10 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             if (ImGui::Button("Create pathfinder"))
             {
                 EntHandle pathfinder = mGameContext.mWorld.addEntity();
-                EntHandle player = *snac::getFirstHandle(
+                EntHandle player = snac::getFirstHandle(
                     ent::Query<component::PlayerSlot, component::Geometry>{
                         mGameContext.mWorld});
+                if (player.isValid())
                 {
                     Phase pathfinding;
                     Entity pEntity = *pathfinder.get(pathfinding);
@@ -332,10 +344,11 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                         .mWindow = gOtherTurningZoneHalfWidth});
                     pEntity.add(component::PathToOnGrid{player});
                 }
-                EntHandle root = mStateMachine->getCurrentScene()->mSceneRoot;
+                EntHandle root =
+                    mGameContext.mSceneRoot;
                 Phase phase;
                 EntHandle level =
-                    *root.get(phase)->get<component::SceneNode>().mFirstChild;
+                    snac::getComponent<component::SceneNode>(root).mFirstChild;
                 insertEntityInScene(pathfinder, level);
             }
             ImGui::End();
@@ -373,20 +386,12 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
     mSimulationTime.advance(aUpdatePeriod
                             / mGameContext.mSimulationControl.mSpeedRatio);
 
-    std::optional<scene::Transition> transition =
-        mStateMachine->getCurrentScene()->update(mSimulationTime, aInput);
+    ent::Wrap<system::SceneStack> & sceneStack = mGameContext.mSceneStack;
+    sceneStack->getActiveScene()->update(mSimulationTime, aInput);
 
-    if (transition)
+    if (mGameContext.mSceneStack->empty())
     {
-        if (transition.value().mTransitionName == scene::gQuitTransitionName)
-        {
-            return true;
-        }
-        else
-        {
-            mStateMachine->changeState(mGameContext, transition.value(),
-                                       aInput);
-        }
+        return true;
     }
 
     if (mGameContext.mSimulationControl.mSaveGameState)
@@ -512,7 +517,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         });
 
     auto font =
-        mGameContext.mResources.getFont("fonts/FredokaOne-Regular.ttf", 120);
+        mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf", 120);
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
 

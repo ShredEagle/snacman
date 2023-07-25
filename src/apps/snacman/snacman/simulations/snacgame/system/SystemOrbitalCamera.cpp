@@ -1,4 +1,5 @@
 #include "SystemOrbitalCamera.h"
+#include "snacman/simulations/snacgame/GameParameters.h"
 
 #include "../component/Geometry.h"
 

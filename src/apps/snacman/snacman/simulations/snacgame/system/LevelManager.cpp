@@ -87,7 +87,9 @@ LevelManager::createLevel(const component::LevelSetupData & aSetupData)
 
         // There is no 3rd dimension right now
         int z = 0;
-
+        
+        {
+        TIME_SINGLE(Main, "Create elements");
         for (int y = 0; y < aGrid.mSize.height(); y++)
         {
             for (int x = 0; x < aGrid.mSize.width(); x++)
@@ -155,12 +157,15 @@ LevelManager::createLevel(const component::LevelSetupData & aSetupData)
                 });
             }
         }
+        }
 
         /* createAnimatedTest(*mGameContext, createLevel, snac::Clock::now(),
          * {14.f, 7.f}); */
         /* createAnimatedTest(*mGameContext, createLevel, snac::Clock::now() +
          * snac::ms{1000}, { 0.f, 7.f}); */
 
+        {
+        TIME_SINGLE(Main, "Allow movement setup");
         for (int i = 1; i < height - 1; ++i)
         {
             for (int j = 1; j < stride - 1; ++j)
@@ -188,6 +193,7 @@ LevelManager::createLevel(const component::LevelSetupData & aSetupData)
                 }
             }
         }
+        }
 
         levelData.mTiles = std::move(tiles);
         levelData.mNodes = std::move(nodes);
@@ -203,11 +209,16 @@ LevelManager::createLevel(const component::LevelSetupData & aSetupData)
             .add(component::GlobalPose{});
     } // End createLevel Phase
 
-    mTiles.each([level](EntHandle aTileHandle, const component::LevelTile &)
+    {
+    TIME_SINGLE(Main, "Scene insertion");
+    mTiles.each([level](EntHandle aTileHandle, const component::LevelTile & aTile)
                 { insertEntityInScene(aTileHandle, level); });
     mPowerUpAndPills.each([level](EntHandle aTileHandle, const component::RoundTransient &)
                 { insertEntityInScene(aTileHandle, level); });
+    }
 
+    {
+    TIME_SINGLE(Main, "Portal info creation");
     mPortals.each(
         [&tiles = levelData.mTiles, stride, &level, this](EntHandle aHandle,
                                        component::Portal & aPortal,
@@ -230,6 +241,7 @@ LevelManager::createLevel(const component::LevelSetupData & aSetupData)
                           Vec3{1.f, 0.f, 0.f});
         }
     });
+    }
 
     return level;
 }

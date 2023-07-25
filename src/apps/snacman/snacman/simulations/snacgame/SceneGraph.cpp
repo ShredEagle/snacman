@@ -163,13 +163,13 @@ void insertEntityInScene(ent::Handle<ent::Entity> aHandle,
     component::SceneNode & parentNode =
         parentEntity.get<component::SceneNode>();
     component::SceneNode & newNode = newChild.get<component::SceneNode>();
-    assert(newNode.mParent == std::nullopt
+    assert(!newNode.mParent.isValid()
            && "Can't add a node into the scene graph that is already part of "
               "the scene graph");
 
-    if (parentNode.mFirstChild)
+    if (parentNode.mFirstChild.isValid())
     {
-        EntHandle oldHandle = *parentNode.mFirstChild;
+        EntHandle oldHandle = parentNode.mFirstChild;
         component::SceneNode & oldNode =
             oldHandle.get()->get<component::SceneNode>();
         newNode.mNextChild = oldHandle;
@@ -186,33 +186,36 @@ void removeEntityFromScene(ent::Handle<ent::Entity> aHandle)
     ent::Entity_view removedChild = *aHandle.get();
     component::SceneNode & removedNode =
         removedChild.get<component::SceneNode>();
-    assert(removedNode.mParent && "removed node does not have a parent");
-    ent::Entity_view parentEntity = *removedNode.mParent->get();
-    component::SceneNode & parentNode =
-        parentEntity.get<component::SceneNode>();
 
-    if (parentNode.mFirstChild == aHandle)
+    if (removedNode.mParent.isValid())
     {
-        parentNode.mFirstChild = removedNode.mNextChild;
-    }
+        ent::Entity_view parentEntity = *removedNode.mParent.get();
+        component::SceneNode & parentNode =
+            parentEntity.get<component::SceneNode>();
 
-    if (removedNode.mNextChild)
-    {
-        removedNode.mNextChild->get()
-            ->get<component::SceneNode>()
-            .mPrevChild = removedNode.mPrevChild;
-    }
+        if (parentNode.mFirstChild == aHandle)
+        {
+            parentNode.mFirstChild = removedNode.mNextChild;
+        }
 
-    if (removedNode.mPrevChild)
-    {
-        removedNode.mPrevChild->get()
-            ->get<component::SceneNode>()
-            .mNextChild = removedNode.mNextChild;
-    }
+        if (removedNode.mNextChild.isValid())
+        {
+            removedNode.mNextChild.get()
+                ->get<component::SceneNode>()
+                .mPrevChild = removedNode.mPrevChild;
+        }
 
-    removedNode.mParent = std::nullopt;
-    removedNode.mNextChild = std::nullopt;
-    removedNode.mPrevChild = std::nullopt;
+        if (removedNode.mPrevChild.isValid())
+        {
+            removedNode.mPrevChild.get()
+                ->get<component::SceneNode>()
+                .mNextChild = removedNode.mNextChild;
+        }
+
+        removedNode.mParent = {};
+        removedNode.mNextChild = {};
+        removedNode.mPrevChild = {};
+    }
 }
 
 void transferEntity(EntHandle aHandle, EntHandle aNewParent)
@@ -240,7 +243,7 @@ void transferEntity(EntHandle aHandle, EntHandle aNewParent)
     component::GlobalPose & childPose = child.get<component::GlobalPose>();
 
     component::GlobalPose & parentPose = parent.get<component::GlobalPose>();
-    if (childNode.mParent)
+    if (childNode.mParent.isValid())
     {
         removeEntityFromScene(aHandle);
     }
@@ -254,11 +257,11 @@ void eraseEntityRecursive(ent::Handle<ent::Entity> aHandle, ent::Phase & aPhase)
 {
     const component::SceneNode & sceneNode = snac::getComponent<component::SceneNode>(aHandle);
 
-    for(std::optional<ent::Handle<ent::Entity>> child = sceneNode.mFirstChild;
-        child.has_value();
-        child = snac::getComponent<component::SceneNode>(*child).mNextChild)
+    for(ent::Handle<ent::Entity> child = sceneNode.mFirstChild;
+        child.isValid();
+        child = snac::getComponent<component::SceneNode>(child).mNextChild)
     {
-        eraseEntityRecursive(*child, aPhase);
+        eraseEntityRecursive(child, aPhase);
     }
     
     aHandle.get(aPhase)->erase();

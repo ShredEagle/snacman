@@ -31,13 +31,12 @@ AllowMovement::AllowMovement(GameContext & aGameContext) :
 {}
 
 
-void AllowMovement::update()
+void AllowMovement::update(component::Level & aLevelData)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
     ent::Phase nomutation;
 
-    component::Level & aLevelData = mGameContext->mLevel->get(nomutation)->get<component::Level>();
     auto tiles = aLevelData.mTiles;
     if (tiles.size() == 0) [[unlikely]]
     {

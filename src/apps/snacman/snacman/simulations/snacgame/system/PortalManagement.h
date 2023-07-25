@@ -12,6 +12,7 @@ struct PlayerRoundData;
 struct Geometry;
 struct SceneNode;
 struct Portal;
+struct Level;
 }
 namespace system {
 
@@ -21,7 +22,7 @@ public:
     PortalManagement(GameContext & aGameContext);
 
     void preGraphUpdate();
-    void postGraphUpdate();
+    void postGraphUpdate(component::Level & aLevelData);
 
 private:
     GameContext * mGameContext;

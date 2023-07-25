@@ -36,151 +36,133 @@ PortalManagement::PortalManagement(GameContext & aGameContext) :
 void PortalManagement::preGraphUpdate()
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    EntHandle level = *mGameContext->mLevel;
-    if (level.isValid())
-    {
-        ent::Phase portalPhase;
+    ent::Phase portalPhase;
 
-        mPlayer.each([this](EntHandle aPlayerHandle,
-                            component::PlayerRoundData & aRoundData) {
-            mPortals.each([&aPlayerHandle, &aRoundData,
-                           this](const component::Portal & aPortal) {
-                if (aPortal.portalIndex == aRoundData.mDestinationPortal
-                    && !aRoundData.mPortalImage)
-                {
-                    EntHandle newPortalImage = createPortalImage(
-                        *mGameContext, aRoundData, aPortal);
-                    insertEntityInScene(newPortalImage, aPlayerHandle);
-                }
-            });
+    mPlayer.each([this](EntHandle aPlayerHandle,
+                        component::PlayerRoundData & aRoundData) {
+        mPortals.each([&aPlayerHandle, &aRoundData,
+                       this](const component::Portal & aPortal) {
+            if (aPortal.portalIndex == aRoundData.mDestinationPortal
+                && !aRoundData.mPortalImage.isValid())
+            {
+                EntHandle newPortalImage = createPortalImage(
+                    *mGameContext, aRoundData, aPortal);
+                insertEntityInScene(newPortalImage, aPlayerHandle);
+            }
         });
-    }
+    });
 }
 
-void PortalManagement::postGraphUpdate()
+void PortalManagement::postGraphUpdate(component::Level & aLevelData)
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    EntHandle level = *mGameContext->mLevel;
-    if (level.isValid())
-    {
-        ent::Phase portalPhase;
-        const component::Level & levelData =
-            level.get(portalPhase)->get<component::Level>();
+    ent::Phase portalPhase;
 
-        mPlayer.each([&levelData, &portalPhase, this](
-                         EntHandle aPlayerHandle,
-                         component::GlobalPose & aPlayerPose,
-                         const component::Collision & aPlayerCol,
-                         component::Geometry & aPlayerGeo,
-                         component::PlayerRoundData & aRoundData,
-                         const component::SceneNode & aPlayerNode) {
-            aRoundData.mCurrentPortal = -1;
-            aRoundData.mDestinationPortal = -1;
+    mPlayer.each([&aLevelData, &portalPhase, this](
+                     EntHandle aPlayerHandle,
+                     component::GlobalPose & aPlayerPose,
+                     const component::Collision & aPlayerCol,
+                     component::Geometry & aPlayerGeo,
+                     component::PlayerRoundData & aRoundData,
+                     const component::SceneNode & aPlayerNode) {
+        aRoundData.mCurrentPortal = -1;
+        aRoundData.mDestinationPortal = -1;
 
-            Box_f playerHitbox = component::transformHitbox(
-                aPlayerPose.mPosition, aPlayerCol.mHitbox);
+        Box_f playerHitbox = component::transformHitbox(
+            aPlayerPose.mPosition, aPlayerCol.mHitbox);
 
-            mPortals.each([&playerHitbox, &levelData, &aPlayerGeo,
-                           &aRoundData, &aPlayerNode, &portalPhase](
-                              const component::Portal & aPortal,
-                              const component::Geometry & aPortalGeo,
-                              const component::GlobalPose & aPortalPose) {
-                Box_f portalHitbox = component::transformHitbox(
-                    aPortalPose.mPosition, aPortal.mEnterHitbox);
+        mPortals.each([&playerHitbox, &aLevelData, &aPlayerGeo,
+                       &aRoundData, &aPlayerNode, &portalPhase](
+                          const component::Portal & aPortal,
+                          const component::Geometry & aPortalGeo,
+                          const component::GlobalPose & aPortalPose) {
+            Box_f portalHitbox = component::transformHitbox(
+                aPortalPose.mPosition, aPortal.mEnterHitbox);
 
-                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::debug)
-                    .addBox(
-                        snac::DebugDrawer::Entry{
-                            .mPosition = {0.f, 0.f, 0.f},
-                            .mColor = math::hdr::gGreen<float>,
-                        },
-                        portalHitbox);
+            DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::debug)
+                .addBox(
+                    snac::DebugDrawer::Entry{
+                        .mPosition = {0.f, 0.f, 0.f},
+                        .mColor = math::hdr::gGreen<float>,
+                    },
+                    portalHitbox);
 
-                Box_f portalExitHitbox = component::transformHitbox(
-                    aPortalPose.mPosition, aPortal.mExitHitbox);
+            Box_f portalExitHitbox = component::transformHitbox(
+                aPortalPose.mPosition, aPortal.mExitHitbox);
 
-                DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::debug)
-                    .addBox(
-                        snac::DebugDrawer::Entry{
-                            .mPosition = {0.f, 0.f, 0.f},
-                            .mColor = math::hdr::gRed<float>,
-                        },
-                        portalExitHitbox);
+            DBGDRAW(snac::gPortalDrawer, snac::DebugDrawer::Level::debug)
+                .addBox(
+                    snac::DebugDrawer::Entry{
+                        .mPosition = {0.f, 0.f, 0.f},
+                        .mColor = math::hdr::gRed<float>,
+                    },
+                    portalExitHitbox);
 
-                // If player collides with the portal hitbox we set up
-                // the player portal teleportation
-                if (component::collideWithSat(portalHitbox, playerHitbox))
+            // If player collides with the portal hitbox we set up
+            // the player portal teleportation
+            if (component::collideWithSat(portalHitbox, playerHitbox))
+            {
+                int destinationPortalIndex = -1;
+                for (int portalIndex : aLevelData.mPortalIndex)
                 {
-                    int destinationPortalIndex = -1;
-                    for (int portalIndex : levelData.mPortalIndex)
+                    if (portalIndex != aPortal.portalIndex)
                     {
-                        if (portalIndex != aPortal.portalIndex)
-                        {
-                            destinationPortalIndex = portalIndex;
-                            break;
-                        }
+                        destinationPortalIndex = portalIndex;
+                        break;
                     }
-
-                    aRoundData.mCurrentPortal = aPortal.portalIndex;
-                    aRoundData.mCurrentPortalPos = aPortalGeo.mPosition.xy();
-                    aRoundData.mDestinationPortal = destinationPortalIndex;
                 }
 
-                if (aRoundData.mPortalImage)
+                aRoundData.mCurrentPortal = aPortal.portalIndex;
+                aRoundData.mCurrentPortalPos = aPortalGeo.mPosition.xy();
+                aRoundData.mDestinationPortal = destinationPortalIndex;
+            }
+
+            if (aRoundData.mPortalImage.isValid())
+            {
+                ent::Entity portalEnt = *aRoundData.mPortalImage.get(portalPhase);
+                component::GlobalPose imagePose =
+                    portalEnt.get<component::GlobalPose>();
+                component::Collision imageCollision =
+                    portalEnt.get<component::Collision>();
+                Box_f playerPortalImageHitbox = component::transformHitbox(
+                    imagePose.mPosition, imageCollision.mHitbox);
+
+                DBGDRAW_DEBUG(snac::gPortalDrawer)
+                    .addBox(
+                        snac::DebugDrawer::Entry{
+                            .mColor = math::hdr::gBlue<float>,
+                        },
+                        playerPortalImageHitbox);
+
+                if (component::collideWithSat(portalExitHitbox,
+                                              playerPortalImageHitbox))
                 {
-                    Phase handlePortalImage;
-                    component::GlobalPose imagePose =
-                        aRoundData.mPortalImage->get(handlePortalImage)
-                            ->get<component::GlobalPose>();
-                    component::Collision imageCollision =
-                        aRoundData.mPortalImage->get(handlePortalImage)
-                            ->get<component::Collision>();
-                    Box_f playerPortalImageHitbox = component::transformHitbox(
-                        imagePose.mPosition, imageCollision.mHitbox);
-
-                    DBGDRAW(snac::gPortalDrawer,
-                            snac::DebugDrawer::Level::debug)
-                        .addBox(
-                            snac::DebugDrawer::Entry{
-                                .mPosition = {0.f, 0.f, 0.f},
-                                .mColor = math::hdr::gBlue<float>,
-                            },
-                            playerPortalImageHitbox);
-
-                    if (component::collideWithSat(portalExitHitbox,
-                                                  playerPortalImageHitbox))
+                    aPlayerGeo.mPosition = aPortalGeo.mPosition;
+                    updateGlobalPosition(aPlayerNode);
+                    // TODO: (franz) this can be removed once the models can be made transparent
+                    if (aRoundData.mModel.get()->has<component::VisualModel>())
                     {
-                        aPlayerGeo.mPosition = aPortalGeo.mPosition;
-                        updateGlobalPosition(aPlayerNode);
-                        // TODO: (franz) this can be removed once the models can be made transparent
-                        if (aRoundData.mModel.get()->has<component::VisualModel>())
-                        {
-                            snac::getComponent<component::VisualModel>(
-                                aRoundData.mModel)
-                                .mDisableInterpolation = true;
-                        }
-                        aRoundData.mCurrentPortal = -1;
-                        aRoundData.mDestinationPortal = -1;
-
-                        aRoundData.mPortalImage->get(portalPhase)
-                            ->erase();
-                        aRoundData.mPortalImage = std::nullopt;
+                        snac::getComponent<component::VisualModel>(
+                            aRoundData.mModel)
+                            .mDisableInterpolation = true;
                     }
+                    aRoundData.mCurrentPortal = -1;
+                    aRoundData.mDestinationPortal = -1;
 
-                    if (component::collideWithSat(portalExitHitbox,
-                                                  playerHitbox))
-                    {
-                        aRoundData.mCurrentPortal = -1;
-                        aRoundData.mDestinationPortal = -1;
-
-                        aRoundData.mPortalImage->get(portalPhase)
-                            ->erase();
-                        aRoundData.mPortalImage = std::nullopt;
-                    }
+                    portalEnt.erase();
                 }
-            });
+
+                if (component::collideWithSat(portalExitHitbox,
+                                              playerHitbox))
+                {
+                    aRoundData.mCurrentPortal = -1;
+                    aRoundData.mDestinationPortal = -1;
+
+                    portalEnt.erase();
+                }
+            }
         });
-    }
+    });
 }
 } // namespace system
 } // namespace snacgame

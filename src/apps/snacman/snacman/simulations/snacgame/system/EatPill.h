@@ -11,6 +11,7 @@ struct Collision;
 struct PlayerRoundData;
 struct Pill;
 struct PlayerHud;
+struct PlayerGameData;
 }
 namespace system {
 

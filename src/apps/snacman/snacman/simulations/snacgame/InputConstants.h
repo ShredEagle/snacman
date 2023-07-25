@@ -12,6 +12,7 @@ constexpr int gPlayerMoveFlagDown = 1 << 2;
 constexpr int gPlayerMoveFlagLeft = 1 << 3;
 constexpr int gPlayerMoveFlagRight = 1 << 4;
 constexpr int gPlayerUsePowerup = 1 << 5;
+constexpr int gPlayerSelect = 1 << 6;
 
 constexpr int gJoin = 1 << 10;
 

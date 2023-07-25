@@ -7,6 +7,7 @@ namespace snacgame {
 struct GameContext;
 namespace component {
 struct PlayerRoundData;
+struct PlayerGameData;
 struct Pill;
 struct LevelTile;
 }

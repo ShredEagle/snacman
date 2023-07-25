@@ -28,9 +28,6 @@ public:
     visu::Camera getCamera() const;
 
 private:
-    static constexpr math::Spherical<float> gInitialCameraSpherical{
-        20.f, math::Turn<float>{0.075f},
-        math::Turn<float>{0.f}};
     static constexpr math::Vec<2, GLfloat> gMouseControlFactor{1 / 500.f,
                                                                1 / 500.f};
     static constexpr float gScrollFactor = 0.05f;

@@ -24,12 +24,12 @@ struct DogPowerUpInfo
 
 struct TeleportPowerUpInfo
 {
-    std::optional<ent::Handle<ent::Entity>> mCurrentTarget;
+    ent::Handle<ent::Entity> mCurrentTarget;
     // This is 0.f because we want the teleport to change target
     // as soon as the player inputs a target change
     // and then to wait for the delay
     float mDelayChangeTarget = 0.f;
-    std::optional<ent::Handle<ent::Entity>> mTargetArrow;
+    ent::Handle<ent::Entity> mTargetArrow;
 };
 
 struct MissilePowerUpInfo
@@ -56,19 +56,20 @@ struct PlayerRoundData
     // scene node from the orientation of the model
     ent::Handle<ent::Entity> mModel;
 
+    // We need access to playerGameData and the slot index
+    // which are in the slot
+    ent::Handle<ent::Entity> mSlot;
+
     // Power up info
-    std::optional<ent::Handle<ent::Entity>> mPowerUp;
+    ent::Handle<ent::Entity> mPowerUp;
     PowerUpType mType = PowerUpType::None;
     std::variant<DogPowerUpInfo, TeleportPowerUpInfo, MissilePowerUpInfo> mInfo;
 
     // Portal data
-    std::optional<ent::Handle<ent::Entity>> mPortalImage;
+    ent::Handle<ent::Entity> mPortalImage;
     math::Position<2, float> mCurrentPortalPos;
     int mCurrentPortal = -1;
     int mDestinationPortal = -1;
-
-    // Link to slot handle
-    ent::Handle<ent::Entity> mSlotHandle;
 
     void drawUi() const;
 };

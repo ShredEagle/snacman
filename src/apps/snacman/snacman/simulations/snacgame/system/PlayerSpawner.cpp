@@ -1,6 +1,7 @@
 #include "PlayerSpawner.h"
 
 #include "SceneGraphResolver.h"
+#include "snacman/simulations/snacgame/component/Controller.h"
 
 #include "../component/PlayerSlot.h"
 #include "../component/PlayerGameData.h"
@@ -22,38 +23,39 @@ namespace system {
 
 PlayerSpawner::PlayerSpawner(GameContext & aGameContext) :
     mGameContext{&aGameContext},
-    mUnspawnedPlayers{mGameContext->mWorld},
+    mPlayerSlots{mGameContext->mWorld},
     mSpawner{mGameContext->mWorld}
 {}
 
-void PlayerSpawner::spawnPlayers()
+void PlayerSpawner::spawnPlayers(EntHandle aLevel)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
     Phase spawnPlayer;
-    mUnspawnedPlayers.each(
-        [this, &spawnPlayer](EntHandle aSlotHandle, const component::PlayerSlot &)
+    std::vector<EntHandle> mSpawnedSlots;
+    mPlayerSlots.each(
+        [this, &aLevel, &mSpawnedSlots](EntHandle aSlotHandle, const component::PlayerSlot &)
         {
-        OptEntHandle spawnHandle = snac::getFirstHandle(
+        component::PlayerSlot & slot = snac::getComponent<component::PlayerSlot>(aSlotHandle);
+        EntHandle spawnHandle = snac::getFirstHandle(
             mSpawner, [](const component::Spawner & aSpawner)
             { return !aSpawner.mSpawnedPlayer; });
-        if (spawnHandle)
+        if (spawnHandle.isValid() && !slot.mPlayer.isValid())
         {
-            component::Spawner & spawner =
-                spawnHandle->get()->get<component::Spawner>();
-            EntHandle playerHandle = createInGamePlayer(
-                *mGameContext, aSlotHandle,
-                spawner.mSpawnPosition);
-            insertEntityInScene(playerHandle, *mGameContext->mLevel);
+            component::Spawner & spawner = snac::getComponent<component::Spawner>(spawnHandle);
+            slot.mPlayer = createInGamePlayer(*mGameContext, aSlotHandle, spawner.mSpawnPosition);
+            insertEntityInScene(slot.mPlayer, aLevel);
             updateGlobalPosition(
-                playerHandle.get()->get<component::SceneNode>());
-            
-            //Remove player from the spawnable pool
-            aSlotHandle.get(spawnPlayer)->remove<component::Unspawned>();
-
+                snac::getComponent<component::SceneNode>(slot.mPlayer));
             spawner.mSpawnedPlayer = true;
+            mSpawnedSlots.push_back(spawnHandle);
         }
     });
+
+    for (EntHandle spawnHandle : mSpawnedSlots)
+    {
+        spawnHandle.get(spawnPlayer)->remove<component::Controller>();
+    }
 }
 
 } // namespace system
