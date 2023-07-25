@@ -20,6 +20,9 @@ struct RoundTransient
 struct GameTransient
 {};
 
+struct Crown
+{};
+
 } // namespace component
 } // namespace snacgame
 } // namespace ad

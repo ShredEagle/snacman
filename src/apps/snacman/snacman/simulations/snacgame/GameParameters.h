@@ -38,6 +38,14 @@ constexpr float gPillHeight = 6 * gCellSize * 0.1f;
 constexpr float gPlayerHeight = 0 * gCellSize * 0.1f;
 constexpr float gLevelHeight = 0 * gCellSize * 0.1f;
 
+const math::Quaternion<float> gBaseCrownOrientation =
+    math::Quaternion<float>{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+                            math::Turn<float>{0.25f}}
+    * math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
+                              math::Turn<float>{0.25f}};
+constexpr math::Size<3, float> gBaseCrownInstanceScaling{0.2f, 0.2f, 0.2f};
+constexpr math::Position<3, float> gBaseCrownPosition{0.f, 0.f, 1.8f};
+
 const math::Quaternion<float> gBasePlayerModelOrientation =
     math::Quaternion<float>{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                             math::Turn<float>{0.25f}}

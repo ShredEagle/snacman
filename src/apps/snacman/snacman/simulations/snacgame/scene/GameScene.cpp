@@ -167,8 +167,6 @@ void GameScene::onExit(Transition aTransition)
         Phase destroyPlayer;
         mSlots.each([&destroyPlayer](EntHandle aHandle, const component::PlayerSlot &)
                     { eraseEntityRecursive(aHandle, destroyPlayer); });
-        mPlayers.each([&destroyPlayer](EntHandle aHandle, const component::PlayerRoundData &)
-                    { eraseEntityRecursive(aHandle, destroyPlayer); });
         // Delete hud
         mHuds.each([&destroyPlayer](EntHandle aHandle, const component::PlayerHud &)
                    { eraseEntityRecursive(aHandle, destroyPlayer); });
@@ -176,14 +174,7 @@ void GameScene::onExit(Transition aTransition)
     {
         Phase destroyEnvironment;
 
-        mTiles.each([&destroyEnvironment](EntHandle aHandle, const component::LevelTile &)
-                    { aHandle.get(destroyEnvironment)->erase(); });
-        // Destroy round transient and components
-        mRoundTransients.each(
-            [&destroyEnvironment](EntHandle aHandle, component::RoundTransient &)
-            { aHandle.get(destroyEnvironment)->erase(); });
-
-        mLevel.get(destroyEnvironment)->erase();
+        eraseEntityRecursive(mLevel, destroyEnvironment);
 
         mSystems.get(destroyEnvironment)->erase();
         mSystems = mGameContext.mWorld.addEntity();

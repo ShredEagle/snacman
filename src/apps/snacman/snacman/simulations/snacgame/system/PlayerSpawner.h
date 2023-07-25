@@ -8,6 +8,7 @@ struct GameContext;
 namespace component {
 struct Unspawned;
 struct PlayerSlot;
+struct PlayerRoundData;
 struct Spawner;
 }
 namespace system {
@@ -22,6 +23,7 @@ public:
 private:
     GameContext * mGameContext;
     ent::Query<component::PlayerSlot> mPlayerSlots;
+    ent::Query<component::PlayerRoundData> mPlayers;
     ent::Query<component::Spawner> mSpawner;
 };
 

@@ -1,10 +1,13 @@
 #include "RoundMonitor.h"
+#include "snacman/simulations/snacgame/SceneGraph.h"
+#include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 
 #include "../component/PlayerGameData.h"
 #include "../component/LevelData.h"
 #include "../component/PlayerRoundData.h"
 #include "../component/SceneNode.h"
 #include "../component/PlayerSlot.h"
+#include "../component/GlobalPose.h"
 
 #include "../Entities.h"
 #include "../GameContext.h"
