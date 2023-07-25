@@ -427,6 +427,39 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
     return hudHandle;
 }
 
+// TODO: (franz) does not need the slot handle just the index
+EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
+{
+    const component::PlayerSlot & slot =
+        aSlotHandle.get()->get<component::PlayerSlot>();
+    EntHandle playerModelHandle = aContext.mWorld.addEntity();
+    {
+        Phase createModel;
+        Entity model = *playerModelHandle.get(createModel);
+
+        std::shared_ptr<snac::Model> modelData = addMeshGeoNode(
+            aContext, model, "models/donut/donut.gltf",
+            "effects/MeshRiggingTextures.sefx", Pos3::Zero(), 1.f,
+            gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation,
+            gSlotColors.at(slot.mSlotIndex));
+
+        std::string animName = "idle";
+        const snac::NodeAnimation & animation =
+            modelData->mAnimations.at(animName);
+        model.add(component::RigAnimation{
+            .mAnimName = animName,
+            .mAnimation = &animation,
+            .mAnimationMap = &modelData->mAnimations,
+            .mStartTime = snac::Clock::now(),
+            .mParameter =
+                decltype(component::RigAnimation::mParameter){
+                    animation.mEndTime},
+        });
+    }
+
+    return playerModelHandle;
+}
+
 ent::Handle<ent::Entity> createCrown(GameContext & aContext)
 {
     Phase createCrown;
@@ -437,6 +470,7 @@ ent::Handle<ent::Entity> createCrown(GameContext & aContext)
         aContext, crown, "models/crown/crown.gltf",
         "effects/MeshTextures.sefx", gBaseCrownPosition, 1.f,
         gBaseCrownInstanceScaling, gBaseCrownOrientation);
+    crownHandle.get(createCrown)->add(component::Crown{});
 
     return crownHandle;
 }

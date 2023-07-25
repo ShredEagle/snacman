@@ -8,6 +8,7 @@ struct GameContext;
 namespace component {
 struct PlayerRoundData;
 struct PlayerGameData;
+struct Crown;
 struct Pill;
 struct LevelTile;
 }

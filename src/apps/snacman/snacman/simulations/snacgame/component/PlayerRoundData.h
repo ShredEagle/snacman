@@ -55,6 +55,7 @@ struct PlayerRoundData
     // Player model this is used to isolate a player
     // scene node from the orientation of the model
     ent::Handle<ent::Entity> mModel;
+    ent::Handle<ent::Entity> mCrown;
 
     // We need access to playerGameData and the slot index
     // which are in the slot
