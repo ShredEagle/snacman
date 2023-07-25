@@ -1,14 +1,15 @@
 #include "PlayerSpawner.h"
 
-#include "SceneGraphResolver.h"
-#include "snacman/simulations/snacgame/component/Controller.h"
-
+#include "../component/Controller.h"
 #include "../component/PlayerSlot.h"
 #include "../component/PlayerGameData.h"
 #include "../component/PlayerRoundData.h"
 #include "../component/SceneNode.h"
 #include "../component/GlobalPose.h"
 #include "../component/Spawner.h"
+
+#include "SceneGraphResolver.h"
+
 #include "../Entities.h"
 #include "../GameContext.h"
 #include "../SceneGraph.h"

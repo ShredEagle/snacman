@@ -11,7 +11,7 @@
 namespace ad {
 namespace snacgame {
 ent::Handle<ent::Entity> insertTransformNode(ent::EntityManager & aWorld,
-                                             component::Geometry aGeometry,
+                                             component::Geometry & aGeometry,
                                              ent::Handle<ent::Entity> aParent);
 void insertEntityInScene(ent::Handle<ent::Entity> aHandle,
                          ent::Handle<ent::Entity> aParent);

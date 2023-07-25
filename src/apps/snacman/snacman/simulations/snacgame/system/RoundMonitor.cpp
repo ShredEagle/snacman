@@ -7,6 +7,7 @@
 #include "../component/PlayerRoundData.h"
 #include "../component/SceneNode.h"
 #include "../component/PlayerSlot.h"
+#include "../component/GlobalPose.h"
 
 #include "../Entities.h"
 #include "../GameContext.h"

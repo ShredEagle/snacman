@@ -119,7 +119,7 @@ void computeNewLocalTransform(component::Geometry & aChildGeo,
 
 // Allows to easily insert a node with a transformation into the scene graph
 EntHandle insertTransformNode(ent::EntityManager & aWorld,
-                              component::Geometry aGeometry,
+                              component::Geometry & aGeometry,
                               ent::Handle<ent::Entity> aParent)
 {
     EntHandle nodeEnt = aWorld.addEntity();
