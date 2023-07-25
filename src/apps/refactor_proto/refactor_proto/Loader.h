@@ -21,7 +21,7 @@ namespace semantic
 
 // IMPORTANT: for the moment, just load the first vertex stream in the file
 // has to be extended to actually load complex models.
-VertexStream loadBinary(Storage & aStorage, const std::filesystem::path & aBinaryFile);
+Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, Material aDefaultMaterial);
 
 VertexStream makeFromPositions(Storage & aStorage, std::span<math::Position<3, GLfloat>> aPositions);
 

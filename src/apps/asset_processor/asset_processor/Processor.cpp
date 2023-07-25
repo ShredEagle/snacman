@@ -2,6 +2,9 @@
 
 #include "Logging.h"
 
+// TODO address that dirty include when the content is moved to a proper library
+#include "../../refactor_proto/refactor_proto/BinaryArchive.h"
+
 #include <math/Homogeneous.h>
 
 #include <assimp/Importer.hpp>      // C++ importer interface
@@ -23,40 +26,41 @@ namespace {
         return (aMesh->mPrimitiveTypes = (aiPrimitiveType_TRIANGLE | aiPrimitiveType_NGONEncodingFlag));
     }
 
-    math::AffineMatrix<4, float> extractTransformation(aiNode * aNode)
+    math::Matrix<4, 3, float> extractAffinePart(const aiNode * aNode)
     {
         auto m = aNode->mTransformation;
-        math::Matrix<4, 3, float> affinePart{
+        assert(m.d1 == 0 && m.d2 == 0 && m.d3 == 0 && m.d4 == 1);
+        return math::Matrix<4, 3, float>{
             m.a1, m.b1, m.c1,
             m.a2, m.b2, m.c2,
             m.a3, m.b3, m.c3,
             m.a4, m.b4, m.c4,
         };
-        return math::AffineMatrix<4, float>{affinePart};
     }
 
-    
-    struct BinaryArchive
+    math::AffineMatrix<4, float> extractTransformation(const aiNode * aNode)
     {
-        template <class T> requires std::is_arithmetic_v<T>
-        BinaryArchive & write(T aValue)
-        {
-            mOut.write((const char *)&aValue, sizeof(T));
-            return *this;
-        }
-
-        template <class T>
-        BinaryArchive & write(std::span<T> aData)
-        {
-            mOut.write((const char *)aData.data(), aData.size_bytes());
-            return *this;
-        }
-
-        std::ofstream mOut;
-    };
-
+        return math::AffineMatrix<4, float>{extractAffinePart(aNode)};
+    }
+    
     struct FileWriter
     {
+        FileWriter(std::filesystem::path aDestinationFile) :
+            mArchive{
+                .mOut = std::ofstream{aDestinationFile, std::ios::binary}
+            }
+        {
+            unsigned int version = 1;
+            mArchive.write(version);
+        }
+
+        void write(const aiNode * aNode)
+        {
+            mArchive.write(aNode->mNumMeshes);
+            mArchive.write(aNode->mNumChildren);
+            mArchive.write(extractAffinePart(aNode));
+        }
+
         void write(const aiMesh * aMesh)
         {
             // Vertices
@@ -71,9 +75,20 @@ namespace {
             }
         }
 
-        BinaryArchive mArchive;
+        BinaryOutArchive mArchive;
     };
 
+    // Current binary format as of 2023/07/25:
+    //  node.numMeshes
+    //  node.numChildren
+    //  node.transformation
+    //  each node.mesh:
+    //    mesh.numVertices
+    //    [mesh.vertices(i.e. positions, 3 floats per vertex)]
+    //    mesh.numFaces
+    //    [mesh.faces(i.e. 3 unsigned int per face)]
+    //  each node.child:
+    //    // recurse
     void recurseNodes(aiNode * aNode,
                       const aiScene * aScene,
                       FileWriter & aWriter,
@@ -88,6 +103,8 @@ namespace {
                   << "\n" << nodeTransform 
                   << "\n"
                   ;
+
+        aWriter.write(aNode);
 
         for(std::size_t meshIdx = 0; meshIdx != aNode->mNumMeshes; ++meshIdx)
         {
@@ -139,11 +156,7 @@ void processModel(const std::filesystem::path & aFile)
     }
 
     std::filesystem::path output = aFile.parent_path() / aFile.stem().replace_extension(".seum");
-    FileWriter writer{
-        .mArchive{
-            .mOut = std::ofstream{output, std::ios::binary},
-        }
-    };
+    FileWriter writer{output};
 
     // Now we can access the file's contents. 
     recurseNodes(scene->mRootNode, scene, writer);

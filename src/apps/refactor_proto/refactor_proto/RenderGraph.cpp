@@ -191,13 +191,53 @@ namespace {
             }
         }
     }
+
+    void populateDrawList(DrawList & aDrawList, const Node & aNode, const Pose & aParentPose)
+    {
+        const Pose & localPose = aNode.mInstance.mPose;
+        Pose absolutePose = aParentPose.transform(localPose);
+
+        if(Object * object = aNode.mInstance.mObject;
+           object != nullptr)
+        {
+            aDrawList.push_back(Instance{
+                .mObject = object,
+                .mPose = absolutePose,
+            });
+        }
+
+        for(const auto & child : aNode.mChildren)
+        {
+            populateDrawList(aDrawList, child, absolutePose);
+        }
+    }
+
+} // unnamed namespace
+
+
+DrawList Scene::populateDrawList() const
+{
+    static constexpr Pose gIdentityPose{
+        .mPosition{0.f, 0.f, 0.f},
+        .mUniformScale = 1,
+    };
+
+    DrawList drawList;
+    for(const Node & topNode : mRoot)
+    {
+        renderer::populateDrawList(drawList, topNode, gIdentityPose);
+    }
+
+    return drawList;
 }
+
 
 RenderGraph::RenderGraph()
 {
     // TODO replace use of pointers into the storage (which are invalidated on vector resize)
     // with some form of handle
     mStorage.mBuffers.reserve(16);
+    mStorage.mObjects.reserve(16);
 
     static Object triangle;
     triangle.mParts.push_back(Part{
@@ -205,7 +245,7 @@ RenderGraph::RenderGraph()
         .mMaterial = makeWhiteMaterial(mStorage),
     });
 
-    mScene.push_back(Instance{
+    mScene.addToRoot(Instance{
         .mObject = &triangle,
         .mPose = {
             .mPosition = {-0.5f, -0.2f, 0.f},
@@ -220,7 +260,7 @@ RenderGraph::RenderGraph()
         .mMaterial = triangle.mParts[0].mMaterial,
     });
 
-    mScene.push_back(Instance{
+    mScene.addToRoot(Instance{
         .mObject = &cube,
         .mPose = {
             .mPosition = {0.5f, -0.2f, 0.f},
@@ -229,19 +269,10 @@ RenderGraph::RenderGraph()
     });
 
     std::filesystem::path binaryFile{"D:/projects/Gamedev/2/proto-assets/teapot/teapot.seum"};
-    static Object teapot;
-    teapot.mParts.push_back(Part{
-        .mVertexStream = loadBinary(mStorage, binaryFile),
-        .mMaterial = triangle.mParts[0].mMaterial,
-    });
-
-    mScene.push_back(Instance{
-        .mObject = &teapot,
-        .mPose = {
-            .mPosition = {0.0f, 0.2f, 0.f},
-            .mUniformScale = 0.005f,
-        }
-    });
+    Node teapot = loadBinary(binaryFile, mStorage, triangle.mParts[0].mMaterial);
+    teapot.mInstance.mPose.mPosition = {0.0f, 0.2f, 0.f};
+    teapot.mInstance.mPose.mUniformScale = 0.005f;
+    mScene.mRoot.push_back(std::move(teapot));
 
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     mInstanceStream = makeInstanceStream(mStorage, 1);
@@ -250,12 +281,14 @@ RenderGraph::RenderGraph()
 
 void RenderGraph::render(const graphics::ApplicationGlfw & aGlfwApp)
 {
+    // Implement material/program selection while generating drawlist
+    DrawList drawList = mScene.populateDrawList();
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
-    for(const auto & instance : mScene)
+    for(const auto & instance : drawList)
     {
-        // TODO replace with some form a render list generation, abstracting material/program selection
         draw(instance, mInstanceStream, aGlfwApp.getAppInterface()->getFramebufferSize());
     }
 }

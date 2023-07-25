@@ -9,6 +9,21 @@
 namespace ad::renderer {
 
 
+using DrawList = std::vector<Instance>;
+
+struct Scene
+{
+    Scene & addToRoot(Instance aInstance)
+    {
+        mRoot.push_back(Node{.mInstance = std::move(aInstance)});
+        return *this;
+    }
+
+    std::vector<Node> mRoot; 
+
+    DrawList populateDrawList() const;
+};
+
 struct RenderGraph
 {
     RenderGraph();
@@ -16,7 +31,7 @@ struct RenderGraph
     void render(const graphics::ApplicationGlfw & aGlfwApp);
 
     Storage mStorage;
-    std::vector<Instance> mScene;
+    Scene mScene;
     SemanticBufferViews mInstanceStream;
 };
 

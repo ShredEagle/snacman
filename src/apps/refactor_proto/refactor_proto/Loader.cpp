@@ -55,10 +55,136 @@ namespace {
     }
 
 
+    Pose decompose(const math::AffineMatrix<4, GLfloat> & aTransformation)
+    {
+        Pose result {
+            .mPosition = aTransformation.getAffine(),
+        };
+
+        std::array<math::Vec<3, GLfloat>, 3> rows{
+            math::Vec<3, GLfloat>{aTransformation[0]},
+            math::Vec<3, GLfloat>{aTransformation[1]},
+            math::Vec<3, GLfloat>{aTransformation[2]},
+        };
+        math::Size<3, GLfloat> scale{
+            rows[0].getNorm(),
+            rows[1].getNorm(),
+            rows[2].getNorm(),
+        };
+
+        // TODO we will need to introduce some tolerance here
+        assert(scale[0] == scale[1] && scale[0] == scale[2]);
+        result.mUniformScale = scale[0];
+
+        return result;
+    }
+
+
+    VertexStream loadMesh(BinaryInArchive & aIn, Storage & aStorage)
+    {
+        unsigned int verticesCount;
+        aIn.read(verticesCount);
+
+        constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
+        std::size_t positionBufferSize = verticesCount * gPositionSize;
+        std::unique_ptr<char[]> positionBuffer = aIn.readBytes(positionBufferSize);
+
+        auto [vbo, sizeVbo] = 
+            makeMutableBuffer(std::span{positionBuffer.get(), positionBufferSize}, GL_STATIC_DRAW);
+
+        aStorage.mBuffers.push_back(std::move(vbo));
+
+        BufferView vboView{
+            .mGLBuffer = &aStorage.mBuffers.back(),
+            .mStride = gPositionSize,
+            .mOffset = 0,
+            .mSize = sizeVbo, // The view has access to the whole buffer
+        };
+
+        unsigned int primitiveCount;
+        aIn.read(primitiveCount);
+        const unsigned int indicesCount = 3 * primitiveCount;
+
+        constexpr auto gIndexSize = sizeof(unsigned int);
+        const std::size_t indexBufferSize = indicesCount * gIndexSize;
+        std::unique_ptr<char[]> indexBuffer = aIn.readBytes(indexBufferSize);
+
+        auto [ibo, sizeIbo] = 
+            makeMutableBuffer(std::span{indexBuffer.get(), indexBufferSize}, GL_STATIC_DRAW);
+
+        aStorage.mBuffers.push_back(std::move(ibo));
+
+        BufferView iboView{
+            .mGLBuffer = &aStorage.mBuffers.back(),
+            .mOffset = 0,
+            .mSize = sizeIbo, // The view has access to the whole buffer
+        };
+
+        return VertexStream{
+            .mVertexBufferViews{ vboView, },
+            .mSemanticToAttribute{
+                {
+                    semantic::gPosition,
+                    AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 3,
+                            .mOffset = 0,
+                            .mComponentType = GL_FLOAT
+                        }
+                    }
+                },
+            },
+            .mVertexCount = (GLsizei)verticesCount,
+            .mPrimitiveMode = GL_TRIANGLES,
+            .mIndexBufferView = iboView,
+            .mIndicesType = GL_UNSIGNED_INT,
+            .mIndicesCount = (GLsizei)indicesCount,
+        };
+    }
+
+    Object * addObject(Storage & aStorage)
+    {
+        aStorage.mObjects.emplace_back();
+        return &aStorage.mObjects.back();
+    }
+
+    Node loadNode(BinaryInArchive & aIn, Storage & aStorage, const Material aDefaultMaterial)
+    {
+        unsigned int meshesCount, childrenCount;
+        aIn.read(meshesCount);
+        aIn.read(childrenCount);
+
+        math::Matrix<4, 3, GLfloat> localTransformation;
+        aIn.read(localTransformation);
+
+        Node node{
+            .mInstance{
+                .mObject = (meshesCount > 0) ? addObject(aStorage) : nullptr,
+                .mPose = decompose(math::AffineMatrix<4, GLfloat>{localTransformation}),
+            },
+        };
+
+        for(std::size_t meshIdx = 0; meshIdx != meshesCount; ++meshIdx)
+        {
+            node.mInstance.mObject->mParts.push_back(Part{
+                .mVertexStream = loadMesh(aIn, aStorage),
+                .mMaterial = aDefaultMaterial,
+            });
+        }
+
+        for(std::size_t childIdx = 0; childIdx != childrenCount; ++childIdx)
+        {
+            node.mChildren.push_back(loadNode(aIn, aStorage, aDefaultMaterial));
+        }
+
+        return node;
+    }
+
 } // unnamed namespace
 
 
-VertexStream loadBinary(Storage & aStorage, const std::filesystem::path & aBinaryFile)
+Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, Material aDefaultMaterial)
 {
     BinaryInArchive in{
         .mIn{std::ifstream{aBinaryFile, std::ios::binary}},
@@ -69,65 +195,7 @@ VertexStream loadBinary(Storage & aStorage, const std::filesystem::path & aBinar
     in.read(version);
     assert(version == 1);
 
-    unsigned int verticesCount;
-    in.read(verticesCount);
-
-    constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
-    std::size_t positionBufferSize = verticesCount * gPositionSize;
-    std::unique_ptr<char[]> positionBuffer = in.readBytes(positionBufferSize);
-
-    auto [vbo, sizeVbo] = 
-        makeMutableBuffer(std::span{positionBuffer.get(), positionBufferSize}, GL_STATIC_DRAW);
-
-    aStorage.mBuffers.push_back(std::move(vbo));
-
-    BufferView vboView{
-        .mGLBuffer = &aStorage.mBuffers.back(),
-        .mStride = gPositionSize,
-        .mOffset = 0,
-        .mSize = sizeVbo, // The view has access to the whole buffer
-    };
-
-    unsigned int primitiveCount;
-    in.read(primitiveCount);
-    const unsigned int indicesCount = 3 * primitiveCount;
-
-    constexpr auto gIndexSize = 3 * sizeof(unsigned int);
-    const std::size_t indexBufferSize = indicesCount * gIndexSize;
-    std::unique_ptr<char[]> indexBuffer = in.readBytes(indexBufferSize);
-
-    auto [ibo, sizeIbo] = 
-        makeMutableBuffer(std::span{indexBuffer.get(), indexBufferSize}, GL_STATIC_DRAW);
-
-    aStorage.mBuffers.push_back(std::move(ibo));
-
-    BufferView iboView{
-        .mGLBuffer = &aStorage.mBuffers.back(),
-        .mOffset = 0,
-        .mSize = sizeIbo, // The view has access to the whole buffer
-    };
-
-    return VertexStream{
-        .mVertexBufferViews{ vboView, },
-        .mSemanticToAttribute{
-            {
-                semantic::gPosition,
-                AttributeAccessor{
-                    .mBufferViewIndex = 0, // view is added above
-                    .mClientDataFormat{
-                        .mDimension = 3,
-                        .mOffset = 0,
-                        .mComponentType = GL_FLOAT
-                    }
-                }
-            },
-        },
-        .mVertexCount = (GLsizei)verticesCount,
-        .mPrimitiveMode = GL_TRIANGLES,
-        .mIndexBufferView = iboView,
-        .mIndicesType = GL_UNSIGNED_INT,
-        .mIndicesCount = (GLsizei)indicesCount,
-    };
+    return loadNode(in, aStorage, aDefaultMaterial);
 }
 
 

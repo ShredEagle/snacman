@@ -31,9 +31,9 @@ struct BinaryOutArchive
     }
 
     template <int N_rows, int N_cols, class T_number>
-    BinaryOutArchive & write(math::Matrix<N_rows, N_cols, T_number> aMatrix)
+    BinaryOutArchive & write(const math::Matrix<N_rows, N_cols, T_number> & aMatrix)
     {
-        return write(std::span{aMatrix.data(), aMatrix.size_value});
+        return write(std::span{aMatrix});
     }
 
 
@@ -56,7 +56,20 @@ struct BinaryInArchive
         mIn.read(buffer.get(), aCount);
         return buffer;
     }
-    
+
+    template <class T>
+    BinaryInArchive & read(std::span<T> aData)
+    {
+        mIn.read((char *)aData.data(), aData.size_bytes());
+        return *this;
+    }
+
+    template <int N_rows, int N_cols, class T_number>
+    BinaryInArchive & read(math::Matrix<N_rows, N_cols, T_number> & aMatrix)
+    {
+        return read(std::span{aMatrix});
+    }
+
     std::ifstream mIn;
 };
 

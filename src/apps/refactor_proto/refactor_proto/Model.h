@@ -96,21 +96,13 @@ struct VertexStream /*: public SemanticBufferViews*/
 struct Part
 {
     VertexStream mVertexStream;
-    Material mMaterial;
+    Material mMaterial; // TODO should probably be a "reference", as it is likely shared
 };
 
 
 struct Object
 {
     std::vector<Part> mParts;
-};
-
-
-// Loosely inspired by Godot data model, this class should not exist in the library
-struct Storage
-{
-    std::vector<graphics::BufferAny> mBuffers;
-    std::vector<Effect> mEffects;
 };
 
 
@@ -122,9 +114,18 @@ struct Pose
 {
     math::Vec<3, float> mPosition;
     float mUniformScale;
+
+    Pose transform(Pose aNested) const
+    {
+        aNested.mPosition += mPosition;
+        aNested.mUniformScale *= mUniformScale;
+        return aNested;
+    }
 };
 
 
+/// A good candidate to be at the interface between client and renderer lib.
+/// Equivalent to a "Shape" in the shape list from AZDO talks.
 struct Instance
 {
     Object * mObject;
@@ -137,5 +138,15 @@ struct Node
     Instance mInstance;
     std::vector<Node> mChildren;
 };
+
+
+// Loosely inspired by Godot data model, this class should not exist in the library
+struct Storage
+{
+    std::vector<graphics::BufferAny> mBuffers;
+    std::vector<Object> mObjects;
+    std::vector<Effect> mEffects;
+};
+
 
 } // namespace ad::renderer
