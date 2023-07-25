@@ -14,7 +14,7 @@ struct GameContext;
 struct ControllerCommand;
 
 namespace component {
-struct PlayerSlot;
+struct PlayerRoundData;
 struct Controller;
 struct MappingContext;
 } // namespace component
@@ -30,7 +30,7 @@ public:
     std::vector<ControllerCommand> mapControllersInput(RawInput & aInput);
 
 private:
-    ent::Query<component::PlayerSlot, component::Controller> mPlayers;
+    ent::Query<component::Controller> mPlayers;
     ent::Wrap<component::MappingContext> * mMappingContext;
 };
 

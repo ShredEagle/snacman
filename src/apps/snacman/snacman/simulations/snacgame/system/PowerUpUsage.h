@@ -43,15 +43,9 @@ private:
     ent::Query<component::GlobalPose,
                component::Geometry,
                component::Collision,
-               component::PlayerRoundData,
-               component::PlayerGameData>
-        mPlayers;
-    ent::Query<component::Geometry,
-               component::PlayerRoundData,
-               component::GlobalPose,
                component::Controller,
-               component::PlayerSlot>
-        mPowUpPlayers;
+               component::PlayerRoundData>
+        mPlayers;
     ent::Query<component::GlobalPose,
                component::Geometry,
                component::PowerUp,

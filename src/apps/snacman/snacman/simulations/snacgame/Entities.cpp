@@ -500,11 +500,10 @@ void preparePlayerForGame(GameContext & aContext, EntHandle aSlotHandle)
 {
     component::SceneNode & node = snac::getComponent<component::SceneNode>(aSlotHandle);
     
-    EntHandle child = node.mFirstChild;
     while(node.mFirstChild.isValid())
     {
         Phase destroyChild;
-        eraseEntityRecursive(child, destroyChild);
+        eraseEntityRecursive(node.mFirstChild, destroyChild);
     }
 }
 
@@ -513,22 +512,23 @@ EntHandle createInGamePlayer(GameContext & aContext,
                              const Pos3 & aPosition)
 {
     EntHandle playerModelHandle = createPlayerModel(aContext, aSlotHandle);
+    EntHandle playerHandle = aContext.mWorld.addEntity();
 
     {
         Phase sceneInit;
-        Entity player = *aSlotHandle.get(sceneInit);
-        component::Geometry & playerGeo = snac::getComponent<component::Geometry>(aSlotHandle);
-        playerGeo.mPosition = aPosition;
-
+        Entity player = *playerHandle.get(sceneInit);
+        addGeoNode(aContext, player, aPosition);
+        component::Controller controller = snac::getComponent<component::Controller>(aSlotHandle);
         player
-            .add(component::PlayerRoundData{.mModel = playerModelHandle})
+            .add(component::PlayerRoundData{.mModel = playerModelHandle, .mSlot = aSlotHandle})
+            .add(controller)
             .add(component::AllowedMovement{})
             .add(component::Collision{component::gPlayerHitbox});
     }
 
-    insertEntityInScene(playerModelHandle, aSlotHandle);
+    insertEntityInScene(playerModelHandle, playerHandle);
 
-    return aSlotHandle;
+    return playerHandle;
 }
 
 EntHandle addPlayer(GameContext & aContext, const int aControllerIndex)

@@ -1,4 +1,5 @@
 #include "PowerUpUsage.h"
+
 #include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 
 #include "../component/AllowedMovement.h"
@@ -6,40 +7,36 @@
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
+#include "../component/LevelData.h"
+#include "../component/PathToOnGrid.h"
 #include "../component/PlayerGameData.h"
 #include "../component/PlayerHud.h"
 #include "../component/PlayerRoundData.h"
-#include "../component/PathToOnGrid.h"
 #include "../component/PlayerSlot.h"
 #include "../component/PowerUp.h"
 #include "../component/SceneNode.h"
 #include "../component/Speed.h"
+#include "../component/Tags.h"
 #include "../component/Text.h"
 #include "../component/VisualModel.h"
-#include "../component/Tags.h"
-#include "../component/LevelData.h"
-
-#include "../system/Pathfinding.h"
-
+#include "../Entities.h"
 #include "../GameContext.h"
 #include "../GameParameters.h"
-#include "../Entities.h"
 #include "../InputConstants.h"
-#include "../SceneGraph.h"
-#include "../typedef.h"
 #include "../ModelInfos.h"
+#include "../SceneGraph.h"
+#include "../system/Pathfinding.h"
+#include "../typedef.h"
 
-#include <snacman/Timing.h>
+#include <limits>
+#include <math/Box.h>
+#include <math/Transformations.h>
+#include <math/VectorUtilities.h>
+#include <optional>
 #include <snacman/DebugDrawing.h>
 #include <snacman/EntityUtilities.h>
 #include <snacman/Profiling.h>
-
-#include <math/Box.h>
-#include <math/VectorUtilities.h>
-#include <math/Transformations.h>
-
-#include <limits>
-#include <optional>
+#include <snacman/Timing.h>
 #include <utility>
 
 namespace ad {
@@ -49,7 +46,6 @@ namespace system {
 PowerUpUsage::PowerUpUsage(GameContext & aGameContext) :
     mGameContext{&aGameContext},
     mPlayers{mGameContext->mWorld},
-    mPowUpPlayers{mGameContext->mWorld},
     mPowerups{mGameContext->mWorld},
     mInGameDogPowerups(mGameContext->mWorld),
     mInGameMissilePowerups(mGameContext->mWorld)
@@ -59,9 +55,11 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
 {
     TIME_RECURRING_CLASSFUNC(Main);
     const float delta = (float) aTime.mDeltaSeconds;
-    mPowerups.each([&delta, this](component::PowerUp & aPowerUp,
-                                  component::VisualModel & aVisualModel,
-                                  component::Geometry & aGeo) {
+    mPowerups.each(
+        [&delta, this](component::PowerUp & aPowerUp,
+                       component::VisualModel & aVisualModel,
+                       component::Geometry & aGeo)
+        {
         if (aPowerUp.mSwapTimer > 0.f)
         {
             aPowerUp.mSwapTimer -= delta;
@@ -75,35 +73,39 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                     (static_cast<unsigned int>(aPowerUp.mType) + 1)
                     % static_cast<unsigned int>(component::PowerUpType::_End));
 
-            ModelInfo info = gLevelPowerupInfoByType.at(
-                static_cast<unsigned int>(newType));
+            ModelInfo info =
+                gLevelPowerupInfoByType.at(static_cast<unsigned int>(newType));
             // TODO: (franz) put the program in the powerup info
             aVisualModel.mModel = mGameContext->mResources.getModel(
                 info.mPath, "effects/MeshTextures.sefx");
             aPowerUp.mType = newType;
             aGeo.mInstanceScaling = info.mInstanceScale;
-            aGeo.mOrientation =
-                gLevelBasePowerupQuat * info.mOrientation;
+            aGeo.mOrientation = gLevelBasePowerupQuat * info.mOrientation;
             aGeo.mScaling = info.mScaling;
         }
     });
 
     {
-        Phase pickup;
         // Powerup pickup phase
-        mPlayers.each([this, &pickup](EntHandle aPlayer,
-                          const component::GlobalPose & aPlayerPose,
-                          component::Collision aPlayerCol,
-                          component::PlayerRoundData & aRoundData) {
+        mPlayers.each(
+            [this](EntHandle aPlayer, const component::GlobalPose & aPlayerPose,
+                   component::Collision aPlayerCol,
+                   component::PlayerRoundData & aRoundData)
+            {
             const Box_f playerHitbox = component::transformHitbox(
                 aPlayerPose.mPosition, aPlayerCol.mHitbox);
             if (aRoundData.mType == component::PowerUpType::None
                 && aRoundData.mInvulFrameCounter <= 0)
             {
-                mPowerups.each([&playerHitbox, this, &aPlayer, &pickup, &aRoundData](ent::Handle<ent::Entity> aHandle,
-                                   component::PowerUp & aPowerup,
-                                   const component::GlobalPose & aPowerupGeo,
-                                   const component::Collision & aPowerupCol) {
+                Phase powerupDestroyOnPickup;
+                mPowerups.each(
+                    [&playerHitbox, this, &aPlayer,
+                     &powerupDestroyOnPickup,
+                     &aRoundData](ent::Handle<ent::Entity> aPowerupHandle,
+                                  component::PowerUp & aPowerup,
+                                  const component::GlobalPose & aPowerupGeo,
+                                  const component::Collision & aPowerupCol)
+                    {
                     const Box_f powerupHitbox = component::transformHitbox(
                         aPowerupGeo.mPosition, aPowerupCol.mHitbox);
 
@@ -116,22 +118,24 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                             },
                             powerupHitbox);
 
-                    if (!aPowerup.mPickedUp
-                        && component::collideWithSat(powerupHitbox,
-                                                     playerHitbox))
+                    if (component::collideWithSat(powerupHitbox, playerHitbox))
                     {
+                        EntHandle hud =
+                            snac::getComponent<component::PlayerGameData>(aRoundData.mSlot)
+                                .mHud;
+                        auto & playerHud = snac::getComponent<component::PlayerHud>(hud);
                         EntHandle playerPowerup =
                             createPlayerPowerUp(*mGameContext, aPowerup.mType);
                         aRoundData.mType = aPowerup.mType;
                         aRoundData.mPowerUp = playerPowerup;
 
-                        insertEntityInScene(playerPowerup,
-                                            aPlayer.get()
-                                                ->get<component::PlayerRoundData>()
-                                                .mModel);
-                        updateGlobalPosition(snac::getComponent<component::SceneNode>(playerPowerup));
-                        aPowerup.mPickedUp = true;
-                        aHandle.get(pickup)->erase();
+                        insertEntityInScene(
+                            playerPowerup,
+                            aRoundData.mModel);
+                        updateGlobalPosition(
+                            snac::getComponent<component::SceneNode>(
+                                playerPowerup));
+                        aPowerupHandle.get(powerupDestroyOnPickup)->erase();
 
                         switch (aRoundData.mType)
                         {
@@ -152,6 +156,11 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                         default:
                             break;
                         }
+
+                        // Update power-up name in HUD
+                        snac::getComponent<component::Text>(
+                            playerHud.mPowerupText)
+                            .mString = component::getPowerUpName(aPlayer);
                     }
                 });
             }
@@ -160,13 +169,13 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
 
     Phase usage;
     // Power up usage phase
-    mPowUpPlayers.each([this, &usage, &delta, aLevel](
-                           EntHandle aHandle,
-                           const component::Geometry & aPlayerGeo,
-                           component::PlayerRoundData & aRoundData,
-                           component::GlobalPose & aPlayerPose,
-                           const component::Controller & aController,
-                           const component::PlayerSlot & aSlot) {
+    mPlayers.each(
+        [this, &usage, &delta, aLevel](
+            EntHandle aHandle, const component::Geometry & aPlayerGeo,
+            component::PlayerRoundData & aRoundData,
+            component::GlobalPose & aPlayerPose,
+            const component::Controller & aController)
+        {
         if (aHandle.get()->has<component::ControllingMissile>())
         {
             return;
@@ -185,17 +194,15 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 // Transfer powerup to level node in scene graph
                 // Adds components behavior
                 // TODO: (franz) Animate the player
-                // FIX: (franz)Recreate the entity instead of transfering it
+                // FIX: (franz) Recreate the entity instead of transfering it
                 transferEntity(aRoundData.mPowerUp, aLevel);
                 Entity powerupEnt = *aRoundData.mPowerUp.get(usage);
                 component::Geometry & puGeo =
                     powerupEnt.get<component::Geometry>();
-                powerupEnt
-                    .add(component::AllowedMovement{})
-                    .add(component::PathToOnGrid{.mEntityTarget =
-                                                     targetHandle})
-                    .add(component::Collision{
-                        .mHitbox = component::gPowerUpHitbox})
+                powerupEnt.add(component::AllowedMovement{})
+                    .add(component::PathToOnGrid{.mEntityTarget = targetHandle})
+                    .add(component::Collision{.mHitbox =
+                                                  component::gPowerUpHitbox})
                     .add(component::InGamePowerup{
                         .mOwner = aHandle,
                         .mType = aRoundData.mType,
@@ -211,7 +218,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
         }
         case component::PowerUpType::Teleport:
         {
-            const component::PlayerSlot & playerSlot = aSlot;
+            const component::PlayerSlot & playerSlot =
+                snac::getComponent<component::PlayerSlot>(aRoundData.mSlot);
             component::TeleportPowerUpInfo & info =
                 std::get<component::TeleportPowerUpInfo>(aRoundData.mInfo);
             if (!info.mCurrentTarget.isValid())
@@ -223,7 +231,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                     EntHandle arrowHandle = createTargetArrow(
                         *mGameContext, gSlotColors.at(playerSlot.mSlotIndex));
                     insertEntityInScene(arrowHandle, firstTarget);
-                    updateGlobalPosition(snac::getComponent<component::SceneNode>(arrowHandle));
+                    updateGlobalPosition(
+                        snac::getComponent<component::SceneNode>(arrowHandle));
 
                     info.mCurrentTarget = firstTarget;
                     info.mTargetArrow = arrowHandle;
@@ -239,7 +248,9 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 aRoundData.mPowerUp.get(usage)->erase();
                 aHandle.get(usage)->remove<component::PlayerPowerUp>();
 
-                auto removePortalImage = [&usage, &aRoundData](EntHandle aInPortalHandle) {
+                auto removePortalImage =
+                    [&usage, &aRoundData](EntHandle aInPortalHandle)
+                {
                     if (aRoundData.mPortalImage.isValid())
                     {
                         aRoundData.mCurrentPortal = -1;
@@ -256,12 +267,11 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 break;
             }
 
-            bool changeTarget =
-                ((aController.mInput.mCommand
-                  & (gNextPowerUpTarget | gPrevPowerUpTarget)))
-                || (aController.mInput.mCommand
-                    & (gRightJoyUp | gRightJoyDown | gRightJoyLeft
-                       | gRightJoyRight));
+            bool changeTarget = ((aController.mInput.mCommand
+                                  & (gNextPowerUpTarget | gPrevPowerUpTarget)))
+                                || (aController.mInput.mCommand
+                                    & (gRightJoyUp | gRightJoyDown
+                                       | gRightJoyLeft | gRightJoyRight));
 
             if (changeTarget)
             {
@@ -283,45 +293,42 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                         mSortedPosition;
                     int positionSize = 0;
                     mPlayers.each(
-                        [&positionSize, &direction, &mSortedPosition,
-                         &aHandle](const EntHandle aOther,
-                                   const component::GlobalPose & aPose) {
-                            if (aOther != aHandle)
-                            {
-                                // This makes it so we can sort by the
-                                // direction pressed by the player
-                                mSortedPosition.at(positionSize).first =
-                                    aPose.mPosition.xy() * direction.x();
-                                mSortedPosition.at(positionSize).second =
-                                    aOther;
-                                positionSize += 1;
-                            }
-                        });
+                        [&positionSize, &direction, &mSortedPosition, &aHandle](
+                            const EntHandle aOther,
+                            const component::GlobalPose & aPose)
+                        {
+                        if (aOther != aHandle)
+                        {
+                            // This makes it so we can sort by the
+                            // direction pressed by the player
+                            mSortedPosition.at(positionSize).first =
+                                aPose.mPosition.xy() * direction.x();
+                            mSortedPosition.at(positionSize).second = aOther;
+                            positionSize += 1;
+                        }
+                    });
                     // Sort with respect to the direction pressed by the
                     // player
                     std::sort(
                         mSortedPosition.begin(), mSortedPosition.end(),
                         [](const std::pair<Pos2, EntHandle> & aLhs,
-                           const std::pair<Pos2, EntHandle> & aRhs)
-                            -> bool {
-                            // In case the two are considered "equal", we
-                            // must return false
-                            if (!aRhs.second.isValid() && !aLhs.second.isValid())
-                            {
-                                return false;
-                            }
-                            else
-                            {
-                                return !aRhs.second.isValid()
-                                       || (aLhs.second.isValid()
-                                           && (aLhs.first.x()
-                                                   > aRhs.first.x()
-                                               || (aLhs.first.x()
-                                                       == aRhs.first.x()
-                                                   && aRhs.first.y()
-                                                          > aLhs.first
-                                                                .y())));
-                            }
+                           const std::pair<Pos2, EntHandle> & aRhs) -> bool
+                        {
+                        // In case the two are considered "equal", we
+                        // must return false
+                        if (!aRhs.second.isValid() && !aLhs.second.isValid())
+                        {
+                            return false;
+                        }
+                        else
+                        {
+                            return !aRhs.second.isValid()
+                                   || (aLhs.second.isValid()
+                                       && (aLhs.first.x() > aRhs.first.x()
+                                           || (aLhs.first.x() == aRhs.first.x()
+                                               && aRhs.first.y()
+                                                      > aLhs.first.y())));
+                        }
                         });
 
                     // Find the current target in the array
@@ -329,12 +336,12 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                         mSortedPosition.begin(),
                         std::find_if(
                             mSortedPosition.begin(), mSortedPosition.end(),
-                            [&info](
-                                const std::pair<Pos2, EntHandle> & aItem)
-                                -> bool {
-                                return aItem.second.isValid() && info.mCurrentTarget.isValid()
-                                       && aItem.second
-                                              == info.mCurrentTarget;
+                            [&info](const std::pair<Pos2, EntHandle> & aItem)
+                                -> bool
+                            {
+                        return aItem.second.isValid()
+                               && info.mCurrentTarget.isValid()
+                               && aItem.second == info.mCurrentTarget;
                             }));
 
                     // And chose the next player in the direction the player
@@ -343,8 +350,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                     {
                         info.mCurrentTarget =
                             mSortedPosition[(currentTargetIndex + 1)
-                                             % positionSize]
-                                 .second;
+                                            % positionSize]
+                                .second;
                     }
 
                     // We then reset the delay
@@ -362,9 +369,10 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                            .mParent)
                 {
                     removeEntityFromScene(info.mTargetArrow);
-                    insertEntityInScene(info.mTargetArrow,
-                                        info.mCurrentTarget);
-                    updateGlobalPosition(snac::getComponent<component::SceneNode>(info.mTargetArrow));
+                    insertEntityInScene(info.mTargetArrow, info.mCurrentTarget);
+                    updateGlobalPosition(
+                        snac::getComponent<component::SceneNode>(
+                            info.mTargetArrow));
                 }
             }
             else
@@ -380,7 +388,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 // TODO: (franz) Animate the player
                 // TODO: (franz) redo this completely to have the model as a
                 // child from the creation of powerup
-                const component::PlayerSlot & playerSlot = aSlot;
+                const component::PlayerSlot & playerSlot =
+                    snac::getComponent<component::PlayerSlot>(aRoundData.mSlot);
                 EntHandle rootPowerup = aRoundData.mPowerUp;
                 Entity rootPowerupEnt = *rootPowerup.get(usage);
                 component::Geometry & puGeo =
@@ -403,34 +412,34 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                     Entity ringEnt = *ring.get(ringPhase);
                     // TODO: (franz) put in Entities.cpp the creation of the
                     // area
-                    addMeshGeoNode(*mGameContext, ringEnt,
-                                   "models/missile/area.gltf",
-                                   "effects/MeshTextures.sefx",
-                                   {0.f, 0.f, 0.f}, 3.f, {1.f, 1.f, 1.f},
-                                   Quat_f{UnitVec3{Vec3{1.f, 0.f, 0.f}},
-                                          Turn_f{0.25f}},
-                                   gSlotColors.at(playerSlot.mSlotIndex));
+                    addMeshGeoNode(
+                        *mGameContext, ringEnt, "models/missile/area.gltf",
+                        "effects/MeshTextures.sefx", {0.f, 0.f, 0.f}, 3.f,
+                        {1.f, 1.f, 1.f},
+                        Quat_f{UnitVec3{Vec3{1.f, 0.f, 0.f}}, Turn_f{0.25f}},
+                        gSlotColors.at(playerSlot.mSlotIndex));
                     ringEnt.add(component::RoundTransient{});
                 }
 
                 EntHandle missileModel = mGameContext->mWorld.addEntity();
                 {
                     Phase missilePhase;
-                    constexpr ModelInfo info =
-                        gPlayerPowerupInfoByType[(
-                            unsigned int) component::PowerUpType::Missile];
+                    constexpr ModelInfo info = gPlayerPowerupInfoByType[(
+                        unsigned int) component::PowerUpType::Missile];
                     Entity missileEnt = *missileModel.get(missilePhase);
                     addMeshGeoNode(
-                        *mGameContext, missileEnt, info.mPath,
-                        info.mProgPath, {0.f, 0.f, gPillHeight},
-                        info.mScaling, info.mInstanceScale,
+                        *mGameContext, missileEnt, info.mPath, info.mProgPath,
+                        {0.f, 0.f, gPillHeight}, info.mScaling,
+                        info.mInstanceScale,
                         playerModelGeo.mOrientation * missileOrientation);
                     missileEnt.add(component::RoundTransient{});
                 }
                 insertEntityInScene(missileModel, rootPowerup);
-                updateGlobalPosition(snac::getComponent<component::SceneNode>(missileModel));
+                updateGlobalPosition(
+                    snac::getComponent<component::SceneNode>(missileModel));
                 insertEntityInScene(ring, rootPowerup);
-                updateGlobalPosition(snac::getComponent<component::SceneNode>(ring));
+                updateGlobalPosition(
+                    snac::getComponent<component::SceneNode>(ring));
 
                 // Adds components behavior
                 component::InGamePowerup inGamePowerup{
@@ -461,20 +470,24 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
 
     {
         Phase inGameDog;
-        mInGameDogPowerups.each([this, &inGameDog, &aTime, aLevel](
-                                    EntHandle aPowerupHandle,
-                                    const component::GlobalPose & aPowerupPose,
-                                    const component::Geometry & aGeo,
-                                    const component::Collision & aPowerupCol,
-                                    component::InGamePowerup & aPowerup) {
+        mInGameDogPowerups.each(
+            [this, &inGameDog, &aTime, aLevel](
+                EntHandle aPowerupHandle,
+                const component::GlobalPose & aPowerupPose,
+                const component::Geometry & aGeo,
+                const component::Collision & aPowerupCol,
+                component::InGamePowerup & aPowerup)
+            {
             const Box_f powerupHitbox = component::transformHitbox(
                 aPowerupPose.mPosition, aPowerupCol.mHitbox);
-            mPlayers.each([&aPowerup, powerupHitbox, &aPowerupHandle,
-                           &inGameDog, &aGeo, this, &aTime, aLevel](
-                              EntHandle aPlayerHandle,
-                              const component::GlobalPose & aPlayerPose,
-                              const component::Collision & aPlayerCol,
-                              component::PlayerRoundData & aPlayerRoundData) {
+            mPlayers.each(
+                [&aPowerup, powerupHitbox, &aPowerupHandle, &inGameDog, &aGeo,
+                 this, &aTime,
+                 aLevel](EntHandle aPlayerHandle,
+                         const component::GlobalPose & aPlayerPose,
+                         const component::Collision & aPlayerCol,
+                         component::PlayerRoundData & aPlayerRoundData)
+                {
                 if (aPlayerHandle != aPowerup.mOwner)
                 {
                     const Box_f playerHitbox = component::transformHitbox(
@@ -489,9 +502,10 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                         aPowerupHandle.get(inGameDog)->erase();
                         EntHandle explosionHandle = createExplosion(
                             *mGameContext, aGeo.mPosition, aTime);
-                        insertEntityInScene(explosionHandle,
-                                            aLevel);
-                        updateGlobalPosition(snac::getComponent<component::SceneNode>(explosionHandle));
+                        insertEntityInScene(explosionHandle, aLevel);
+                        updateGlobalPosition(
+                            snac::getComponent<component::SceneNode>(
+                                explosionHandle));
                     }
                 }
             });
@@ -500,13 +514,13 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
 
     {
         Phase manageMissile;
-        mInGameMissilePowerups.each([&manageMissile, delta, this, &aTime, aLevel](
-                                        EntHandle aPowerupHandle,
-                                        const component::GlobalPose &
-                                            aPowerupPose,
-                                        component::Geometry & aGeo,
-                                        component::Speed & aSpeed,
-                                        component::InGamePowerup & aPowerup) {
+        mInGameMissilePowerups.each(
+            [&manageMissile, delta, this, &aTime, aLevel](
+                EntHandle aPowerupHandle,
+                const component::GlobalPose & aPowerupPose,
+                component::Geometry & aGeo, component::Speed & aSpeed,
+                component::InGamePowerup & aPowerup)
+            {
             // Change orientation
             EntHandle aOwner = aPowerup.mOwner;
             const component::Controller & aController =
@@ -558,10 +572,12 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
             {
                 // Boom boom the missile
                 // Find all player within radius
-                mPlayers.each([&aPowerupPose](
-                                  EntHandle aOther,
-                                  component::PlayerRoundData & aPlayerRoundData,
-                                  component::GlobalPose & aPlayerPose) {
+                mPlayers.each(
+                    [&aPowerupPose](
+                        EntHandle aOther,
+                        component::PlayerRoundData & aPlayerRoundData,
+                        component::GlobalPose & aPlayerPose)
+                    {
                     float distance =
                         (aPowerupPose.mPosition - aPlayerPose.mPosition)
                             .getNormSquared();
@@ -585,37 +601,17 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 EntHandle explosionHandle =
                     createExplosion(*mGameContext, aGeo.mPosition, aTime);
                 insertEntityInScene(explosionHandle, aLevel);
-                updateGlobalPosition(snac::getComponent<component::SceneNode>(explosionHandle));
+                updateGlobalPosition(
+                    snac::getComponent<component::SceneNode>(explosionHandle));
             }
         });
     }
-
-    // Update power-up name in HUD
-    mPlayers.each([](ent::Handle<ent::Entity> aPlayer,
-                     component::PlayerRoundData & aRoundData,
-                     const component::PlayerGameData & aGameData) {
-        // TODO code smell, this is defensive programming because sometimes we
-        // get there when the round monitor already removed the hud from the
-        // entitymanager (I suppose the correct logic would be not to execute
-        // this system on players between rounds)
-        
-        EntHandle hud = aGameData.mHud;
-        if (hud.isValid() && aRoundData.mType != component::PowerUpType::None)
-        {
-            auto & playerHud =
-                snac::getComponent<component::PlayerHud>(hud);
-            snac::getComponent<component::Text>(playerHud.mPowerupText)
-                .mString = component::getPowerUpName(aPlayer);
-        }
-    });
 }
 
-std::pair<Pos2, EntHandle>
-PowerUpUsage::getDogPlacementTile(EntHandle aHandle,
-                                  const component::Geometry & aGeo, EntHandle aLevel)
+std::pair<Pos2, EntHandle> PowerUpUsage::getDogPlacementTile(
+    EntHandle aHandle, const component::Geometry & aGeo, EntHandle aLevel)
 {
-    const component::Level & lvlData =
-        aLevel.get()->get<component::Level>();
+    const component::Level & lvlData = aLevel.get()->get<component::Level>();
     const std::vector<component::PathfindNode> & nodes = lvlData.mNodes;
     const size_t stride = lvlData.mSize.width();
 
@@ -625,50 +621,51 @@ PowerUpUsage::getDogPlacementTile(EntHandle aHandle,
 
     mPlayers.each(
         [&stride, &aGeo, aHandle, &currentDepth, &targetPos, &targetHandle,
-         &nodes](EntHandle aOther, const component::Geometry & aOtherGeo) {
-            if (aHandle != aOther)
+         &nodes](EntHandle aOther, const component::Geometry & aOtherGeo)
+        {
+        if (aHandle != aOther)
+        {
+            // We need a copy of nodes to make the calculation in place
+            // so nodes is captured by value
+            std::vector<component::PathfindNode> localNodes = nodes;
+
+            // We need to create the startNode locally because it can be pointed
+            // to by the resulting pathfind node and would be unstacked if it's
+            // created inside pathfind
+            component::PathfindNode startNode = createStartPathfindNode(
+                aGeo.mPosition.xy(), aOtherGeo.mPosition.xy(), stride);
+            component::PathfindNode targetNode = pathfind(
+                startNode, aOtherGeo.mPosition.xy(), localNodes, stride);
+
+            unsigned int newDepth = 0;
+
+            while (targetNode.mPrev != nullptr
+                   && targetNode.mPrev->mPrev != nullptr
+                   && targetNode.mPrev->mPrev->mPrev != nullptr)
             {
-                // We need a copy of nodes to make the calculation in place
-                // so nodes is captured by value
-                std::vector<component::PathfindNode> localNodes = nodes;
-
-                // We need to create the startNode locally because it can be pointed to
-                // by the resulting pathfind node and would be unstacked if it's created inside
-                // pathfind
-                component::PathfindNode startNode = createStartPathfindNode(
-                        aGeo.mPosition.xy(), aOtherGeo.mPosition.xy(), stride);
-                component::PathfindNode targetNode =
-                    pathfind(startNode, aOtherGeo.mPosition.xy(),
-                             localNodes, stride);
-
-                unsigned int newDepth = 0;
-
-                while (targetNode.mPrev != nullptr
-                       && targetNode.mPrev->mPrev != nullptr
-                       && targetNode.mPrev->mPrev->mPrev != nullptr)
-                {
-                    newDepth++;
-                    targetNode = *targetNode.mPrev;
-                }
-
-                if (newDepth < currentDepth)
-                {
-                    targetPos = targetNode.mPos;
-                    targetHandle = aOther;
-                }
+                newDepth++;
+                targetNode = *targetNode.mPrev;
             }
-        });
+
+            if (newDepth < currentDepth)
+            {
+                targetPos = targetNode.mPos;
+                targetHandle = aOther;
+            }
+        }
+    });
 
     return std::make_pair(targetPos, targetHandle);
 }
 
-EntHandle PowerUpUsage::getClosestPlayer(EntHandle aPlayer,
-                                            const Pos3 & aPos)
+EntHandle PowerUpUsage::getClosestPlayer(EntHandle aPlayer, const Pos3 & aPos)
 {
     EntHandle result;
     float minDistSquare = std::numeric_limits<float>::max();
-    mPlayers.each([&aPlayer, &result, &minDistSquare, &aPos](
-                      EntHandle aHandle, const component::GlobalPose & aPose) {
+    mPlayers.each(
+        [&aPlayer, &result, &minDistSquare, &aPos](
+            EntHandle aHandle, const component::GlobalPose & aPose)
+        {
         if (aPlayer != aHandle)
         {
             float dist = (aPose.mPosition - aPos).getNormSquared();

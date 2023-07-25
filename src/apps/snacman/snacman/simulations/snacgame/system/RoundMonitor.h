@@ -22,7 +22,7 @@ public:
     void updateRoundScore();
 private:
     GameContext * mGameContext;
-    ent::Query<component::PlayerRoundData, component::PlayerGameData> mPlayers;
+    ent::Query<component::PlayerRoundData> mPlayers;
     ent::Query<component::Pill>
         mPills;
     ent::Query<component::LevelTile> mLevelEntities;

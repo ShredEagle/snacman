@@ -25,8 +25,7 @@ constexpr float gMissileSpeed = 5.f;
 
 struct PowerUp
 {
-    PowerUpType mType;
-    bool mPickedUp = false;
+    PowerUpType mType = PowerUpType::None;
     float mSwapPeriod = 1.f;
     float mSwapTimer = mSwapPeriod;
 };

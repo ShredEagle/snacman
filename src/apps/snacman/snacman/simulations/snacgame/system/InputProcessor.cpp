@@ -6,8 +6,9 @@
 #include "snacman/simulations/snacgame/component/Context.h"
 
 #include "../component/Controller.h"
-#include "../component/PlayerSlot.h"
+#include "../component/PlayerRoundData.h"
 #include "../GameContext.h"
+
 #include <algorithm>
 
 namespace ad {

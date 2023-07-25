@@ -56,6 +56,10 @@ struct PlayerRoundData
     // scene node from the orientation of the model
     ent::Handle<ent::Entity> mModel;
 
+    // We need access to playerGameData and the slot index
+    // which are in the slot
+    ent::Handle<ent::Entity> mSlot;
+
     // Power up info
     ent::Handle<ent::Entity> mPowerUp;
     PowerUpType mType = PowerUpType::None;

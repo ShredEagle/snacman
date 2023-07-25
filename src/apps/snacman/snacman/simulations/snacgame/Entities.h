@@ -113,7 +113,6 @@ ent::Handle<ent::Entity> addPlayer(GameContext & aContext, const int aController
 ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
                                             ent::Handle<ent::Entity> aSlotHandle,
                                             const math::Position<3, float> & aPosition);
-void removePlayerFromGame(ent::Handle<ent::Entity> aSlotHandle);
 ent::Handle<ent::Entity> createJoinGamePlayer(GameContext & aContext,
                                             ent::Handle<ent::Entity> aSlotHandle, int aSlotIndex);
 void preparePlayerForGame(GameContext & aContext, ent::Handle<ent::Entity> aSlotHandle);

@@ -25,8 +25,7 @@ public:
 private:
     ent::Query<component::GlobalPose,
                component::Collision,
-               component::PlayerRoundData,
-               component::PlayerGameData>
+               component::PlayerRoundData>
         mPlayers;
     ent::Query<component::GlobalPose, component::Collision, component::Pill>
         mPills;

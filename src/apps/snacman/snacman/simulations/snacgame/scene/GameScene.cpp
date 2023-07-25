@@ -144,14 +144,19 @@ GameScene::GameScene(GameContext & aGameContext,
             .add(system::Pathfinding{mGameContext})
             .add(system::Debug_BoundingBoxes{mGameContext});
     }
-}
 
-void GameScene::onEnter(Transition aTransition)
-{
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
     snac::Orbital & camOrbital = camera.get()->get<snac::Orbital>();
     camOrbital.mSpherical.polar() = gInitialCameraSpherical.polar();
     camOrbital.mSpherical.radius() = gInitialCameraSpherical.radius();
+
+    mSlots.each([this](EntHandle aHandle, const component::PlayerSlot &) {
+        addBillpadHud(mGameContext, aHandle);
+    });
+}
+
+void GameScene::onEnter(Transition aTransition)
+{
 }
 
 
@@ -160,25 +165,27 @@ void GameScene::onExit(Transition aTransition)
     TIME_SINGLE(Main, "teardown game scene");
     {
         Phase destroyPlayer;
-        mSlots.each([&destroyPlayer](EntHandle aHandle, component::PlayerSlot &)
+        mSlots.each([&destroyPlayer](EntHandle aHandle, const component::PlayerSlot &)
                     { eraseEntityRecursive(aHandle, destroyPlayer); });
-        // Delet hud
-        mHuds.each([&destroyPlayer](EntHandle aHandle, component::PlayerHud &)
+        mPlayers.each([&destroyPlayer](EntHandle aHandle, const component::PlayerRoundData &)
+                    { eraseEntityRecursive(aHandle, destroyPlayer); });
+        // Delete hud
+        mHuds.each([&destroyPlayer](EntHandle aHandle, const component::PlayerHud &)
                    { eraseEntityRecursive(aHandle, destroyPlayer); });
     }
     {
-        Phase destroy;
+        Phase destroyEnvironment;
 
-        mTiles.each([&destroy](EntHandle aHandle, const component::LevelTile &)
-                    { aHandle.get(destroy)->erase(); });
+        mTiles.each([&destroyEnvironment](EntHandle aHandle, const component::LevelTile &)
+                    { aHandle.get(destroyEnvironment)->erase(); });
         // Destroy round transient and components
         mRoundTransients.each(
-            [&destroy](EntHandle aHandle, component::RoundTransient &)
-            { aHandle.get(destroy)->erase(); });
+            [&destroyEnvironment](EntHandle aHandle, component::RoundTransient &)
+            { aHandle.get(destroyEnvironment)->erase(); });
 
-        mLevel.get(destroy)->erase();
+        mLevel.get(destroyEnvironment)->erase();
 
-        mSystems.get(destroy)->erase();
+        mSystems.get(destroyEnvironment)->erase();
         mSystems = mGameContext.mWorld.addEntity();
     }
     {
@@ -198,11 +205,11 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 
     bool quit = false;
 
-    std::vector<ControllerCommand> boundControllers =
+    std::vector<ControllerCommand> controllers =
         mSystems.get()->get<system::InputProcessor>().mapControllersInput(
             aInput);
 
-    for (auto controller : boundControllers)
+    for (auto controller : controllers)
     {
         if (controller.mBound)
         {
@@ -212,7 +219,8 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         {
             if (controller.mInput.mCommand & gJoin)
             {
-                addPlayer(mGameContext, controller.mId);
+                EntHandle slot = addPlayer(mGameContext, controller.mId);
+                addBillpadHud(mGameContext, slot);
             }
         }
     }
@@ -231,17 +239,17 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
     if (mLevel.isValid()
         && mSystems.get(update)->get<system::RoundMonitor>().isRoundOver())
     {
-        Phase cleanup;
         component::LevelSetupData & data = *mLevelData;
-
-        mSystems.get(update)->get<system::RoundMonitor>().updateRoundScore();
-        // Destroy level tiles
-        //
         data.mSeed += 1;
 
-        eraseEntityRecursive(mLevel, cleanup);
+        mSystems.get(update)->get<system::RoundMonitor>().updateRoundScore();
 
-        mSystems.get(update)->get<system::PlayerSpawner>().despawnPlayers();
+        std::vector<unsigned int> playerControllerIndices;
+        {
+            Phase cleanup;
+            // This removes everything from the level players included
+            eraseEntityRecursive(mLevel, cleanup);
+        }
     }
 
     if (!mLevel.isValid())
