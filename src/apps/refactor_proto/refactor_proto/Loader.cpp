@@ -86,51 +86,56 @@ namespace {
 
     VertexStream loadMesh(BinaryInArchive & aIn, Storage & aStorage)
     {
+        auto loadBuffer = [&aStorage, &aIn](GLsizei aElementSize, std::size_t aElementCount)
+        {
+            std::size_t bufferSize = aElementCount * aElementSize;
+            std::unique_ptr<char[]> cpuBuffer = aIn.readBytes(bufferSize);
+
+            auto [glBuffer, glBufferSize] = 
+                makeMutableBuffer(std::span{cpuBuffer.get(), bufferSize}, GL_STATIC_DRAW);
+
+            aStorage.mBuffers.push_back(std::move(glBuffer));
+
+            return BufferView {
+                .mGLBuffer = &aStorage.mBuffers.back(),
+                .mStride = aElementSize,
+                .mOffset = 0,
+                .mSize = glBufferSize, // The view has access to the whole buffer
+            };
+        };
+
         unsigned int verticesCount;
         aIn.read(verticesCount);
-
         constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
-        std::size_t positionBufferSize = verticesCount * gPositionSize;
-        std::unique_ptr<char[]> positionBuffer = aIn.readBytes(positionBufferSize);
+        BufferView positionView = loadBuffer(gPositionSize, verticesCount);
 
-        auto [vbo, sizeVbo] = 
-            makeMutableBuffer(std::span{positionBuffer.get(), positionBufferSize}, GL_STATIC_DRAW);
-
-        aStorage.mBuffers.push_back(std::move(vbo));
-
-        BufferView vboView{
-            .mGLBuffer = &aStorage.mBuffers.back(),
-            .mStride = gPositionSize,
-            .mOffset = 0,
-            .mSize = sizeVbo, // The view has access to the whole buffer
-        };
+        constexpr auto gNormalSize = gPositionSize;
+        BufferView normalView = loadBuffer(gNormalSize, verticesCount);
 
         unsigned int primitiveCount;
         aIn.read(primitiveCount);
         const unsigned int indicesCount = 3 * primitiveCount;
-
         constexpr auto gIndexSize = sizeof(unsigned int);
-        const std::size_t indexBufferSize = indicesCount * gIndexSize;
-        std::unique_ptr<char[]> indexBuffer = aIn.readBytes(indexBufferSize);
-
-        auto [ibo, sizeIbo] = 
-            makeMutableBuffer(std::span{indexBuffer.get(), indexBufferSize}, GL_STATIC_DRAW);
-
-        aStorage.mBuffers.push_back(std::move(ibo));
-
-        BufferView iboView{
-            .mGLBuffer = &aStorage.mBuffers.back(),
-            .mOffset = 0,
-            .mSize = sizeIbo, // The view has access to the whole buffer
-        };
+        BufferView iboView = loadBuffer(gIndexSize, indicesCount);
 
         return VertexStream{
-            .mVertexBufferViews{ vboView, },
+            .mVertexBufferViews{ positionView, normalView},
             .mSemanticToAttribute{
                 {
                     semantic::gPosition,
                     AttributeAccessor{
                         .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 3,
+                            .mOffset = 0,
+                            .mComponentType = GL_FLOAT
+                        }
+                    }
+                },
+                {
+                    semantic::gNormal,
+                    AttributeAccessor{
+                        .mBufferViewIndex = 1, // view is added above
                         .mClientDataFormat{
                             .mDimension = 3,
                             .mOffset = 0,
@@ -254,6 +259,7 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile)
     // or to be found in the current "assets" folders of ResourceFinder.
     graphics::FileLookup lookup{programPath};
 
+    std::vector<std::string> defines;
     for (auto [shaderStage, shaderFile] : program.items())
     {
         GLenum stageEnumerator;

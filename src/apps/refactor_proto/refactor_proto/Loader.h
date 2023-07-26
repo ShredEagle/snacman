@@ -14,6 +14,7 @@ namespace ad::renderer {
 namespace semantic
 {
     const Semantic gPosition{"Position"};
+    const Semantic gNormal{"Normal"};
     const Semantic gLocalToWorld{"LocalToWorld"};
 
     const BlockSemantic gFrame{"Frame"};

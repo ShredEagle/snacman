@@ -35,6 +35,8 @@ const char * gVertexShader = R"#(
 
     layout(std140, binding = 1) uniform ViewBlock
     {
+        mat4 worldToCamera;
+        mat4 projection;
         mat4 viewingProjection;
     };
 
@@ -137,6 +139,23 @@ namespace {
     }
 
 
+    struct GpuViewBlock
+    {
+        GpuViewBlock(
+            math::AffineMatrix<4, GLfloat> aWorldToCamera,
+            math::Matrix<4, 4, GLfloat> aProjection 
+        ) :
+            mWorldToCamera{aWorldToCamera},
+            mProjection{aProjection},
+            mViewingProjection{aWorldToCamera * aProjection}
+        {}
+
+        math::AffineMatrix<4, GLfloat> mWorldToCamera; 
+        math::Matrix<4, 4, GLfloat> mProjection; 
+        math::Matrix<4, 4, GLfloat> mViewingProjection;
+    };
+
+
     void draw(const Instance & aInstance,
               const SemanticBufferViews & aInstanceBufferView,
               math::Size<2, int> aFramebufferResolution)
@@ -178,10 +197,12 @@ namespace {
                                                        -0.1f,
                                                        10.f);
         
-                math::AffineMatrix<4, GLfloat> viewingProjection = 
-                    math::trans3d::translate<GLfloat>({0.f, 0.f, -2.f})
-                    * math::trans3d::orthographicProjection(viewVolume);
-                graphics::loadSingle(ubo, viewingProjection, 
+                GpuViewBlock viewBlock{
+                    math::trans3d::translate<GLfloat>({0.f, 0.f, -2.f}),
+                    math::trans3d::orthographicProjection(viewVolume),
+                };
+                    
+                graphics::loadSingle(ubo, viewBlock, 
                                      graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
                 ubos.emplace(semantic::gView, std::move(ubo));
             }

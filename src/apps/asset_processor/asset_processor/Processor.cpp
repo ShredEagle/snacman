@@ -66,6 +66,8 @@ namespace {
             // Vertices
             mArchive.write(aMesh->mNumVertices);
             mArchive.write(std::span{aMesh->mVertices, aMesh->mNumVertices});
+            assert(aMesh->mNormals != nullptr);
+            mArchive.write(std::span{aMesh->mNormals, aMesh->mNumVertices});
             // Faces
             mArchive.write(aMesh->mNumFaces);
             for(std::size_t faceIdx = 0; faceIdx != aMesh->mNumFaces; ++faceIdx)
@@ -85,6 +87,7 @@ namespace {
     //  each node.mesh:
     //    mesh.numVertices
     //    [mesh.vertices(i.e. positions, 3 floats per vertex)]
+    //    [mesh.normals(3 floats per vertex)]
     //    mesh.numFaces
     //    [mesh.faces(i.e. 3 unsigned int per face)]
     //  each node.child:
@@ -145,7 +148,8 @@ void processModel(const std::filesystem::path & aFile)
           aiProcess_JoinIdenticalVertices  |
           aiProcess_SortByPType            |
           // Ad: added flags below
-          aiProcess_ValidateDataStructure
+          aiProcess_ValidateDataStructure  |
+          aiProcess_GenNormals
           );
     
     // If the import failed, report it
