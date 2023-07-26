@@ -9,6 +9,10 @@
 #include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 
 #include "../component/MenuItem.h"
+#include "../component/Tags.h"
+#include "../component/PlayerHud.h"
+#include "../component/PlayerRoundData.h"
+#include "../component/PathToOnGrid.h"
 #include "../component/Controller.h"
 #include "../component/Text.h"
 #include "../component/GlobalPose.h"
