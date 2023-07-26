@@ -6,6 +6,8 @@
 
 #include "snacman/EntityUtilities.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
+#include "snacman/simulations/snacgame/scene/PauseScene.h"
+#include "snacman/simulations/snacgame/scene/DataScene.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 
 #include "../component/AllowedMovement.h"
@@ -157,12 +159,23 @@ GameScene::GameScene(GameContext & aGameContext,
 
 void GameScene::onEnter(Transition aTransition)
 {
+    if (aTransition.mTransitionName == gQuitTransitionName)
+    {
+        mGameContext.mSceneStack->popScene();
+        mGameContext.mSceneStack->pushScene(
+            std::make_shared<MenuScene>(mGameContext, mMappingContext));
+    }
 }
 
 
 void GameScene::onExit(Transition aTransition)
 {
     TIME_SINGLE(Main, "teardown game scene");
+    if (aTransition.mTransitionName == GameScene::sToPauseTransition)
+    {
+        return;
+    }
+
     {
         Phase destroyPlayer;
         mSlots.each([&destroyPlayer](EntHandle aHandle, const component::PlayerSlot &)
@@ -198,7 +211,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 
     std::vector<ControllerCommand> controllers =
         mSystems.get()->get<system::InputProcessor>().mapControllersInput(
-            aInput);
+            aInput, "player", "unbound");
 
     for (auto controller : controllers)
     {
@@ -218,9 +231,8 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 
     if (quit)
     {
-        mGameContext.mSceneStack->popScene();
         mGameContext.mSceneStack->pushScene(
-            std::make_shared<MenuScene>(mGameContext, mMappingContext));
+            std::make_shared<PauseScene>(mGameContext, mMappingContext), Transition{.mTransitionName = GameScene::sToPauseTransition});
         return;
     }
 

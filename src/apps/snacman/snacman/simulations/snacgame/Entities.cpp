@@ -619,7 +619,7 @@ createMenuItem(GameContext & aContext,
 {
     auto item = makeText(
         aContext, aInit, aString, aFont,
-        aSelected ? scene::gColorItemSelected : scene::gColorItemUnselected,
+        aSelected ? gColorItemSelected : gColorItemUnselected,
         aPos, aScale);
     item.get(aInit)->add(component::MenuItem{.mName = aString,
                                              .mSelected = aSelected,

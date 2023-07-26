@@ -45,6 +45,7 @@ public:
 
 private:
 
+    ent::Query<component::PlayerSlot> mSlots;
     ent::Handle<ent::Entity> mJoinGameRoot;
 };
 

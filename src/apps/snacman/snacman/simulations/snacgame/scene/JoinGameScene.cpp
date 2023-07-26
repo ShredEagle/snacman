@@ -36,6 +36,7 @@ namespace scene {
 JoinGameScene::JoinGameScene(GameContext & aGameContext,
                              ent::Wrap<component::MappingContext> & aMappingContext) :
     Scene(gJoinGameSceneName, aGameContext, aMappingContext),
+    mSlots{aGameContext.mWorld},
     mJoinGameRoot{mGameContext.mWorld.addEntity()}
 {
     Phase init;
@@ -64,7 +65,7 @@ void JoinGameScene::update(const snac::Time & aTime, RawInput & aInput)
     std::vector<ControllerCommand> controllerCommands =
         mSystems.get()
             ->get<system::InputProcessor>()
-            .mapControllersInput(aInput);
+            .mapControllersInput(aInput, "player", "unbound");
 
     bool quit = false;
     bool start = false;
@@ -130,6 +131,10 @@ void JoinGameScene::onEnter(Transition aTransition) {
 void JoinGameScene::onExit(Transition aTransition) {
     Phase onExitPhase;
     eraseEntityRecursive(mJoinGameRoot, onExitPhase);
+    if (aTransition.mTransitionName != sToGameTransition)
+    {
+        snac::eraseAllInQuery(mSlots);
+    }
 }
 
 } // namespace scene

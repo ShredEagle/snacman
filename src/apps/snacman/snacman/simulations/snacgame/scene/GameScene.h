@@ -50,6 +50,9 @@ public:
     void onExit(Transition aTransition) override;
 
     ent::Wrap<component::LevelSetupData> mLevelData;
+
+    static constexpr char sFromPauseTransition[] = "GameFromPauseTransition";
+    static constexpr char sToPauseTransition[] = "Pause";
 private:
     ent::Query<component::LevelTile> mTiles;
     ent::Query<component::RoundTransient> mRoundTransients;

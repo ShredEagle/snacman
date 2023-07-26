@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Scene.h"
-#include "snac-renderer/Camera.h"
 
 #include <math/Color.h>
 #include <entity/Query.h>
@@ -16,10 +15,10 @@ struct Text;
 }
 namespace scene {
 
-class MenuScene : public Scene
+class PauseScene : public Scene
 {
 public:
-    MenuScene(GameContext & aGameContext,
+    PauseScene(GameContext & aGameContext,
               ent::Wrap<component::MappingContext> & aContext);
 
     void update(const snac::Time & aTime, RawInput & aInput) override;

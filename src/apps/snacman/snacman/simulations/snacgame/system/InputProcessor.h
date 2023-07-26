@@ -27,7 +27,7 @@ public:
     InputProcessor(GameContext & aGameContext,
                    ent::Wrap<component::MappingContext> & aMappingContext);
 
-    std::vector<ControllerCommand> mapControllersInput(RawInput & aInput);
+    std::vector<ControllerCommand> mapControllersInput(RawInput & aInput, const char * aBoundMode, const char * aUnboundMode);
 
 private:
     ent::Query<component::Controller> mPlayers;

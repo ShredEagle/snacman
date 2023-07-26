@@ -21,7 +21,7 @@ InputProcessor::InputProcessor(
 {}
 
 std::vector<ControllerCommand>
-InputProcessor::mapControllersInput(RawInput & aInput)
+InputProcessor::mapControllersInput(RawInput & aInput, const char * aBoundMode, const char * aUnboundMode)
 {
     std::vector<ControllerCommand> controllers;
 
@@ -32,11 +32,11 @@ InputProcessor::mapControllersInput(RawInput & aInput)
         {
         case ControllerType::Keyboard:
             aController.mInput = convertKeyboardInput(
-                "player", aInput.mKeyboard, (*mMappingContext)->mKeyboardMapping);
+                aBoundMode, aInput.mKeyboard, (*mMappingContext)->mKeyboardMapping);
             break;
         case ControllerType::Gamepad:
             aController.mInput = convertGamepadInput(
-                "player", aInput.mGamepads.at(aController.mControllerId),
+                aBoundMode, aInput.mGamepads.at(aController.mControllerId),
                 (*mMappingContext)->mGamepadMapping);
             break;
         default:
@@ -63,14 +63,14 @@ InputProcessor::mapControllersInput(RawInput & aInput)
 
             if (controllerIsKeyboard)
             {
-                input = convertKeyboardInput("unbound", aInput.mKeyboard,
+                input = convertKeyboardInput(aUnboundMode, aInput.mKeyboard,
                                              (*mMappingContext)->mKeyboardMapping);
                 controllers.push_back({gKeyboardControllerIndex, ControllerType::Keyboard, input, false});
             }
             else
             {
                 GamepadState & rawGamepad = aInput.mGamepads.at(controlIndex);
-                input = convertGamepadInput("unbound", rawGamepad,
+                input = convertGamepadInput(aUnboundMode, rawGamepad,
                                             (*mMappingContext)->mGamepadMapping);
                 controllers.push_back({controlIndex, ControllerType::Keyboard, input, false});
             }

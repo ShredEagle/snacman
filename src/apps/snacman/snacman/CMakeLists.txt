@@ -64,9 +64,10 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/VisualModel.h
 
     simulations/snacgame/scene/GameScene.h
-    simulations/snacgame/scene/MenuScene.h
-    simulations/snacgame/scene/JoinGameScene.h
     simulations/snacgame/scene/DataScene.h
+    simulations/snacgame/scene/JoinGameScene.h
+    simulations/snacgame/scene/MenuScene.h
+    simulations/snacgame/scene/PauseScene.h
     simulations/snacgame/scene/Scene.h
     simulations/snacgame/scene/SettingsScene.h
 
@@ -79,6 +80,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/Explosion.h
     simulations/snacgame/system/InputProcessor.h
     simulations/snacgame/system/IntegratePlayerMovement.h
+    simulations/snacgame/system/MenuManager.h
     simulations/snacgame/system/MovementIntegration.h
     simulations/snacgame/system/LevelManager.h
     simulations/snacgame/system/Pathfinding.h
@@ -119,6 +121,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/scene/GameScene.cpp
     simulations/snacgame/scene/JoinGameScene.cpp
     simulations/snacgame/scene/MenuScene.cpp
+    simulations/snacgame/scene/PauseScene.cpp
     simulations/snacgame/scene/SettingsScene.cpp
 
     simulations/snacgame/system/AdvanceAnimations.cpp
@@ -130,6 +133,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/Explosion.cpp
     simulations/snacgame/system/InputProcessor.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
+    simulations/snacgame/system/MenuManager.cpp
     simulations/snacgame/system/MovementIntegration.cpp
     simulations/snacgame/system/LevelManager.cpp
     simulations/snacgame/system/SystemOrbitalCamera.cpp
