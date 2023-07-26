@@ -106,7 +106,7 @@ void JoinGameScene::update(const snac::Time & aTime, RawInput & aInput)
     for (auto command : quittingOrDisconnectedPlayers)
     {
         Phase destroyQuitter;
-        EntHandle quiter = snac::getFirstHandle(mSlots, [&command](component::Controller & aController) { return aController.mControllerId == command.mId;});
+        EntHandle quiter = snac::getFirstHandle(mSlots, [&command](component::Controller & aController) { return (int)aController.mControllerId == command.mId;});
         EntHandle model = snac::getComponent<component::PlayerJoinData>(quiter).mJoinPlayerModel;
         quiter.get(destroyQuitter)->erase();
         eraseEntityRecursive(model, destroyQuitter);
@@ -145,7 +145,7 @@ void JoinGameScene::onEnter(Transition aTransition) {
         EntHandle slotHandle = addPlayer(mGameContext, info.mTransitionControllerId);
         const component::PlayerSlot & slot =
             slotHandle.get()->get<component::PlayerSlot>();
-        EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, slot.mSlotIndex);
+        EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, (int)slot.mSlotIndex);
         insertEntityInScene(joinGamePlayer, mJoinGameRoot);
         Phase joinPlayer;
         slotHandle.get(joinPlayer)->add(component::PlayerJoinData{.mJoinPlayerModel = joinGamePlayer});
