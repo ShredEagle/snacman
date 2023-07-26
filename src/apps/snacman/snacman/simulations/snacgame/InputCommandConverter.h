@@ -275,6 +275,7 @@ struct ControllerCommand
     ControllerType mControllerType;
     GameInput mInput;
     bool mBound;
+    bool mConnected = false;
 };
 
 inline GameInput convertKeyboardInput(const std::string & aGroup,

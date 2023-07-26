@@ -22,6 +22,7 @@ struct GameContext;
 namespace component {
 struct MappingContext;
 struct PlayerSlot;
+struct Controller;
 } // namespace component
 
 namespace scene {
@@ -45,7 +46,7 @@ public:
 
 private:
 
-    ent::Query<component::PlayerSlot> mSlots;
+    ent::Query<component::PlayerSlot, component::Controller> mSlots;
     ent::Handle<ent::Entity> mJoinGameRoot;
 };
 

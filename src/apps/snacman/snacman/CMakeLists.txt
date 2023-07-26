@@ -50,6 +50,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/MovementScreenSpace.h
     simulations/snacgame/component/PathToOnGrid.h
     simulations/snacgame/component/PlayerHud.h
+    simulations/snacgame/component/PlayerJoinData.h
     simulations/snacgame/component/PlayerSlot.h
     simulations/snacgame/component/PlayerGameData.h
     simulations/snacgame/component/PlayerRoundData.h

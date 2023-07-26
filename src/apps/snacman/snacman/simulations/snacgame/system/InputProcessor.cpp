@@ -42,10 +42,11 @@ InputProcessor::mapControllersInput(RawInput & aInput, const char * aBoundMode, 
         default:
             break;
         }
+        bool connected = aController.mControllerId >= aInput.mGamepads.size() || aInput.mGamepads.at(aController.mControllerId).mConnected;
 
         controllers.push_back({(int)aController.mControllerId,
                                       aController.mType, aController.mInput,
-                                      true});
+                                      true, connected});
     });
 
     for (int controlIndex = 0; controlIndex < (int) aInput.mGamepads.size() + 1;

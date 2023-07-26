@@ -539,8 +539,6 @@ EntHandle createJoinGamePlayer(GameContext & aContext, EntHandle aSlotHandle, in
                        info.mOrientation, gSlotColors.at(aSlotIndex));
     }
 
-    assert(aContext.mSceneRoot.isValid());
-
     insertEntityInScene(numberHandle, playerModelHandle);
 
     return playerModelHandle;
