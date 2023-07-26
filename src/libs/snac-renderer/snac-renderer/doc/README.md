@@ -2,13 +2,15 @@
 
 **Renderer** could be the library, and features implemented via **backends**
 (e.g. OpenGL backend).
-The question is which level is **Renderer**, is it low level with something building on top?
+The question is which level is **Renderer**, is it low level with something like a scene-aware
+renderer building on top?
 
 ## Trying to describre the problem
 
 When rendering a scene, there is a bipartite graph (resources are input to passes which produces resources as output, used by other passes as input, etc.)
 
-At the lowest level, a pass is making drawcall(s) to a graphics API, those calls takes input from:
+At the lowest level, a pass is making drawcall(s) to a graphics API,
+using the currently active program. The program takes input from:
 * Vertex Buffers/Primitive assembly (VAO in OGL. Anything else?)
 * Uniforms (Constants in Vulkan?)
 * Textures
@@ -17,7 +19,7 @@ At the lowest level, a pass is making drawcall(s) to a graphics API, those calls
 
 The input can come from:
 * Different level of context (in ourmachinery: _execution contexts_)
-  * Frame (time, count, ...)
+  * Frame (time, frame number, ...)
   * Viewport (resolution, ...) and Camera (pose, projection)
   * Pass
   * Scene (environment, ...)
@@ -37,9 +39,9 @@ Each pass should declare its input and output. If done dynamically, this allows 
 Overriding a materials (at any level) would ideally allow to control "per pass"
 i.e. the idea that a material contains the map of "pass" -> "shader program" seems valid.
 
-ourmachinery make the conceptual distinction between "context state" (~ the current scope of the code provide it)
+ourmachinery make the conceptual distinction between "context state" (~ the current scope of the code provides it)
 and the "instance state", that might be shared between distinct passes but can change with each instance/object.
-They model it with the same types in code, but the first can easily be provided consolidated as a stack,
+They model it with the same types in code, but the first can easily be provided consolidated as a stack (mapping the code scope),
 while the second is more "ad-hoc", provided with each instance.
 
 It seems the context could be fixed for a pass (takable as const ref).
@@ -50,18 +52,21 @@ the program is not uniform per pass, it might vary per instance.
 
 There is a tension between "features activated/available per instance", selection of the matching
 program variant, and providing such values.
-Providing can be done in distinct ways (see AZDO talks: buffers with array and index, buffer with driver side entry selection, textures, uniforms), some engine hide this with their opaque preprocessor injecting the corresponding shader code for "data access", client shader code then using those "get_whatever()" function to access the values.
-Also, the open/closed principle would dictate that the client can add custom features without touching the renderer code. This implies some dynamic design, where instances can maintain a dynamic collection of features and their data, of unbounded types.
+Providing can be done in distinct ways (see AZDO talks: buffers with array and index, buffer with driver side selection of one index before each draw call, textures, uniforms),
+some engine hide this with their opaque preprocessor injecting the corresponding shader code for "data access",
+client shader code then using those "get_whatever()" function to access the values.
+Also, the open/closed principle would dictate that the client can add custom features without touching the renderer code.
+This implies some dynamic design, where instances can maintain a dynamic collection of features and their data, of unbounded types.
 Yet, if the actual Render Graph is somehow hardcoded into the renderer, it might limit what can be achieved with such features?
 In particular, what if a pass needs to not enable some specific feature, how would that be controlled?
-(e.g. a scene where shadows should be of instance without its animations applied [not a good example, I know]).
+(e.g. a scene where shadows should be of the instance without its animations applied [not a realistic example, I know]).
 Maybe the feature, added by the client, could have some filter on the pass. But what if a material override expect another feature set for the same pass?
 Also, some features data is dynamic and need updating(e.g. computing bones matrix palette, each frame).
 Also, some features are common and should be provided by the lib, not having clients copy it each project.
 Base feature might simply be provided by the lib, and then used by the clients from there.
 
 A complication with dynamic feature set on material (impacting shader code):
-* The shader code variation becomes dynamic, and this can lead to new variants compilation at hard to control moments.
+* The shader code variation becomes dynamic, and this can lead to new variants compilation at "unintended" moments during runtime.
 
 Idea: should the library let the client actually "preload" the material, providing the requested feature at this point?
 Reducing the Material shader options to a static "map" indexed by predefined attributes.

@@ -19,4 +19,7 @@ inline std::string to_string(Semantic aSemantic)
 { return aSemantic; }
 
 
+using Feature = std::string;
+
+
 } // namespace ad::renderer

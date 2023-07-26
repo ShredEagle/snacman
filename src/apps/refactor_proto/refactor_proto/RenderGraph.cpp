@@ -1,6 +1,7 @@
 #include "RenderGraph.h"
 
 #include "Cube.h"
+#include "Json.h"
 #include "Loader.h"
 #include "Profiling.h"
 #include "SetupDrawing.h"
@@ -11,6 +12,8 @@
 
 #include <math/Transformations.h>
 #include <math/Vector.h>
+
+#include <platform/Path.h>
 
 #include <renderer/BufferLoad.h>
 #include <renderer/Query.h>
@@ -26,9 +29,9 @@ namespace ad::renderer {
 const char * gVertexShader = R"#(
     #version 420
 
-    in vec3 v_Position_clip;
+    in vec3 v_Position_local;
 
-    in mat4 i_ModelTransform;
+    in mat4 i_LocalToWorld;
 
     layout(std140, binding = 1) uniform ViewBlock
     {
@@ -37,7 +40,7 @@ const char * gVertexShader = R"#(
 
     void main()
     {
-        gl_Position = viewingProjection * i_ModelTransform * vec4(v_Position_clip, 1.f);
+        gl_Position = viewingProjection * i_LocalToWorld * vec4(v_Position_local, 1.f);
     }
 )#";
 
@@ -60,6 +63,40 @@ const char * gFragmentShader = R"#(
 
 namespace {
 
+    resource::ResourceFinder makeResourceFinder()
+    {
+        filesystem::path assetConfig = platform::getExecutableFileDirectory() / "assets.json";
+        if(exists(assetConfig))
+        {
+            Json config = Json::parse(std::ifstream{assetConfig});
+            
+            // This leads to an ambibuity on the path ctor, I suppose because
+            // the iterator value_t is equally convertible to both filesystem::path and filesystem::path::string_type
+            //return resource::ResourceFinder(config.at("prefixes").begin(),
+            //                                config.at("prefixes").end());
+
+            // Take the silly long way
+            std::vector<std::string> prefixes{
+                config.at("prefixes").begin(),
+                config.at("prefixes").end()
+            };
+            std::vector<std::filesystem::path> prefixPathes;
+            prefixPathes.reserve(prefixes.size());
+            for (auto & prefix : prefixes)
+            {
+                prefixPathes.push_back(std::filesystem::canonical(prefix));
+            }
+            return resource::ResourceFinder(prefixPathes.begin(),
+                                            prefixPathes.end());
+        }
+        else
+        {
+            return resource::ResourceFinder{platform::getExecutableFileDirectory()};
+        }
+    }
+
+
+
     VertexStream makeTriangle(Storage & aStorage)
     {
         std::array<math::Position<3, GLfloat>, 3> vertices{{
@@ -78,16 +115,17 @@ namespace {
 
     Material makeWhiteMaterial(Storage & aStorage)
     {
+        aStorage.mPrograms.emplace_back(
+            graphics::makeLinkedProgram({
+                {GL_VERTEX_SHADER, gVertexShader},
+                {GL_FRAGMENT_SHADER, gFragmentShader},
+            }),
+            "white");
+
         Effect effect{
             .mTechniques{makeVector(
                 Technique{
-                    .mProgram{
-                        graphics::makeLinkedProgram({
-                            {GL_VERTEX_SHADER, gVertexShader},
-                            {GL_FRAGMENT_SHADER, gFragmentShader},
-                        }),
-                        "white"
-                    }
+                    .mProgram{ &aStorage.mPrograms.back() }
                 }
             )},
         };
@@ -154,7 +192,7 @@ namespace {
             // TODO replace program selection with something not hardcoded, this is a quick test
             // (Ideally, a shader system with some form of render list)
             assert(part.mMaterial.mEffect->mTechniques.size() == 1);
-            const IntrospectProgram & selectedProgram = part.mMaterial.mEffect->mTechniques.at(0).mProgram;
+            const IntrospectProgram & selectedProgram = *part.mMaterial.mEffect->mTechniques.at(0).mProgram;
 
             const VertexStream & vertexStream = part.mVertexStream;
 
@@ -232,12 +270,15 @@ DrawList Scene::populateDrawList() const
 }
 
 
-RenderGraph::RenderGraph()
+RenderGraph::RenderGraph() : 
+    mLoader{makeResourceFinder()}
 {
     // TODO replace use of pointers into the storage (which are invalidated on vector resize)
     // with some form of handle
     mStorage.mBuffers.reserve(16);
     mStorage.mObjects.reserve(16);
+    mStorage.mEffects.reserve(16);
+    mStorage.mPrograms.reserve(16);
 
     static Object triangle;
     triangle.mParts.push_back(Part{
@@ -269,7 +310,10 @@ RenderGraph::RenderGraph()
     });
 
     std::filesystem::path binaryFile{"D:/projects/Gamedev/2/proto-assets/teapot/teapot.seum"};
-    Node teapot = loadBinary(binaryFile, mStorage, triangle.mParts[0].mMaterial);
+    static Material defaultPhongMaterial{
+        .mEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage, {}),
+    };
+    Node teapot = loadBinary(binaryFile, mStorage, defaultPhongMaterial);
     teapot.mInstance.mPose.mPosition = {0.0f, 0.2f, 0.f};
     teapot.mInstance.mPose.mUniformScale = 0.005f;
     mScene.mRoot.push_back(std::move(teapot));

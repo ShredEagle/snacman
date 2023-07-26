@@ -2,6 +2,7 @@
 
 
 #include "Model.h"
+#include "Loader.h"
 
 #include <graphics/ApplicationGlfw.h>
 
@@ -33,6 +34,7 @@ struct RenderGraph
     Storage mStorage;
     Scene mScene;
     SemanticBufferViews mInstanceStream;
+    Loader mLoader;
 };
 
 

@@ -9,6 +9,7 @@ set(${TARGET_NAME}_HEADERS
     Commons.h
     Cube.h
     IntrospectProgram.h
+    Json.h
     Loader.h
     Logging.h
     Model.h
@@ -63,7 +64,7 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
 file(GENERATE 
      OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
-     CONTENT "{\"prefixes\": [\"${REPO_FOLDER}/src/libs/snac-renderer/snac-renderer/\",
+     CONTENT "{\"prefixes\": [\"${CMAKE_CURRENT_LIST_DIR}/resources/\",
                               \"${REPO_FOLDER}/../snac-assets/\"]}")
 
 
@@ -74,7 +75,7 @@ file(GENERATE
 
 find_package(Graphics CONFIG REQUIRED graphics renderer)
 find_package(Math CONFIG REQUIRED math)
-find_package(Handy CONFIG REQUIRED handy)
+find_package(Handy CONFIG REQUIRED handy resource)
 
 
 #find_package(nlohmann_json 3.11.2 CONFIG REQUIRED)
@@ -86,6 +87,7 @@ target_link_libraries(${TARGET_NAME}
         ad::handy
         ad::math
         ad::renderer
+        ad::resource
 
         spdlog::spdlog
         #nlohmann_json::nlohmann_json

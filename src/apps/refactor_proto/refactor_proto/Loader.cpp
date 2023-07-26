@@ -1,10 +1,14 @@
 #include "Loader.h"
 
 #include "BinaryArchive.h" 
+#include "Json.h"
+#include "Logging.h"
 
 #include <math/Homogeneous.h>
 
 #include <renderer/BufferLoad.h>
+#include <renderer/ShaderSource.h>
+#include <renderer/utilities/FileLookup.h>
 
 
 namespace ad::renderer {
@@ -181,6 +185,7 @@ namespace {
         return node;
     }
 
+
 } // unnamed namespace
 
 
@@ -196,6 +201,93 @@ Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, M
     assert(version == 1);
 
     return loadNode(in, aStorage, aDefaultMaterial);
+}
+
+
+Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
+                            Storage & aStorage,
+                            const FeatureSet & aFeatures)
+{
+    aStorage.mEffects.emplace_back();
+    Effect & result = aStorage.mEffects.back();
+
+    Json effect = Json::parse(std::ifstream{mFinder.pathFor(aEffectFile)});
+    for (const auto & technique : effect.at("techniques"))
+    {
+        aStorage.mPrograms.push_back(loadProgram(technique.at("programfile")));
+        result.mTechniques.push_back(
+            Technique{
+                .mProgram = &aStorage.mPrograms.back(),
+            });
+        if(technique.contains("annotations"))
+        {
+            Technique & inserted = result.mTechniques.back();
+            for(auto [category, value] : technique.at("annotations").items())
+            {
+                inserted.mAnnotations.emplace(category, value.get<std::string>());
+            }
+        }
+    }
+    return &result;
+}
+
+
+IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile)
+{
+    std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
+
+    auto programPath = mFinder.pathFor(aProgFile);
+
+    // TODO factorize and make more robust (e.g. test file existence)
+    Json program;
+    try 
+    {
+        program = Json::parse(std::ifstream{programPath});
+    }
+    catch (Json::parse_error &)
+    {
+        SELOG(critical)("Rethrowing exception from attempt to parse Json from '{}'.", aProgFile.string());
+        throw;
+    }
+
+    // TODO decide if we want the shader path to be relative to the prog file (with FileLookup)
+    // or to be found in the current "assets" folders of ResourceFinder.
+    graphics::FileLookup lookup{programPath};
+
+    for (auto [shaderStage, shaderFile] : program.items())
+    {
+        GLenum stageEnumerator;
+        if(shaderStage == "features")
+        {
+            // Special case, not a shader stage
+            continue;
+        }
+        else if(shaderStage == "vertex")
+        {
+            stageEnumerator = GL_VERTEX_SHADER;
+        }
+        else if (shaderStage == "fragment")
+        {
+            stageEnumerator = GL_FRAGMENT_SHADER;
+        }
+        else
+        {
+            SELOG(critical)("Unable to map shader stage key '{}' to a program stage.", shaderStage);
+            throw std::invalid_argument{"Unhandled shader stage key."};
+        }
+        
+        auto [inputStream, identifier] = lookup(shaderFile);
+        shaders.emplace_back(
+            stageEnumerator,
+            graphics::ShaderSource::Preprocess(*inputStream, defines, identifier, lookup));
+    }
+
+    SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());
+
+    return IntrospectProgram{
+            graphics::makeLinkedProgram(shaders.begin(), shaders.end()),
+            aProgFile.filename().string()
+    };
 }
 
 
@@ -248,7 +340,7 @@ SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstance
         .mVertexBufferViews = { vboView, },
         .mSemanticToAttribute{
             {
-                semantic::gModelTransform,
+                semantic::gLocalToWorld,
                 AttributeAccessor{
                     .mBufferViewIndex = 0, // view is added above
                     .mClientDataFormat{

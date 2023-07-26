@@ -8,7 +8,9 @@
 
 #include <math/Vector.h>
 
+// TODO this is a bit of heavy includes for the general Model file.
 #include <map>
+#include <set>
 #include <vector>
 
 
@@ -44,7 +46,7 @@ struct Technique
     };
 
     std::map<StringKey, StringKey> mAnnotations;
-    IntrospectProgram mProgram;
+    IntrospectProgram * mProgram;
 };
 
 
@@ -93,6 +95,10 @@ struct VertexStream /*: public SemanticBufferViews*/
 
 #undef SEMANTIC_BUFFER_MEMBERS
 
+// TODO might be better as a binary flag, but this still should allow for user extension
+// (anyway, feature order should not be important)
+using FeatureSet = std::set<Feature>;
+
 struct Part
 {
     VertexStream mVertexStream;
@@ -140,12 +146,13 @@ struct Node
 };
 
 
-// Loosely inspired by Godot data model, this class should not exist in the library
+// Loosely inspired by Godot data model, this class should probably not exist in the library
 struct Storage
 {
     std::vector<graphics::BufferAny> mBuffers;
     std::vector<Object> mObjects;
     std::vector<Effect> mEffects;
+    std::vector<IntrospectProgram> mPrograms;
 };
 
 
