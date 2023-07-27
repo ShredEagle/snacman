@@ -2,7 +2,7 @@
 
 #include "Gamma.glsl"
 #include "Helpers.glsl"
-
+ 
 in vec3 ex_Position_cam;
 in vec3 ex_Normal_cam;
 
@@ -13,7 +13,7 @@ void main()
 {
     // TODO take that as input
     vec3 lightColor = vec3(1., 1., 1.);
-    vec3 lightDir_cam = normalize(vec3(1., 0., 1.));
+    vec3 lightDir_cam = normalize(vec3(-0.5, 0., 1.));
     vec3 ambientFactor = vec3(.2, .2, .2);
     vec4 albedo = vec4(1., 1., 1., 1.);
 

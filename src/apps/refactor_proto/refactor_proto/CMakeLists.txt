@@ -6,6 +6,7 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     BinaryArchive.h
+    Camera.h
     Commons.h
     Cube.h
     IntrospectProgram.h
@@ -23,6 +24,7 @@ set(${TARGET_NAME}_HEADERS
 set(${TARGET_NAME}_SOURCES
     main.cpp
 
+    Camera.cpp
     IntrospectProgram.cpp
     Loader.cpp
     Logging.cpp

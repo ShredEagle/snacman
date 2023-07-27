@@ -6,12 +6,11 @@
 #include "Profiling.h"
 #include "SetupDrawing.h"
 
-#include <graphics/CameraUtilities.h>
-
 #include <handy/vector_utils.h>
 
 #include <math/Transformations.h>
 #include <math/Vector.h>
+#include <math/VectorUtilities.h>
 
 #include <platform/Path.h>
 
@@ -62,6 +61,9 @@ const char * gFragmentShader = R"#(
     }
 )#";
 
+constexpr math::Degree<float> gInitialVFov{50.f};
+constexpr float gNearZ{-0.1f};
+constexpr float gFarZ{-25.f};
 
 namespace {
 
@@ -139,6 +141,7 @@ namespace {
     }
 
 
+    /// @brief Layout compatible with the shader's `ViewBlock`
     struct GpuViewBlock
     {
         GpuViewBlock(
@@ -150,14 +153,20 @@ namespace {
             mViewingProjection{aWorldToCamera * aProjection}
         {}
 
+        GpuViewBlock(const Camera & aCamera) :
+            GpuViewBlock{aCamera.getParentToCamera(), aCamera.getProjection()}
+        {}
+
         math::AffineMatrix<4, GLfloat> mWorldToCamera; 
         math::Matrix<4, 4, GLfloat> mProjection; 
         math::Matrix<4, 4, GLfloat> mViewingProjection;
     };
 
 
+
     void draw(const Instance & aInstance,
               const SemanticBufferViews & aInstanceBufferView,
+              const Camera & aCamera,
               math::Size<2, int> aFramebufferResolution)
     {
         // TODO should be done once per viewport
@@ -177,6 +186,7 @@ namespace {
             );
         }
 
+        // TODO Consolidate UBO setup
         RepositoryUBO ubos;
         {
             PROFILER_SCOPE_SECTION("prepare_UBO", CpuTime, GpuTime);
@@ -191,18 +201,9 @@ namespace {
             }
             {
                 graphics::UniformBufferObject ubo;
-                math::Box<GLfloat> viewVolume = 
-                    graphics::getViewVolumeRightHanded(aFramebufferResolution,
-                                                       2.f,
-                                                       -0.1f,
-                                                       10.f);
-        
-                GpuViewBlock viewBlock{
-                    math::trans3d::translate<GLfloat>({0.f, 0.f, -2.f}),
-                    math::trans3d::orthographicProjection(viewVolume),
-                };
                     
-                graphics::loadSingle(ubo, viewBlock, 
+                graphics::loadSingle(ubo, 
+                                     GpuViewBlock{aCamera}, 
                                      graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
                 ubos.emplace(semantic::gView, std::move(ubo));
             }
@@ -291,9 +292,39 @@ DrawList Scene::populateDrawList() const
 }
 
 
-RenderGraph::RenderGraph() : 
-    mLoader{makeResourceFinder()}
+//TODO Ad 2023/07/26: Move to the glfw app library, handle all callbacks 
+//    (and only register the subset actually provided by T_callbackProvider)
+template <class T_callbackProvider>
+void registerGlfwCallbacks(graphics::AppInterface & aAppInterface, T_callbackProvider & aProvider)
 {
+    using namespace std::placeholders;
+    aAppInterface.registerMouseButtonCallback(
+        std::bind(&T_callbackProvider::callbackMouseButton, std::ref(aProvider), _1, _2, _3, _4, _5));
+    aAppInterface.registerCursorPositionCallback(
+        std::bind(&T_callbackProvider::callbackCursorPosition, std::ref(aProvider), _1, _2));
+    aAppInterface.registerScrollCallback(
+        std::bind(&T_callbackProvider::callbackScroll, std::ref(aProvider), _1, _2));
+}
+
+
+RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+                         const std::filesystem::path & aModelFile) :
+    mGlfwAppInterface{std::move(aGlfwAppInterface)},
+    mLoader{makeResourceFinder()},
+    mCameraControl{mGlfwAppInterface->getWindowSize(),
+                   gInitialVFov,
+                   Orbital{2/*initial radius*/}
+    }
+{
+    mCamera.setupOrthographicProjection({
+        .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
+        .mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
+        .mNearZ = gNearZ,
+        .mFarZ = gFarZ,
+    });
+
+    registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl);
+
     // TODO replace use of pointers into the storage (which are invalidated on vector resize)
     // with some form of handle
     mStorage.mBuffers.reserve(16);
@@ -330,31 +361,47 @@ RenderGraph::RenderGraph() :
         }
     });
 
-    std::filesystem::path binaryFile{"D:/projects/Gamedev/2/proto-assets/teapot/teapot.seum"};
     static Material defaultPhongMaterial{
         .mEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage, {}),
     };
-    Node teapot = loadBinary(binaryFile, mStorage, defaultPhongMaterial);
-    teapot.mInstance.mPose.mPosition = {0.0f, 0.2f, 0.f};
-    teapot.mInstance.mPose.mUniformScale = 0.005f;
-    mScene.mRoot.push_back(std::move(teapot));
+    Node model = loadBinary(aModelFile, mStorage, defaultPhongMaterial);
+    model.mInstance.mPose.mPosition = {0.0f, 0.2f, 0.f};
+    // TODO automatically handle scaling via model bounding box.
+    model.mInstance.mPose.mUniformScale = 0.005f;
+    mScene.mRoot.push_back(std::move(model));
 
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     mInstanceStream = makeInstanceStream(mStorage, 1);
 }
 
 
-void RenderGraph::render(const graphics::ApplicationGlfw & aGlfwApp)
+void RenderGraph::render()
 {
     // Implement material/program selection while generating drawlist
     DrawList drawList = mScene.populateDrawList();
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // TODO handle pipeline state with an abstraction
+    //glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+
+    // Update camera to match current values in orbital control.
+    mCamera.setPose(mCameraControl.mOrbital.getParentToLocal());
+    if(mCamera.isProjectionOrthographic())
+    {
+        // Note: to allow "zooming" in the orthographic case, we change the viewed height of the ortho projection.
+        // An alternative would be to apply a scale factor to the camera Pose transformation.
+        changeOrthographicViewportHeight(mCamera, mCameraControl.getViewHeightAtOrbitalCenter());
+    }
+
     PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
     for(const auto & instance : drawList)
     {
-        draw(instance, mInstanceStream, aGlfwApp.getAppInterface()->getFramebufferSize());
+        draw(instance,
+             mInstanceStream,
+             mCamera,
+             mGlfwAppInterface->getFramebufferSize());
     }
 }
 

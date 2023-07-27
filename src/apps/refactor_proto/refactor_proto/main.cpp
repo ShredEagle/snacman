@@ -12,7 +12,28 @@ using namespace ad;
 using namespace se;
 
 
-void runApplication()
+std::filesystem::path handleArguments(int argc, char * argv[])
+{
+    if(argc != 2)
+    {
+        std::cerr << "Usage: " << std::filesystem::path{argv[0]}.filename().string() << " input_model_file\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    std::filesystem::path inputPath{argv[1]};
+    inputPath.replace_extension(".seum");
+
+    if(!is_regular_file(inputPath))
+    {
+        std::cerr << "Provided argument should be a file, but '" << inputPath.string() << "' is not.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    return inputPath;
+}
+
+
+void runApplication(int argc, char * argv[])
 {
     SELOG(info)("Starting application '{}'.", gApplicationName);
 
@@ -27,20 +48,23 @@ void runApplication()
 
     auto scopeProfiler = renderer::scopeGlobalProfiler();
 
-    renderer::RenderGraph renderGraph;
+    renderer::RenderGraph renderGraph{
+        glfwApp.getAppInterface(),
+        handleArguments(argc, argv)
+    };
 
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME;
         PROFILER_BEGIN_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
 
-        renderGraph.render(glfwApp);
+        renderGraph.render();
         glfwApp.swapBuffers();
 
         PROFILER_END_SECTION;
         PROFILER_END_FRAME;
 
-        std::cout << renderer::getGlobalProfiler().prettyPrint();
+//        std::cout << renderer::getGlobalProfiler().prettyPrint();
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }
@@ -70,7 +94,7 @@ int main(int argc, char * argv[])
     // Run the application (and use logging facilities if there is an error)
     try
     {
-        runApplication();
+        runApplication(argc, argv);
     }
     catch (std::exception & aException)
     {

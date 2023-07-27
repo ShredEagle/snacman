@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "Camera.h"
 #include "Model.h"
 #include "Loader.h"
 
@@ -27,14 +28,19 @@ struct Scene
 
 struct RenderGraph
 {
-    RenderGraph();
+    RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+                const std::filesystem::path & aModelFile);
 
-    void render(const graphics::ApplicationGlfw & aGlfwApp);
+    void render();
 
+    std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
     Scene mScene;
     SemanticBufferViews mInstanceStream;
     Loader mLoader;
+
+    Camera mCamera;
+    OrbitalControl mCameraControl;
 };
 
 
