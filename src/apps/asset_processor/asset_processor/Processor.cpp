@@ -149,7 +149,7 @@ void processModel(const std::filesystem::path & aFile)
           aiProcess_SortByPType            |
           // Ad: added flags below
           aiProcess_ValidateDataStructure  |
-          aiProcess_GenNormals
+          aiProcess_GenSmoothNormals
           );
     
     // If the import failed, report it
