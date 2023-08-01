@@ -4,10 +4,13 @@
 #include "Json.h"
 #include "Logging.h"
 
+#include <arte/Image.h>
+
 #include <math/Homogeneous.h>
 
 #include <renderer/BufferLoad.h>
 #include <renderer/ShaderSource.h>
+#include <renderer/Texture.h>
 #include <renderer/utilities/FileLookup.h>
 
 
@@ -84,7 +87,9 @@ namespace {
     }
 
 
-    VertexStream loadMesh(BinaryInArchive & aIn, Storage & aStorage)
+    // TODO consolidate loading several attribute, several meshes into the same GL buffers
+    // (the attribute interleaving might be done on the exporter side though).
+    Part loadMesh(BinaryInArchive & aIn, Storage & aStorage, Material aDefaultMaterial)
     {
         auto loadBuffer = [&aStorage, &aIn](GLsizei aElementSize, std::size_t aElementCount)
         {
@@ -104,6 +109,9 @@ namespace {
             };
         };
 
+        unsigned int materialIndex;
+        aIn.read(materialIndex);
+
         unsigned int verticesCount;
         aIn.read(verticesCount);
         constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
@@ -112,51 +120,86 @@ namespace {
         constexpr auto gNormalSize = gPositionSize;
         BufferView normalView = loadBuffer(gNormalSize, verticesCount);
 
+        unsigned int uvChannelsCount;
+        aIn.read(uvChannelsCount);
+        assert(uvChannelsCount <= 1);
+        BufferView uvView;
+        for(unsigned int uvIdx = 0; uvIdx != uvChannelsCount; ++uvIdx)
+        {
+            uvView = loadBuffer(2 * sizeof(float), verticesCount);
+        }
+
         unsigned int primitiveCount;
         aIn.read(primitiveCount);
         const unsigned int indicesCount = 3 * primitiveCount;
         constexpr auto gIndexSize = sizeof(unsigned int);
         BufferView iboView = loadBuffer(gIndexSize, indicesCount);
 
-        return VertexStream{
-            .mVertexBufferViews{ positionView, normalView},
-            .mSemanticToAttribute{
-                {
-                    semantic::gPosition,
-                    AttributeAccessor{
-                        .mBufferViewIndex = 0, // view is added above
-                        .mClientDataFormat{
-                            .mDimension = 3,
-                            .mOffset = 0,
-                            .mComponentType = GL_FLOAT
+        Part part{
+            .mVertexStream{
+                .mVertexBufferViews{ positionView, normalView},
+                .mSemanticToAttribute{
+                    {
+                        semantic::gPosition,
+                        AttributeAccessor{
+                            .mBufferViewIndex = 0, // view is added above
+                            .mClientDataFormat{
+                                .mDimension = 3,
+                                .mOffset = 0,
+                                .mComponentType = GL_FLOAT
+                            }
                         }
-                    }
-                },
-                {
-                    semantic::gNormal,
-                    AttributeAccessor{
-                        .mBufferViewIndex = 1, // view is added above
-                        .mClientDataFormat{
-                            .mDimension = 3,
-                            .mOffset = 0,
-                            .mComponentType = GL_FLOAT
+                    },
+                    {
+                        semantic::gNormal,
+                        AttributeAccessor{
+                            .mBufferViewIndex = 1, // view is added above
+                            .mClientDataFormat{
+                                .mDimension = 3,
+                                .mOffset = 0,
+                                .mComponentType = GL_FLOAT
+                            }
                         }
-                    }
+                    },
                 },
+                .mVertexCount = (GLsizei)verticesCount,
+                .mPrimitiveMode = GL_TRIANGLES,
+                .mIndexBufferView = iboView,
+                .mIndicesType = GL_UNSIGNED_INT,
+                .mIndicesCount = (GLsizei)indicesCount,
             },
-            .mVertexCount = (GLsizei)verticesCount,
-            .mPrimitiveMode = GL_TRIANGLES,
-            .mIndexBufferView = iboView,
-            .mIndicesType = GL_UNSIGNED_INT,
-            .mIndicesCount = (GLsizei)indicesCount,
+            .mMaterial{
+                .mPhongMaterialIdx = materialIndex,
+                .mEffect = aDefaultMaterial.mEffect,
+            }
         };
+
+        if(uvChannelsCount != 0)
+        {
+            part.mVertexStream.mSemanticToAttribute.emplace(
+                semantic::gUv,
+                AttributeAccessor{
+                    // Size taken before pushing back
+                    .mBufferViewIndex = part.mVertexStream.mVertexBufferViews.size(),
+                    .mClientDataFormat{
+                        .mDimension = 2,
+                        .mOffset = 0,
+                        .mComponentType = GL_FLOAT,
+                    },
+                });
+            part.mVertexStream.mVertexBufferViews.push_back(std::move(uvView));
+        }
+
+        return part;
     }
+
 
     Object * addObject(Storage & aStorage)
     {
         aStorage.mObjects.emplace_back();
         return &aStorage.mObjects.back();
     }
+
 
     Node loadNode(BinaryInArchive & aIn, Storage & aStorage, const Material aDefaultMaterial)
     {
@@ -176,10 +219,9 @@ namespace {
 
         for(std::size_t meshIdx = 0; meshIdx != meshesCount; ++meshIdx)
         {
-            node.mInstance.mObject->mParts.push_back(Part{
-                .mVertexStream = loadMesh(aIn, aStorage),
-                .mMaterial = aDefaultMaterial,
-            });
+            node.mInstance.mObject->mParts.push_back(
+                loadMesh(aIn, aStorage, aDefaultMaterial)
+            );
         }
 
         for(std::size_t childIdx = 0; childIdx != childrenCount; ++childIdx)
@@ -191,13 +233,48 @@ namespace {
     }
 
 
+    graphics::Texture loadTexture(std::filesystem::path aTexturePath)
+    {
+        graphics::Texture texture{GL_TEXTURE_2D};
+        arte::Image<math::sdr::Rgba> image{aTexturePath};
+        graphics::loadImageCompleteMipmaps(texture, image);
+        return texture;
+    }
+
+
+    // TODO Ad 2023/08/01: 
+    // Map the material to uniform buffer containing array
+    // Review how the effects (the programs) are provided to the parts (currently hardcoded)
+    void loadMaterials(BinaryInArchive & aIn, Storage & aStorage)
+    {
+        unsigned int materialsCount;
+        aIn.read(materialsCount);
+
+        std::vector<PhongMaterial> materials{materialsCount};
+        aIn.read(std::span{materials});
+
+        unsigned int pathsCount;
+        aIn.read(pathsCount);
+        for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
+        {
+            std::string path = aIn.readString();
+            aStorage.mTextures.push_back(loadTexture(aIn.mParentPath / path));
+        }
+
+        aStorage.mPhongMaterials = std::move(materials);
+    }
+
+
 } // unnamed namespace
 
 
+// TODO should not take a default material, but have a way to get the actual effect to use 
+// (maybe directly from the binary file)
 Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, Material aDefaultMaterial)
 {
     BinaryInArchive in{
         .mIn{std::ifstream{aBinaryFile, std::ios::binary}},
+        .mParentPath{aBinaryFile.parent_path()},
     };
 
     // TODO we need a unified design where the load code does not duplicate the type of the write.
@@ -205,7 +282,11 @@ Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, M
     in.read(version);
     assert(version == 1);
 
-    return loadNode(in, aStorage, aDefaultMaterial);
+    Node result = loadNode(in, aStorage, aDefaultMaterial);
+
+    loadMaterials(in, aStorage);
+
+    return result;
 }
 
 

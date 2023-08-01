@@ -167,11 +167,8 @@ namespace {
     void draw(const Instance & aInstance,
               const SemanticBufferViews & aInstanceBufferView,
               const Camera & aCamera,
-              math::Size<2, int> aFramebufferResolution)
+              const Storage & aStorage)
     {
-        // TODO should be done once per viewport
-        glViewport(0, 0, aFramebufferResolution.width(), aFramebufferResolution.height());
-
         // TODO should be done ahead of the draw call, at once for all instances.
         {
             math::AffineMatrix<4, GLfloat> modelTransformation = 
@@ -185,6 +182,12 @@ namespace {
                 std::span{&modelTransformation, 1}
             );
         }
+
+        //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
+        // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
+        // those could be "bound" before draw (potentially doing some binds and uniform setting, but not iterating the program)
+        // (We could even separate actual texture from the "format", allowing to change an underlying texture without revisiting the program)
+        // This would address the warnings repetitions (only issued when the compiled state is (re-)generated), and be better for perfs.
 
         // TODO Consolidate UBO setup
         RepositoryUBO ubos;
@@ -213,8 +216,9 @@ namespace {
         {
             // TODO replace program selection with something not hardcoded, this is a quick test
             // (Ideally, a shader system with some form of render list)
-            assert(part.mMaterial.mEffect->mTechniques.size() == 1);
-            const IntrospectProgram & selectedProgram = *part.mMaterial.mEffect->mTechniques.at(0).mProgram;
+            const Material & material = part.mMaterial;
+            assert(material.mEffect->mTechniques.size() == 1);
+            const IntrospectProgram & selectedProgram = *material.mEffect->mTechniques.at(0).mProgram;
 
             const VertexStream & vertexStream = part.mVertexStream;
 
@@ -227,6 +231,16 @@ namespace {
             {
                 PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
                 setBufferBackedBlocks(selectedProgram, ubos);
+            }
+
+            if(material.mPhongMaterialIdx != -1)
+            {
+                if(auto textureIdx = aStorage.mPhongMaterials[material.mPhongMaterialIdx].mDiffuseMap.mTextureIndex;
+                   textureIdx != TextureInput::gNoEntry)
+                {
+                    PROFILER_SCOPE_SECTION("set_textures", CpuTime);
+                    setTextures(selectedProgram, {{semantic::gDiffuseTexture, &aStorage.mTextures[textureIdx]},});
+                }
             }
 
             graphics::ScopedBind programScope{selectedProgram};
@@ -331,6 +345,8 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     mStorage.mObjects.reserve(16);
     mStorage.mEffects.reserve(16);
     mStorage.mPrograms.reserve(16);
+    mStorage.mPhongMaterials.reserve(16);
+    mStorage.mTextures.reserve(16);
 
     static Object triangle;
     triangle.mParts.push_back(Part{
@@ -396,12 +412,16 @@ void RenderGraph::render()
     }
 
     PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
+    // TODO should be done once per viewport
+    glViewport(0, 0,
+               mGlfwAppInterface->getFramebufferSize().width(),
+               mGlfwAppInterface->getFramebufferSize().height());
     for(const auto & instance : drawList)
     {
         draw(instance,
              mInstanceStream,
              mCamera,
-             mGlfwAppInterface->getFramebufferSize());
+             mStorage);
     }
 }
 

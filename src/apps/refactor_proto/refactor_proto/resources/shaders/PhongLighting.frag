@@ -5,6 +5,9 @@
  
 in vec3 ex_Position_cam;
 in vec3 ex_Normal_cam;
+in vec2 ex_Uv;
+
+uniform sampler2D u_DiffuseTexture;
 
 out vec4 out_Color;
 
@@ -15,7 +18,7 @@ void main()
     vec3 lightColor = vec3(1., 1., 1.);
     vec3 lightDir_cam = normalize(vec3(-0.5, 0., 1.));
     vec3 ambientFactor = vec3(.2, .2, .2);
-    vec4 albedo = vec4(1., 1., 1., 1.);
+    vec4 albedo = texture(u_DiffuseTexture, ex_Uv);
 
     vec3 view_cam = vec3(0., 0., 1.);
     vec3 h_cam = normalize(view_cam + lightDir_cam);
@@ -26,5 +29,6 @@ void main()
 
     vec3 phongColor = (ambient + diffuse) * albedo.xyz;
     out_Color = correctGamma(vec4(phongColor, albedo.w));
+    //out_Color = vec4(ex_Uv, 0., 1.);
     //out_Color = vec4(normal_cam, 1.);
 }

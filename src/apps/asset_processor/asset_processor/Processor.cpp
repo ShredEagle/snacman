@@ -4,6 +4,7 @@
 
 // TODO address that dirty include when the content is moved to a proper library
 #include "../../refactor_proto/refactor_proto/BinaryArchive.h"
+#include "../../refactor_proto/refactor_proto/Material.h"
 
 #include <math/Homogeneous.h>
 
@@ -63,11 +64,36 @@ namespace {
 
         void write(const aiMesh * aMesh)
         {
+            //TODO Ad 2023/07/27: It could be better to dump only the materials actually references by meshes
+            // (requires a step to re-index without the unused materials)
+            // Material index
+            mArchive.write(aMesh->mMaterialIndex);
+
             // Vertices
             mArchive.write(aMesh->mNumVertices);
             mArchive.write(std::span{aMesh->mVertices, aMesh->mNumVertices});
+
             assert(aMesh->mNormals != nullptr);
             mArchive.write(std::span{aMesh->mNormals, aMesh->mNumVertices});
+
+            assert(aMesh->GetNumColorChannels() == 0); // TODO handle this if some assets use vertex colors
+
+            mArchive.write(aMesh->GetNumUVChannels());
+            for (unsigned int uvIdx = 0; uvIdx != aMesh->GetNumUVChannels(); ++ uvIdx)
+            {
+                // Only support bidimensionnal texture sampling atm.
+                // Sadly, some models have a 3 here, even if they actually use only 2 (e.g. teapot.obj)
+                //assert(aMesh->mNumUVComponents[uvIdx] == 2);
+                // TODO Interleave the odd channel with their preceding even channel
+                // (i.e. better usage of the 4 components of each vertex attribute)
+                for(auto vertexIdx = 0; vertexIdx != aMesh->mNumVertices; ++vertexIdx)
+                {
+                    mArchive.write(std::span{&(aMesh->mTextureCoords[uvIdx][vertexIdx].x), 2});
+                    // Even the assertion below does not hold true for teapot.obj
+                    //assert(aMesh->mTextureCoords[uvIdx][vertexIdx].z == 0);
+                }
+            }
+
             // Faces
             mArchive.write(aMesh->mNumFaces);
             for(std::size_t faceIdx = 0; faceIdx != aMesh->mNumFaces; ++faceIdx)
@@ -75,6 +101,22 @@ namespace {
                 const aiFace & face = aMesh->mFaces[faceIdx];
                 mArchive.write(std::span{face.mIndices, 3});
             }
+        }
+
+        void write(const std::vector<std::string> & aStrings)
+        {
+            mArchive.write((unsigned int)aStrings.size());
+            for(const auto & string : aStrings)
+            {
+                mArchive.write(string);
+            }
+        }
+
+        template <class T_element>
+        void writeRaw(std::span<T_element> aData)
+        {
+            mArchive.write((unsigned int)aData.size());
+            mArchive.write(aData);
         }
 
         BinaryOutArchive mArchive;
@@ -85,13 +127,23 @@ namespace {
     //  node.numChildren
     //  node.transformation
     //  each node.mesh:
+    //    mesh.materialIndex
     //    mesh.numVertices
     //    [mesh.vertices(i.e. positions, 3 floats per vertex)]
     //    [mesh.normals(3 floats per vertex)]
+    //    mesh.numUVChannels
+    //    each mesh.UVChannel:
+    //      [UVChannel.coordinates(2 floats per vertex)]
     //    mesh.numFaces
     //    [mesh.faces(i.e. 3 unsigned int per face)]
     //  each node.child:
     //    // recurse
+    //  numMaterials
+    //  raw memory dump of span<PhongMaterial>
+    //  numTexturePaths
+    //  each texturePath:
+    //    string size
+    //    string characters
     void recurseNodes(aiNode * aNode,
                       const aiScene * aScene,
                       FileWriter & aWriter,
@@ -131,6 +183,80 @@ namespace {
         }
     }
 
+
+    void set(const aiColor4D & aSource, math::hdr::Rgba_f & aDestination)
+    {
+        aDestination.r() = aSource.r;
+        aDestination.g() = aSource.g;
+        aDestination.b() = aSource.b;
+        aDestination.a() = aSource.a;
+    }
+
+    template <class... VT_args>
+    void setColor(math::hdr::Rgba_f & aDestination, aiMaterial * aMaterial, VT_args &&... aArgs)
+    {
+        aiColor4D aiColor;
+        if(aMaterial->Get(aArgs..., aiColor) == AI_SUCCESS)
+        {
+            set(aiColor, aDestination);
+        }
+    }
+
+
+    void dumpMaterials(const aiScene * aScene, FileWriter & aWriter)
+    {
+        std::vector<PhongMaterial> materials;
+        materials.reserve(aScene->mNumMaterials);
+
+        std::vector<std::string> texturePaths;
+
+        for(std::size_t materialIdx = 0; materialIdx != aScene->mNumMaterials; ++materialIdx)
+        {
+            materials.emplace_back();
+            PhongMaterial & phongMaterial = materials.back();
+
+            aiMaterial * material = aScene->mMaterials[materialIdx];
+
+            std::cout << "Material '" << material->GetName().C_Str()
+                << "' Diffuse tex:" << material->GetTextureCount(aiTextureType_DIFFUSE)
+                << " Specular tex:" << material->GetTextureCount(aiTextureType_SPECULAR)
+                << " Ambient tex:" << material->GetTextureCount(aiTextureType_AMBIENT)
+                << std::endl;
+
+            // TODO Handle other textures than diffuse.
+            // (and handle several textures in the stacks?)
+            assert(material->GetTextureCount(aiTextureType_SPECULAR) == 0
+                && material->GetTextureCount(aiTextureType_AMBIENT) == 0
+                && material->GetTextureCount(aiTextureType_DIFFUSE) <= 1);
+
+            setColor(phongMaterial.mAmbientColor,  material, AI_MATKEY_COLOR_AMBIENT);
+            setColor(phongMaterial.mDiffuseColor,  material, AI_MATKEY_COLOR_DIFFUSE);
+            setColor(phongMaterial.mSpecularColor, material, AI_MATKEY_COLOR_SPECULAR);
+
+            constexpr unsigned int indexInStack = 0;
+            aiString texPath;
+            if(material->Get(AI_MATKEY_TEXTURE_DIFFUSE(indexInStack), texPath) == AI_SUCCESS)
+            {
+                std::cout << "  diffuse texture path: '" << texPath.C_Str() << "'\n";
+                phongMaterial.mDiffuseMap = {
+                    .mTextureIndex = (TextureInput::Index)texturePaths.size(),
+                    .mUVAttributeIndex = 0, // a default,
+                                            // see: https://assimp-docs.readthedocs.io/en/latest/usage/use_the_lib.html#how-to-map-uv-channels-to-textures-matkey-uvwsrc
+                };
+                texturePaths.push_back(texPath.C_Str());
+            }
+
+            unsigned int aiIndex;
+            if(material->Get(AI_MATKEY_UVWSRC_DIFFUSE(indexInStack), aiIndex) == AI_SUCCESS)
+            {
+                phongMaterial.mDiffuseMap.mUVAttributeIndex = aiIndex;
+            }
+        }
+
+        aWriter.writeRaw(std::span{materials});
+        aWriter.write(texturePaths);
+    }
+
 } // unnamed namespace
 
 
@@ -148,9 +274,12 @@ void processModel(const std::filesystem::path & aFile)
           aiProcess_JoinIdenticalVertices  |
           aiProcess_SortByPType            |
           // Ad: added flags below
-          aiProcess_ValidateDataStructure  |
-          aiProcess_GenSmoothNormals
-          );
+          aiProcess_RemoveRedundantMaterials |
+          aiProcess_GenSmoothNormals         |
+          aiProcess_ValidateDataStructure    |
+          aiProcess_FindDegenerates          |
+          aiProcess_FindInvalidData
+    );
     
     // If the import failed, report it
     if(!scene)
@@ -164,6 +293,9 @@ void processModel(const std::filesystem::path & aFile)
 
     // Now we can access the file's contents. 
     recurseNodes(scene->mRootNode, scene, writer);
+
+    dumpMaterials(scene, writer);
+
     // We're done. Everything will be cleaned up by the importer destructor
 }
 

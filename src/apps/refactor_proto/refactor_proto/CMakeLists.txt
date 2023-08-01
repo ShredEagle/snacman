@@ -13,6 +13,7 @@ set(${TARGET_NAME}_HEADERS
     Json.h
     Loader.h
     Logging.h
+    Material.h
     Model.h
     Profiler.h
     Profiling.h

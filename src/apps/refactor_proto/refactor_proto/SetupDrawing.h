@@ -24,4 +24,8 @@ void setBufferBackedBlocks(const IntrospectProgram & aProgram,
                            const RepositoryUBO & aUniformBufferObjects);
 
 
+void setTextures(const IntrospectProgram & aProgram,
+                 const RepositoryTexture & aTextures);
+
+
 } // namespace ad::renderer

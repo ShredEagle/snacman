@@ -102,9 +102,11 @@ private:
 };
 
 
+//TODO Ad 2023/07/27: 
+// This should be abstracted away from being used purely for rendering cameras, removing
+// knowledge of window size and vertical FOV. Yet this cause au complication for _panning_ movements.
+
 /// @brief Controls an Orbital position with mouse movements (movements of an usual orbital camera).
-/// @todo This should be abstracted away from being used purely for rendering cameras, removing
-/// knowledge of window size and vertical FOV. Yet this cause au complication for _panning_ movements.
 struct OrbitalControl
 {
     template <class T_unitTag>

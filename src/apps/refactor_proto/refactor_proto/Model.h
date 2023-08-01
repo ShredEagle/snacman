@@ -3,7 +3,9 @@
 
 #include "Commons.h" 
 #include "IntrospectProgram.h" 
+#include "Material.h"
 
+#include <renderer/Texture.h>
 #include <renderer/VertexSpecification.h>
 
 #include <math/Vector.h>
@@ -58,6 +60,10 @@ struct Effect
 
 struct Material
 {
+    // TODO currently, hardcodes the parameters type to be for phong model
+    // later on, it should allow for different types of parameters (that will have to match the different shader program expectations)
+    // also, we will probably load all parameters of a given type into buffers, and access them in shaders via indices (AZDO)
+    std::size_t mPhongMaterialIdx = (std::size_t)-1;
     Effect * mEffect;
 };
 
@@ -153,6 +159,8 @@ struct Storage
     std::vector<Object> mObjects;
     std::vector<Effect> mEffects;
     std::vector<IntrospectProgram> mPrograms;
+    std::vector<PhongMaterial> mPhongMaterials;
+    std::vector<graphics::Texture> mTextures;
 };
 
 

@@ -36,6 +36,11 @@ struct BinaryOutArchive
         return write(std::span{aMatrix});
     }
 
+    BinaryOutArchive & write(const std::string & aString)
+    {
+        write((unsigned int)aString.size());
+        return write(std::span{aString});
+    }
 
     std::ofstream mOut;
 };
@@ -57,6 +62,15 @@ struct BinaryInArchive
         return buffer;
     }
 
+    std::string readString()
+    {
+        unsigned int stringSize;
+        read(stringSize);
+        std::string buffer(stringSize, '\0');
+        mIn.read(buffer.data(), stringSize);
+        return buffer;
+    }
+
     template <class T>
     BinaryInArchive & read(std::span<T> aData)
     {
@@ -71,6 +85,7 @@ struct BinaryInArchive
     }
 
     std::ifstream mIn;
+    std::filesystem::path mParentPath;
 };
 
 

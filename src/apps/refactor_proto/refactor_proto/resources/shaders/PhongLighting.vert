@@ -2,6 +2,7 @@
 
 in vec3 ve_Position_local;
 in vec3 ve_Normal_local;
+in vec2 ve_Uv;
 
 in mat4 in_LocalToWorld;
 // Will be required to support non-uniform scaling.
@@ -18,6 +19,7 @@ layout(std140, binding = 0) uniform ViewBlock
 
 out vec3 ex_Position_cam;
 out vec3 ex_Normal_cam;
+out vec2 ex_Uv;
 
 void main(void)
 {
@@ -33,4 +35,5 @@ void main(void)
     gl_Position = projection * position_cam;
     ex_Position_cam = vec3(position_cam);
     ex_Normal_cam = mat3(localToCamera) * ve_Normal_local;
+    ex_Uv = ve_Uv;
 }

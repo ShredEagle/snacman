@@ -3,6 +3,7 @@
 #include "Logging.h"
 #include "Model.h"
 
+#include <renderer/Uniforms.h>
 #include <renderer/ScopeGuards.h>
 
 #include <fmt/ostream.h>
@@ -148,6 +149,52 @@ void setBufferBackedBlocks(const IntrospectProgram & aProgram,
                 __func__,
                 to_string(shaderBlock.mSemantic),
                 aProgram.name());
+        }
+    }
+}
+
+
+void setTextures(const IntrospectProgram & aProgram,
+                 const RepositoryTexture & aTextures)
+{
+    GLint textureImageUnit = 0;
+    for (const IntrospectProgram::Resource & shaderUniform : aProgram.mUniforms)
+    {
+        if (graphics::isResourceSamplerType(shaderUniform.mType))
+        {
+            if(auto found = aTextures.find(shaderUniform.mSemantic);
+               found != aTextures.end())
+            {
+                if (shaderUniform.mArraySize != 1)
+                {
+                    SELOG(error)(
+                        "{}: '{}' program uniform '{}'({}) is a sampler array of size {}, setting uniform arrays is not supported.",
+                        __func__,
+                        aProgram.name(),
+                        shaderUniform.mName,
+                        to_string(shaderUniform.mSemantic),
+                        shaderUniform.mArraySize
+                    );
+                }
+
+                // TODO assertions regarding texture-sampler compatibility
+                auto guardImageUnit = graphics::activateTextureUnitGuard(textureImageUnit);
+                bind(*found->second); // should not be unbound when we exit the current scope.
+                graphics::setUniform(aProgram, shaderUniform.mLocation, textureImageUnit);
+                ++textureImageUnit;
+            }
+            else
+            {
+                // TODO since this function is currently called before each draw
+                // this is much to verbose for a warning...
+                // In the case of samplers thought this is likely an error:
+                // the sampler being available means it is probably used.
+                SELOG(error)(
+                    "{}: Could not find an a texture for semantic '{}' in program '{}'.", 
+                    __func__,
+                    to_string(shaderUniform.mSemantic),
+                    aProgram.name());
+            }
         }
     }
 }

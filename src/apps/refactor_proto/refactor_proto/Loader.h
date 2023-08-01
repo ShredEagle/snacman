@@ -15,7 +15,9 @@ namespace semantic
 {
     const Semantic gPosition{"Position"};
     const Semantic gNormal{"Normal"};
+    const Semantic gUv{"Uv"};
     const Semantic gLocalToWorld{"LocalToWorld"};
+    const Semantic gDiffuseTexture{"DiffuseTexture"};
 
     const BlockSemantic gFrame{"Frame"};
     const BlockSemantic gView{"View"};
