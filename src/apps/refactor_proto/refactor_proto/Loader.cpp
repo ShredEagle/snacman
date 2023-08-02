@@ -235,7 +235,6 @@ namespace {
 
 
     // TODO Ad 2023/08/01: 
-    // Map the material to uniform buffer containing array
     // Review how the effects (the programs) are provided to the parts (currently hardcoded)
     void loadMaterials(BinaryInArchive & aIn, Storage & aStorage)
     {
