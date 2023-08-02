@@ -6,8 +6,6 @@
 
 #include <arte/Image.h>
 
-#include <math/Homogeneous.h>
-
 #include <renderer/BufferLoad.h>
 #include <renderer/ShaderSource.h>
 #include <renderer/Texture.h>
@@ -15,12 +13,6 @@
 
 
 namespace ad::renderer {
-
-
-struct InstanceData
-{
-    math::AffineMatrix<4, GLfloat> mModelTransform;
-};
 
 
 namespace {
@@ -432,8 +424,20 @@ SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstance
                     .mBufferViewIndex = 0, // view is added above
                     .mClientDataFormat{
                         .mDimension = {4, 4},
-                        .mOffset = 0,
+                        .mOffset = offsetof(InstanceData, mModelTransform),
                         .mComponentType = GL_FLOAT
+                    },
+                    .mInstanceDivisor = 1,
+                }
+            },
+            {
+                semantic::gMaterialIdx,
+                AttributeAccessor{
+                    .mBufferViewIndex = 0, // view is added above
+                    .mClientDataFormat{
+                        .mDimension = 1,
+                        .mOffset = offsetof(InstanceData, mMaterialIdx),
+                        .mComponentType = GL_UNSIGNED_INT,
                     },
                     .mInstanceDivisor = 1,
                 }

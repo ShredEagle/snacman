@@ -72,6 +72,8 @@ struct AttributeAccessor
 {
     std::vector<BufferView>::size_type mBufferViewIndex;
     graphics::ClientAttribute mClientDataFormat;
+    // TODO instance divisor should move to BufferView, it is shared by all vertices pulled from the view
+    // (exactly like stride)
     GLuint mInstanceDivisor = 0;
 };
 
@@ -108,7 +110,8 @@ using FeatureSet = std::set<Feature>;
 struct Part
 {
     VertexStream mVertexStream;
-    Material mMaterial; // TODO should probably be a "reference", as it is likely shared
+    Material mMaterial; // TODO #matref: should probably be a "reference", as it is likely shared
+    FeatureSet mFeatures;
 };
 
 
@@ -142,6 +145,8 @@ struct Instance
 {
     Object * mObject;
     Pose mPose;
+    // TODO #matref
+    std::optional<Material> mMaterialOverride;
 };
 
 

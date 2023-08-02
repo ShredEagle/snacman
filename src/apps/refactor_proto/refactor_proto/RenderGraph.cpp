@@ -3,6 +3,7 @@
 #include "Cube.h"
 #include "Json.h"
 #include "Loader.h"
+#include "Logging.h"
 #include "Profiling.h"
 #include "SetupDrawing.h"
 
@@ -163,26 +164,19 @@ namespace {
     };
 
 
+    graphics::UniformBufferObject prepareMaterialBuffer(const Storage & aStorage)
+    {
+        graphics::UniformBufferObject ubo;
+        graphics::load(ubo, std::span{aStorage.mPhongMaterials}, graphics::BufferHint::StaticDraw);
+        return ubo;
+    }
+
 
     void draw(const Instance & aInstance,
               const SemanticBufferViews & aInstanceBufferView,
               const Camera & aCamera,
               const Storage & aStorage)
     {
-        // TODO should be done ahead of the draw call, at once for all instances.
-        {
-            math::AffineMatrix<4, GLfloat> modelTransformation = 
-                math::trans3d::scaleUniform(aInstance.mPose.mUniformScale)
-                * math::trans3d::translate(aInstance.mPose.mPosition)
-                ;
-            
-            graphics::replaceSubset(
-                *aInstanceBufferView.mVertexBufferViews.at(0).mGLBuffer,
-                0, /*offset*/
-                std::span{&modelTransformation, 1}
-            );
-        }
-
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
         // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
         // those could be "bound" before draw (potentially doing some binds and uniform setting, but not iterating the program)
@@ -210,13 +204,40 @@ namespace {
                                      graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
                 ubos.emplace(semantic::gView, std::move(ubo));
             }
+            {
+                ubos.emplace(semantic::gMaterials, prepareMaterialBuffer(aStorage));
+            }
         }
 
         for(const Part & part : aInstance.mObject->mParts)
         {
             // TODO replace program selection with something not hardcoded, this is a quick test
             // (Ideally, a shader system with some form of render list)
-            const Material & material = part.mMaterial;
+            // Also, this selection should be done while the drawlist is generated, so it is shared by all passes
+            // Also, the drawlist generation should be at the part level, not the object instance level
+            const Material & material = aInstance.mMaterialOverride ?
+                *aInstance.mMaterialOverride : part.mMaterial;
+            
+            // TODO should be done ahead of the draw call, at once for all instances.
+            // TODO there is a tension between what is actually per object instance 
+            // (the transformation matrix if there cannot be any per part transformation)
+            // and what is per part (the material, ...). Note that the GL instance
+            // corresponds to a Part in our data model.
+            {
+                InstanceData instanceData{
+                    .mModelTransform =
+                        math::trans3d::scaleUniform(aInstance.mPose.mUniformScale)
+                        * math::trans3d::translate(aInstance.mPose.mPosition),
+                    .mMaterialIdx = (GLuint)material.mPhongMaterialIdx,
+                };
+                
+                graphics::replaceSubset(
+                    *aInstanceBufferView.mVertexBufferViews.at(0).mGLBuffer,
+                    0, /*offset*/
+                    std::span{&instanceData, 1}
+                );
+            }
+
             assert(material.mEffect->mTechniques.size() == 1);
             const IntrospectProgram & selectedProgram = *material.mEffect->mTechniques.at(0).mProgram;
 
@@ -277,6 +298,7 @@ namespace {
             aDrawList.push_back(Instance{
                 .mObject = object,
                 .mPose = absolutePose,
+                .mMaterialOverride = aNode.mInstance.mMaterialOverride,
             });
         }
 
@@ -377,14 +399,39 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
         }
     });
 
+    Effect * phongEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage, {});
     static Material defaultPhongMaterial{
-        .mEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage, {}),
+        .mEffect = phongEffect,
     };
     Node model = loadBinary(aModelFile, mStorage, defaultPhongMaterial);
     model.mInstance.mPose.mPosition = {0.0f, 0.2f, 0.f};
     // TODO automatically handle scaling via model bounding box.
     model.mInstance.mPose.mUniformScale = 0.005f;
+
+    // Add a a copy of the model (hardcoded for teapot), to test another material idx
+    {
+        Node copy = model;
+        Material materialOverride{
+            .mPhongMaterialIdx = mStorage.mPhongMaterials.size(), // The index of the material that will be pushed.
+            .mEffect = phongEffect,
+        };
+        copy.mInstance.mPose.mPosition.y() = -0.8f;
+        copy.mChildren.at(0).mInstance.mMaterialOverride = materialOverride;
+        copy.mChildren.at(1).mInstance.mMaterialOverride = materialOverride;
+        mScene.mRoot.push_back(std::move(copy));
+    }
+
     mScene.mRoot.push_back(std::move(model));
+
+    // Creates another phong material, for the model copy
+    {
+        mStorage.mPhongMaterials.push_back(mStorage.mPhongMaterials.at(0));
+        auto & phong = mStorage.mPhongMaterials.at(1);
+        phong.mDiffuseColor = math::hdr::gCyan<float> * 0.75f;
+        phong.mAmbientColor = math::hdr::gCyan<float> * 0.2f;
+        phong.mSpecularColor = math::hdr::gWhite<float> * 0.5f;
+        phong.mSpecularExponent = 100.f;
+    }
 
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     mInstanceStream = makeInstanceStream(mStorage, 1);

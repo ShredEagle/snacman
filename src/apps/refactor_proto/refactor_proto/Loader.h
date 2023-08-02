@@ -3,12 +3,21 @@
 
 #include "Model.h"
 
+#include <math/Homogeneous.h>
+
 #include <resource/ResourceFinder.h>
 
 #include <filesystem>
 
 
 namespace ad::renderer {
+
+
+struct InstanceData
+{
+    math::AffineMatrix<4, GLfloat> mModelTransform;
+    GLuint mMaterialIdx = (GLsizei)-1;
+};
 
 
 namespace semantic
@@ -18,9 +27,11 @@ namespace semantic
     const Semantic gUv{"Uv"};
     const Semantic gLocalToWorld{"LocalToWorld"};
     const Semantic gDiffuseTexture{"DiffuseTexture"};
+    const Semantic gMaterialIdx{"MaterialIdx"};
 
     const BlockSemantic gFrame{"Frame"};
     const BlockSemantic gView{"View"};
+    const BlockSemantic gMaterials{"Materials"};
 } // namespace semantic
 
 
