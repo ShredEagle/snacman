@@ -199,6 +199,7 @@ namespace {
         if(aMaterial->Get(aArgs..., aiColor) == AI_SUCCESS)
         {
             set(aiColor, aDestination);
+            std::cout << "  color '" << std::get<0>(std::forward_as_tuple(aArgs...)) << "': " << aDestination << "\n";
         }
     }
 
@@ -251,6 +252,23 @@ namespace {
             {
                 phongMaterial.mDiffuseMap.mUVAttributeIndex = aiIndex;
             }
+
+            if(material->Get(AI_MATKEY_SHININESS, phongMaterial.mSpecularExponent) == AI_SUCCESS)
+            {
+                std::cout << "  specular exponent: " << phongMaterial.mSpecularExponent << "\n";
+            }
+
+            if(material->Get(AI_MATKEY_OPACITY, phongMaterial.mDiffuseColor.a()) == AI_SUCCESS)
+            {
+                std::cout << "  opacity factor: " << phongMaterial.mDiffuseColor.a() << "\n";
+            }
+            else if(material->Get(AI_MATKEY_TRANSPARENCYFACTOR, phongMaterial.mDiffuseColor.a()) == AI_SUCCESS)
+            {
+                std::cout << "  transparency factor: " << phongMaterial.mDiffuseColor.a() << "\n";
+                phongMaterial.mDiffuseColor.a() = 1 - phongMaterial.mDiffuseColor.a();
+            }
+
+            normalizeColorFactors(phongMaterial);
         }
 
         aWriter.writeRaw(std::span{materials});
