@@ -266,23 +266,26 @@ namespace {
 
             graphics::ScopedBind programScope{selectedProgram};
 
-            // TODO multi draw
-            if(vertexStream.mIndicesType == NULL)
             {
-                glDrawArraysInstanced(
-                    vertexStream.mPrimitiveMode,
-                    0,
-                    vertexStream.mVertexCount,
-                    1);
-            }
-            else
-            {
-                glDrawElementsInstanced(
-                    vertexStream.mPrimitiveMode,
-                    vertexStream.mIndicesCount,
-                    vertexStream.mIndicesType,
-                    (const void *)vertexStream.mIndexBufferView.mOffset,
-                    1);
+                PROFILER_SCOPE_SECTION("glDraw_call", CpuTime, GpuTime);
+                // TODO multi draw
+                if(vertexStream.mIndicesType == NULL)
+                {
+                    glDrawArraysInstanced(
+                        vertexStream.mPrimitiveMode,
+                        0,
+                        vertexStream.mVertexCount,
+                        1);
+                }
+                else
+                {
+                    glDrawElementsInstanced(
+                        vertexStream.mPrimitiveMode,
+                        vertexStream.mIndicesCount,
+                        vertexStream.mIndicesType,
+                        (const void *)vertexStream.mIndexBufferView.mOffset,
+                        1);
+                }
             }
         }
     }

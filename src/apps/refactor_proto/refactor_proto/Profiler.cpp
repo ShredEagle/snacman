@@ -1,4 +1,4 @@
-#include "Profiler.h"
+#include "profiler.h"
 
 #include "Logging.h"
 
@@ -33,13 +33,15 @@ void Profiler::beginFrame()
     ++mFrameNumber;
     mNextEntry = 0;
     mCurrentLevel = 0; // should already be the case
+    mCurrentParent = Entry::gNoParent; // should already be the case
 }
 
 void Profiler::endFrame()
 {
     assert(mCurrentLevel == 0); // sanity check
+    assert(mCurrentParent == Entry::gNoParent); // sanity check
 
-    // Ensure we have a full circular buffer (of size gFrameDelay)
+    // Ensure we have enough entries in the circular buffer (frame count >= gFrameDelay)
     if((mFrameNumber + 1) < gFrameDelay)
     {
         return;
@@ -77,12 +79,16 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     
     Entry & entry = mEntries[mNextEntry];
 
-    // Because we do not track identity, we hope it matches
-    assert(entry.mName == nullptr || entry.mName == aName);
-    assert(entry.mLevel == Entry::gInvalidLevel || entry.mName == aName);
+    // Because we do not track identity properly when frame structure change, we hope it always matches
+    assert(entry.mId.mName == nullptr || entry.mId.mName == aName);
+    assert(entry.mId.mLevel == Entry::gInvalidLevel || entry.mId.mLevel == mCurrentLevel);
+    assert(entry.mId.mParentIdx == Entry::gInvalidEntry || entry.mId.mParentIdx == mCurrentParent);
 
-    entry.mLevel = mCurrentLevel++;
-    entry.mName = aName;
+    entry.mId.mName = aName;
+    entry.mId.mLevel = mCurrentLevel++;
+    entry.mId.mParentIdx = mCurrentParent;
+    mCurrentParent = mNextEntry; //i.e. this Entry index becomes the current parent
+
     if(entry.mActiveMetrics == 0)
     {
         for(const ProviderIndex providerIndex : aProviders)
@@ -110,31 +116,121 @@ void Profiler::endSection(EntryIndex aIndex)
     {
         getProvider(entry.mMetrics[i]).endSection(aIndex, mFrameNumber % gFrameDelay);
     }
+    mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
     --mCurrentLevel;
 }
 
 
+struct LogicalSection
+{
+    LogicalSection(const Profiler::Entry & aEntry) :
+        mId{aEntry.mId},
+        mValues{aEntry.mMetrics},
+        mActiveMetrics{aEntry.mActiveMetrics}
+    {}
+
+    void push(const Profiler::Entry & aEntry, Profiler::EntryIndex aEntryIndex)
+    {
+        assert(mActiveMetrics == aEntry.mActiveMetrics);
+        for (std::size_t metricIdx = 0; metricIdx != mActiveMetrics; ++metricIdx)
+        {
+            // TODO the accumulation should also handle other data (samples, max, min, ...)
+            // could be encapsulated in a Value member function.
+            assert(mValues[metricIdx].mProviderIndex == aEntry.mMetrics[metricIdx].mProviderIndex);
+            mValues[metricIdx].mValues.mAccumulated += aEntry.mMetrics[metricIdx].mValues.mAccumulated;
+        }
+        mEntries.push_back(aEntryIndex);
+    }
+
+    /// @brief Identity that determines the belonging of an Entry to this logical Section.
+    Profiler::Entry::Identity mId;
+    // TODO should we use an array? 
+    // Is it really useful to keep if we cumulate at push? (might be if we cache the sort result between frames)
+    std::vector<Profiler::EntryIndex> mEntries;
+
+    // TODO we actually only need to store Values here (not even sure we should keep the individual samples)
+    // If we go this route, we should split Metrics from AOS to SOA so we can copy Values from Entries with memcpy
+    std::array<Profiler::Metric<GLuint>, Profiler::gMaxMetricsPerSection> mValues;
+    std::size_t mActiveMetrics = 0;
+};
+
+
 std::string Profiler::prettyPrint() const
 {
-    std::ostringstream oss;
+    //TODO time this function
 
-    for(EntryIndex i = 0; i != mNextEntry; ++i)
+    using Clock = ProviderCPUTime::Clock;
+    auto beginTime = Clock::now();
+
+    //
+    // Group by identity
+    //
+
+    // TODO Ad 2023/08/03: #sectionid Since for the moment we expect the "frame entry structure" to stay identical
+    // we actually do not need to sort again at each frame.
+    // In the long run though, we probably want to handle frame structure changes,
+    // but there might be an optimization when we can guarantee the structure is identical to previous frame.
+    std::vector<LogicalSection> sections; // Note: We know there are at most mNextEntry logical sections,
+                                          // might allow for a preallocated array
+    for(EntryIndex entryIdx = 0; entryIdx != mNextEntry; ++entryIdx)
     {
-        const Entry & entry = mEntries[i];
+        const Entry & entry = mEntries[entryIdx];
 
-        oss << std::string(entry.mLevel * 2, ' ') << entry.mName << ":" 
+        if(auto found = std::find_if(sections.begin(), sections.end(),
+                                     [&entry](const auto & aCandidateSection)
+                                     {
+                                         return aCandidateSection.mId == entry.mId;
+                                     });
+           found != sections.end())
+        {
+            found->push(entry, entryIdx);
+        }
+        else
+        {
+            sections.emplace_back(entry);
+        }
+    }
+
+    auto sortedTime = Clock::now();
+
+    //
+    // Write the aggregated results to output stream
+    //
+    std::ostringstream oss;
+    for(const LogicalSection & section : sections)
+    {
+        oss << std::string(section.mId.mLevel * 2, ' ') << section.mId.mName << ":" 
             ;
         
-        for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
+        for (std::size_t valueIdx = 0; valueIdx != section.mActiveMetrics; ++valueIdx)
         {
-            const ProviderInterface & provider = getProvider(entry.mMetrics[i]);
+            const auto & metric = section.mValues[valueIdx];
+            const ProviderInterface & provider = getProvider(metric);
+
             oss << " " << provider.mQuantityName << " " 
-                << entry.mMetrics[i].mValues.average() 
+                << metric.mValues.average() 
                 << " " << provider.mUnit << ","
                 ;
         }
 
+        if(section.mEntries.size() > 1)
+        {
+            oss << " (accumulated: " << section.mEntries.size() << ")";
+        }
+
         oss << "\n";
+    }
+
+    //
+    // Output timing statistics about this function itself
+    //
+    {
+        using std::chrono::microseconds;
+        oss << "(generated in " 
+            << ProviderCPUTime::GetTicks<microseconds>(Clock::now() - beginTime) << " us"
+            << ", sort took " << ProviderCPUTime::GetTicks<microseconds>(sortedTime - beginTime) << " us"
+            << ")"
+            ;
     }
 
     return oss.str();
@@ -165,10 +261,8 @@ void ProviderCPUTime::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentF
 
 bool ProviderCPUTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
 {
-    using std::chrono::microseconds;
     const auto & interval = getInterval(aEntryIndex, aQueryFrame);
-    // TODO address this cast
-    aSampleResult = (GLuint)std::chrono::duration_cast<microseconds>(interval.mEnd - interval.mBegin).count();
+    aSampleResult = GetTicks<std::chrono::microseconds>(interval.mEnd - interval.mBegin);
     return true;
 }
 

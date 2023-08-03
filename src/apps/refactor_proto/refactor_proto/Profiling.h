@@ -23,8 +23,8 @@ inline Profiler & getGlobalProfiler()
 }
 
 
-// Note: Hardcoded lit of available providers for the moment,
-// as we know in which order Providers are pushed into the Profiler.
+// Note: Hardcoded list of available providers (for the time being),
+// since we know in which order Providers are pushed into the Profiler.
 enum 
 {
     CpuTime = 0,

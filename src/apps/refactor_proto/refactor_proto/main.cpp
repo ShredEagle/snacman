@@ -64,7 +64,7 @@ void runApplication(int argc, char * argv[])
         PROFILER_END_SECTION;
         PROFILER_END_FRAME;
 
-//        std::cout << renderer::getGlobalProfiler().prettyPrint();
+        std::cout << renderer::getGlobalProfiler().prettyPrint() << "\n";
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }
@@ -76,7 +76,7 @@ int main(int argc, char * argv[])
     try
     {
         se::initializeLogging();
-        spdlog::set_level(spdlog::level::debug);
+        spdlog::set_level(spdlog::level::warn);
     }
     catch (std::exception & aException)
     {

@@ -11,7 +11,7 @@
 // The design has several requirements:
 // * The Profiler instance has knowledge of a "frame" or "step", inside which sections can be defined anywhere in client code.
 // * The sections should not require client to provide permanent storage. 
-//   * TODO Sections guards on the stack are okay.
+//   * Sections guards on the stack are okay.
 //   * i.e., the Profiler is hosting all state that must be kept between frames.
 // * Sections can be arbitrarily nested, and must always be balanced (client's responsibility).
 //    * TODO Some metrics are harder to nest, for example OpenGL async Query objects,
@@ -20,12 +20,12 @@
 // * TODO The identity of a section is not a trivial matter
 //   * The identity should have implicit defaults (i.e. not client's responsiblity):
 //     * If a section is inside a loop, each iteration should be cumulated.
-//     * If a lexical section inside a scope is reached via distinct paths, 
+//     * If a lexical section inside a scope is reached via distinct paths (path meaning the "stack of sections"), 
 //       each path should lead to a distinct logical section.
 //   * What happens to identity when a frame composition changes (i.e. not the exact same sequence of sections)
 //     * Number of iterations in a loop can differ very frequently (number of lights, culled objects)
 //     * High level frame structure can differ (new screen effects, scene change (cut scene), ...)
-//   * The client should be able to override default, by opting-in per section.
+//   * The client should be able to override default, with ability to overrid identity per section.
 // * TODO Sections should be able to keep distinct metric of heterogenous types (CPU time, GPU time, GPU draw counts, ...)
 //   * The metrics should be user-extensible
 //   * Restriction: a given logical section should list the same exact metrics at each frame.
@@ -36,6 +36,7 @@
 namespace ad::renderer {
 
 
+/// @brief Specialize this interface to provide new metrics.
 class ProviderInterface
 {
 public:
@@ -61,10 +62,14 @@ public:
 
 class Profiler
 {
+    friend struct LogicalSection; // Implementation detail for grouping entries by logical section.
+
 public:
     inline static constexpr std::size_t gInitialEntries{64};
     inline static constexpr std::size_t gMaxSamples{128};
     inline static constexpr std::size_t gMaxMetricsPerSection{16};
+    /// @brief Delay before querying metrics.
+    /// This is initially implemented so asynchronous GPU request have a good chance to be ready when queried.
     inline static constexpr std::uint32_t gFrameDelay{3};
 
     using EntryIndex = ProviderInterface::EntryIndex;
@@ -100,6 +105,9 @@ public:
     std::string prettyPrint() const;
 
 private:
+    /// @brief Keep a record of up to `gMaxSample` samples, as well as special values over this record (TODO e.g. min, max, accumulation).
+    /// @tparam T_value The type of value that are recorded when sampling.
+    /// @tparam T_average The type of the average, notably usefull to request decimals when averaging integers.
     template <class T_value, class T_average = T_value>
     struct Values
     {
@@ -129,6 +137,7 @@ private:
         std::size_t mSampleCount{0};
     };
 
+    /// @brief A reference to a metrics Provider, and a `Value` record of the samples taken by this provider.
     template <class T_value, class T_average = T_value>
     struct Metric
     {
@@ -137,12 +146,26 @@ private:
         Values<T_value, T_average> mValues;
     };
 
+    /// @brief A distinct Entry is used each time the flow of control reaches beginSection().
+    /// (i.e. inside a given _frame_, each call to beginSection returns a distinct Entry.)
+    ///
+    /// Contains an array of `Metrics` measured for this entry.
     struct Entry
     {
         inline static constexpr unsigned int gInvalidLevel = -1;
+        inline static constexpr EntryIndex gInvalidEntry = std::numeric_limits<EntryIndex>::max();
+        inline static constexpr EntryIndex gNoParent = gInvalidEntry - 1;
 
-        const char * mName;
-        unsigned int mLevel = gInvalidLevel;
+        struct Identity
+        {
+            const char * mName;
+            unsigned int mLevel = gInvalidLevel;
+            EntryIndex mParentIdx = gInvalidEntry;
+
+            bool operator==(const Identity & aRhs) const = default;
+        };
+
+        Identity mId;
         std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
         std::size_t mActiveMetrics = 0;
     };
@@ -151,8 +174,9 @@ private:
     const ProviderInterface & getProvider(const Metric<GLuint> & aMetric) const;
 
     std::vector<Entry> mEntries{gInitialEntries};
-    std::size_t mNextEntry{0};
+    EntryIndex mNextEntry{0};
     unsigned int mCurrentLevel{0};
+    EntryIndex mCurrentParent{Entry::gNoParent};
     unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
 
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
@@ -171,6 +195,13 @@ struct ProviderCPUTime : public ProviderInterface
     void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
+
+    template <class T_targetDuration, class T_inputDuration>
+    static GLuint GetTicks(T_inputDuration aDuration)
+    {
+        // TODO address this cast
+        return (GLuint)std::chrono::duration_cast<T_targetDuration>(aDuration).count();
+    }
 
     //////
     struct TimeInterval

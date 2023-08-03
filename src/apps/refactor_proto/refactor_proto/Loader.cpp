@@ -44,7 +44,7 @@ namespace {
         constexpr auto target = graphics::BufferType::Array;
         graphics::ScopedBind boundBuffer{buffer, target}; // glBind()
         const GLsizeiptr size = aInitialData.size_bytes();
-        // TODO enable GL 4.5+, here used for DSA
+        // TODO enable GL 4.5+, so we could use DSA here
         glBufferData(
             static_cast<GLenum>(target),
             size,
