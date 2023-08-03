@@ -27,8 +27,12 @@ struct BufferView
 {
     graphics::BufferAny * mGLBuffer;
     // The stride is at the view level (not buffer).
-    // This way the buffer can store heterogeneous elements.
+    // This way the buffer can store heterogeneous sections, accessed by distinct views.
     GLsizei mStride;
+    // The instance divisor it at the view level, not AttributeAccessor
+    // The reasoning is that since the view is supposed to represent an homogeneous chunck of the buffer,
+    // the divisor (like the stride) will be shared by all vertices pulled from the view.
+    GLuint mInstanceDivisor = 0;
     GLintptr mOffset;
     GLsizeiptr mSize; // The size (in bytes) this buffer view has access to, starting from mOffset.
                       // Intended to be used for safety checks.
@@ -72,9 +76,6 @@ struct AttributeAccessor
 {
     std::vector<BufferView>::size_type mBufferViewIndex;
     graphics::ClientAttribute mClientDataFormat;
-    // TODO instance divisor should move to BufferView, it is shared by all vertices pulled from the view
-    // (exactly like stride)
-    GLuint mInstanceDivisor = 0;
 };
 
 

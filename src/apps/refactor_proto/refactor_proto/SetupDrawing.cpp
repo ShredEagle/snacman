@@ -22,7 +22,6 @@ namespace {
     void attachAttribute(const IntrospectProgram::Attribute & aShaderAttribute,
                          const graphics::ClientAttribute & aClientAttribute,
                          const BufferView & aVertexBufferView,
-                         GLuint aInstanceDivisor,
                          std::string_view aProgramName /* for log messages */)
     {
             // Consider secondary dimension mismatch (i.e., number of rows) a fatal error
@@ -58,7 +57,7 @@ namespace {
             graphics::attachBoundVertexBuffer(
                 {aShaderAttribute.toShaderParameter(), aClientAttribute},
                 aVertexBufferView.mStride,
-                aInstanceDivisor);
+                aVertexBufferView.mInstanceDivisor);
     }
 
 
@@ -88,11 +87,10 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
             const AttributeAccessor & accessor = found->second;
             const BufferView & vertexBufferView = 
                 aVertices.mVertexBufferViews.at(accessor.mBufferViewIndex);
-            assert(accessor.mInstanceDivisor == 0); // should always be 0 for the VertexStream it seems
+            assert(vertexBufferView.mInstanceDivisor == 0); // should always be 0 for the VertexStream as far as I imagine
             attachAttribute(shaderAttribute,
                             accessor.mClientDataFormat,
                             vertexBufferView,
-                            accessor.mInstanceDivisor,
                             aProgram.name());
         }
         else
@@ -110,7 +108,6 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
                     attachAttribute(shaderAttribute,
                                     accessor.mClientDataFormat,
                                     vertexBufferView,
-                                    accessor.mInstanceDivisor,
                                     aProgram.name());
                     continue; // Move to the next program attribute since we found a match.
                 }

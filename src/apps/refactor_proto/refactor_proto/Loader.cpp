@@ -282,8 +282,8 @@ Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, M
 
 
 Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
-                            Storage & aStorage,
-                            const FeatureSet & aFeatures)
+                            Storage & aStorage/*,
+                            const FeatureSet & aFeatures*/)
 {
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
@@ -410,6 +410,7 @@ SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstance
     BufferView vboView{
         .mGLBuffer = &aStorage.mBuffers.back(),
         .mStride = sizeof(InstanceData),
+        .mInstanceDivisor = 1,
         .mOffset = 0,
         .mSize = size, // The view has access to the whole buffer
     };
@@ -426,7 +427,6 @@ SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstance
                         .mOffset = offsetof(InstanceData, mModelTransform),
                         .mComponentType = GL_FLOAT
                     },
-                    .mInstanceDivisor = 1,
                 }
             },
             {
@@ -438,7 +438,6 @@ SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstance
                         .mOffset = offsetof(InstanceData, mMaterialIdx),
                         .mComponentType = GL_UNSIGNED_INT,
                     },
-                    .mInstanceDivisor = 1,
                 }
             },
         }
