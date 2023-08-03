@@ -123,10 +123,11 @@ void Profiler::endSection(EntryIndex aIndex)
 
 struct LogicalSection
 {
-    LogicalSection(const Profiler::Entry & aEntry) :
+    LogicalSection(const Profiler::Entry & aEntry, Profiler::EntryIndex aEntryIndex) :
         mId{aEntry.mId},
         mValues{aEntry.mMetrics},
-        mActiveMetrics{aEntry.mActiveMetrics}
+        mActiveMetrics{aEntry.mActiveMetrics},
+        mEntries{aEntryIndex}
     {}
 
     void push(const Profiler::Entry & aEntry, Profiler::EntryIndex aEntryIndex)
@@ -172,22 +173,50 @@ std::string Profiler::prettyPrint() const
     // but there might be an optimization when we can guarantee the structure is identical to previous frame.
     std::vector<LogicalSection> sections; // Note: We know there are at most mNextEntry logical sections,
                                           // might allow for a preallocated array
+
+    using LogicalSectionId = unsigned short; // we should not have that many logical sections right?
+    static constexpr LogicalSectionId gInvalidLogicalSection = std::numeric_limits<LogicalSectionId>::max();
+    std::vector<LogicalSectionId> entryIdToLogicalSectionId(mEntries.size(), gInvalidLogicalSection);
+
     for(EntryIndex entryIdx = 0; entryIdx != mNextEntry; ++entryIdx)
     {
         const Entry & entry = mEntries[entryIdx];
 
+        // Important:
+        // We cannot simply compare the Entry Identity the Identity of a section to test if the Entry belongs there:
+        // the parent index could be different (i.e. parents are distinct entries),
+        // yet both parents could still belong to the same section.
+        // For this reason, we actually have to lookup which section each parent belongs to,
+        // this is the purpose of the lookup below.
         if(auto found = std::find_if(sections.begin(), sections.end(),
-                                     [&entry](const auto & aCandidateSection)
+                                     [&entry, &lookup = entryIdToLogicalSectionId](const auto & aCandidateSection)
                                      {
-                                         return aCandidateSection.mId == entry.mId;
+                                        assert(entry.mId.mParentIdx == Entry::gNoParent 
+                                            || (lookup[entry.mId.mParentIdx] != gInvalidLogicalSection));
+
+                                        return aCandidateSection.mId.mName == entry.mId.mName
+                                                // Check if the entry and the candidate section have the same logical parent:
+                                                // * either both have a parent, then we compare the LogicalSectionId of both parents
+                                                // * OR both have no parent
+                                            && (   (   entry.mId.mParentIdx != Entry::gNoParent 
+                                                    && aCandidateSection.mId.mParentIdx != Entry::gNoParent 
+                                                    && lookup[entry.mId.mParentIdx] == lookup[aCandidateSection.mId.mParentIdx])
+                                                || (   entry.mId.mParentIdx == Entry::gNoParent
+                                                    && aCandidateSection.mId.mParentIdx == Entry::gNoParent))
+                                                // Check if the entry and candidate have the same level
+                                                // Should alway be true then, so we assert
+                                            && (assert(aCandidateSection.mId.mLevel == entry.mId.mLevel), true)
+                                            ;
                                      });
            found != sections.end())
         {
+            entryIdToLogicalSectionId[entryIdx] = (LogicalSectionId)(found - sections.begin());
             found->push(entry, entryIdx);
         }
         else
         {
-            sections.emplace_back(entry);
+            entryIdToLogicalSectionId[entryIdx] = (LogicalSectionId)sections.size();
+            sections.emplace_back(entry, entryIdx);
         }
     }
 
