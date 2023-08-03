@@ -44,8 +44,8 @@ struct Loader
 {
     /// @brief Load an effect file (.sefx), store it in `aStorage` and return its handle.
     Effect * loadEffect(const std::filesystem::path & aEffectFile,
-                        Storage & aStorage,
-                        const FeatureSet & aFeatures);
+                        Storage & aStorage/*,
+                        const FeatureSet & aFeatures*/);
 
     /// @brief Load a `.prog` file as an IntrospectProgram.
     IntrospectProgram loadProgram(const filesystem::path & aProgFile);

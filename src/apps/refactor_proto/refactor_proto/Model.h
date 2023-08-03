@@ -104,15 +104,15 @@ struct VertexStream /*: public SemanticBufferViews*/
 
 #undef SEMANTIC_BUFFER_MEMBERS
 
-// TODO might be better as a binary flag, but this still should allow for user extension
-// (anyway, feature order should not be important)
-using FeatureSet = std::set<Feature>;
+//// TODO might be better as a binary flag, but this still should allow for user extension
+//// (anyway, feature order should not be important)
+//using FeatureSet = std::set<Feature>;
 
 struct Part
 {
     VertexStream mVertexStream;
     Material mMaterial; // TODO #matref: should probably be a "reference", as it is likely shared
-    FeatureSet mFeatures;
+    //FeatureSet mFeatures;
 };
 
 

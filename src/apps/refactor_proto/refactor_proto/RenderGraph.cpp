@@ -402,7 +402,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
         }
     });
 
-    Effect * phongEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage, {});
+    Effect * phongEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage);
     static Material defaultPhongMaterial{
         .mEffect = phongEffect,
     };

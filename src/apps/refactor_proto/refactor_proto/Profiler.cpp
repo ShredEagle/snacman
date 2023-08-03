@@ -158,8 +158,6 @@ struct LogicalSection
 
 std::string Profiler::prettyPrint() const
 {
-    //TODO time this function
-
     using Clock = ProviderCPUTime::Clock;
     auto beginTime = Clock::now();
 
