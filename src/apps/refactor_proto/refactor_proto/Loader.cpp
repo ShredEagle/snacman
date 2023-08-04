@@ -369,37 +369,37 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile)
 }
 
 
-VertexStream makeFromPositions(Storage & aStorage, std::span<math::Position<3, GLfloat>> aPositions)
-{
-    auto [vbo, size] = makeMutableBuffer(aPositions, GL_STATIC_DRAW);
-    aStorage.mBuffers.push_back(std::move(vbo));
-
-    BufferView vboView{
-        .mGLBuffer = &aStorage.mBuffers.back(),
-        .mStride = sizeof(decltype(aPositions)::value_type),
-        .mOffset = 0,
-        .mSize = size, // The view has access to the whole buffer
-    };
-
-    return VertexStream{
-        .mVertexBufferViews{ vboView, },
-        .mSemanticToAttribute{
-            {
-                semantic::gPosition,
-                AttributeAccessor{
-                    .mBufferViewIndex = 0, // view is added above
-                    .mClientDataFormat{
-                        .mDimension = 3,
-                        .mOffset = 0,
-                        .mComponentType = GL_FLOAT
-                    }
-                }
-            },
-        },
-        .mVertexCount = (GLsizei)std::size(aPositions),
-        .mPrimitiveMode = GL_TRIANGLES,
-    };
-}
+//VertexStream makeFromPositions(Storage & aStorage, std::span<math::Position<3, GLfloat>> aPositions)
+//{
+//    auto [vbo, size] = makeMutableBuffer(aPositions, GL_STATIC_DRAW);
+//    aStorage.mBuffers.push_back(std::move(vbo));
+//
+//    BufferView vboView{
+//        .mGLBuffer = &aStorage.mBuffers.back(),
+//        .mStride = sizeof(decltype(aPositions)::value_type),
+//        .mOffset = 0,
+//        .mSize = size, // The view has access to the whole buffer
+//    };
+//
+//    return VertexStream{
+//        .mVertexBufferViews{ vboView, },
+//        .mSemanticToAttribute{
+//            {
+//                semantic::gPosition,
+//                AttributeAccessor{
+//                    .mBufferViewIndex = 0, // view is added above
+//                    .mClientDataFormat{
+//                        .mDimension = 3,
+//                        .mOffset = 0,
+//                        .mComponentType = GL_FLOAT
+//                    }
+//                }
+//            },
+//        },
+//        .mVertexCount = (GLsizei)std::size(aPositions),
+//        .mPrimitiveMode = GL_TRIANGLES,
+//    };
+//}
 
 
 SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)

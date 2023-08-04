@@ -102,21 +102,21 @@ namespace {
 
 
 
-    VertexStream makeTriangle(Storage & aStorage)
-    {
-        std::array<math::Position<3, GLfloat>, 3> vertices{{
-            { 1.f, -1.f, 0.f},
-            { 0.f,  1.f, 0.f},
-            {-1.f, -1.f, 0.f},
-        }};
-        return makeFromPositions(aStorage, std::span{vertices});
-    }
+    //VertexStream makeTriangle(Storage & aStorage)
+    //{
+    //    std::array<math::Position<3, GLfloat>, 3> vertices{{
+    //        { 1.f, -1.f, 0.f},
+    //        { 0.f,  1.f, 0.f},
+    //        {-1.f, -1.f, 0.f},
+    //    }};
+    //    return makeFromPositions(aStorage, std::span{vertices});
+    //}
 
-    VertexStream makeCube(Storage & aStorage)
-    {
-        auto cubeVertices = getExpandedCubeVertices<math::Position<3, GLfloat>>();
-        return makeFromPositions(aStorage, std::span{cubeVertices});
-    }
+    //VertexStream makeCube(Storage & aStorage)
+    //{
+    //    auto cubeVertices = getExpandedCubeVertices<math::Position<3, GLfloat>>();
+    //    return makeFromPositions(aStorage, std::span{cubeVertices});
+    //}
 
     Material makeWhiteMaterial(Storage & aStorage)
     {
@@ -373,34 +373,34 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     mStorage.mPhongMaterials.reserve(16);
     mStorage.mTextures.reserve(16);
 
-    static Object triangle;
-    triangle.mParts.push_back(Part{
-        .mVertexStream = makeTriangle(mStorage),
-        .mMaterial = makeWhiteMaterial(mStorage),
-    });
+    //static Object triangle;
+    //triangle.mParts.push_back(Part{
+    //    .mVertexStream = makeTriangle(mStorage),
+    //    .mMaterial = makeWhiteMaterial(mStorage),
+    //});
 
-    mScene.addToRoot(Instance{
-        .mObject = &triangle,
-        .mPose = {
-            .mPosition = {-0.5f, -0.2f, 0.f},
-            .mUniformScale = 0.3f,
-        }
-    });
+    //mScene.addToRoot(Instance{
+    //    .mObject = &triangle,
+    //    .mPose = {
+    //        .mPosition = {-0.5f, -0.2f, 0.f},
+    //        .mUniformScale = 0.3f,
+    //    }
+    //});
 
-    // TODO cache materials
-    static Object cube;
-    cube.mParts.push_back(Part{
-        .mVertexStream = makeCube(mStorage),
-        .mMaterial = triangle.mParts[0].mMaterial,
-    });
+    //// TODO cache materials
+    //static Object cube;
+    //cube.mParts.push_back(Part{
+    //    .mVertexStream = makeCube(mStorage),
+    //    .mMaterial = triangle.mParts[0].mMaterial,
+    //});
 
-    mScene.addToRoot(Instance{
-        .mObject = &cube,
-        .mPose = {
-            .mPosition = {0.5f, -0.2f, 0.f},
-            .mUniformScale = 0.3f,
-        }
-    });
+    //mScene.addToRoot(Instance{
+    //    .mObject = &cube,
+    //    .mPose = {
+    //        .mPosition = {0.5f, -0.2f, 0.f},
+    //        .mUniformScale = 0.3f,
+    //    }
+    //});
 
     Effect * phongEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage);
     static Material defaultPhongMaterial{
