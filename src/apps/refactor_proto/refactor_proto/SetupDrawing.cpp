@@ -66,7 +66,7 @@ namespace {
 
 graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
                                        const VertexStream & aVertices,
-                                       std::initializer_list<const SemanticBufferViews *> aExtraVertexAttributes)
+                                       std::initializer_list<const GenericStream *> aExtraVertexAttributes)
 {
     graphics::VertexArrayObject vertexArray;
     graphics::ScopedBind scopedVao{vertexArray};
@@ -97,7 +97,7 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
         {
             // TODO I do not like this repetition, this should be factorized with first step.
             // And the overall flow of control could be less convoluted.
-            for(const SemanticBufferViews * semanticBufferView : aExtraVertexAttributes)
+            for(const GenericStream * semanticBufferView : aExtraVertexAttributes)
             {
                 if (auto found = semanticBufferView->mSemanticToAttribute.find(shaderAttribute.mSemantic);
                     found != semanticBufferView->mSemanticToAttribute.end())

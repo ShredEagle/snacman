@@ -127,60 +127,66 @@ namespace {
         constexpr auto gIndexSize = sizeof(unsigned int);
         BufferView iboView = loadBuffer(gIndexSize, indicesCount);
 
-        Part part{
-            .mVertexStream{
-                .mVertexBufferViews{ positionView, normalView},
-                .mSemanticToAttribute{
-                    {
-                        semantic::gPosition,
-                        AttributeAccessor{
-                            .mBufferViewIndex = 0, // view is added above
-                            .mClientDataFormat{
-                                .mDimension = 3,
-                                .mOffset = 0,
-                                .mComponentType = GL_FLOAT
-                            }
+        // TODO this is the stream we should reuse when storing several parts in the same buffer
+        aStorage.mVertexStreams.push_back({
+            .mVertexBufferViews{ positionView, normalView},
+            .mSemanticToAttribute{
+                {
+                    semantic::gPosition,
+                    AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 3,
+                            .mOffset = 0,
+                            .mComponentType = GL_FLOAT
                         }
-                    },
-                    {
-                        semantic::gNormal,
-                        AttributeAccessor{
-                            .mBufferViewIndex = 1, // view is added above
-                            .mClientDataFormat{
-                                .mDimension = 3,
-                                .mOffset = 0,
-                                .mComponentType = GL_FLOAT
-                            }
-                        }
-                    },
+                    }
                 },
-                .mVertexCount = (GLsizei)verticesCount,
-                .mPrimitiveMode = GL_TRIANGLES,
-                .mIndexBufferView = iboView,
-                .mIndicesType = GL_UNSIGNED_INT,
-                .mIndicesCount = (GLsizei)indicesCount,
+                {
+                    semantic::gNormal,
+                    AttributeAccessor{
+                        .mBufferViewIndex = 1, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 3,
+                            .mOffset = 0,
+                            .mComponentType = GL_FLOAT
+                        }
+                    }
+                },
             },
-            .mMaterial{
-                .mPhongMaterialIdx = materialIndex,
-                .mEffect = aDefaultMaterial.mEffect,
-            }
-        };
+            .mIndexBufferView = iboView,
+            .mIndicesType = GL_UNSIGNED_INT,
+        });
+
+        VertexStream & vertexStream = aStorage.mVertexStreams.back();
 
         if(uvChannelsCount != 0)
         {
-            part.mVertexStream.mSemanticToAttribute.emplace(
+            vertexStream.mSemanticToAttribute.emplace(
                 semantic::gUv,
                 AttributeAccessor{
                     // Size taken before pushing back
-                    .mBufferViewIndex = part.mVertexStream.mVertexBufferViews.size(),
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size(),
                     .mClientDataFormat{
                         .mDimension = 2,
                         .mOffset = 0,
                         .mComponentType = GL_FLOAT,
                     },
                 });
-            part.mVertexStream.mVertexBufferViews.push_back(std::move(uvView));
+            vertexStream.mVertexBufferViews.push_back(std::move(uvView));
         }
+
+
+        Part part{
+            .mMaterial{
+                .mPhongMaterialIdx = materialIndex,
+                .mEffect = aDefaultMaterial.mEffect,
+            },
+            .mVertexStream = &vertexStream,
+            .mPrimitiveMode = GL_TRIANGLES,
+            .mVertexCount = (GLsizei)verticesCount,
+            .mIndicesCount = (GLsizei)indicesCount,
+        };
 
         return part;
     }
@@ -291,10 +297,12 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
     Json effect = Json::parse(std::ifstream{mFinder.pathFor(aEffectFile)});
     for (const auto & technique : effect.at("techniques"))
     {
-        aStorage.mPrograms.push_back(loadProgram(technique.at("programfile")));
+        aStorage.mPrograms.push_back(ConfiguredProgram{
+            .mProgram = loadProgram(technique.at("programfile")),
+        });
         result.mTechniques.push_back(
             Technique{
-                .mProgram = &aStorage.mPrograms.back(),
+                .mConfiguredProgram = &aStorage.mPrograms.back(),
             });
         if(technique.contains("annotations"))
         {
@@ -402,7 +410,7 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile)
 //}
 
 
-SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
+GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
 {
     auto [vbo, size] = makeMutableBuffer<InstanceData>(aInstanceCount, GL_STREAM_DRAW);
     aStorage.mBuffers.push_back(std::move(vbo));
@@ -415,7 +423,7 @@ SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstance
         .mSize = size, // The view has access to the whole buffer
     };
 
-    return SemanticBufferViews{
+    return GenericStream{
         .mVertexBufferViews = { vboView, },
         .mSemanticToAttribute{
             {

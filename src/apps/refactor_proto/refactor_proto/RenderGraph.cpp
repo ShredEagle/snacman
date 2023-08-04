@@ -120,17 +120,20 @@ namespace {
 
     Material makeWhiteMaterial(Storage & aStorage)
     {
-        aStorage.mPrograms.emplace_back(
-            graphics::makeLinkedProgram({
-                {GL_VERTEX_SHADER, gVertexShader},
-                {GL_FRAGMENT_SHADER, gFragmentShader},
-            }),
-            "white");
+        aStorage.mPrograms.push_back({
+            .mProgram = {
+                graphics::makeLinkedProgram({
+                    {GL_VERTEX_SHADER, gVertexShader},
+                    {GL_FRAGMENT_SHADER, gFragmentShader},
+                }),
+                "white",
+            },
+        });
 
         Effect effect{
             .mTechniques{makeVector(
                 Technique{
-                    .mProgram{ &aStorage.mPrograms.back() }
+                    .mConfiguredProgram{ &aStorage.mPrograms.back() }
                 }
             )},
         };
@@ -173,7 +176,7 @@ namespace {
 
 
     void draw(const Instance & aInstance,
-              const SemanticBufferViews & aInstanceBufferView,
+              const GenericStream & aInstanceBufferView,
               const Camera & aCamera,
               const Storage & aStorage)
     {
@@ -239,9 +242,9 @@ namespace {
             }
 
             assert(material.mEffect->mTechniques.size() == 1);
-            const IntrospectProgram & selectedProgram = *material.mEffect->mTechniques.at(0).mProgram;
+            const IntrospectProgram & selectedProgram = material.mEffect->mTechniques.at(0).mConfiguredProgram->mProgram;
 
-            const VertexStream & vertexStream = part.mVertexStream;
+            const VertexStream & vertexStream = *part.mVertexStream;
 
             // TODO cache VAO
             PROFILER_BEGIN_SECTION("prepare_VAO", CpuTime);
@@ -272,18 +275,20 @@ namespace {
                 if(vertexStream.mIndicesType == NULL)
                 {
                     glDrawArraysInstanced(
-                        vertexStream.mPrimitiveMode,
-                        0,
-                        vertexStream.mVertexCount,
+                        part.mPrimitiveMode,
+                        part.mVertexFirst,
+                        part.mVertexCount,
                         1);
                 }
                 else
                 {
                     glDrawElementsInstanced(
-                        vertexStream.mPrimitiveMode,
-                        vertexStream.mIndicesCount,
+                        part.mPrimitiveMode,
+                        part.mIndicesCount,
                         vertexStream.mIndicesType,
-                        (const void *)vertexStream.mIndexBufferView.mOffset,
+                        (const void *)
+                            (vertexStream.mIndexBufferView.mOffset 
+                            + (part.mIndexFirst * graphics::getByteSize(vertexStream.mIndicesType))),
                         1);
                 }
             }

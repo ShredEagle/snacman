@@ -55,7 +55,7 @@ struct Loader
 
 VertexStream makeFromPositions(Storage & aStorage, std::span<math::Position<3, GLfloat>> aPositions);
 
-SemanticBufferViews makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount);
+GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount);
 
 
 } // namespace ad::renderer

@@ -36,7 +36,7 @@ struct RenderGraph
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
     Scene mScene;
-    SemanticBufferViews mInstanceStream;
+    GenericStream mInstanceStream;
     Loader mLoader;
 
     Camera mCamera;
