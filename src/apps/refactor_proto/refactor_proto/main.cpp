@@ -45,6 +45,7 @@ void runApplication(int argc, char * argv[])
         glfwFlags,
         4, 1,
     };
+    glfwSwapInterval(0);
 
     auto scopeProfiler = renderer::scopeGlobalProfiler();
 
