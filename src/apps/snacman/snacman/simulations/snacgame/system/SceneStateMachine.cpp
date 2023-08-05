@@ -84,7 +84,7 @@ SceneStateMachine::SceneStateMachine(ent::EntityManager & aWorld,
         auto sceneDataIt =
             std::find_if(mPossibleScene.begin(), mPossibleScene.end(),
                          [&sceneDesc](std::shared_ptr<Scene> & d) {
-                             return d->mName == sceneDesc["name"];
+                             return d->mName == sceneDesc["name"].get<std::string>();
                          });
         assert(sceneDataIt != mPossibleScene.end() && "Cannot find scene");
 
@@ -95,7 +95,7 @@ SceneStateMachine::SceneStateMachine(ent::EntityManager & aWorld,
             auto targetIt =
                 std::find_if(mPossibleScene.begin(), mPossibleScene.end(),
                              [&transition](std::shared_ptr<Scene> & d) {
-                                 return d->mName == transition["target"];
+                                 return d->mName == transition["target"].get<std::string>();
                              });
 
             sceneData->mStateTransition.insert(
