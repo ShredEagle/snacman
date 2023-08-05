@@ -86,6 +86,10 @@ struct ProgramConfig
 struct ConfiguredProgram
 {
     IntrospectProgram mProgram;
+    // Note: it is not ideal to "pollute" the data model with a notion of cache, but it makes access simpler.
+    // Note: Distinct programs but with the same vertex attribute configuration 
+    // (same semantic & type at the same attributes indices)
+    // can share the same VAO, which is why we **reference** the config.
     /// @brief Provide access to the cache of VAOs for this program.
     Handle<ProgramConfig> mConfiguration;
 };
@@ -212,7 +216,8 @@ struct Node
 // and storage of graphics API level objects (i.e. names of textures, buffers, ...)
 struct Storage
 {
-    // TODO Ad 2023/08/04: Change all to lists
+    // TODO Ad 2023/08/04: Change what is possible to lists (avoid relocation of elements)
+    // Some are actually used for random access though, so this class needs a deep refactoring anyway
     std::vector<graphics::BufferAny> mBuffers;
     std::vector<Object> mObjects;
     std::vector<Effect> mEffects;
