@@ -58,6 +58,28 @@ struct BufferView
 // Material & Shader
 //
 
+struct VertexStream;
+
+/// @brief Cache of the vertex attributes configurations (i.e. VAOs) for a given program 
+/// (or a set of compatible programs).
+///
+/// Since this cache will be at the program level, the per-program lookup is already done.
+/// The remaining key to lookup is the buffer array data format / source buffer, that we map to VertexStream identity.
+struct ProgramConfig
+{
+    struct Entry
+    {
+        // Note: When moving to VAB (separate format) this would become too conservative:
+        // all buffer sets with the same format (attribute size, component type, relative offset) can share a VAO.
+        Handle<const VertexStream> mVertexStream;
+        graphics::VertexArrayObject mVao;
+    };
+    // Note: The cache is implemented as a vector, lookup is made by visiting elements and comparing VertexStream handles.
+    std::vector<Entry> mEntries;
+};
+
+
+
 /// @brief A program with its cache of VAOs.
 struct ConfiguredProgram
 {
@@ -66,10 +88,8 @@ struct ConfiguredProgram
     // Note: Distinct programs but with the same vertex attribute configuration 
     // (same semantic & type at the same attributes indices)
     // can share the same VAO, which is why we **reference** the config.
-    // Note: For the moment, try with a single Vao per program (to see if we can make it work
-    // without a complicated lookup to find the specific Vao for a combination of buffers)
     /// @brief Provide access to the cache of VAOs for this program.
-    Handle<graphics::VertexArrayObject> mVao;
+    Handle<ProgramConfig> mConfig;
 };
 
 struct Technique
@@ -204,7 +224,7 @@ struct Storage
     std::vector<PhongMaterial> mPhongMaterials;
     std::vector<graphics::Texture> mTextures;
     std::list<VertexStream> mVertexStreams;
-    std::list<graphics::VertexArrayObject> mVaos;
+    std::list<ProgramConfig> mProgramConfigs;
 };
 
 

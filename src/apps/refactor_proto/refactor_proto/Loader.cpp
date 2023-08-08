@@ -302,11 +302,14 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
     {
         aStorage.mPrograms.push_back(ConfiguredProgram{
             .mProgram = loadProgram(technique.at("programfile")),
+            // TODO Share Configs between programs that are compatibles (i.e., same input semantic and type at same attribute index)
+            // (For simplicity, we create one Config per program at the moment).
+            .mConfig = (aStorage.mProgramConfigs.emplace_back(), &aStorage.mProgramConfigs.back()),
         });
-        result.mTechniques.push_back(
-            Technique{
-                .mConfiguredProgram = &aStorage.mPrograms.back(),
-            });
+        result.mTechniques.push_back(Technique{
+            .mConfiguredProgram = &aStorage.mPrograms.back(),
+        });
+
         if(technique.contains("annotations"))
         {
             Technique & inserted = result.mTechniques.back();

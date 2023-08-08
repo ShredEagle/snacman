@@ -243,21 +243,35 @@ namespace {
 
             assert(material.mEffect->mTechniques.size() == 1);
             
-            // We are "lucky" that it is via pointer, so the top level constness is not propagated...
-            ConfiguredProgram & configuredProgram = *material.mEffect->mTechniques.at(0).mConfiguredProgram;
+            const ConfiguredProgram & configuredProgram = *material.mEffect->mTechniques.at(0).mConfiguredProgram;
             const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
 
             const VertexStream & vertexStream = *part.mVertexStream;
 
             // TODO cache VAO -- in progress
             PROFILER_BEGIN_SECTION("prepare_VAO", CpuTime);
-            if(Handle<graphics::VertexArrayObject> & vao = configuredProgram.mVao;
-               vao == gNullHandle)
+            // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
+            const auto & vao = [&, &entries = configuredProgram.mConfig->mEntries]() -> const graphics::VertexArrayObject &
             {
-                aStorage.mVaos.push_back(prepareVAO(selectedProgram, vertexStream));
-                vao = &aStorage.mVaos.back();
-            }
-            const graphics::VertexArrayObject & vao = *configuredProgram.mVao;
+                if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
+                                                   [&vertexStream, &part](const auto & aEntry)
+                                                   {
+                                                       return aEntry.mVertexStream == part.mVertexStream;
+                                                   });
+                    foundConfig != entries.end())
+                {
+                    return foundConfig->mVao;
+                }
+                else
+                {
+                    entries.push_back(
+                        ProgramConfig::Entry{
+                            .mVertexStream = part.mVertexStream,
+                            .mVao = prepareVAO(selectedProgram, vertexStream),
+                        });
+                    return entries.back().mVao;
+                }
+            }();
             PROFILER_END_SECTION;
             graphics::ScopedBind vaoScope{vao};
             
