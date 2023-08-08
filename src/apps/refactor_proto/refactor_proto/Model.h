@@ -25,6 +25,8 @@ namespace ad::renderer {
 template <class T>
 using Handle = T *;
 
+static constexpr auto gNullHandle = nullptr;
+
 //
 // GL coupled (low level)
 //
@@ -56,32 +58,6 @@ struct BufferView
 // Material & Shader
 //
 
-struct VertexStream;
-struct GenericStream;
-
-// The object containing all information to prepare a VAO for a program.
-// It allows to cache VAOs per program.
-struct VertexPullerSetup
-{
-    Handle<VertexStream> mVertexStream;
-    std::vector<Handle<GenericStream>> mExtraStreams;
-};
-
-
-/// @brief Cache of all the configurations (i.e. VAOs) for a given program (or a set of compatible programs).
-struct ProgramConfig
-{
-    struct Entry
-    {
-        // Note: When moving to VAB (separate format) this would become too conservative:
-        // all buffer sets with the same format (attribute size, component type, relative offset) can share a VAO.
-        Handle<VertexPullerSetup> mVertexPullerSetup;
-        Handle<graphics::VertexArrayObject> mVao;
-    };
-    std::vector<Entry> mEntries;
-};
-
-
 /// @brief A program with its cache of VAOs.
 struct ConfiguredProgram
 {
@@ -90,8 +66,10 @@ struct ConfiguredProgram
     // Note: Distinct programs but with the same vertex attribute configuration 
     // (same semantic & type at the same attributes indices)
     // can share the same VAO, which is why we **reference** the config.
+    // Note: For the moment, try with a single Vao per program (to see if we can make it work
+    // without a complicated lookup to find the specific Vao for a combination of buffers)
     /// @brief Provide access to the cache of VAOs for this program.
-    Handle<ProgramConfig> mConfiguration;
+    Handle<graphics::VertexArrayObject> mVao;
 };
 
 struct Technique
@@ -159,6 +137,7 @@ struct VertexStream /*: public SemanticBufferViews*/
 struct Part
 {
     Material mMaterial; // TODO #matref: should probably be a "reference", as it is likely shared
+                        // on the other hand, it is currently very lightweight
     Handle<VertexStream> mVertexStream;
     GLenum mPrimitiveMode = NULL;
     GLsizei mVertexFirst = 0;
@@ -225,6 +204,7 @@ struct Storage
     std::vector<PhongMaterial> mPhongMaterials;
     std::vector<graphics::Texture> mTextures;
     std::list<VertexStream> mVertexStreams;
+    std::list<graphics::VertexArrayObject> mVaos;
 };
 
 

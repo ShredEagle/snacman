@@ -65,8 +65,7 @@ namespace {
 
 
 graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
-                                       const VertexStream & aVertices,
-                                       std::initializer_list<const GenericStream *> aExtraVertexAttributes)
+                                       const VertexStream & aVertices)
 {
     graphics::VertexArrayObject vertexArray;
     graphics::ScopedBind scopedVao{vertexArray};
@@ -87,7 +86,8 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
             const AttributeAccessor & accessor = found->second;
             const BufferView & vertexBufferView = 
                 aVertices.mVertexBufferViews.at(accessor.mBufferViewIndex);
-            assert(vertexBufferView.mInstanceDivisor == 0); // should always be 0 for the VertexStream as far as I imagine
+            // Assertion below is not true anymore, since we merge everything into the VertexStream
+            //assert(vertexBufferView.mInstanceDivisor == 0); // should always be 0 for the VertexStream as far as I imagine
             attachAttribute(shaderAttribute,
                             accessor.mClientDataFormat,
                             vertexBufferView,
@@ -95,29 +95,11 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
         }
         else
         {
-            // TODO I do not like this repetition, this should be factorized with first step.
-            // And the overall flow of control could be less convoluted.
-            for(const GenericStream * semanticBufferView : aExtraVertexAttributes)
-            {
-                if (auto found = semanticBufferView->mSemanticToAttribute.find(shaderAttribute.mSemantic);
-                    found != semanticBufferView->mSemanticToAttribute.end())
-                {
-                    const AttributeAccessor & accessor = found->second;
-                    const BufferView & vertexBufferView = 
-                        semanticBufferView->mVertexBufferViews.at(accessor.mBufferViewIndex);
-                    attachAttribute(shaderAttribute,
-                                    accessor.mClientDataFormat,
-                                    vertexBufferView,
-                                    aProgram.name());
-                    continue; // Move to the next program attribute since we found a match.
-                }
-
-                SELOG(warn)(
-                    "{}: Could not find an a vertex array buffer for semantic '{}' in program '{}'.", 
-                    __func__,
-                    to_string(shaderAttribute.mSemantic),
-                    aProgram.name());
-            }
+            SELOG(warn)(
+                "{}: Could not find an a vertex array buffer for semantic '{}' in program '{}'.", 
+                __func__,
+                to_string(shaderAttribute.mSemantic),
+                aProgram.name());
         }
     }
 

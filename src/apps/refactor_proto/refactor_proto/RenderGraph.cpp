@@ -178,7 +178,7 @@ namespace {
     void draw(const Instance & aInstance,
               const GenericStream & aInstanceBufferView,
               const Camera & aCamera,
-              const Storage & aStorage)
+              Storage & aStorage)
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
         // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
@@ -242,13 +242,22 @@ namespace {
             }
 
             assert(material.mEffect->mTechniques.size() == 1);
-            const IntrospectProgram & selectedProgram = material.mEffect->mTechniques.at(0).mConfiguredProgram->mProgram;
+            
+            // We are "lucky" that it is via pointer, so the top level constness is not propagated...
+            ConfiguredProgram & configuredProgram = *material.mEffect->mTechniques.at(0).mConfiguredProgram;
+            const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
 
             const VertexStream & vertexStream = *part.mVertexStream;
 
-            // TODO cache VAO
+            // TODO cache VAO -- in progress
             PROFILER_BEGIN_SECTION("prepare_VAO", CpuTime);
-            graphics::VertexArrayObject vao = prepareVAO(selectedProgram, vertexStream, {&aInstanceBufferView});
+            if(Handle<graphics::VertexArrayObject> & vao = configuredProgram.mVao;
+               vao == gNullHandle)
+            {
+                aStorage.mVaos.push_back(prepareVAO(selectedProgram, vertexStream));
+                vao = &aStorage.mVaos.back();
+            }
+            const graphics::VertexArrayObject & vao = *configuredProgram.mVao;
             PROFILER_END_SECTION;
             graphics::ScopedBind vaoScope{vao};
             
@@ -378,6 +387,9 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     mStorage.mPhongMaterials.reserve(16);
     mStorage.mTextures.reserve(16);
 
+    // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
+    mInstanceStream = makeInstanceStream(mStorage, 1);
+
     //static Object triangle;
     //triangle.mParts.push_back(Part{
     //    .mVertexStream = makeTriangle(mStorage),
@@ -411,7 +423,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     static Material defaultPhongMaterial{
         .mEffect = phongEffect,
     };
-    Node model = loadBinary(aModelFile, mStorage, defaultPhongMaterial);
+    Node model = loadBinary(aModelFile, mStorage, defaultPhongMaterial, mInstanceStream);
     model.mInstance.mPose.mPosition = {0.0f, 0.2f, 0.f};
     // TODO automatically handle scaling via model bounding box.
     model.mInstance.mPose.mUniformScale = 0.005f;
@@ -440,9 +452,6 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
         phong.mSpecularColor = math::hdr::gWhite<float> * 0.5f;
         phong.mSpecularExponent = 100.f;
     }
-
-    // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
-    mInstanceStream = makeInstanceStream(mStorage, 1);
 }
 
 

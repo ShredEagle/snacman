@@ -81,7 +81,7 @@ namespace {
 
     // TODO consolidate loading several attribute, several meshes into the same GL buffers
     // (the attribute interleaving might be done on the exporter side though).
-    Part loadMesh(BinaryInArchive & aIn, Storage & aStorage, Material aDefaultMaterial)
+    Part loadMesh(BinaryInArchive & aIn, Storage & aStorage, Material aDefaultMaterial, const GenericStream & aStream)
     {
         auto loadBuffer = [&aStorage, &aIn](GLsizei aElementSize, std::size_t aElementCount)
         {
@@ -129,36 +129,39 @@ namespace {
 
         // TODO this is the stream we should reuse when storing several parts in the same buffer
         aStorage.mVertexStreams.push_back({
-            .mVertexBufferViews{ positionView, normalView},
-            .mSemanticToAttribute{
-                {
-                    semantic::gPosition,
-                    AttributeAccessor{
-                        .mBufferViewIndex = 0, // view is added above
-                        .mClientDataFormat{
-                            .mDimension = 3,
-                            .mOffset = 0,
-                            .mComponentType = GL_FLOAT
-                        }
-                    }
-                },
-                {
-                    semantic::gNormal,
-                    AttributeAccessor{
-                        .mBufferViewIndex = 1, // view is added above
-                        .mClientDataFormat{
-                            .mDimension = 3,
-                            .mOffset = 0,
-                            .mComponentType = GL_FLOAT
-                        }
-                    }
-                },
-            },
+            .mVertexBufferViews{aStream.mVertexBufferViews},
+            .mSemanticToAttribute{aStream.mSemanticToAttribute},
             .mIndexBufferView = iboView,
             .mIndicesType = GL_UNSIGNED_INT,
         });
 
         VertexStream & vertexStream = aStorage.mVertexStreams.back();
+
+        vertexStream.mVertexBufferViews.insert(vertexStream.mVertexBufferViews.end(), { positionView, normalView});
+        vertexStream.mSemanticToAttribute.insert({
+            {
+                semantic::gPosition,
+                AttributeAccessor{
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 2, // view is added above
+                    .mClientDataFormat{
+                        .mDimension = 3,
+                        .mOffset = 0,
+                        .mComponentType = GL_FLOAT
+                    }
+                }
+            },
+            {
+                semantic::gNormal,
+                AttributeAccessor{
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 1, // view is added above
+                    .mClientDataFormat{
+                        .mDimension = 3,
+                        .mOffset = 0,
+                        .mComponentType = GL_FLOAT
+                    }
+                }
+            },
+        });
 
         if(uvChannelsCount != 0)
         {
@@ -199,7 +202,7 @@ namespace {
     }
 
 
-    Node loadNode(BinaryInArchive & aIn, Storage & aStorage, const Material aDefaultMaterial)
+    Node loadNode(BinaryInArchive & aIn, Storage & aStorage, const Material aDefaultMaterial, const GenericStream & aStream)
     {
         unsigned int meshesCount, childrenCount;
         aIn.read(meshesCount);
@@ -218,13 +221,13 @@ namespace {
         for(std::size_t meshIdx = 0; meshIdx != meshesCount; ++meshIdx)
         {
             node.mInstance.mObject->mParts.push_back(
-                loadMesh(aIn, aStorage, aDefaultMaterial)
+                loadMesh(aIn, aStorage, aDefaultMaterial, aStream)
             );
         }
 
         for(std::size_t childIdx = 0; childIdx != childrenCount; ++childIdx)
         {
-            node.mChildren.push_back(loadNode(aIn, aStorage, aDefaultMaterial));
+            node.mChildren.push_back(loadNode(aIn, aStorage, aDefaultMaterial, aStream));
         }
 
         return node;
@@ -267,7 +270,7 @@ namespace {
 
 // TODO should not take a default material, but have a way to get the actual effect to use 
 // (maybe directly from the binary file)
-Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, Material aDefaultMaterial)
+Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, Material aDefaultMaterial, const GenericStream & aStream)
 {
     BinaryInArchive in{
         .mIn{std::ifstream{aBinaryFile, std::ios::binary}},
@@ -279,7 +282,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, M
     in.read(version);
     assert(version == 1);
 
-    Node result = loadNode(in, aStorage, aDefaultMaterial);
+    Node result = loadNode(in, aStorage, aDefaultMaterial, aStream);
 
     loadMaterials(in, aStorage);
 

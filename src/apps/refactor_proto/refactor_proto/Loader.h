@@ -37,7 +37,12 @@ namespace semantic
 
 // IMPORTANT: for the moment, just load the first vertex stream in the file
 // has to be extended to actually load complex models.
-Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, Material aDefaultMaterial);
+Node loadBinary(const std::filesystem::path & aBinaryFile,
+                Storage & aStorage,
+                Material aDefaultMaterial,
+                // TODO should be replaced by the Handle to a shared VertexStream (when it is properly reused),
+                // stream already containing the instance data
+                const GenericStream & aStream/*to provide instance data, such as model transform*/);
 
 
 struct Loader

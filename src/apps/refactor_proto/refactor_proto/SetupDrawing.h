@@ -16,8 +16,7 @@ struct GenericStream;
 
 
 graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
-                                       const VertexStream & aVertices,
-                                       std::initializer_list<const GenericStream *> aExtraVertexAttributes = {});
+                                       const VertexStream & aVertices);
 
 
 void setBufferBackedBlocks(const IntrospectProgram & aProgram,
