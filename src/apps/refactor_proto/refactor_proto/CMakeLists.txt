@@ -20,6 +20,7 @@ set(${TARGET_NAME}_HEADERS
     RenderGraph.h
     Repositories.h
     SetupDrawing.h
+    Time.h
 )
 
 set(${TARGET_NAME}_SOURCES

@@ -1,10 +1,12 @@
 #pragma once
 
 
+#include "Time.h"
+
 #include <renderer/Query.h> 
 
 #include <array>
-#include <chrono>
+
 
 // Implementation notes:
 // A profiler is one of those feature that seems trivial, until you try to implement one.
@@ -55,6 +57,8 @@ public:
     // TODO make generic regarding provided type
     virtual bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) = 0;
 
+    virtual void resize(std::size_t aNewEntriesCount) = 0;
+
     const char * mQuantityName = "quantity";
     const char * mUnit = "u";
 };
@@ -65,7 +69,7 @@ class Profiler
     friend struct LogicalSection; // Implementation detail for grouping entries by logical section.
 
 public:
-    inline static constexpr std::size_t gInitialEntries{16384 * 2 * 2};
+    inline static constexpr std::size_t gInitialEntries{256};
     inline static constexpr std::size_t gMaxSamples{128};
     inline static constexpr std::size_t gMaxMetricsPerSection{16};
     /// @brief Delay before querying metrics.
@@ -104,7 +108,7 @@ public:
 
     std::string prettyPrint() const;
 
-private:
+    // Note: struct Values is kept public because it is a convenient utility class.
     /// @brief Keep a record of up to `gMaxSample` samples, as well as special values over this record (TODO e.g. min, max, accumulation).
     /// @tparam T_value The type of value that are recorded when sampling.
     /// @tparam T_average The type of the average, notably usefull to request decimals when averaging integers.
@@ -137,6 +141,7 @@ private:
         std::size_t mSampleCount{0};
     };
 
+private:
     /// @brief A reference to a metrics Provider, and a `Value` record of the samples taken by this provider.
     template <class T_value, class T_average = T_value>
     struct Metric
@@ -170,10 +175,15 @@ private:
         std::size_t mActiveMetrics = 0;
     };
 
+    /// @brief Returns the next entry, handling resizing of storage when needed.
+    Entry & getNextEntry();
+
+    void resize(std::size_t aNewEntriesCount);
+
     ProviderInterface & getProvider(const Metric<GLuint> & aMetric);
     const ProviderInterface & getProvider(const Metric<GLuint> & aMetric) const;
 
-    std::vector<Entry> mEntries{gInitialEntries};
+    std::vector<Entry> mEntries; // Initial size handled in constructor
     EntryIndex mNextEntry{0};
     unsigned int mCurrentLevel{0};
     EntryIndex mCurrentParent{Entry::gNoParent};
@@ -189,19 +199,13 @@ struct ProviderCPUTime : public ProviderInterface
         ProviderInterface{"CPU time", "us"}
     {}
 
-    using Clock = std::chrono::high_resolution_clock;
-
     void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
     void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 
-    template <class T_targetDuration, class T_inputDuration>
-    static GLuint GetTicks(T_inputDuration aDuration)
-    {
-        // TODO address this cast
-        return (GLuint)std::chrono::duration_cast<T_targetDuration>(aDuration).count();
-    }
+    void resize(std::size_t aNewEntriesCount) override
+    { mTimePoints.resize(aNewEntriesCount * Profiler::gFrameDelay); }
 
     //////
     struct TimeInterval
@@ -212,26 +216,29 @@ struct ProviderCPUTime : public ProviderInterface
 
     TimeInterval & getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame);
 
-    std::array<TimeInterval, Profiler::gInitialEntries * Profiler::gFrameDelay> mTimePoints;
+    std::vector<TimeInterval> mTimePoints;
 };
 
 
 struct ProviderGL : public ProviderInterface
 {
-    ProviderGL();
+    ProviderGL() :
+        ProviderInterface{"GPU generated", "primitive(s)"}
+    {}
 
     void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
     void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 
+    void resize(std::size_t aNewEntriesCount) override
+    { mQueriesPool.resize(aNewEntriesCount * Profiler::gFrameDelay); }
+
     //////
 
     graphics::Query & getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame);
 
     std::vector<graphics::Query> mQueriesPool;
-    inline static constexpr std::size_t gInitialQueriesInPool{Profiler::gInitialEntries * Profiler::gFrameDelay};
-
     bool mActive{false}; // There can be at most 1 query active per target (per index, for indexed targets)
 };
 
@@ -253,15 +260,15 @@ struct ProviderGLTime : public ProviderInterface
 
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 
+    // This is currently very conservative, having enough queries to recorded begin/end time for each section
+    // in each "frame delay slot".
+    void resize(std::size_t aNewEntriesCount) override
+    { mQueriesPool.resize(2 * aNewEntriesCount * Profiler::gFrameDelay); }
+
     //////
     graphics::Query & getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame, Event aEvent);
 
-    // TODO Have a dynamic allocation size
-    // This is currently very conservative, having enough queries to recorded begin/end time for each section
-    // in each "frame delay slot".
-    inline static constexpr std::size_t gInitialQueriesInPool{2 * Profiler::gInitialEntries * Profiler::gFrameDelay};
-
-    std::vector<graphics::Query> mQueriesPool{gInitialQueriesInPool};
+    std::vector<graphics::Query> mQueriesPool;
 };
 
 } // namespace ad::renderer

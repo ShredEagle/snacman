@@ -1,6 +1,8 @@
 #include "Logging.h"
+#include "Profiler.h" // For Profiler::Values
 #include "Profiling.h"
 #include "RenderGraph.h"
+#include "Time.h"
 
 #include <build_info.h>
 
@@ -45,7 +47,7 @@ void runApplication(int argc, char * argv[])
         glfwFlags,
         4, 1,
     };
-    glfwSwapInterval(0);
+    glfwSwapInterval(0); // Disable V-sync
 
     auto scopeProfiler = renderer::scopeGlobalProfiler();
 
@@ -54,8 +56,30 @@ void runApplication(int argc, char * argv[])
         handleArguments(argc, argv)
     };
 
+    renderer::Profiler::Values<std::uint64_t> frameDuration;
+    Clock::time_point previousFrame = Clock::now();
+    using FrameDurationUnit = std::chrono::microseconds;
+
     while (glfwApp.handleEvents())
     {
+        {
+            // TODO this could be integrated into the Profiler::beginFrame()
+            auto startTime = Clock::now();
+            frameDuration.record(getTicks<FrameDurationUnit>(startTime - previousFrame));
+            previousFrame = startTime;
+        }
+        if( auto framePeriodUs = frameDuration.average();
+            framePeriodUs != 0)
+        {
+            float fps = (float)(FrameDurationUnit::period::den) / (framePeriodUs * FrameDurationUnit::period::num);
+            std::ostringstream titleOss;
+            titleOss.precision(2);
+            titleOss << getVersionedName() 
+                << " (" << std::fixed << fps << " fps)"
+                ;
+            glfwApp.setWindowTitle(titleOss.str());
+        }
+
         PROFILER_BEGIN_FRAME;
         PROFILER_BEGIN_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
 
@@ -77,7 +101,7 @@ int main(int argc, char * argv[])
     try
     {
         se::initializeLogging();
-        spdlog::set_level(spdlog::level::warn);
+        spdlog::set_level(spdlog::level::info);
     }
     catch (std::exception & aException)
     {

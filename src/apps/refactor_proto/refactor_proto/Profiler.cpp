@@ -13,6 +13,30 @@ Profiler::Profiler()
     mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
     mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
     mMetricProviders.push_back(std::make_unique<ProviderGL>());
+
+    resize(gInitialEntries);
+}
+
+
+Profiler::Entry & Profiler::getNextEntry()
+{
+    if(mNextEntry == mEntries.size())
+    {
+        auto newSize = mEntries.size() * 2;
+        SELOG(warn)("Resizing the profiler to {} entries.", newSize);
+        resize(newSize);
+    }
+    return mEntries[mNextEntry];
+}
+
+
+void Profiler::resize(std::size_t aNewEntriesCount)
+{
+    mEntries.resize(aNewEntriesCount);
+    for(const auto & provider : mMetricProviders)
+    {
+        provider->resize(aNewEntriesCount);
+    }
 }
 
 
@@ -77,7 +101,7 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     // There must be a number of provider in [1, maxMetricsPerSection]
     assert(aProviders.size() > 0 && aProviders.size() <= gMaxMetricsPerSection);
     
-    Entry & entry = mEntries[mNextEntry];
+    Entry & entry = getNextEntry();
 
     // Because we do not track identity properly when frame structure change, we hope it always matches
     assert(entry.mId.mName == nullptr || entry.mId.mName == aName);
@@ -158,7 +182,6 @@ struct LogicalSection
 
 std::string Profiler::prettyPrint() const
 {
-    using Clock = ProviderCPUTime::Clock;
     auto beginTime = Clock::now();
 
     //
@@ -255,8 +278,8 @@ std::string Profiler::prettyPrint() const
         using std::chrono::microseconds;
         oss << "(generated from "
             << mNextEntry << " entries in " 
-            << ProviderCPUTime::GetTicks<microseconds>(Clock::now() - beginTime) << " us"
-            << ", sort took " << ProviderCPUTime::GetTicks<microseconds>(sortedTime - beginTime) << " us"
+            << getTicks<microseconds>(Clock::now() - beginTime) << " us"
+            << ", sort took " << getTicks<microseconds>(sortedTime - beginTime) << " us"
             << ")"
             ;
     }
@@ -290,15 +313,10 @@ void ProviderCPUTime::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentF
 bool ProviderCPUTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
 {
     const auto & interval = getInterval(aEntryIndex, aQueryFrame);
-    aSampleResult = GetTicks<std::chrono::microseconds>(interval.mEnd - interval.mBegin);
+    // TODO address this case (potentially with Values of the correct type)
+    aSampleResult = (GLuint)getTicks<std::chrono::microseconds>(interval.mEnd - interval.mBegin);
     return true;
 }
-
-
-ProviderGL::ProviderGL() :
-    ProviderInterface{"GPU generated", "primitive(s)"},
-    mQueriesPool{gInitialQueriesInPool}
-{}
 
 
 graphics::Query & ProviderGL::getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
