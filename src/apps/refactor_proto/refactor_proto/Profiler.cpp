@@ -253,7 +253,8 @@ std::string Profiler::prettyPrint() const
     //
     {
         using std::chrono::microseconds;
-        oss << "(generated in " 
+        oss << "(generated from "
+            << mNextEntry << " entries in " 
             << ProviderCPUTime::GetTicks<microseconds>(Clock::now() - beginTime) << " us"
             << ", sort took " << ProviderCPUTime::GetTicks<microseconds>(sortedTime - beginTime) << " us"
             << ")"

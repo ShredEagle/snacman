@@ -6,6 +6,7 @@
 #include "../../refactor_proto/refactor_proto/BinaryArchive.h"
 #include "../../refactor_proto/refactor_proto/Material.h"
 
+#include <math/Box.h>
 #include <math/Homogeneous.h>
 
 #include <assimp/Importer.hpp>      // C++ importer interface
@@ -39,10 +40,25 @@ namespace {
         };
     }
 
+    math::Position<3, float> toPosition(aiVector3D aVec)
+    {
+        return {aVec.x, aVec.y, aVec.z};
+    }
+
     math::AffineMatrix<4, float> extractTransformation(const aiNode * aNode)
     {
         return math::AffineMatrix<4, float>{extractAffinePart(aNode)};
     }
+
+    math::Box<float> extractAabb(const aiMesh * aMesh)
+    {
+        aiAABB aiBox = aMesh->mAABB;
+        return{
+            .mPosition = toPosition(aiBox.mMin),
+            .mDimension = (toPosition(aiBox.mMax) - toPosition(aiBox.mMin)).as<math::Size>(),
+        };
+    }
+
     
     struct FileWriter
     {
@@ -53,6 +69,12 @@ namespace {
         {
             unsigned int version = 1;
             mArchive.write(version);
+        }
+
+        // TODO this feels out of place, this file writer being inteded to be high level
+        void write(const math::Box<float> aBox)
+        {
+            mArchive.write(aBox);
         }
 
         void write(const aiNode * aNode)
@@ -136,30 +158,41 @@ namespace {
     //      [UVChannel.coordinates(2 floats per vertex)]
     //    mesh.numFaces
     //    [mesh.faces(i.e. 3 unsigned int per face)]
+    //    mesh.boundingBox (AABB, as a math::Box<float>)
+    //  bounding box union of all meshes (AABB, as a math::Box<float>, even if there are no meshes)
     //  each node.child:
     //    // recurse
+    //  node.boundingBox (AABB, as a math::Box<float>) // Note: I dislike having the node bounding box after the children BB, but it is computed form children's...
     //  numMaterials
     //  raw memory dump of span<PhongMaterial>
     //  numTexturePaths
     //  each texturePath:
     //    string size
     //    string characters
-    void recurseNodes(aiNode * aNode,
-                      const aiScene * aScene,
-                      FileWriter & aWriter,
-                      unsigned int level = 0)
+    
+    /// @return AABB of the node, as the union of nested nodes and meshes AABBs.
+    math::Box<float> recurseNodes(aiNode * aNode,
+                                  const aiScene * aScene,
+                                  FileWriter & aWriter,
+                                  unsigned int level = 0)
     {
         math::AffineMatrix<4, float> nodeTransform = extractTransformation(aNode);
 
-        //SELOG(info)("{}{}, {} mesh(es).",
-        //            std::string(2 * level, ' '), aNode->mName.C_Str(), aNode->mNumMeshes);
         std::cout << std::string(2 * level, ' ') << aNode->mName.C_Str() 
                   << ", " << aNode->mNumMeshes << " mesh(es)"
-                  << "\n" << nodeTransform 
+                  << ", " << aNode->mNumChildren << " children"
+                  //<< "\n" << nodeTransform 
                   << "\n"
                   ;
 
         aWriter.write(aNode);
+
+        math::Box<float> nodeAabb;
+        // Prime this node's bounding box
+        if(aNode->mNumMeshes != 0)
+        {
+            nodeAabb = extractAabb(aScene->mMeshes[0]);
+        }
 
         for(std::size_t meshIdx = 0; meshIdx != aNode->mNumMeshes; ++meshIdx)
         {
@@ -168,19 +201,42 @@ namespace {
             assert(mesh->HasPositions() && mesh->HasFaces());
             assert(hasTrianglesOnly(mesh));
 
+            math::Box<float> meshAabb = extractAabb(mesh);
+            nodeAabb.uniteAssign(meshAabb);
+
             std::cout << std::string(2 * level, ' ')
                 << "- Mesh " << globalMeshIndex << " with " << mesh->mNumVertices << " vertices, " 
-                << mesh->mNumFaces << " triangles."
+                << mesh->mNumFaces << " triangles,"
+                << " AABB " << meshAabb << "."
                 << "\n"
                 ;
 
             aWriter.write(mesh);
+            aWriter.write(meshAabb);
         }
 
+        aWriter.write(nodeAabb); // this is the AABB of all direct parts, without children nodes. (i.e the `Object`).
+
+        // TODO do we really want to compute the node's AABB? This is tricky, because there might be transformations
+        // between nodes.
+        // Yet the client will usually be interested in the top node AABB to define camera parameters...
         for(std::size_t childIdx = 0; childIdx != aNode->mNumChildren; ++childIdx)
         {
-            recurseNodes(aNode->mChildren[childIdx], aScene, aWriter, level + 1);
+            math::Box<float> childAabb = 
+                recurseNodes(aNode->mChildren[childIdx], aScene, aWriter, level + 1);
+            if(childIdx == 0 && aNode->mNumMeshes == 0) // The box was not primed yet
+            {
+                nodeAabb = childAabb;
+            }
+            else
+            {
+                nodeAabb.uniteAssign(childAabb);
+            }
         }
+
+        aWriter.write(nodeAabb);
+
+        return nodeAabb;
     }
 
 
@@ -287,16 +343,19 @@ void processModel(const std::filesystem::path & aFile)
     // propably to request more postprocessing than we do in this example.
     const aiScene* scene = importer.ReadFile(
         aFile.string(),
-          aiProcess_CalcTangentSpace       | 
-          aiProcess_Triangulate            |
-          aiProcess_JoinIdenticalVertices  |
-          aiProcess_SortByPType            |
-          // Ad: added flags below
-          aiProcess_RemoveRedundantMaterials |
-          aiProcess_GenSmoothNormals         |
-          aiProcess_ValidateDataStructure    |
-          aiProcess_FindDegenerates          |
-          aiProcess_FindInvalidData
+        aiProcess_CalcTangentSpace       | 
+        aiProcess_Triangulate            |
+        aiProcess_JoinIdenticalVertices  |
+        aiProcess_SortByPType            |
+        // Ad: added flags below
+        aiProcess_RemoveRedundantMaterials  |
+        aiProcess_GenSmoothNormals          |
+        aiProcess_ValidateDataStructure     |
+        aiProcess_FindDegenerates           |
+        aiProcess_FindInvalidData           |
+        // Generate bouding boxes, see: https://stackoverflow.com/a/74331859/1027706
+        aiProcess_GenBoundingBoxes          |
+        /* to allow final | */0
     );
     
     // If the import failed, report it
@@ -310,7 +369,8 @@ void processModel(const std::filesystem::path & aFile)
     FileWriter writer{output};
 
     // Now we can access the file's contents. 
-    recurseNodes(scene->mRootNode, scene, writer);
+    math::Box<float> modelAabb = recurseNodes(scene->mRootNode, scene, writer);
+    std::cout << "Model bounding box: " << modelAabb << "\n";
 
     dumpMaterials(scene, writer);
 

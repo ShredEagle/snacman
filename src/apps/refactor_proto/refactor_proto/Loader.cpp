@@ -191,6 +191,8 @@ namespace {
             .mIndicesCount = (GLsizei)indicesCount,
         };
 
+        aIn.read(part.mAabb);
+
         return part;
     }
 
@@ -224,11 +226,20 @@ namespace {
                 loadMesh(aIn, aStorage, aDefaultMaterial, aStream)
             );
         }
+        
+        math::Box<float> objectAabb;
+        aIn.read(objectAabb);
+        if(node.mInstance.mObject != nullptr)
+        {
+            node.mInstance.mObject->mAabb = objectAabb;
+        }
 
         for(std::size_t childIdx = 0; childIdx != childrenCount; ++childIdx)
         {
             node.mChildren.push_back(loadNode(aIn, aStorage, aDefaultMaterial, aStream));
         }
+
+        aIn.read(node.mAabb);
 
         return node;
     }

@@ -8,6 +8,7 @@
 #include <renderer/Texture.h>
 #include <renderer/VertexSpecification.h>
 
+#include <math/Box.h>
 #include <math/Vector.h>
 
 // TODO this is a bit of heavy includes for the general Model file.
@@ -164,6 +165,7 @@ struct Part
     GLsizei mVertexCount = 0;
     GLsizei mIndexFirst = 0;
     GLsizei mIndicesCount = 0;
+    math::Box<GLfloat> mAabb;
     //FeatureSet mFeatures;
 };
 
@@ -171,6 +173,7 @@ struct Part
 struct Object
 {
     std::vector<Part> mParts;
+    math::Box<GLfloat> mAabb;
 };
 
 
@@ -207,6 +210,9 @@ struct Node
 {
     Instance mInstance;
     std::vector<Node> mChildren;
+    // TODO Ad 2023/08/09: I am not sure we want to "cache" the AABB at the node level
+    // it is dependent on transformations, and the node is intended ot only live in client code.
+    math::Box<GLfloat> mAabb;
 };
 
 

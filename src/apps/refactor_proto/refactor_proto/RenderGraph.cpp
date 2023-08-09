@@ -64,7 +64,12 @@ const char * gFragmentShader = R"#(
 
 constexpr math::Degree<float> gInitialVFov{50.f};
 constexpr float gNearZ{-0.1f};
-constexpr float gFarZ{-25.f};
+constexpr float gMinFarZ{-25.f}; // Note: minimum in **absolute** value (i.e. the computed far Z can only be inferior to this).
+
+/// @brief The orbitalcamera is moved away by the largest model dimension times this factor.
+constexpr float gRadialDistancingFactor{1.5f};
+/// @brief The far plane will be at least at this factor times the model depth.
+constexpr float gDepthFactor{20.f};
 
 namespace {
 
@@ -383,23 +388,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
                    Orbital{2/*initial radius*/}
     }
 {
-    mCamera.setupOrthographicProjection({
-        .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
-        .mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
-        .mNearZ = gNearZ,
-        .mFarZ = gFarZ,
-    });
-
     registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl);
-
-    // TODO replace use of pointers into the storage (which are invalidated on vector resize)
-    // with some form of handle
-    mStorage.mBuffers.reserve(16);
-    mStorage.mObjects.reserve(16);
-    mStorage.mEffects.reserve(16);
-    mStorage.mPrograms.reserve(16);
-    mStorage.mPhongMaterials.reserve(16);
-    mStorage.mTextures.reserve(16);
 
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     mInstanceStream = makeInstanceStream(mStorage, 1);
@@ -437,35 +426,60 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     static Material defaultPhongMaterial{
         .mEffect = phongEffect,
     };
-    Node model = loadBinary(aModelFile, mStorage, defaultPhongMaterial, mInstanceStream);
-    model.mInstance.mPose.mPosition = {0.0f, 0.2f, 0.f};
-    // TODO automatically handle scaling via model bounding box.
-    model.mInstance.mPose.mUniformScale = 0.005f;
 
+    Node model = loadBinary(aModelFile, mStorage, defaultPhongMaterial, mInstanceStream);
+
+    // TODO store and load names in the binary file format
+    SELOG(info)("Loaded model '{}' with bouding box {}.", aModelFile.stem().string(), fmt::streamed(model.mAabb));
+
+    // Center the model on world origin
+    model.mInstance.mPose.mPosition = -model.mAabb.center().as<math::Vec>();
+
+    // TODO automatically handle scaling via model bounding box.
+    // Note that this has mainly the same effect has moving the radial camera away
+    //model.mInstance.mPose.mUniformScale = 0.005f;
+
+    // move the orbital camera away, depending on the model size
+    mCameraControl.mOrbital.mSpherical.radius() = 
+        std::max(mCameraControl.mOrbital.mSpherical.radius(),
+                 gRadialDistancingFactor * (*model.mAabb.mDimension.getMaxMagnitudeElement()));
+
+
+    // We waited to load the model before setting up the projection,
+    // in order to set the far plane based on the model depth.
+    mCamera.setupOrthographicProjection({
+        .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
+        .mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
+        .mNearZ = gNearZ,
+        .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
+    });
+
+    // TODO restore the ability to make a model copy, with a distinct material
     // Add a a copy of the model (hardcoded for teapot), to test another material idx
-    {
-        Node copy = model;
-        Material materialOverride{
-            .mPhongMaterialIdx = mStorage.mPhongMaterials.size(), // The index of the material that will be pushed.
-            .mEffect = phongEffect,
-        };
-        copy.mInstance.mPose.mPosition.y() = -0.8f;
-        copy.mChildren.at(0).mInstance.mMaterialOverride = materialOverride;
-        copy.mChildren.at(1).mInstance.mMaterialOverride = materialOverride;
-        mScene.mRoot.push_back(std::move(copy));
-    }
+    //{
+    //    Node copy = model;
+    //    Material materialOverride{
+    //        .mPhongMaterialIdx = mStorage.mPhongMaterials.size(), // The index of the material that will be pushed.
+    //        .mEffect = phongEffect,
+    //    };
+    //    copy.mInstance.mPose.mPosition.y() = -0.8f;
+    //    copy.mChildren.at(0).mInstance.mMaterialOverride = materialOverride;
+    //    copy.mChildren.at(1).mInstance.mMaterialOverride = materialOverride;
+    //    mScene.mRoot.push_back(std::move(copy));
+    //}
+
+    //// Creates another phong material, for the model copy
+    //{
+    //    mStorage.mPhongMaterials.push_back(mStorage.mPhongMaterials.at(0));
+    //    auto & phong = mStorage.mPhongMaterials.at(1);
+    //    phong.mDiffuseColor = math::hdr::gCyan<float> * 0.75f;
+    //    phong.mAmbientColor = math::hdr::gCyan<float> * 0.2f;
+    //    phong.mSpecularColor = math::hdr::gWhite<float> * 0.5f;
+    //    phong.mSpecularExponent = 100.f;
+    //}
 
     mScene.mRoot.push_back(std::move(model));
 
-    // Creates another phong material, for the model copy
-    {
-        mStorage.mPhongMaterials.push_back(mStorage.mPhongMaterials.at(0));
-        auto & phong = mStorage.mPhongMaterials.at(1);
-        phong.mDiffuseColor = math::hdr::gCyan<float> * 0.75f;
-        phong.mAmbientColor = math::hdr::gCyan<float> * 0.2f;
-        phong.mSpecularColor = math::hdr::gWhite<float> * 0.5f;
-        phong.mSpecularExponent = 100.f;
-    }
 }
 
 

@@ -75,9 +75,8 @@ void changeOrthographicViewportHeight(Camera & aCamera, float aNewHeight);
 /// @brief `Orbital` represent a position on a spherical orbit around an origin.
 /// This can be used to represent camera poses, with the camera placed at the `Orbital` position,
 /// and looking toward the orbit origin.
-class Orbital
+struct Orbital
 {
-public:
     Orbital(float aRadius, math::Radian<float> aPolar = math::Degree<float>{90.f},
             math::Radian<float> aAzimuthal = math::Radian<float>{0.f},
             math::Position<3, float> aPosition = {0.f, 0.f, 0.f}) :
@@ -96,7 +95,6 @@ public:
 
     math::AffineMatrix<4, float> getParentToLocal() const;
 
-private:
     math::Position<3, float> mSphericalOrigin;
     math::Spherical<float> mSpherical;
 };

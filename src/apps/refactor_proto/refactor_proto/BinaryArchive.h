@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <math/Box.h>
 #include <math/Matrix.h>
 
 #include <fstream>
@@ -30,10 +31,18 @@ struct BinaryOutArchive
         return *this;
     }
 
-    template <int N_rows, int N_cols, class T_number>
-    BinaryOutArchive & write(const math::Matrix<N_rows, N_cols, T_number> & aMatrix)
+    template <class T_derived, int N_rows, int N_cols, class T_number>
+    BinaryOutArchive & write(const math::MatrixBase<T_derived, N_rows, N_cols, T_number> & aMatrix)
     {
         return write(std::span{aMatrix});
+    }
+
+    template <class T_number>
+    BinaryOutArchive & write(const math::Box<T_number> & aBox)
+    {
+        write(aBox.mPosition);
+        write(aBox.mDimension);
+        return *this;
     }
 
     BinaryOutArchive & write(const std::string & aString)
@@ -78,10 +87,18 @@ struct BinaryInArchive
         return *this;
     }
 
-    template <int N_rows, int N_cols, class T_number>
-    BinaryInArchive & read(math::Matrix<N_rows, N_cols, T_number> & aMatrix)
+    template <class T_derived, int N_rows, int N_cols, class T_number>
+    BinaryInArchive & read(math::MatrixBase<T_derived, N_rows, N_cols, T_number> & aMatrix)
     {
         return read(std::span{aMatrix});
+    }
+
+    template <class T_number>
+    BinaryInArchive & read(math::Box<T_number> & aBox)
+    {
+        read(aBox.mPosition);
+        read(aBox.mDimension);
+        return *this;
     }
 
     std::ifstream mIn;
