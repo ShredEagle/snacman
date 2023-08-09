@@ -223,10 +223,10 @@ struct Storage
 {
     // TODO Ad 2023/08/04: Change what is possible to lists (avoid relocation of elements)
     // Some are actually used for random access though, so this class needs a deep refactoring anyway
-    std::vector<graphics::BufferAny> mBuffers;
-    std::vector<Object> mObjects;
-    std::vector<Effect> mEffects;
-    std::vector<ConfiguredProgram> mPrograms;
+    std::list<graphics::BufferAny> mBuffers;
+    std::list<Object> mObjects;
+    std::list<Effect> mEffects;
+    std::list<ConfiguredProgram> mPrograms;
     std::vector<PhongMaterial> mPhongMaterials;
     std::vector<graphics::Texture> mTextures;
     std::list<VertexStream> mVertexStreams;

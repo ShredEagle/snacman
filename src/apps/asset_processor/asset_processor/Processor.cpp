@@ -282,9 +282,18 @@ namespace {
 
             // TODO Handle other textures than diffuse.
             // (and handle several textures in the stacks?)
-            assert(material->GetTextureCount(aiTextureType_SPECULAR) == 0
-                && material->GetTextureCount(aiTextureType_AMBIENT) == 0
-                && material->GetTextureCount(aiTextureType_DIFFUSE) <= 1);
+            assert(material->GetTextureCount(aiTextureType_DIFFUSE) <= 1);
+
+            if(material->GetTextureCount(aiTextureType_SPECULAR) != 0)
+            {
+                SELOG(warn)("Material '{}' has {} specular textures, but exporter does not handle them yet.",
+                    material->GetName().C_Str(), material->GetTextureCount(aiTextureType_SPECULAR));
+            }
+            if(material->GetTextureCount(aiTextureType_AMBIENT) != 0)
+            {
+                SELOG(warn)("Material '{}' has {} ambient textures, but exporter does not handle them yet.",
+                    material->GetName().C_Str(), material->GetTextureCount(aiTextureType_AMBIENT));
+            }
 
             setColor(phongMaterial.mAmbientColor,  material, AI_MATKEY_COLOR_AMBIENT);
             setColor(phongMaterial.mDiffuseColor,  material, AI_MATKEY_COLOR_DIFFUSE);

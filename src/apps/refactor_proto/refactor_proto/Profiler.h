@@ -65,7 +65,7 @@ class Profiler
     friend struct LogicalSection; // Implementation detail for grouping entries by logical section.
 
 public:
-    inline static constexpr std::size_t gInitialEntries{256};
+    inline static constexpr std::size_t gInitialEntries{16384 * 2 * 2};
     inline static constexpr std::size_t gMaxSamples{128};
     inline static constexpr std::size_t gMaxMetricsPerSection{16};
     /// @brief Delay before querying metrics.
