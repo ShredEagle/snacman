@@ -31,6 +31,8 @@ struct RenderGraph
     RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
                 const std::filesystem::path & aModelFile);
 
+    // for camera movements, should be moved out to the simuation of course
+    void update(float aDeltaTime);
     void render();
 
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
@@ -40,7 +42,10 @@ struct RenderGraph
     Loader mLoader;
 
     Camera mCamera;
+    
+    // TODO allow both control modes
     OrbitalControl mCameraControl;
+    FirstPersonControl mFirstPersonControl;
 };
 
 

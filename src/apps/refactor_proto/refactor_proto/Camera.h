@@ -2,6 +2,7 @@
 
 
 #include <math/Angle.h>
+#include <math/EulerAngles.h>
 #include <math/Homogeneous.h>
 #include <math/Spherical.h>
 #include <math/Vector.h>
@@ -120,6 +121,8 @@ struct OrbitalControl
     void callbackMouseButton(int button, int action, int mods, double xpos, double ypos);
     void callbackCursorPosition(double xpos, double ypos);
     void callbackScroll(double xoffset, double yoffset);
+    void callbackKeyboard(int key, int scancode, int action, int mods)
+    {}
 
     /// \brief Return the view height in world coordinates, for a view plan place at the Orbital origin.
     /// Computation is based on the currently set Fov and Oribtal radius, even if the actual projection
@@ -151,6 +154,39 @@ private:
 
     ControlMode mControlMode{ControlMode::None};
     math::Position<2, float> mPreviousDragPosition{0.f, 0.f};
+};
+
+
+struct FirstPersonControl
+{
+    // Glfw compatible callbacks
+    void callbackMouseButton(int button, int action, int mods, double xpos, double ypos);
+    void callbackCursorPosition(double xpos, double ypos);
+    void callbackScroll(double xoffset, double yoffset);
+    void callbackKeyboard(int key, int scancode, int action, int mods);
+
+    math::AffineMatrix<4, float> getParentToLocal() const;
+
+    void update(float aDeltaTime);
+
+    /// @brief The position in the parent frame.
+    math::Position<3, float> mPosition;
+    math::EulerAngles<float> mOrientation;
+
+private:
+    enum class ControlMode
+    {
+        None,
+        Aiming,
+    };
+
+    static constexpr math::Vec<2, float> gMouseControlFactor{1/1000.f, 1/1000.f};
+    static constexpr float gSpeed = 400.f; // worldunit/s
+
+    ControlMode mControlMode{ControlMode::None};
+    math::Position<2, float> mPreviousCursorPosition{0.f, 0.f};
+
+    bool mF{false}, mB{false}, mL{false}, mR{false};
 };
 
 } // namespace ad::renderer

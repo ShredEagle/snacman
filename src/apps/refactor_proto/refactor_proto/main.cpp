@@ -59,6 +59,7 @@ void runApplication(int argc, char * argv[])
     renderer::Profiler::Values<std::uint64_t> frameDuration;
     Clock::time_point previousFrame = Clock::now();
     using FrameDurationUnit = std::chrono::microseconds;
+    float stepDuration = 0.f;
 
     while (glfwApp.handleEvents())
     {
@@ -66,6 +67,7 @@ void runApplication(int argc, char * argv[])
             // TODO this could be integrated into the Profiler::beginFrame()
             auto startTime = Clock::now();
             frameDuration.record(getTicks<FrameDurationUnit>(startTime - previousFrame));
+            stepDuration = (float)asFractionalSeconds(startTime - previousFrame);
             previousFrame = startTime;
         }
         if( auto framePeriodUs = frameDuration.average();
@@ -83,13 +85,14 @@ void runApplication(int argc, char * argv[])
         PROFILER_BEGIN_FRAME;
         PROFILER_BEGIN_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
 
+        renderGraph.update(stepDuration);
         renderGraph.render();
         glfwApp.swapBuffers();
 
         PROFILER_END_SECTION;
         PROFILER_END_FRAME;
 
-        std::cout << renderer::getGlobalProfiler().prettyPrint() << "\n";
+        //std::cout << renderer::getGlobalProfiler().prettyPrint() << "\n";
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }

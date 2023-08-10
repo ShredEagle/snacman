@@ -364,18 +364,47 @@ DrawList Scene::populateDrawList() const
 }
 
 
-//TODO Ad 2023/07/26: Move to the glfw app library, handle all callbacks 
-//    (and only register the subset actually provided by T_callbackProvider)
+enum class EscKeyBehaviour
+{
+    Ignore,
+    Close,
+};
+
+//TODO Ad 2023/07/26: Move to the glfw app library,
+// only register the subset actually provided by T_callbackProvider (so it does not need to implement them all)
 template <class T_callbackProvider>
-void registerGlfwCallbacks(graphics::AppInterface & aAppInterface, T_callbackProvider & aProvider)
+void registerGlfwCallbacks(graphics::AppInterface & aAppInterface,
+                           T_callbackProvider & aProvider,
+                           EscKeyBehaviour aEscBehaviour)
 {
     using namespace std::placeholders;
+
     aAppInterface.registerMouseButtonCallback(
         std::bind(&T_callbackProvider::callbackMouseButton, std::ref(aProvider), _1, _2, _3, _4, _5));
     aAppInterface.registerCursorPositionCallback(
         std::bind(&T_callbackProvider::callbackCursorPosition, std::ref(aProvider), _1, _2));
     aAppInterface.registerScrollCallback(
         std::bind(&T_callbackProvider::callbackScroll, std::ref(aProvider), _1, _2));
+
+    switch(aEscBehaviour)
+    {
+        case EscKeyBehaviour::Ignore:
+            aAppInterface.registerKeyCallback(
+                std::bind(&T_callbackProvider::callbackKeyboard, std::ref(aProvider), _1, _2, _3, _4));
+            break;
+        case EscKeyBehaviour::Close:
+            aAppInterface.registerKeyCallback(
+                [&aAppInterface, &aProvider](int key, int scancode, int action, int mods)
+                {
+                    // TODO would be cleaner to factorize that and the ApplicationGlfw::default_key_callback
+                    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+                    {
+                        aAppInterface.requestCloseApplication();
+                    }
+                    aProvider.callbackKeyboard(key, scancode, action, mods);
+                });
+            break;
+    }
 }
 
 
@@ -388,7 +417,8 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
                    Orbital{2/*initial radius*/}
     }
 {
-    registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl);
+    registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close);
+    registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close);
 
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     mInstanceStream = makeInstanceStream(mStorage, 1);
@@ -449,7 +479,9 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     // in order to set the far plane based on the model depth.
     mCamera.setupOrthographicProjection({
         .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
-        .mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
+        // TODO #camera
+        //.mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
+        .mViewHeight = 200,
         .mNearZ = gNearZ,
         .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
     });
@@ -483,6 +515,12 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
 }
 
 
+void RenderGraph::update(float aDeltaTime)
+{
+    mFirstPersonControl.update(aDeltaTime);
+}
+
+
 void RenderGraph::render()
 {
     // Implement material/program selection while generating drawlist
@@ -494,14 +532,16 @@ void RenderGraph::render()
     //glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
 
+    // TODO #camera
     // Update camera to match current values in orbital control.
-    mCamera.setPose(mCameraControl.mOrbital.getParentToLocal());
-    if(mCamera.isProjectionOrthographic())
-    {
-        // Note: to allow "zooming" in the orthographic case, we change the viewed height of the ortho projection.
-        // An alternative would be to apply a scale factor to the camera Pose transformation.
-        changeOrthographicViewportHeight(mCamera, mCameraControl.getViewHeightAtOrbitalCenter());
-    }
+    //mCamera.setPose(mCameraControl.mOrbital.getParentToLocal());
+    //if(mCamera.isProjectionOrthographic())
+    //{
+    //    // Note: to allow "zooming" in the orthographic case, we change the viewed height of the ortho projection.
+    //    // An alternative would be to apply a scale factor to the camera Pose transformation.
+    //    changeOrthographicViewportHeight(mCamera, mCameraControl.getViewHeightAtOrbitalCenter());
+    //}
+    mCamera.setPose(mFirstPersonControl.getParentToLocal());
 
     PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
     // TODO should be done once per viewport

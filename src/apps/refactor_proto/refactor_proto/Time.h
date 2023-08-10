@@ -25,4 +25,5 @@ constexpr double asFractionalSeconds(Clock::duration aDuration)
     return aDuration.count() * gTickPeriod;
 }
 
+
 } // namespace ad

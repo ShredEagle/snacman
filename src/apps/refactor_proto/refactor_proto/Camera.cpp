@@ -124,9 +124,9 @@ float OrbitalControl::getViewHeightAtOrbitalCenter() const
 void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
 {
     using Radian = math::Radian<float>;
+    // top-left corner origin
     math::Position<2, float> cursorPosition{(float)xpos, (float)ypos};
 
-    // top-left corner origin
     switch (mControlMode)
     {
         case ControlMode::Orbit:
@@ -187,6 +187,125 @@ void OrbitalControl::callbackScroll(double xoffset, double yoffset)
 {
     float factor = (1 - (float)yoffset * gScrollFactor);
     mOrbital.radius() *= factor;
+}
+
+
+//
+// FirstPersonControl
+//
+
+void FirstPersonControl::callbackMouseButton(int button, int action, int mods, double xpos, double ypos)
+{
+    if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT)
+    {
+        mControlMode = ControlMode::Aiming;
+    }
+    else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT)
+    {
+        mControlMode = ControlMode::None;
+    }
+}
+
+
+void FirstPersonControl::callbackCursorPosition(double xpos, double ypos)
+{
+    // top-left corner origin (i.e. +Y is going down on the window)
+    math::Position<2, float> cursorPosition{(float)xpos, (float)ypos};
+
+    if(mControlMode == ControlMode::Aiming)
+    {
+        auto angularIncrements = (cursorPosition - mPreviousCursorPosition).cwMul(gMouseControlFactor);
+        mOrientation.roll.data() -= angularIncrements.y(); // mouse down -> +Y -> negative roation around X (to look down)
+        mOrientation.pitch.data() -= angularIncrements.x(); // mouse right -> +X -> negative rotation around Y (to look right)
+
+        // First clamp the pitch, then reduce
+        static constexpr float quarterRevolution = math::Turn<float>{1.f/4.f}.as<math::Radian>().value();
+        auto & roll = mOrientation.roll.data();
+        roll = std::clamp(roll, -quarterRevolution, quarterRevolution);
+
+        mOrientation = reduce(mOrientation);
+    }
+
+    mPreviousCursorPosition = cursorPosition;
+}
+
+
+void FirstPersonControl::callbackScroll(double xoffset, double yoffset)
+{
+    //TODO handle assigning only the callbacks that are present get rid of this empty
+}
+
+
+void FirstPersonControl::callbackKeyboard(int key, int scancode, int action, int mods)
+{
+    if(action != GLFW_PRESS && action != GLFW_RELEASE)
+    {
+        return;
+    }
+
+    switch(key)
+    {
+        case GLFW_KEY_I:
+            mF = (action == GLFW_PRESS);
+            break;
+        case GLFW_KEY_K:
+            mB = (action == GLFW_PRESS);
+            break;
+        case GLFW_KEY_J:
+            mL = (action == GLFW_PRESS);
+            break;
+        case GLFW_KEY_L:
+            mR = (action == GLFW_PRESS);
+            break;
+    }
+}
+
+
+/// @brief Rotation matrix applying rotations to match the EulerAngles orientation,
+/// i.e. a change of basis from local to parent.
+/// @param aEuler 
+/// @return 
+math::LinearMatrix<3, 3, float> dummyToRotationMatrix(math::EulerAngles<float> aEuler)
+{
+    return math::trans3d::rotateX(aEuler.roll)
+        * math::trans3d::rotateY(aEuler.pitch)
+        * math::trans3d::rotateZ(aEuler.yaw);
+}
+
+math::LinearMatrix<3, 3, float> dummyToRotationMatrixInverse(math::EulerAngles<float> aEuler)
+{
+    //return math::trans3d::rotateX(-aEuler.roll)
+    //    * math::trans3d::rotateY(-aEuler.pitch)
+    //    * math::trans3d::rotateZ(-aEuler.yaw);
+    // TODO understand why this order, when I expected the opposite
+    return math::trans3d::rotateZ(-aEuler.yaw)
+        * math::trans3d::rotateY(-aEuler.pitch)
+        * math::trans3d::rotateX(-aEuler.roll);
+}
+void FirstPersonControl::update(float aDeltaTime)
+{
+    float movement = aDeltaTime * gSpeed;
+    // Both seem equivalent here
+    //math::LinearMatrix<3, 3, float> rotation = dummyToRotationMatrix(mOrientation);
+    // This is the rotation matrix in parent frame:
+    // its rows are the base vectors of the camera frame, expressed in canonical coordinates.
+    math::LinearMatrix<3, 3, float> rotation = toQuaternion(mOrientation).toRotationMatrix();
+    math::Vec<3, float> backward{rotation[2]}; // camera looks in -Z, so +Z is the backward vector
+    math::Vec<3, float> right{rotation[0]};
+    if(mF) mPosition -= backward * movement;
+    if(mB) mPosition += backward * movement;
+    if(mL) mPosition -= right * movement;
+    if(mR) mPosition += right * movement;
+}
+
+
+math::AffineMatrix<4, float> FirstPersonControl::getParentToLocal() const
+{
+    // Translate the world by negated camera position, then rotate by inverse camera orientation
+    return math::trans3d::translate(-mPosition.as<math::Vec>()) 
+        * dummyToRotationMatrixInverse(mOrientation);
+        // TODO investigate why the quaternion path is clipping roll to 3/4 turn instead of 1/4.
+        //* math::toQuaternion(mOrientation).inverse().toRotationMatrix();
 }
 
 } // namespace ad::renderer
