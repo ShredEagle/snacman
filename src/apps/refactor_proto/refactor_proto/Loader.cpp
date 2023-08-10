@@ -248,7 +248,7 @@ namespace {
     graphics::Texture loadTexture(std::filesystem::path aTexturePath)
     {
         graphics::Texture texture{GL_TEXTURE_2D};
-        arte::Image<math::sdr::Rgba> image{aTexturePath};
+        arte::Image<math::sdr::Rgba> image{aTexturePath, arte::ImageOrientation::InvertVerticalAxis};
         graphics::loadImageCompleteMipmaps(texture, image);
         return texture;
     }
