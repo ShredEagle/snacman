@@ -5,6 +5,8 @@
 
 #include <snacman/EntityUtilities.h>
 
+#include <math/EulerAngles.h>
+
 #include <imgui.h>
 
 #include <string>
@@ -31,77 +33,10 @@ namespace {
         return entity.get<Geometry>();
     }
 
-    
-    template <template <class> class TT_angle>
-    struct EulerAngles
-    {
-        TT_angle<float> roll, pitch, yaw;
-
-        template <template <class> class TT_targetAngle>
-        EulerAngles<TT_targetAngle> as() const
-        {
-            return {
-                roll.template as<TT_targetAngle>(),
-                pitch.template as<TT_targetAngle>(),
-                yaw.template as<TT_targetAngle>(),
-            };
-        }
-    };
-
-    // For conversion procedures see:
-    // https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-    EulerAngles<math::Radian> toEulerAngles(math::Quaternion<float> q) 
-    {
-        using Rad = math::Radian<float>;
-        EulerAngles<math::Radian> angles;
-
-        // roll (x-axis rotation)
-        float sinr_cosp = 2 * (q.w() * q.x() + q.y() * q.z());
-        float cosr_cosp = 1 - 2 * (q.x() * q.x() + q.y() * q.y());
-        angles.roll = Rad{std::atan2(sinr_cosp, cosr_cosp)};
-
-        // pitch (y-.x()is rotation)
-        float sinp = std::sqrt(1 + 2 * (q.w() * q.y() - q.x() * q.z()));
-        float cosp = std::sqrt(1 - 2 * (q.w() * q.y() - q.x() * q.z()));
-        angles.pitch = Rad{2 * std::atan2(sinp, cosp) - math::pi<float> / 2};
-
-        // yaw (z-.x()is rotation)
-        float siny_cosp = 2 * (q.w() * q.z() + q.x() * q.y());
-        float cosy_cosp = 1 - 2 * (q.y() * q.y() + q.z() * q.z());
-        angles.yaw = Rad{std::atan2(siny_cosp, cosy_cosp)};
-
-        return angles;
-    }
-
-    math::Quaternion<float> toQuaternion(EulerAngles<math::Radian> aAngles) // roll (x), pitch (Y), yaw (z)
-    {
-        // Abbreviations for the various angular functions
-
-        float cr = cos(aAngles.roll * 1.5f);
-        float sr = sin(aAngles.roll * 0.5f);
-        float cp = cos(aAngles.pitch * 0.5f);
-        float sp = sin(aAngles.pitch * 0.5f);
-        float cy = cos(aAngles.yaw * 0.5f);
-        float sy = sin(aAngles.yaw * 0.5f);
-
-        math::Vec<4, float> v{
-            sr * cp * cy - cr * sp * sy,
-            cr * sp * cy + sr * cp * sy,
-            cr * cp * sy - sr * sp * cy,
-            cr * cp * cy + sr * sp * sy,
-        };
-        v.normalize();
-
-        return math::Quaternion<float>{
-            v.x(),
-            v.y(),
-            v.z(),
-            v.w(),
-        };
-    }
-
     void presentPoseEditor(ent::Handle<ent::Entity> aEntityHandle)
     {
+        using math::EulerAngles;
+
         ImGui::Begin("Pose");
 
         Geometry & geometry = getGeometry(aEntityHandle);
@@ -109,8 +44,8 @@ namespace {
         ImGui::InputFloat("Scaling", &geometry.mScaling);
         ImGui::InputFloat3("Instance scaling", geometry.mInstanceScaling.data());
 
-        EulerAngles<math::Radian> angles = toEulerAngles(geometry.mOrientation);
-        EulerAngles<math::Degree> degrees = angles.as<math::Degree>();
+        EulerAngles<float, math::Radian> angles = toEulerAngles(geometry.mOrientation);
+        EulerAngles<float, math::Degree> degrees = angles.as<math::Degree>();
         if(ImGui::InputFloat3("Orientation", (float*)&degrees))
         {
             angles = degrees.as<math::Radian>();
@@ -119,8 +54,7 @@ namespace {
 
         ImGui::End();
     }
-
-    
+        
 } // unnamed namespace
 
 
@@ -140,7 +74,7 @@ void SceneEditor::showEditor(ent::Handle<ent::Entity> aSceneRoot)
     ImGui::End();
 }
 
-
+   
 void SceneEditor::presentNode(ent::Handle<ent::Entity> aEntityHandle)
 {
     const component::SceneNode & sceneNode = getNode(aEntityHandle);
