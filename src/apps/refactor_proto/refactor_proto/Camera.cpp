@@ -263,8 +263,6 @@ void FirstPersonControl::callbackKeyboard(int key, int scancode, int action, int
 
 /// @brief Rotation matrix applying rotations to match the EulerAngles orientation,
 /// i.e. a change of basis from local to parent.
-/// @param aEuler 
-/// @return 
 math::LinearMatrix<3, 3, float> dummyToRotationMatrix(math::EulerAngles<float> aEuler)
 {
     return math::trans3d::rotateX(aEuler.roll)
@@ -285,11 +283,12 @@ math::LinearMatrix<3, 3, float> dummyToRotationMatrixInverse(math::EulerAngles<f
 void FirstPersonControl::update(float aDeltaTime)
 {
     float movement = aDeltaTime * gSpeed;
-    // Both seem equivalent here
-    //math::LinearMatrix<3, 3, float> rotation = dummyToRotationMatrix(mOrientation);
     // This is the rotation matrix in parent frame:
     // its rows are the base vectors of the camera frame, expressed in canonical coordinates.
-    math::LinearMatrix<3, 3, float> rotation = toQuaternion(mOrientation).toRotationMatrix();
+    math::LinearMatrix<3, 3, float> rotation = dummyToRotationMatrix(mOrientation);
+    // TODO I expected both toe be equivalent, but the quaternion form causes issue with the "backward"
+    // vector when there is enough roll
+    //math::LinearMatrix<3, 3, float> rotation = toQuaternion(mOrientation).toRotationMatrix();
     math::Vec<3, float> backward{rotation[2]}; // camera looks in -Z, so +Z is the backward vector
     math::Vec<3, float> right{rotation[0]};
     if(mF) mPosition -= backward * movement;

@@ -169,8 +169,12 @@ struct FirstPersonControl
 
     void update(float aDeltaTime);
 
+
+    // TODO Ad 2023/08/10: Consolidate that in a notion of Pose, and implement conversions to math::Frame
+    // Then use the Frame with math::trans3d::canonicaToFrame to implement getParentToLocal()
     /// @brief The position in the parent frame.
     math::Position<3, float> mPosition;
+    /// @brief The orientation in the parent frame.
     math::EulerAngles<float> mOrientation;
 
 private:
