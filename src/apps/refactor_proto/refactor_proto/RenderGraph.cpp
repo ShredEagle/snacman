@@ -462,12 +462,15 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     // TODO store and load names in the binary file format
     SELOG(info)("Loaded model '{}' with bouding box {}.", aModelFile.stem().string(), fmt::streamed(model.mAabb));
 
+    // TODO automatically handle scaling via model bounding box.
+    // Note that visually this has the same effect as moving the radial camera away
+    // Actually, an automatic scaling could be detected for an "object viewer", but it is much harder for an environment
+    // From the values of teapot and sponza, they seem to be in centimeters
+    model.mInstance.mPose.mUniformScale = 0.01f;
+    model.mAabb *= model.mInstance.mPose.mUniformScale;
+
     // Center the model on world origin
     model.mInstance.mPose.mPosition = -model.mAabb.center().as<math::Vec>();
-
-    // TODO automatically handle scaling via model bounding box.
-    // Note that this has mainly the same effect has moving the radial camera away
-    //model.mInstance.mPose.mUniformScale = 0.005f;
 
     // move the orbital camera away, depending on the model size
     mCameraControl.mOrbital.mSpherical.radius() = 
@@ -481,8 +484,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     mCamera.setupOrthographicProjection({
         .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
         // TODO #camera
-        //.mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
-        .mViewHeight = 200,
+        .mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
         .mNearZ = gNearZ,
         .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
     });

@@ -193,7 +193,7 @@ private:
     };
 
     static constexpr math::Vec<2, float> gMouseControlFactor{1/1000.f, 1/1000.f};
-    static constexpr float gSpeed = 400.f; // worldunit/s
+    static constexpr float gSpeed = 4.f; // worldunit/s
 
     ControlMode mControlMode{ControlMode::None};
     math::Position<2, float> mPreviousCursorPosition{0.f, 0.f};
