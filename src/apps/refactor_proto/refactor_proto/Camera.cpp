@@ -10,10 +10,12 @@
 
 namespace ad::renderer {
 
+
 ////////
 // Camera
 ////////
 
+// TODO factorize those projection matrix functions
 math::Matrix<4, 4, float> Camera::MakeProjection(OrthographicParameters aParams)
 {
     assert(aParams.mNearZ > aParams.mFarZ);
@@ -29,11 +31,32 @@ math::Matrix<4, 4, float> Camera::MakeProjection(OrthographicParameters aParams)
     return
         math::trans3d::orthographicProjection(viewVolume)
         * math::trans3d::scale(1.f, 1.f, -1.f) // camera space is right handed, but gl clip space is left handed.
-        ;
+    ;
+}
+
+
+math::Matrix<4, 4, float> Camera::MakeProjection(PerspectiveParameters aParams)
+{
+    return 
+        math::trans3d::perspective(aParams.mNearZ, aParams.mFarZ)
+        * MakeProjection(OrthographicParameters{
+                .mAspectRatio = aParams.mAspectRatio,
+                .mViewHeight = 2 * tan(aParams.mVerticalFov / 2.f) * std::abs(aParams.mNearZ),
+                .mNearZ = aParams.mNearZ,
+                .mFarZ = aParams.mFarZ,
+            })
+    ;
 }
 
 
 void Camera::setupOrthographicProjection(OrthographicParameters aParams)
+{
+    mProjection = MakeProjection(aParams);
+    mProjectionParameters = aParams;
+}
+
+
+void Camera::setupPerspectiveProjection(PerspectiveParameters aParams)
 {
     mProjection = MakeProjection(aParams);
     mProjectionParameters = aParams;
@@ -276,6 +299,7 @@ math::LinearMatrix<3, 3, float> dummyToRotationMatrixInverse(math::EulerAngles<f
     //    * math::trans3d::rotateY(-aEuler.pitch)
     //    * math::trans3d::rotateZ(-aEuler.yaw);
     // TODO understand why this order, when I expected the opposite
+    // I guess this is because the other order is for local to parent
     return math::trans3d::rotateZ(-aEuler.yaw)
         * math::trans3d::rotateY(-aEuler.pitch)
         * math::trans3d::rotateX(-aEuler.roll);

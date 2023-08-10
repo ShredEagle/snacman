@@ -32,13 +32,21 @@ public:
         float mFarZ;  // usually negative: Z coordinate of the far plane in the right handed coordinate system.
     };
 
+    struct PerspectiveParameters
+    {
+        float mAspectRatio;
+        math::Radian<float> mVerticalFov;
+        float mNearZ; // usually negative: Z coordinate of the near plane in the right handed coordinate system.
+        float mFarZ;  // usually negative: Z coordinate of the far plane in the right handed coordinate system.
+    };
+
     // TODO Decide whether it should be lifted into a more general library?
     static math::Matrix<4, 4, float> MakeProjection(OrthographicParameters aParams);
+    static math::Matrix<4, 4, float> MakeProjection(PerspectiveParameters aParams);
 
     void setupOrthographicProjection(OrthographicParameters aParams);
 
-    struct PerspectiveParameters
-    {};
+    void setupPerspectiveProjection(PerspectiveParameters aParams);
 
     const math::AffineMatrix<4, float> & getParentToCamera() const
     { return mParentToCamera; }

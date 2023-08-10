@@ -475,6 +475,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
                  gRadialDistancingFactor * (*model.mAabb.mDimension.getMaxMagnitudeElement()));
 
 
+    // TODO #camera do this only the correct setup, on each projection change
     // We waited to load the model before setting up the projection,
     // in order to set the far plane based on the model depth.
     mCamera.setupOrthographicProjection({
@@ -482,6 +483,13 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
         // TODO #camera
         //.mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
         .mViewHeight = 200,
+        .mNearZ = gNearZ,
+        .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
+    });
+
+    mCamera.setupPerspectiveProjection({
+        .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
+        .mVerticalFov = gInitialVFov,
         .mNearZ = gNearZ,
         .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
     });
@@ -532,7 +540,7 @@ void RenderGraph::render()
     //glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
 
-    // TODO #camera
+    // TODO #camera: handle this when necessary
     // Update camera to match current values in orbital control.
     //mCamera.setPose(mCameraControl.mOrbital.getParentToLocal());
     //if(mCamera.isProjectionOrthographic())

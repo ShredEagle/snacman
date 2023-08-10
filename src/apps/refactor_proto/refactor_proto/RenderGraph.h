@@ -43,7 +43,7 @@ struct RenderGraph
 
     Camera mCamera;
     
-    // TODO allow both control modes
+    // TODO #camera allow both control modes, ideally via DearImgui
     OrbitalControl mCameraControl;
     FirstPersonControl mFirstPersonControl;
 };
