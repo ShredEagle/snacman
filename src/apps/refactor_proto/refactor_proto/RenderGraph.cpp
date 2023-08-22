@@ -572,6 +572,9 @@ void RenderGraph::render()
     //glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
 
+    // We implemented alpha testing (cut-out), no blending.
+    glDisable(GL_BLEND);
+
     // TODO #camera: handle this when necessary
     // Update camera to match current values in orbital control.
     //mCamera.setPose(mCameraControl.mOrbital.getParentToLocal());

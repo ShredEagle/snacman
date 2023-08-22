@@ -106,7 +106,7 @@ void runApplication(int argc, char * argv[])
 
         // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
         // would be better to show current frame (but this implies to end the profiler frame earlier)
-        profilerOut.str("");
+        profilerOut.str(""); // reset to empty string
         renderer::getGlobalProfiler().prettyPrint(profilerOut);
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);

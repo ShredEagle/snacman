@@ -30,13 +30,18 @@ out vec4 out_Color;
 
 void main()
 {
-    // TODO take the light(s) as UBO input
-    vec3 lightColor = vec3(1., 1., 1.);
-    vec3 lightDir_cam = normalize(vec3(-0.5, 0., 1.));
-
     // Material
     PhongMaterial material = ub_Phong[ex_MaterialIdx];
     vec4 albedo = texture(u_DiffuseTexture, ex_Uv[material.diffuseUvChannel]);
+    // Implement "cut-out" transparency: everything below 50% opacity is discarded (i.e. no depth write).
+    if(albedo.a < 0.5)
+    {
+        discard;
+    }
+
+    // TODO take the light(s) as UBO input
+    vec3 lightColor = vec3(1., 1., 1.);
+    vec3 lightDir_cam = normalize(vec3(-0.5, 0., 1.));
 
     // Phong reflection model
     vec3 view_cam = vec3(0., 0., 1.);
@@ -47,8 +52,8 @@ void main()
     vec3 diffuse = dotPlus(normal_cam, lightDir_cam) * vec3(material.diffuseColor);
     vec3 specular = pow(dotPlus(normal_cam, h_cam), material.specularExponent) * vec3(material.specularColor);
 
-    vec3 phongColor = lightColor * (ambient + diffuse + specular) * albedo.xyz;
-    out_Color = correctGamma(vec4(phongColor, albedo.w * material.diffuseColor.w));
+    vec3 phongColor = lightColor * (ambient + diffuse + specular) * albedo.rgb;
+    out_Color = correctGamma(vec4(phongColor, albedo.a * material.diffuseColor.a));
     //out_Color = vec4(ex_Uv, 0., 1.);
     //out_Color = vec4(normal_cam, 1.);
 }
