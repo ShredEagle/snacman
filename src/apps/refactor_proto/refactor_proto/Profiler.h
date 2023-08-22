@@ -106,7 +106,7 @@ public:
         };
     }
 
-    std::string prettyPrint() const;
+    void prettyPrint(std::ostream & aOut) const;
 
     // Note: struct Values is kept public because it is a convenient utility class.
     /// @brief Keep a record of up to `gMaxSample` samples, as well as special values over this record (TODO e.g. min, max, accumulation).

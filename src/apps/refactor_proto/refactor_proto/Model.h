@@ -216,6 +216,7 @@ struct Node
 };
 
 
+
 // Loosely inspired by Godot data model, this class should probably not exist in the library
 // Currently it mixes up storage of "high level" renderer abstractions (effects, objects...)
 // and storage of graphics API level objects (i.e. names of textures, buffers, ...)

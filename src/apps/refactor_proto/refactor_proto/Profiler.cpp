@@ -23,7 +23,7 @@ Profiler::Entry & Profiler::getNextEntry()
     if(mNextEntry == mEntries.size())
     {
         auto newSize = mEntries.size() * 2;
-        SELOG(warn)("Resizing the profiler to {} entries.", newSize);
+        SELOG(debug)("Resizing the profiler to {} entries.", newSize);
         resize(newSize);
     }
     return mEntries[mNextEntry];
@@ -180,7 +180,7 @@ struct LogicalSection
 };
 
 
-std::string Profiler::prettyPrint() const
+void Profiler::prettyPrint(std::ostream & aOut) const
 {
     auto beginTime = Clock::now();
 
@@ -246,10 +246,9 @@ std::string Profiler::prettyPrint() const
     //
     // Write the aggregated results to output stream
     //
-    std::ostringstream oss;
     for(const LogicalSection & section : sections)
     {
-        oss << std::string(section.mId.mLevel * 2, ' ') << section.mId.mName << ":" 
+        aOut << std::string(section.mId.mLevel * 2, ' ') << section.mId.mName << ":" 
             ;
         
         for (std::size_t valueIdx = 0; valueIdx != section.mActiveMetrics; ++valueIdx)
@@ -257,7 +256,7 @@ std::string Profiler::prettyPrint() const
             const auto & metric = section.mValues[valueIdx];
             const ProviderInterface & provider = getProvider(metric);
 
-            oss << " " << provider.mQuantityName << " " 
+            aOut << " " << provider.mQuantityName << " " 
                 << metric.mValues.average() 
                 << " " << provider.mUnit << ","
                 ;
@@ -265,10 +264,10 @@ std::string Profiler::prettyPrint() const
 
         if(section.mEntries.size() > 1)
         {
-            oss << " (accumulated: " << section.mEntries.size() << ")";
+            aOut << " (accumulated: " << section.mEntries.size() << ")";
         }
 
-        oss << "\n";
+        aOut << "\n";
     }
 
     //
@@ -276,15 +275,13 @@ std::string Profiler::prettyPrint() const
     //
     {
         using std::chrono::microseconds;
-        oss << "(generated from "
+        aOut << "(generated from "
             << mNextEntry << " entries in " 
             << getTicks<microseconds>(Clock::now() - beginTime) << " us"
             << ", sort took " << getTicks<microseconds>(sortedTime - beginTime) << " us"
             << ")"
             ;
     }
-
-    return oss.str();
 }
 
 

@@ -77,7 +77,7 @@ file(GENERATE
 ##
 
 
-find_package(Graphics CONFIG REQUIRED graphics renderer)
+find_package(Graphics CONFIG REQUIRED graphics imguiui renderer)
 find_package(Math CONFIG REQUIRED math)
 find_package(Handy CONFIG REQUIRED handy resource)
 
@@ -89,6 +89,7 @@ target_link_libraries(${TARGET_NAME}
     PRIVATE
         ad::graphics
         ad::handy
+        ad::imguiui
         ad::math
         ad::renderer
         ad::resource

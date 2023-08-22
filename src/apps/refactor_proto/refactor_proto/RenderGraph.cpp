@@ -9,6 +9,8 @@
 
 #include <handy/vector_utils.h>
 
+#include <imguiui/ImguiUi.h>
+
 #include <math/Transformations.h>
 #include <math/Vector.h>
 #include <math/VectorUtilities.h>
@@ -375,33 +377,60 @@ enum class EscKeyBehaviour
 template <class T_callbackProvider>
 void registerGlfwCallbacks(graphics::AppInterface & aAppInterface,
                            T_callbackProvider & aProvider,
-                           EscKeyBehaviour aEscBehaviour)
+                           EscKeyBehaviour aEscBehaviour,
+                           const imguiui::ImguiUi * aImguiUi)
 {
     using namespace std::placeholders;
 
     aAppInterface.registerMouseButtonCallback(
-        std::bind(&T_callbackProvider::callbackMouseButton, std::ref(aProvider), _1, _2, _3, _4, _5));
+        [aImguiUi, &aProvider](int button, int action, int mods, double xpos, double ypos)
+        {
+            if(!aImguiUi->isCapturingMouse())
+            {
+                aProvider.callbackMouseButton(button, action, mods, xpos, ypos);
+            }
+        });
     aAppInterface.registerCursorPositionCallback(
-        std::bind(&T_callbackProvider::callbackCursorPosition, std::ref(aProvider), _1, _2));
+        [aImguiUi, &aProvider](double xpos, double ypos)
+        {
+            if(!aImguiUi->isCapturingMouse())
+            {
+                aProvider.callbackCursorPosition(xpos, ypos);
+            }
+        });
     aAppInterface.registerScrollCallback(
-        std::bind(&T_callbackProvider::callbackScroll, std::ref(aProvider), _1, _2));
+        [aImguiUi, &aProvider](double xoffset, double yoffset)
+        {
+            if(!aImguiUi->isCapturingMouse())
+            {
+                aProvider.callbackScroll(xoffset, yoffset);
+            }
+        });
 
     switch(aEscBehaviour)
     {
         case EscKeyBehaviour::Ignore:
-            aAppInterface.registerKeyCallback(
-                std::bind(&T_callbackProvider::callbackKeyboard, std::ref(aProvider), _1, _2, _3, _4));
+            aAppInterface.registerKeyCallback([aImguiUi, &aProvider](int key, int scancode, int action, int mods)
+            {
+                if(!aImguiUi->isCapturingKeyboard())
+                {
+                    aProvider.callbackKeyboard(key, scancode, action, mods);
+                }
+            });
             break;
         case EscKeyBehaviour::Close:
             aAppInterface.registerKeyCallback(
-                [&aAppInterface, &aProvider](int key, int scancode, int action, int mods)
+                [&aAppInterface, &aProvider, aImguiUi](int key, int scancode, int action, int mods)
                 {
-                    // TODO would be cleaner to factorize that and the ApplicationGlfw::default_key_callback
-                    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+                    if(!aImguiUi->isCapturingKeyboard())
                     {
-                        aAppInterface.requestCloseApplication();
+                        // TODO would be cleaner to factorize that and the ApplicationGlfw::default_key_callback
+                        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+                        {
+                            aAppInterface.requestCloseApplication();
+                        }
+                        aProvider.callbackKeyboard(key, scancode, action, mods);
                     }
-                    aProvider.callbackKeyboard(key, scancode, action, mods);
                 });
             break;
     }
@@ -409,7 +438,8 @@ void registerGlfwCallbacks(graphics::AppInterface & aAppInterface,
 
 
 RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
-                         const std::filesystem::path & aModelFile) :
+                         const std::filesystem::path & aModelFile,
+                         const imguiui::ImguiUi & aImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
     mLoader{makeResourceFinder()},
     mCameraControl{mGlfwAppInterface->getWindowSize(),
@@ -417,8 +447,8 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
                    Orbital{2/*initial radius*/}
     }
 {
-    registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close);
-    registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close);
+    registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close, &aImguiUi);
+    registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     mInstanceStream = makeInstanceStream(mStorage, 1);

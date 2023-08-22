@@ -7,6 +7,7 @@
 #include <build_info.h>
 
 #include <graphics/ApplicationGlfw.h>
+#include <imguiui/ImguiUi.h>
 
 #include <iostream>
 
@@ -49,17 +50,22 @@ void runApplication(int argc, char * argv[])
     };
     glfwSwapInterval(0); // Disable V-sync
 
+    imguiui::ImguiUi imguiUi{glfwApp};
+
     auto scopeProfiler = renderer::scopeGlobalProfiler();
 
     renderer::RenderGraph renderGraph{
         glfwApp.getAppInterface(),
-        handleArguments(argc, argv)
+        handleArguments(argc, argv),
+        imguiUi,
     };
 
     renderer::Profiler::Values<std::uint64_t> frameDuration;
     Clock::time_point previousFrame = Clock::now();
     using FrameDurationUnit = std::chrono::microseconds;
     float stepDuration = 0.f;
+
+    std::ostringstream profilerOut;
 
     while (glfwApp.handleEvents())
     {
@@ -87,12 +93,21 @@ void runApplication(int argc, char * argv[])
 
         renderGraph.update(stepDuration);
         renderGraph.render();
+        imguiUi.newFrame();
+        ImGui::Begin("Profiler");
+        ImGui::Text(profilerOut.str().c_str());
+        ImGui::End();
+        imguiUi.render();
+        imguiUi.renderBackend();
         glfwApp.swapBuffers();
 
         PROFILER_END_SECTION;
         PROFILER_END_FRAME;
 
-        //std::cout << renderer::getGlobalProfiler().prettyPrint() << "\n";
+        // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
+        // would be better to show current frame (but this implies to end the profiler frame earlier)
+        profilerOut.str("");
+        renderer::getGlobalProfiler().prettyPrint(profilerOut);
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }
