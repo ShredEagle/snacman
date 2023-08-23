@@ -182,42 +182,31 @@ namespace {
     }
 
 
+    void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
+    {
+        GLfloat time =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 1000.f;
+        graphics::loadSingle(aUbo, time, graphics::BufferHint::DynamicDraw);
+    }
+
+
+    void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
+    {
+        graphics::loadSingle(aUbo, GpuViewBlock{aCamera}, graphics::BufferHint::DynamicDraw);
+    }
+
+
     void draw(const Instance & aInstance,
               const GenericStream & aInstanceBufferView,
-              const Camera & aCamera,
-              Storage & aStorage)
+              Storage & aStorage,
+              const RepositoryUBO & aUboRepository)
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
         // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
         // those could be "bound" before draw (potentially doing some binds and uniform setting, but not iterating the program)
         // (We could even separate actual texture from the "format", allowing to change an underlying texture without revisiting the program)
         // This would address the warnings repetitions (only issued when the compiled state is (re-)generated), and be better for perfs.
-
-        // TODO Consolidate UBO setup
-        RepositoryUBO ubos;
-        {
-            PROFILER_SCOPE_SECTION("prepare_UBO", CpuTime, GpuTime);
-            {
-                graphics::UniformBufferObject ubo;
-                GLfloat time =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 1000.f;
-                graphics::loadSingle(ubo, time, 
-                                     graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
-                ubos.emplace(semantic::gFrame, std::move(ubo));
-            }
-            {
-                graphics::UniformBufferObject ubo;
-                    
-                graphics::loadSingle(ubo, 
-                                     GpuViewBlock{aCamera}, 
-                                     graphics::BufferHint::StaticDraw/*todo change hint when refactoring*/);
-                ubos.emplace(semantic::gView, std::move(ubo));
-            }
-            {
-                ubos.emplace(semantic::gMaterials, prepareMaterialBuffer(aStorage));
-            }
-        }
 
         for(const Part & part : aInstance.mObject->mParts)
         {
@@ -234,6 +223,7 @@ namespace {
             // and what is per part (the material, ...). Note that the GL instance
             // corresponds to a Part in our data model.
             {
+                PROFILER_SCOPE_SECTION("prepare_instance_transform", CpuTime);
                 InstanceData instanceData{
                     .mModelTransform =
                         math::trans3d::scaleUniform(aInstance.mPose.mUniformScale)
@@ -255,71 +245,74 @@ namespace {
 
             const VertexStream & vertexStream = *part.mVertexStream;
 
-            // TODO cache VAO -- in progress
-            PROFILER_BEGIN_SECTION("prepare_VAO", CpuTime);
-            // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
-            const auto & vao = [&, &entries = configuredProgram.mConfig->mEntries]() -> const graphics::VertexArrayObject &
             {
-                if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
-                                                   [&vertexStream, &part](const auto & aEntry)
-                                                   {
-                                                       return aEntry.mVertexStream == part.mVertexStream;
-                                                   });
-                    foundConfig != entries.end())
+                PROFILER_BEGIN_SECTION("prepare_VAO", CpuTime);
+                // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
+                const auto & vao = [&, &entries = configuredProgram.mConfig->mEntries]() -> const graphics::VertexArrayObject &
                 {
-                    return foundConfig->mVao;
-                }
-                else
+                    if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
+                                                    [&vertexStream, &part](const auto & aEntry)
+                                                    {
+                                                        return aEntry.mVertexStream == part.mVertexStream;
+                                                    });
+                        foundConfig != entries.end())
+                    {
+                        return foundConfig->mVao;
+                    }
+                    else
+                    {
+                        entries.push_back(
+                            ProgramConfig::Entry{
+                                .mVertexStream = part.mVertexStream,
+                                .mVao = prepareVAO(selectedProgram, vertexStream),
+                            });
+                        return entries.back().mVao;
+                    }
+                }();
+                graphics::ScopedBind vaoScope{vao};
+                PROFILER_END_SECTION;
+                
                 {
-                    entries.push_back(
-                        ProgramConfig::Entry{
-                            .mVertexStream = part.mVertexStream,
-                            .mVao = prepareVAO(selectedProgram, vertexStream),
-                        });
-                    return entries.back().mVao;
+                    PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
+                    setBufferBackedBlocks(selectedProgram, aUboRepository);
                 }
-            }();
-            PROFILER_END_SECTION;
-            graphics::ScopedBind vaoScope{vao};
-            
-            {
-                PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
-                setBufferBackedBlocks(selectedProgram, ubos);
-            }
 
-            if(material.mPhongMaterialIdx != -1)
-            {
-                if(auto textureIdx = aStorage.mPhongMaterials[material.mPhongMaterialIdx].mDiffuseMap.mTextureIndex;
-                   textureIdx != TextureInput::gNoEntry)
+                if(material.mPhongMaterialIdx != -1)
                 {
-                    PROFILER_SCOPE_SECTION("set_textures", CpuTime);
-                    setTextures(selectedProgram, {{semantic::gDiffuseTexture, &aStorage.mTextures[textureIdx]},});
+                    if(auto textureIdx = aStorage.mPhongMaterials[material.mPhongMaterialIdx].mDiffuseMap.mTextureIndex;
+                    textureIdx != TextureInput::gNoEntry)
+                    {
+                        PROFILER_SCOPE_SECTION("set_textures", CpuTime);
+                        setTextures(selectedProgram, {{semantic::gDiffuseTexture, &aStorage.mTextures[textureIdx]},});
+                    }
                 }
-            }
 
-            graphics::ScopedBind programScope{selectedProgram};
+                //PROFILER_BEGIN_SECTION("use_program", CpuTime, GpuTime);
+                graphics::ScopedBind programScope{selectedProgram};
+                //PROFILER_END_SECTION;
 
-            {
-                PROFILER_SCOPE_SECTION("glDraw_call", CpuTime, GpuTime);
-                // TODO multi draw
-                if(vertexStream.mIndicesType == NULL)
                 {
-                    glDrawArraysInstanced(
-                        part.mPrimitiveMode,
-                        part.mVertexFirst,
-                        part.mVertexCount,
-                        1);
-                }
-                else
-                {
-                    glDrawElementsInstanced(
-                        part.mPrimitiveMode,
-                        part.mIndicesCount,
-                        vertexStream.mIndicesType,
-                        (const void *)
-                            (vertexStream.mIndexBufferView.mOffset 
-                            + (part.mIndexFirst * graphics::getByteSize(vertexStream.mIndicesType))),
-                        1);
+                    PROFILER_SCOPE_SECTION("glDraw_call", CpuTime, GpuTime);
+                    // TODO multi draw
+                    if(vertexStream.mIndicesType == NULL)
+                    {
+                        glDrawArraysInstanced(
+                            part.mPrimitiveMode,
+                            part.mVertexFirst,
+                            part.mVertexCount,
+                            1);
+                    }
+                    else
+                    {
+                        glDrawElementsInstanced(
+                            part.mPrimitiveMode,
+                            part.mIndicesCount,
+                            vertexStream.mIndicesType,
+                            (const void *)
+                                (vertexStream.mIndexBufferView.mOffset 
+                                + (part.mIndexFirst * graphics::getByteSize(vertexStream.mIndicesType))),
+                            1);
+                    }
                 }
             }
         }
@@ -363,6 +356,25 @@ DrawList Scene::populateDrawList() const
     }
 
     return drawList;
+}
+
+
+HardcodedUbos::HardcodedUbos(Storage & aStorage)
+{
+    aStorage.mUbos.emplace_back();
+    mFrameUbo = &aStorage.mUbos.back();
+    mUboRepository.emplace(semantic::gFrame, mFrameUbo);
+
+    aStorage.mUbos.emplace_back();
+    mViewingUbo = &aStorage.mUbos.back();
+    mUboRepository.emplace(semantic::gView, mViewingUbo);
+}
+
+
+void HardcodedUbos::addUbo(Storage & aStorage, BlockSemantic aSemantic, graphics::UniformBufferObject && aUbo)
+{
+    aStorage.mUbos.push_back(std::move(aUbo));
+    mUboRepository.emplace(aSemantic, &aStorage.mUbos.back());
 }
 
 
@@ -442,6 +454,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
                          const imguiui::ImguiUi & aImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
     mLoader{makeResourceFinder()},
+    mUbos{mStorage},
     mCameraControl{mGlfwAppInterface->getWindowSize(),
                    gInitialVFov,
                    Orbital{2/*initial radius*/}
@@ -492,39 +505,44 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     // TODO store and load names in the binary file format
     SELOG(info)("Loaded model '{}' with bouding box {}.", aModelFile.stem().string(), fmt::streamed(model.mAabb));
 
-    // TODO automatically handle scaling via model bounding box.
-    // Note that visually this has the same effect as moving the radial camera away
-    // Actually, an automatic scaling could be detected for an "object viewer", but it is much harder for an environment
-    // From the values of teapot and sponza, they seem to be in centimeters
-    model.mInstance.mPose.mUniformScale = 0.01f;
-    model.mAabb *= model.mInstance.mPose.mUniformScale;
+    mUbos.addUbo(mStorage, semantic::gMaterials, prepareMaterialBuffer(mStorage));
 
-    // Center the model on world origin
-    model.mInstance.mPose.mPosition = -model.mAabb.center().as<math::Vec>();
+    // Setup instance and camera poses
+    {
+        // TODO automatically handle scaling via model bounding box.
+        // Note that visually this has the same effect as moving the radial camera away
+        // Actually, an automatic scaling could be detected for an "object viewer", but it is much harder for an environment
+        // From the values of teapot and sponza, they seem to be in centimeters
+        model.mInstance.mPose.mUniformScale = 0.01f;
+        model.mAabb *= model.mInstance.mPose.mUniformScale;
 
-    // move the orbital camera away, depending on the model size
-    mCameraControl.mOrbital.mSpherical.radius() = 
-        std::max(mCameraControl.mOrbital.mSpherical.radius(),
-                 gRadialDistancingFactor * (*model.mAabb.mDimension.getMaxMagnitudeElement()));
+        // Center the model on world origin
+        model.mInstance.mPose.mPosition = -model.mAabb.center().as<math::Vec>();
+
+        // move the orbital camera away, depending on the model size
+        mCameraControl.mOrbital.mSpherical.radius() = 
+            std::max(mCameraControl.mOrbital.mSpherical.radius(),
+                    gRadialDistancingFactor * (*model.mAabb.mDimension.getMaxMagnitudeElement()));
 
 
-    // TODO #camera do this only the correct setup, on each projection change
-    // We waited to load the model before setting up the projection,
-    // in order to set the far plane based on the model depth.
-    mCamera.setupOrthographicProjection({
-        .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
-        // TODO #camera
-        .mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
-        .mNearZ = gNearZ,
-        .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
-    });
+        // TODO #camera do this only the correct setup, on each projection change
+        // We waited to load the model before setting up the projection,
+        // in order to set the far plane based on the model depth.
+        mCamera.setupOrthographicProjection({
+            .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
+            // TODO #camera
+            .mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
+            .mNearZ = gNearZ,
+            .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
+        });
 
-    mCamera.setupPerspectiveProjection({
-        .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
-        .mVerticalFov = gInitialVFov,
-        .mNearZ = gNearZ,
-        .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
-    });
+        mCamera.setupPerspectiveProjection({
+            .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
+            .mVerticalFov = gInitialVFov,
+            .mNearZ = gNearZ,
+            .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
+        });
+    }
 
     // TODO restore the ability to make a model copy, with a distinct material
     // Add a a copy of the model (hardcoded for teapot), to test another material idx
@@ -586,6 +604,13 @@ void RenderGraph::render()
     //}
     mCamera.setPose(mFirstPersonControl.getParentToLocal());
 
+    {
+        PROFILER_SCOPE_SECTION("load_dynamic_UBOs", CpuTime, GpuTime);
+        loadFrameUbo(*mUbos.mFrameUbo);
+        // Note in a more realistic application, several cameras would be used per frame.
+        loadCameraUbo(*mUbos.mViewingUbo, mCamera);
+    }
+
     PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
     // TODO should be done once per viewport
     glViewport(0, 0,
@@ -595,8 +620,8 @@ void RenderGraph::render()
     {
         draw(instance,
              mInstanceStream,
-             mCamera,
-             mStorage);
+             mStorage,
+             mUbos.mUboRepository);
     }
 }
 

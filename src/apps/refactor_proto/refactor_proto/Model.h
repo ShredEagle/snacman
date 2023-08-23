@@ -6,6 +6,7 @@
 #include "Material.h"
 
 #include <renderer/Texture.h>
+#include <renderer/UniformBuffer.h>
 #include <renderer/VertexSpecification.h>
 
 #include <math/Box.h>
@@ -230,6 +231,7 @@ struct Storage
     std::list<ConfiguredProgram> mPrograms;
     std::vector<PhongMaterial> mPhongMaterials;
     std::vector<graphics::Texture> mTextures;
+    std::list<graphics::UniformBufferObject> mUbos;
     std::list<VertexStream> mVertexStreams;
     std::list<ProgramConfig> mProgramConfigs;
 };

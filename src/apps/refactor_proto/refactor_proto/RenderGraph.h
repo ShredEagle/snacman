@@ -4,6 +4,7 @@
 #include "Camera.h"
 #include "Model.h"
 #include "Loader.h"
+#include "Repositories.h"
 
 #include <graphics/ApplicationGlfw.h>
 
@@ -31,6 +32,17 @@ struct Scene
     DrawList populateDrawList() const;
 };
 
+struct HardcodedUbos
+{
+    HardcodedUbos(Storage & aStorage);
+
+    void addUbo(Storage & aStorage, BlockSemantic aSemantic, graphics::UniformBufferObject && aUbo);
+
+    RepositoryUBO mUboRepository;
+    graphics::UniformBufferObject * mFrameUbo;
+    graphics::UniformBufferObject * mViewingUbo;
+};
+
 struct RenderGraph
 {
     RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
@@ -46,6 +58,7 @@ struct RenderGraph
     Scene mScene;
     GenericStream mInstanceStream;
     Loader mLoader;
+    HardcodedUbos mUbos;
 
     Camera mCamera;
     

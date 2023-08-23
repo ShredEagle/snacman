@@ -117,7 +117,7 @@ void setBufferBackedBlocks(const IntrospectProgram & aProgram,
         if(auto found = aUniformBufferObjects.find(shaderBlock.mSemantic);
            found != aUniformBufferObjects.end())
         {
-            bind(found->second, shaderBlock.mBindingIndex);
+            bind(*found->second, shaderBlock.mBindingIndex);
         }
         else
         {

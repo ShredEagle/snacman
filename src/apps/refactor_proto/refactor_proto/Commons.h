@@ -7,6 +7,7 @@
 namespace ad::renderer {
 
 
+// TODO replace with actual string ids (hashes)
 using StringKey = std::string;
 
 
