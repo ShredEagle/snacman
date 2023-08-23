@@ -70,7 +70,7 @@ void runApplication(int argc, char * argv[])
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME;
-        PROFILER_BEGIN_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
+        PROFILER_PUSH_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
 
         {
             PROFILER_SCOPE_SECTION("fps_counter", renderer::CpuTime, renderer::GpuTime);
@@ -104,7 +104,7 @@ void runApplication(int argc, char * argv[])
         imguiUi.renderBackend();
         glfwApp.swapBuffers();
 
-        PROFILER_END_SECTION;
+        PROFILER_POP_SECTION;
         PROFILER_END_FRAME;
 
         // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame

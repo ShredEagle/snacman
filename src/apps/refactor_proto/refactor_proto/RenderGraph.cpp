@@ -21,6 +21,9 @@
 #include <renderer/Query.h>
 #include <renderer/ScopeGuards.h>
 
+#define NOMINMAX
+#include "../../../libs/snac-renderer/snac-renderer/3rdparty/nvtx/include/nvtx3/nvtx3.hpp"
+
 #include <array>
 #include <fstream>
 
@@ -210,12 +213,16 @@ namespace {
 
         for(const Part & part : aInstance.mObject->mParts)
         {
+            PROFILER_SCOPE_SECTION("draw_part", CpuTime);
             // TODO replace program selection with something not hardcoded, this is a quick test
             // (Ideally, a shader system with some form of render list)
             // Also, this selection should be done while the drawlist is generated, so it is shared by all passes
             // Also, the drawlist generation should be at the part level, not the object instance level
+            PROFILER_PUSH_SECTION("discard_1", CpuTime);
             const Material & material = aInstance.mMaterialOverride ?
                 *aInstance.mMaterialOverride : part.mMaterial;
+            PROFILER_POP_SECTION;
+            
             
             // TODO should be done ahead of the draw call, at once for all instances.
             // TODO there is a tension between what is actually per object instance 
@@ -238,15 +245,17 @@ namespace {
                 );
             }
 
+            PROFILER_PUSH_SECTION("discard_2", CpuTime);
             assert(material.mEffect->mTechniques.size() == 1);
             
             const ConfiguredProgram & configuredProgram = *material.mEffect->mTechniques.at(0).mConfiguredProgram;
             const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
 
             const VertexStream & vertexStream = *part.mVertexStream;
+            PROFILER_POP_SECTION;
 
             {
-                PROFILER_BEGIN_SECTION("prepare_VAO", CpuTime);
+                PROFILER_PUSH_SECTION("prepare_VAO", CpuTime);
                 // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
                 const auto & vao = [&, &entries = configuredProgram.mConfig->mEntries]() -> const graphics::VertexArrayObject &
                 {
@@ -270,7 +279,7 @@ namespace {
                     }
                 }();
                 graphics::ScopedBind vaoScope{vao};
-                PROFILER_END_SECTION;
+                PROFILER_POP_SECTION;
                 
                 {
                     PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
@@ -280,19 +289,20 @@ namespace {
                 if(material.mPhongMaterialIdx != -1)
                 {
                     if(auto textureIdx = aStorage.mPhongMaterials[material.mPhongMaterialIdx].mDiffuseMap.mTextureIndex;
-                    textureIdx != TextureInput::gNoEntry)
+                        textureIdx != TextureInput::gNoEntry)
                     {
                         PROFILER_SCOPE_SECTION("set_textures", CpuTime);
                         setTextures(selectedProgram, {{semantic::gDiffuseTexture, &aStorage.mTextures[textureIdx]},});
                     }
                 }
 
-                //PROFILER_BEGIN_SECTION("use_program", CpuTime, GpuTime);
+                PROFILER_PUSH_SECTION("bind_program", CpuTime);
                 graphics::ScopedBind programScope{selectedProgram};
-                //PROFILER_END_SECTION;
+                PROFILER_POP_SECTION;
 
                 {
-                    PROFILER_SCOPE_SECTION("glDraw_call", CpuTime, GpuTime);
+                    // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
+                    PROFILER_SCOPE_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
                     // TODO multi draw
                     if(vertexStream.mIndicesType == NULL)
                     {
@@ -581,6 +591,10 @@ void RenderGraph::update(float aDeltaTime)
 
 void RenderGraph::render()
 {
+    nvtx3::mark("RenderGraph::render()");
+    NVTX3_FUNC_RANGE();
+
+
     // Implement material/program selection while generating drawlist
     DrawList drawList = mScene.populateDrawList();
 
@@ -611,11 +625,12 @@ void RenderGraph::render()
         loadCameraUbo(*mUbos.mViewingUbo, mCamera);
     }
 
-    PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
     // TODO should be done once per viewport
     glViewport(0, 0,
                mGlfwAppInterface->getFramebufferSize().width(),
                mGlfwAppInterface->getFramebufferSize().height());
+
+    PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
     for(const auto & instance : drawList)
     {
         draw(instance,

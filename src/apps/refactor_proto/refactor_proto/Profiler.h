@@ -87,6 +87,12 @@ public:
     EntryIndex beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders);
     void endSection(EntryIndex aIndex);
 
+    // I am not sure this is a good idea, but it relies on a Profiler global state (mCurrentParent) (which might not be a good idea)
+    // The current assumption is that sections should always be strictly nested, and that they are created on a single thread
+    // (or at least that there is an independent copy of the Profiler state per thread).
+    // This helps with ending manual sections.
+    void popCurrentSection();
+
     struct [[nodiscard]] SectionGuard
     {
         ~SectionGuard()

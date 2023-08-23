@@ -37,10 +37,10 @@ enum
 #define PROFILER_BEGIN_FRAME ::ad::renderer::getGlobalProfiler().beginFrame()
 #define PROFILER_END_FRAME ::ad::renderer::getGlobalProfiler().endFrame()
 
-#define PROFILER_BEGIN_SECTION(name, ...) \
-    auto profilerSectionUniqueName = ::ad::renderer::getGlobalProfiler().beginSection(name, {__VA_ARGS__})
+#define PROFILER_PUSH_SECTION(name, ...) \
+    ::ad::renderer::getGlobalProfiler().beginSection(name, {__VA_ARGS__})
 
-#define PROFILER_END_SECTION ::ad::renderer::getGlobalProfiler().endSection(profilerSectionUniqueName)
+#define PROFILER_POP_SECTION ::ad::renderer::getGlobalProfiler().popCurrentSection()
 
 #define PROFILER_SCOPE_SECTION(name, ...) \
     auto profilerScopedSection = ::ad::renderer::getGlobalProfiler().scopeSection(name, {__VA_ARGS__})
@@ -53,8 +53,8 @@ enum
 #define PROFILER_BEGIN_FRAME
 #define PROFILER_END_FRAME
 
-#define PROFILER_BEGIN_SECTION(name, ...) 
-#define PROFILER_END_SECTION
+#define PROFILER_PUSH_SECTION(name, ...) 
+#define PROFILER_POP_SECTION
 
 #define PROFILER_SCOPE_SECTION(name, ...)
 

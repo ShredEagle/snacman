@@ -147,6 +147,12 @@ void Profiler::endSection(EntryIndex aIndex)
 }
 
 
+void Profiler::popCurrentSection()
+{
+    endSection(mCurrentParent);
+}
+
+
 struct LogicalSection
 {
     LogicalSection(const Profiler::Entry & aEntry, Profiler::EntryIndex aEntryIndex) :
@@ -161,9 +167,11 @@ struct LogicalSection
         assert(mActiveMetrics == aEntry.mActiveMetrics);
         for (std::size_t metricIdx = 0; metricIdx != mActiveMetrics; ++metricIdx)
         {
-            // TODO the accumulation should also handle other data (samples, max, min, ...)
+            // TODO the accumulation should also handle other data (current sample, max, min, ...)
             // could be encapsulated in a Value member function.
             assert(mValues[metricIdx].mProviderIndex == aEntry.mMetrics[metricIdx].mProviderIndex);
+            // Average will use the sample count (copied from the Entry provided on this construction)
+            assert(mValues[metricIdx].mValues.mSampleCount == aEntry.mMetrics[metricIdx].mValues.mSampleCount);
             mValues[metricIdx].mValues.mAccumulated += aEntry.mMetrics[metricIdx].mValues.mAccumulated;
         }
         mEntries.push_back(aEntryIndex);
@@ -199,6 +207,7 @@ struct LogicalSection
     std::vector<Profiler::EntryIndex> mEntries;
 
     // TODO we actually only need to store Values here (not even sure we should keep the individual samples)
+    // (note: we do not accumulate the samples at the moment)
     // If we go this route, we should split Metrics from AOS to SOA so we can copy Values from Entries with memcpy
     std::array<Profiler::Metric<GLuint>, Profiler::gMaxMetricsPerSection> mValues;
     std::size_t mActiveMetrics = 0;
