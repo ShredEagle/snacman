@@ -115,6 +115,8 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
 
     if(entry.mActiveMetrics == 0)
     {
+        // TODO the provider indices must always be sorted (this is notably an assumption in LogicalSection::accountForChildSection)
+        // should we sort, or assert that it is already the case?
         for(const ProviderIndex providerIndex : aProviders)
         {
             entry.mMetrics.at(entry.mActiveMetrics++).mProviderIndex = providerIndex;
@@ -167,16 +169,43 @@ struct LogicalSection
         mEntries.push_back(aEntryIndex);
     }
 
+    void accountChildSection(const LogicalSection & aNested)
+    {
+        std::size_t thisMetricIdx = 0, childMetricIdx = 0;
+        while(thisMetricIdx != mActiveMetrics && childMetricIdx != aNested.mActiveMetrics)
+        {
+            if(mValues[thisMetricIdx].mProviderIndex == aNested.mValues[childMetricIdx].mProviderIndex)
+            {
+                mAccountedFor[thisMetricIdx] += aNested.mValues[childMetricIdx].mValues.average();
+                ++thisMetricIdx;
+                ++childMetricIdx;
+            }
+            else if(mValues[thisMetricIdx].mProviderIndex < aNested.mValues[childMetricIdx].mProviderIndex)
+            {
+                ++thisMetricIdx;
+            }
+            else
+            {
+                ++childMetricIdx;
+            }
+        }
+    }
+
     /// @brief Identity that determines the belonging of an Entry to this logical Section.
     Profiler::Entry::Identity mId;
     // TODO should we use an array? 
     // Is it really useful to keep if we cumulate at push? (might be if we cache the sort result between frames)
+    /// @brief Collection of entries beloging to this logical section. 
     std::vector<Profiler::EntryIndex> mEntries;
 
     // TODO we actually only need to store Values here (not even sure we should keep the individual samples)
     // If we go this route, we should split Metrics from AOS to SOA so we can copy Values from Entries with memcpy
     std::array<Profiler::Metric<GLuint>, Profiler::gMaxMetricsPerSection> mValues;
     std::size_t mActiveMetrics = 0;
+
+    /// @brief Keep track of the samples accounted for by sub-sections 
+    /// (thus allowing to know what has not been accounted for)
+    std::array<GLuint, Profiler::gMaxMetricsPerSection> mAccountedFor{0}; 
 };
 
 
@@ -195,8 +224,10 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     std::vector<LogicalSection> sections; // Note: We know there are at most mNextEntry logical sections,
                                           // might allow for a preallocated array
 
-    using LogicalSectionId = unsigned short; // we should not have that many logical sections right?
+    using LogicalSectionId = unsigned short; // we should not have that many logical sections as to require a ushort, right?
     static constexpr LogicalSectionId gInvalidLogicalSection = std::numeric_limits<LogicalSectionId>::max();
+    // This vector associate each entry index to a logical section index.
+    // It allows to test whether distinct entry indices correspond to the same logical section, for parent consolidation.
     std::vector<LogicalSectionId> entryIdToLogicalSectionId(mEntries.size(), gInvalidLogicalSection);
 
     for(EntryIndex entryIdx = 0; entryIdx != mNextEntry; ++entryIdx)
@@ -241,6 +272,16 @@ void Profiler::prettyPrint(std::ostream & aOut) const
         }
     }
 
+    // Accumulate the values accounted for by child sections.
+    for(LogicalSection & section : sections)
+    {
+        if(section.mId.mParentIdx != Entry::gNoParent)
+        {
+            LogicalSection & parentSection = sections[entryIdToLogicalSectionId[section.mId.mParentIdx]];
+            parentSection.accountChildSection(section);
+        }
+    }
+
     auto sortedTime = Clock::now();
 
     //
@@ -258,6 +299,8 @@ void Profiler::prettyPrint(std::ostream & aOut) const
 
             aOut << " " << provider.mQuantityName << " " 
                 << metric.mValues.average() 
+                // Show what has not been accounted for by child sections in between parenthesis
+                << " (" << metric.mValues.average() - section.mAccountedFor[valueIdx] << ")"
                 << " " << provider.mUnit << ","
                 ;
         }
