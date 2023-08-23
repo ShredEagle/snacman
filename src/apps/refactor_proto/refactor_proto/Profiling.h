@@ -32,6 +32,7 @@ enum
     GpuPrimitiveGen,
 };
 
+#ifdef SE_FEATURE_PROFILER
 
 #define PROFILER_BEGIN_FRAME ::ad::renderer::getGlobalProfiler().beginFrame()
 #define PROFILER_END_FRAME ::ad::renderer::getGlobalProfiler().endFrame()
@@ -44,5 +45,21 @@ enum
 #define PROFILER_SCOPE_SECTION(name, ...) \
     auto profilerScopedSection = ::ad::renderer::getGlobalProfiler().scopeSection(name, {__VA_ARGS__})
 
+#define PROFILER_PRINT_TO_STREAM(ostream) \
+    ::ad::renderer::getGlobalProfiler().prettyPrint(ostream);
+
+#else
+
+#define PROFILER_BEGIN_FRAME
+#define PROFILER_END_FRAME
+
+#define PROFILER_BEGIN_SECTION(name, ...) 
+#define PROFILER_END_SECTION
+
+#define PROFILER_SCOPE_SECTION(name, ...)
+
+#define PROFILER_PRINT_TO_STREAM(ostream)
+
+#endif
 
 } // namespace ad::renderer

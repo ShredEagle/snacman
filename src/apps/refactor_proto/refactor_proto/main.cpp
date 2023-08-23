@@ -69,27 +69,30 @@ void runApplication(int argc, char * argv[])
 
     while (glfwApp.handleEvents())
     {
-        {
-            // TODO this could be integrated into the Profiler::beginFrame()
-            auto startTime = Clock::now();
-            frameDuration.record(getTicks<FrameDurationUnit>(startTime - previousFrame));
-            stepDuration = (float)asFractionalSeconds(startTime - previousFrame);
-            previousFrame = startTime;
-        }
-        if( auto framePeriodUs = frameDuration.average();
-            framePeriodUs != 0)
-        {
-            float fps = (float)(FrameDurationUnit::period::den) / (framePeriodUs * FrameDurationUnit::period::num);
-            std::ostringstream titleOss;
-            titleOss.precision(2);
-            titleOss << getVersionedName() 
-                << " (" << std::fixed << fps << " fps)"
-                ;
-            glfwApp.setWindowTitle(titleOss.str());
-        }
-
         PROFILER_BEGIN_FRAME;
         PROFILER_BEGIN_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
+
+        {
+            PROFILER_SCOPE_SECTION("fps_counter", renderer::CpuTime, renderer::GpuTime);
+            {
+                // TODO this could be integrated into the Profiler::beginFrame()
+                auto startTime = Clock::now();
+                frameDuration.record(getTicks<FrameDurationUnit>(startTime - previousFrame));
+                stepDuration = (float)asFractionalSeconds(startTime - previousFrame);
+                previousFrame = startTime;
+            }
+            if( auto framePeriodUs = frameDuration.average();
+                framePeriodUs != 0)
+            {
+                float fps = (float)(FrameDurationUnit::period::den) / (framePeriodUs * FrameDurationUnit::period::num);
+                std::ostringstream titleOss;
+                titleOss.precision(2);
+                titleOss << getVersionedName() 
+                    << " (" << std::fixed << fps << " fps | " << framePeriodUs / 1000.f << " ms/f)"
+                    ;
+                glfwApp.setWindowTitle(titleOss.str());
+            }
+        }
 
         renderGraph.update(stepDuration);
         renderGraph.render();
@@ -107,7 +110,7 @@ void runApplication(int argc, char * argv[])
         // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
         // would be better to show current frame (but this implies to end the profiler frame earlier)
         profilerOut.str(""); // reset to empty string
-        renderer::getGlobalProfiler().prettyPrint(profilerOut);
+        PROFILER_PRINT_TO_STREAM(profilerOut);
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }
