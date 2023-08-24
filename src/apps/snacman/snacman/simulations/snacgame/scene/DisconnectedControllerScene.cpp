@@ -141,10 +141,12 @@ void DisconnectedControllerScene::update(const snac::Time & aTime,
         mSystems.get()->get<system::InputProcessor>().mapControllersInput(
             aInput, "menu", "menu");
 
-    auto [menuItem, accumulatedCommand] =
-        mSystems.get()->get<system::MenuManager>().manageMenu(
+    auto menuResult = mSystems.get()->get<system::MenuManager>().manageMenu(
             controllerCommands);
 
+    auto menuItem = std::get<0>(menuResult);
+    auto accumulatedCommand = std::get<1>(menuResult);
+        
     if (accumulatedCommand & gQuitCommand)
     {
         mGameContext.mSceneStack->popScene(
