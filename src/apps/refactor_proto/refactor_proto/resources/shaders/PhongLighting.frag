@@ -20,7 +20,7 @@ struct PhongMaterial
     float specularExponent;
 };
 
-layout(std140, binding = 1) uniform MaterialsBlock
+layout(std140, binding = 2) uniform MaterialsBlock
 {
     PhongMaterial ub_Phong[128];
 };

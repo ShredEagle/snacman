@@ -444,13 +444,13 @@ GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
         .mVertexBufferViews = { vboView, },
         .mSemanticToAttribute{
             {
-                semantic::gLocalToWorld,
+                semantic::gModelTransformIdx,
                 AttributeAccessor{
                     .mBufferViewIndex = 0, // view is added above
                     .mClientDataFormat{
-                        .mDimension = {4, 4},
-                        .mOffset = offsetof(InstanceData, mModelTransform),
-                        .mComponentType = GL_FLOAT
+                        .mDimension = 1,
+                        .mOffset = offsetof(InstanceData, mModelTransformIdx),
+                        .mComponentType = GL_UNSIGNED_INT,
                     },
                 }
             },

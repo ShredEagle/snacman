@@ -76,6 +76,8 @@ constexpr float gRadialDistancingFactor{1.5f};
 /// @brief The far plane will be at least at this factor times the model depth.
 constexpr float gDepthFactor{20.f};
 
+constexpr std::size_t gMaxInstances = 1;
+
 namespace {
 
     resource::ResourceFinder makeResourceFinder()
@@ -203,7 +205,8 @@ namespace {
     void draw(const Instance & aInstance,
               const GenericStream & aInstanceBufferView,
               Storage & aStorage,
-              const RepositoryUBO & aUboRepository)
+              const RepositoryUBO & aUboRepository,
+              GLuint aTransformIdx)
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
         // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
@@ -232,9 +235,7 @@ namespace {
             {
                 PROFILER_SCOPE_SECTION("prepare_instance_transform", CpuTime);
                 InstanceData instanceData{
-                    .mModelTransform =
-                        math::trans3d::scaleUniform(aInstance.mPose.mUniformScale)
-                        * math::trans3d::translate(aInstance.mPose.mPosition),
+                    .mModelTransformIdx = aTransformIdx,
                     .mMaterialIdx = (GLuint)material.mPhongMaterialIdx,
                 };
                 
@@ -369,6 +370,22 @@ DrawList Scene::populateDrawList() const
 }
 
 
+void prepareInstanceTransforms(const DrawList & drawList, const graphics::UniformBufferObject & aUbo)
+{
+    PROFILER_SCOPE_SECTION("prepare_instance_transforms", CpuTime);
+    std::vector<math::AffineMatrix<4, GLfloat>> transforms;
+    transforms.reserve(drawList.size());
+    for(const auto & instance : drawList)
+    {
+        transforms.push_back(
+            math::trans3d::scaleUniform(instance.mPose.mUniformScale)
+            * math::trans3d::translate(instance.mPose.mPosition));
+    }
+
+    graphics::load(aUbo, std::span{transforms}, graphics::BufferHint::DynamicDraw);
+}
+
+
 HardcodedUbos::HardcodedUbos(Storage & aStorage)
 {
     aStorage.mUbos.emplace_back();
@@ -378,6 +395,10 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
     aStorage.mUbos.emplace_back();
     mViewingUbo = &aStorage.mUbos.back();
     mUboRepository.emplace(semantic::gView, mViewingUbo);
+
+    aStorage.mUbos.emplace_back();
+    mModelTransformUbo = &aStorage.mUbos.back();
+    mUboRepository.emplace(semantic::gLocalToWorld, mModelTransformUbo);
 }
 
 
@@ -474,7 +495,8 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
-    mInstanceStream = makeInstanceStream(mStorage, 1);
+    // At the moment, hardcode a maximum number
+    mInstanceStream = makeInstanceStream(mStorage, gMaxInstances);
 
     //static Object triangle;
     //triangle.mParts.push_back(Part{
@@ -598,6 +620,9 @@ void RenderGraph::render()
     // Implement material/program selection while generating drawlist
     DrawList drawList = mScene.populateDrawList();
 
+    // Load the model-transform UBO with each intance global matrix
+    prepareInstanceTransforms(drawList, *mUbos.mModelTransformUbo);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // TODO handle pipeline state with an abstraction
@@ -631,12 +656,15 @@ void RenderGraph::render()
                mGlfwAppInterface->getFramebufferSize().height());
 
     PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
+    // We loaded one transformation matrix per instance, in the draw list order
+    GLuint transformIdx = 0;
     for(const auto & instance : drawList)
     {
         draw(instance,
              mInstanceStream,
              mStorage,
-             mUbos.mUboRepository);
+             mUbos.mUboRepository,
+             transformIdx++);
     }
 }
 

@@ -41,6 +41,7 @@ struct HardcodedUbos
     RepositoryUBO mUboRepository;
     graphics::UniformBufferObject * mFrameUbo;
     graphics::UniformBufferObject * mViewingUbo;
+    graphics::UniformBufferObject * mModelTransformUbo;
 };
 
 struct RenderGraph
