@@ -1,10 +1,12 @@
 #include "Profiling.h"
 
+#include <mutex>
+
 
 namespace ad::renderer {
 
 
-std::unique_ptr<Profiler> globalProfiler;
+std::unique_ptr<Profiler_t> globalProfiler;
 
 
 Guard scopeGlobalProfiler()
@@ -13,7 +15,7 @@ Guard scopeGlobalProfiler()
     bool passed = false;
     std::call_once(initializeProfiler, [&passed]()
     {
-        globalProfiler = std::make_unique<Profiler>();
+        globalProfiler = std::make_unique<Profiler_t>();
         passed = true;
     });
 

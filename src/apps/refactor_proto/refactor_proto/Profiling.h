@@ -1,7 +1,8 @@
 #pragma once
 
 
-#include "Profiler.h"
+//#include "Profiler.h"
+#include "ProfilerSeattle.h"
 
 #include <handy/Guard.h>
 
@@ -9,7 +10,10 @@
 namespace ad::renderer {
 
 
-extern std::unique_ptr<Profiler> globalProfiler;
+using Profiler_t = ProfilerSeattle;
+
+
+extern std::unique_ptr<Profiler_t> globalProfiler;
 
 
 // Because some providers within the profiler require to destory GL objects,
@@ -17,7 +21,7 @@ extern std::unique_ptr<Profiler> globalProfiler;
 Guard scopeGlobalProfiler();
 
 
-inline Profiler & getGlobalProfiler()
+inline Profiler_t & getGlobalProfiler()
 {
     return *globalProfiler;
 }

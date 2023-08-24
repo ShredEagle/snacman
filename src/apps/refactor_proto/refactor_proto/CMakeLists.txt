@@ -16,6 +16,7 @@ set(${TARGET_NAME}_HEADERS
     Material.h
     Model.h
     Profiler.h
+    ProfilerSeattle.h
     Profiling.h
     RenderGraph.h
     Repositories.h
@@ -31,6 +32,7 @@ set(${TARGET_NAME}_SOURCES
     Loader.cpp
     Logging.cpp
     Profiler.cpp
+    ProfilerSeattle.cpp
     Profiling.cpp
     RenderGraph.cpp
     SetupDrawing.cpp
