@@ -98,10 +98,10 @@ void DisconnectedControllerScene::onEnter(Transition aTransition)
     for (int controllerId : disconnectedControllers)
     {
         sprintf(sceneTitle + stringCursor, "%d and ", controllerId);
-        stringCursor = strlen(sceneTitle);
+        stringCursor = (unsigned int)strlen(sceneTitle);
     }
 
-    stringCursor -= strlen("and ");
+    stringCursor -= (unsigned int)strlen("and ");
 
     if (disconnectedControllers.size() > 1)
     {
