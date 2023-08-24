@@ -69,6 +69,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/scene/JoinGameScene.h
     simulations/snacgame/scene/MenuScene.h
     simulations/snacgame/scene/PauseScene.h
+    simulations/snacgame/scene/DisconnectedControllerScene.h
     simulations/snacgame/scene/Scene.h
     simulations/snacgame/scene/SettingsScene.h
 
@@ -120,6 +121,7 @@ set(${TARGET_NAME}_SOURCES
 
     simulations/snacgame/scene/Scene.cpp
     simulations/snacgame/scene/GameScene.cpp
+    simulations/snacgame/scene/DisconnectedControllerScene.cpp
     simulations/snacgame/scene/JoinGameScene.cpp
     simulations/snacgame/scene/MenuScene.cpp
     simulations/snacgame/scene/PauseScene.cpp

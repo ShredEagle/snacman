@@ -4,6 +4,7 @@
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
 #include "snacman/simulations/snacgame/InputConstants.h"
 #include "snacman/simulations/snacgame/scene/GameScene.h"
+#include "snacman/simulations/snacgame/scene/Scene.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/simulations/snacgame/system/MenuManager.h"
 #include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
@@ -87,6 +88,13 @@ void PauseScene::update(const snac::Time & aTime, RawInput & aInput)
     auto [menuItem, accumulatedCommand] =
         mSystems.get()->get<system::MenuManager>().manageMenu(
             controllerCommands);
+
+    if (accumulatedCommand & gQuitCommand)
+    {
+        mGameContext.mSceneStack->popScene({.mTransitionName = gQuitTransitionName});
+        return;
+    }
+
     if (menuItem.mTransition.mTransitionName
              == GameScene::sFromPauseTransition && accumulatedCommand & gSelectItem)
     {

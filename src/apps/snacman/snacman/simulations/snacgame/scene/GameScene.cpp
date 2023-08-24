@@ -5,9 +5,10 @@
 #include "GameScene.h"
 
 #include "snacman/EntityUtilities.h"
+#include "snacman/simulations/snacgame/scene/DataScene.h"
+#include "snacman/simulations/snacgame/scene/DisconnectedControllerScene.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "snacman/simulations/snacgame/scene/PauseScene.h"
-#include "snacman/simulations/snacgame/scene/DataScene.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 
 #include "../component/AllowedMovement.h"
@@ -18,11 +19,11 @@
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
 #include "../component/LevelData.h"
+#include "../component/MenuItem.h"
 #include "../component/MovementScreenSpace.h"
 #include "../component/PathToOnGrid.h"
 #include "../component/PlayerGameData.h"
 #include "../component/PlayerHud.h"
-#include "../component/MenuItem.h"
 #include "../component/PlayerRoundData.h"
 #include "../component/PlayerSlot.h"
 #include "../component/Portal.h"
@@ -111,8 +112,9 @@ GameScene::GameScene(GameContext & aGameContext,
                                      "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/missile/area.gltf",
                                      "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/square_biscuit/square_biscuit.gltf",
-                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel(
+        "models/square_biscuit/square_biscuit.gltf",
+        "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/burger/burger.gltf",
                                      "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/portal/portal.gltf",
@@ -152,9 +154,8 @@ GameScene::GameScene(GameContext & aGameContext,
     camOrbital.mSpherical.polar() = gInitialCameraSpherical.polar();
     camOrbital.mSpherical.radius() = gInitialCameraSpherical.radius();
 
-    mSlots.each([this](EntHandle aHandle, const component::PlayerSlot &) {
-        addBillpadHud(mGameContext, aHandle);
-    });
+    mSlots.each([this](EntHandle aHandle, const component::PlayerSlot &)
+                { addBillpadHud(mGameContext, aHandle); });
 }
 
 void GameScene::onEnter(Transition aTransition)
@@ -167,7 +168,6 @@ void GameScene::onEnter(Transition aTransition)
     }
 }
 
-
 void GameScene::onExit(Transition aTransition)
 {
     TIME_SINGLE(Main, "teardown game scene");
@@ -178,11 +178,13 @@ void GameScene::onExit(Transition aTransition)
 
     {
         Phase destroyPlayer;
-        mSlots.each([&destroyPlayer](EntHandle aHandle, const component::PlayerSlot &)
-                    { eraseEntityRecursive(aHandle, destroyPlayer); });
+        mSlots.each(
+            [&destroyPlayer](EntHandle aHandle, const component::PlayerSlot &)
+            { eraseEntityRecursive(aHandle, destroyPlayer); });
         // Delete hud
-        mHuds.each([&destroyPlayer](EntHandle aHandle, const component::PlayerHud &)
-                   { eraseEntityRecursive(aHandle, destroyPlayer); });
+        mHuds.each(
+            [&destroyPlayer](EntHandle aHandle, const component::PlayerHud &)
+            { eraseEntityRecursive(aHandle, destroyPlayer); });
     }
     {
         Phase destroyEnvironment;
@@ -212,12 +214,18 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
     std::vector<ControllerCommand> controllers =
         mSystems.get()->get<system::InputProcessor>().mapControllersInput(
             aInput, "player", "unbound");
+    std::vector<int> disconnectedControllerList;
 
     for (auto controller : controllers)
     {
         if (controller.mBound)
         {
             quit |= controller.mInput.mCommand == gQuitCommand;
+
+            if (!controller.mConnected)
+            {
+                disconnectedControllerList.push_back(controller.mId);
+            }
         }
         else
         {
@@ -232,7 +240,19 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
     if (quit)
     {
         mGameContext.mSceneStack->pushScene(
-            std::make_shared<PauseScene>(mGameContext, mMappingContext), Transition{.mTransitionName = GameScene::sToPauseTransition});
+            std::make_shared<PauseScene>(mGameContext, mMappingContext),
+            Transition{.mTransitionName = sToPauseTransition});
+        return;
+    }
+
+    if (disconnectedControllerList.size())
+    {
+        mGameContext.mSceneStack->pushScene(
+            std::make_shared<DisconnectedControllerScene>(mGameContext,
+                                                          mMappingContext),
+            Transition{.mTransitionName = sToPauseTransition,
+                       .mSceneInfo = DisconnectedControllerInfo{
+                           disconnectedControllerList}});
         return;
     }
 
@@ -296,7 +316,8 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
 
-    mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate(level);
+    mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate(
+        level);
     mSystems.get(update)->get<system::PowerUpUsage>().update(aTime, mLevel);
     mSystems.get(update)->get<system::EatPill>().update();
 

@@ -28,21 +28,27 @@ InputProcessor::mapControllersInput(RawInput & aInput, const char * aBoundMode, 
     mPlayers.each(
         [&](component::Controller & aController)
         {
+        bool connected = false;
         switch (aController.mType)
         {
         case ControllerType::Keyboard:
             aController.mInput = convertKeyboardInput(
                 aBoundMode, aInput.mKeyboard, (*mMappingContext)->mKeyboardMapping);
+            connected = true;
             break;
         case ControllerType::Gamepad:
+        {
+            GamepadState gamepad = aInput.mGamepads.at(aController.mControllerId);
             aController.mInput = convertGamepadInput(
-                aBoundMode, aInput.mGamepads.at(aController.mControllerId),
+                aBoundMode, gamepad,
                 (*mMappingContext)->mGamepadMapping);
+            connected = gamepad.mConnected;
             break;
+        }
+        case ControllerType::Dummy:
         default:
             break;
         }
-        bool connected = aController.mControllerId >= aInput.mGamepads.size() || aInput.mGamepads.at(aController.mControllerId).mConnected;
 
         controllers.push_back({(int)aController.mControllerId,
                                       aController.mType, aController.mInput,

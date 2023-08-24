@@ -35,7 +35,6 @@ void PlayerSpawner::spawnPlayers(EntHandle aLevel)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    Phase spawnPlayer;
     std::vector<EntHandle> mSpawnedSlots;
     mPlayerSlots.each(
         [this, &aLevel, &mSpawnedSlots](EntHandle aSlotHandle, const component::PlayerSlot &)
@@ -52,13 +51,16 @@ void PlayerSpawner::spawnPlayers(EntHandle aLevel)
             updateGlobalPosition(
                 snac::getComponent<component::SceneNode>(slot.mPlayer));
             spawner.mSpawnedPlayer = true;
-            mSpawnedSlots.push_back(spawnHandle);
+            mSpawnedSlots.push_back(aSlotHandle);
         }
     });
 
-    for (EntHandle spawnHandle : mSpawnedSlots)
     {
-        spawnHandle.get(spawnPlayer)->remove<component::Controller>();
+        Phase spawnPlayer;
+        for (EntHandle spawnHandle : mSpawnedSlots)
+        {
+            snac::removeComponent<component::Controller>(spawnHandle);
+        }
     }
 
     std::vector<std::pair<EntHandle, component::PlayerRoundData *>> leaders;

@@ -11,6 +11,7 @@ namespace snacgame {
 
 constexpr const char * gMenuSceneName = "Menu";
 constexpr const char * gPauseSceneName = "Pause";
+constexpr const char * gDisconnectedControllerSceneName = "DisconnectedController";
 constexpr const char * gGameSceneName = "Game";
 constexpr const char * gJoinGameSceneName = "JoinGame";
 

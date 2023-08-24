@@ -34,12 +34,17 @@ struct JoinGameSceneInfo
 struct GameSceneInfo
 {};
 
+struct DisconnectedControllerInfo
+{
+    std::vector<int> mDisconnectedControllerId;
+};
+
 struct Transition
 {
     std::string mTransitionName;
     bool shouldTeardown = true;
     bool shouldSetup = true;
-    std::variant<MenuSceneInfo, JoinGameSceneInfo, GameSceneInfo> mSceneInfo;
+    std::variant<MenuSceneInfo, JoinGameSceneInfo, GameSceneInfo, DisconnectedControllerInfo> mSceneInfo;
 
     bool operator==(const Transition & aRhs) const
     {

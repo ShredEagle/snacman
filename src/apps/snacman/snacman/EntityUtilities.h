@@ -18,6 +18,16 @@ T_component & getComponent(ent::Handle<ent::Entity> aHandle)
     return view->get<T_component>();
 }
 
+template <class T_component>
+void removeComponent(ent::Handle<ent::Entity> aHandle)
+{
+    ent::Phase removeComponent;
+    auto view = aHandle.get(removeComponent);
+    assert(view.has_value());
+    assert(view->has<T_component>());
+    view->remove<T_component>();
+}
+
 /* class GuardedEntity */
 /* { */
 /* public: */

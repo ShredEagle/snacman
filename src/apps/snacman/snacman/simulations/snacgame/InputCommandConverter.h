@@ -105,10 +105,10 @@ const inline BidirectionalMap<std::string, int> gCommandFlags{
 
     {"gSelectItem", gSelectItem | gPositiveEdge},
     {"gBack", gBack | gPositiveEdge},
-    {"gGoUp", gGoUp},
-    {"gGoDown", gGoDown},
-    {"gGoLeft", gGoLeft},
-    {"gGoRight", gGoRight},
+    {"gGoUp", gGoUp | gPositiveEdge},
+    {"gGoDown", gGoDown | gPositiveEdge},
+    {"gGoLeft", gGoLeft | gPositiveEdge},
+    {"gGoRight", gGoRight | gPositiveEdge},
 };
 
 const inline BidirectionalMap<std::string, GamepadAtomicInput>
