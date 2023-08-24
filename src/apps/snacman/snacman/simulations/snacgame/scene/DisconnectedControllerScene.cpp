@@ -93,7 +93,7 @@ void DisconnectedControllerScene::onEnter(Transition aTransition)
     {
         sprintf(sceneTitle, "Controller ");
     }
-    unsigned int stringCursor = strlen(sceneTitle);
+    unsigned int stringCursor = (unsigned int)strlen(sceneTitle);
 
     for (int controllerId : disconnectedControllers)
     {
