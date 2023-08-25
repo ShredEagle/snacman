@@ -1,17 +1,20 @@
 #include "MenuScene.h"
 
+#include "snacman/simulations/snacgame/system/InputProcessor.h"
+#include "snacman/simulations/snacgame/system/MenuManager.h"
+
 #include "../component/Context.h"
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
 #include "../component/MenuItem.h"
-#include "../component/PlayerSlot.h"
+#include "../component/PathToOnGrid.h"
 #include "../component/PlayerHud.h"
 #include "../component/PlayerRoundData.h"
-#include "../component/PathToOnGrid.h"
+#include "../component/PlayerSlot.h"
 #include "../component/SceneNode.h"
-#include "../component/Text.h"
 #include "../component/Tags.h"
+#include "../component/Text.h"
 #include "../Entities.h"
 #include "../GameParameters.h"
 #include "../InputCommandConverter.h"
@@ -48,24 +51,25 @@ MenuScene::MenuScene(GameContext & aGameContext,
         mGameContext, init, "Start", font,
         math::Position<2, float>{-0.55f, 0.0f},
         {
-            {gGoDown, "quit"},
+            {gGoDown, "Quit"},
         },
-        scene::Transition{.mTransitionName =
-                              JoinGameScene::sFromMenuTransition},
-        true, {1.5f, 1.5f});
-    auto quitHandle = createMenuItem(
-        mGameContext, init, "Quit", font,
-        math::Position<2, float>{-0.55f, -0.3f},
-        {
-            {gGoUp, "Start"},
-        },
-        scene::Transition{.mTransitionName = gQuitTransitionName}, false,
+        Transition{.mTransitionName = JoinGameScene::sFromMenuTransition}, true,
         {1.5f, 1.5f});
+    auto quitHandle =
+        createMenuItem(mGameContext, init, "Quit", font,
+                       math::Position<2, float>{-0.55f, -0.3f},
+                       {
+                           {gGoUp, "Start"},
+                       },
+                       Transition{.mTransitionName = gQuitTransitionName},
+                       false, {1.5f, 1.5f});
 
     mOwnedEntities.push_back(startHandle);
     mOwnedEntities.push_back(quitHandle);
-    mSystems.get(init)->add(
-        system::SceneGraphResolver{mGameContext, mGameContext.mSceneRoot});
+    mSystems.get(init)
+        ->add(system::SceneGraphResolver{mGameContext, mGameContext.mSceneRoot})
+        .add(system::MenuManager{mGameContext})
+        .add(system::InputProcessor{mGameContext, mMappingContext});
 
     ent::Handle<ent::Entity> background = createStageDecor(mGameContext);
     mOwnedEntities.push_back(background);
@@ -96,60 +100,20 @@ void MenuScene::update(const snac::Time & aTime, RawInput & aInput)
 {
     TIME_RECURRING_CLASSFUNC(Main);
 
-    std::vector<ControllerCommand> controllerCommandList;
+    std::vector<ControllerCommand> controllerCommands =
+        mSystems.get()->get<system::InputProcessor>().mapControllersInput(
+            aInput, "menu", "menu");
 
-    ControllerCommand keyboardCommand{
-        .mId = gKeyboardControllerIndex,
-        .mControllerType = ControllerType::Keyboard,
-        .mInput = convertKeyboardInput("menu", aInput.mKeyboard,
-                                       mMappingContext->mKeyboardMapping),
-    };
+    auto [menuItem, accumulatedCommand] =
+        mSystems.get()->get<system::MenuManager>().manageMenu(
+            controllerCommands);
 
-    int accumulatedCommand = keyboardCommand.mInput.mCommand;
+    bool quit = accumulatedCommand & gQuitCommand;
 
-    controllerCommandList.push_back(keyboardCommand);
-
-    for (std::size_t index = 0; index < aInput.mGamepads.size(); ++index)
-    {
-        GamepadState & rawGamepad = aInput.mGamepads.at(index);
-        ControllerCommand gamepadCommand{
-            .mId = static_cast<int>(index),
-            .mControllerType = ControllerType::Gamepad,
-            .mInput = convertGamepadInput("menu", rawGamepad,
-                                          mMappingContext->mGamepadMapping),
-        };
-        accumulatedCommand |= gamepadCommand.mInput.mCommand;
-        controllerCommandList.push_back(gamepadCommand);
-    }
-
-    bool quit = false;
-    if (accumulatedCommand & gQuitCommand)
-    {
-        quit = true;
-    }
-
-    std::string newItem;
-
-    int filteredForMenuCommand =
-        accumulatedCommand & (gGoUp | gGoDown | gGoLeft | gGoRight);
-
-    EntHandle selectedItemHandle = snac::getFirstHandle(
-        mItems, [](component::MenuItem & aItem) { return aItem.mSelected; });
-    component::MenuItem & menuItem =
-        snac::getComponent<component::MenuItem>(selectedItemHandle);
-    component::Text & text =
-        snac::getComponent<component::Text>(selectedItemHandle);
-
-    if (menuItem.mNeighbors.contains(filteredForMenuCommand))
-    {
-        newItem = menuItem.mNeighbors.at(filteredForMenuCommand);
-        menuItem.mSelected = false;
-        text.mColor = gColorItemUnselected;
-    }
-    else if (menuItem.mTransition.mTransitionName
+    if (menuItem.mTransition.mTransitionName
              == JoinGameScene::sFromMenuTransition)
     {
-        for (auto command : controllerCommandList)
+        for (auto command : controllerCommands)
         {
             if (command.mInput.mCommand & gSelectItem)
             {
@@ -165,7 +129,8 @@ void MenuScene::update(const snac::Time & aTime, RawInput & aInput)
             }
         }
     }
-    else if (menuItem.mTransition.mTransitionName == "quit")
+    else if (menuItem.mTransition.mTransitionName == gQuitTransitionName
+             && accumulatedCommand & gSelectItem)
     {
         quit = true;
     }
@@ -176,25 +141,6 @@ void MenuScene::update(const snac::Time & aTime, RawInput & aInput)
         mGameContext.mSceneStack->popScene(
             Transition{.mTransitionName = StageDecorScene::sQuitTransition});
         return;
-    }
-
-    bool newItemFound = false;
-    mItems.each(
-        [&newItem, &newItemFound](component::MenuItem & aItem,
-                                  component::Text & aText)
-        {
-        if (aItem.mName == newItem)
-        {
-            newItemFound = true;
-            aItem.mSelected = true;
-            aText.mColor = gColorItemSelected;
-        }
-    });
-
-    if (!newItemFound && newItem != "")
-    {
-        SELOG(error)
-        ("Could not find item {} in menu (Check the case)", newItem);
     }
 
     mSystems.get()->get<system::SceneGraphResolver>().update();

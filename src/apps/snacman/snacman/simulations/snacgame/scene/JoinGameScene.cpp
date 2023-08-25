@@ -22,6 +22,7 @@
 #include "snacman/simulations/snacgame/GameParameters.h"
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
 #include "snacman/simulations/snacgame/SceneGraph.h"
+#include "snacman/simulations/snacgame/component/PlayerJoinData.h"
 #include "snacman/simulations/snacgame/scene/GameScene.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "snacman/simulations/snacgame/scene/Scene.h"
@@ -36,6 +37,7 @@ namespace scene {
 JoinGameScene::JoinGameScene(GameContext & aGameContext,
                              ent::Wrap<component::MappingContext> & aMappingContext) :
     Scene(gJoinGameSceneName, aGameContext, aMappingContext),
+    mSlots{aGameContext.mWorld},
     mJoinGameRoot{mGameContext.mWorld.addEntity()}
 {
     Phase init;
@@ -64,17 +66,27 @@ void JoinGameScene::update(const snac::Time & aTime, RawInput & aInput)
     std::vector<ControllerCommand> controllerCommands =
         mSystems.get()
             ->get<system::InputProcessor>()
-            .mapControllersInput(aInput);
+            .mapControllersInput(aInput, "player", "unbound");
 
-    bool quit = false;
+    std::vector<ControllerCommand> quittingOrDisconnectedPlayers;
     bool start = false;
 
     for (auto controller : controllerCommands)
     {
         if (controller.mBound)
         {
-            quit |= controller.mInput.mCommand == gQuitCommand;
-            start |= controller.mInput.mCommand == gPlayerSelect;
+            if (controller.mConnected)
+            {
+                if (controller.mInput.mCommand == gQuitCommand)
+                {
+                    quittingOrDisconnectedPlayers.push_back(controller);
+                }
+                start |= controller.mInput.mCommand == gPlayerSelect;
+            }
+            else
+            {
+                quittingOrDisconnectedPlayers.push_back(controller);
+            }
         }
         else
         {
@@ -85,11 +97,22 @@ void JoinGameScene::update(const snac::Time & aTime, RawInput & aInput)
                     slotHandle.get()->get<component::PlayerSlot>();
                 EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, slot.mSlotIndex);
                 insertEntityInScene(joinGamePlayer, mJoinGameRoot);
+                Phase joinPlayer;
+                slotHandle.get(joinPlayer)->add(component::PlayerJoinData{.mJoinPlayerModel = joinGamePlayer});
             }
         }
     }
 
-    if (quit)
+    for (auto command : quittingOrDisconnectedPlayers)
+    {
+        Phase destroyQuitter;
+        EntHandle quiter = snac::getFirstHandle(mSlots, [&command](component::Controller & aController) { return (int)aController.mControllerId == command.mId;});
+        EntHandle model = snac::getComponent<component::PlayerJoinData>(quiter).mJoinPlayerModel;
+        quiter.get(destroyQuitter)->erase();
+        eraseEntityRecursive(model, destroyQuitter);
+    }
+
+    if (mSlots.countMatches() == 0)
     {
         mGameContext.mSceneStack->popScene(Transition{.mTransitionName = sQuitTransition});
         mGameContext.mSceneStack->pushScene(
@@ -122,14 +145,20 @@ void JoinGameScene::onEnter(Transition aTransition) {
         EntHandle slotHandle = addPlayer(mGameContext, info.mTransitionControllerId);
         const component::PlayerSlot & slot =
             slotHandle.get()->get<component::PlayerSlot>();
-        EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, slot.mSlotIndex);
+        EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, (int)slot.mSlotIndex);
         insertEntityInScene(joinGamePlayer, mJoinGameRoot);
+        Phase joinPlayer;
+        slotHandle.get(joinPlayer)->add(component::PlayerJoinData{.mJoinPlayerModel = joinGamePlayer});
     }
 }
 
 void JoinGameScene::onExit(Transition aTransition) {
     Phase onExitPhase;
     eraseEntityRecursive(mJoinGameRoot, onExitPhase);
+    if (aTransition.mTransitionName != sToGameTransition)
+    {
+        snac::eraseAllInQuery(mSlots);
+    }
 }
 
 } // namespace scene

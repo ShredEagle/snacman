@@ -88,10 +88,10 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
 {
     ent::Phase init;
 
-    // Add permanent game title
-    makeText(mGameContext, init, "Snacman",
-             mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf"),
-             math::hdr::gYellow<float>, {-0.25f, 0.75f}, {1.8f, 1.8f});
+    /* // Add permanent game title */
+    /* makeText(mGameContext, init, "Snacman", */
+    /*          mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf"), */
+    /*          math::hdr::gYellow<float>, {-0.25f, 0.75f}, {1.8f, 1.8f}); */
 
     mGameContext.mSceneStack->pushScene(
         std::make_shared<scene::StageDecorScene>(mGameContext, mMappingContext));

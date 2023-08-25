@@ -8,6 +8,7 @@
 
 #include <type_traits>
 #include <variant>
+#include <cstdint>
 
 namespace ad {
 

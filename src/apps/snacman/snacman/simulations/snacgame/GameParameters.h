@@ -10,6 +10,8 @@ namespace ad {
 namespace snacgame {
 
 constexpr const char * gMenuSceneName = "Menu";
+constexpr const char * gPauseSceneName = "Pause";
+constexpr const char * gDisconnectedControllerSceneName = "DisconnectedController";
 constexpr const char * gGameSceneName = "Game";
 constexpr const char * gJoinGameSceneName = "JoinGame";
 
@@ -53,12 +55,15 @@ const math::Quaternion<float> gBasePlayerModelOrientation =
                               math::Turn<float>{0.25f}};
 constexpr math::Size<3, float> gBasePlayerModelInstanceScaling{0.2f, 0.2f, 0.2f};
 
-static const math::Quaternion<float> gWorldCoordTo3dCoordQuat =
+const math::Quaternion<float> gWorldCoordTo3dCoordQuat =
     math::Quaternion<float>{
         math::UnitVec<3, float>::MakeFromUnitLength({-1.f, 0.f, 0.f}),
         math::Turn<float>{0.25f}};
-static const math::LinearMatrix<3, 3, float> gWorldCoordTo3dCoord =
+const math::LinearMatrix<3, 3, float> gWorldCoordTo3dCoord =
     gWorldCoordTo3dCoordQuat.toRotationMatrix();
+
+const math::hdr::Rgba_f gColorItemUnselected = math::hdr::gBlack<float>;
+const math::hdr::Rgba_f gColorItemSelected = math::hdr::gCyan<float>;
 
 } // namespace snacgame
 } // namespace ad

@@ -43,5 +43,15 @@ getFirstHandle(ent::Query<VT_components...> aQuery)
     return getFirstHandle(aQuery, []() { return true; });
 }
 
+template <class... VT_components>
+void
+eraseAllInQuery(ent::Query<VT_components...> aQuery)
+{
+    ent::Phase destroy;
+    aQuery.each([&destroy](ent::Handle<ent::Entity> aHandle, VT_components... parameters) {
+        aHandle.get(destroy)->erase();
+    });
+}
+
 } // namespace snac
 } // namespace ad

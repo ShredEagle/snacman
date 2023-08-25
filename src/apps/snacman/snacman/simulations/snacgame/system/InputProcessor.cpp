@@ -21,31 +21,38 @@ InputProcessor::InputProcessor(
 {}
 
 std::vector<ControllerCommand>
-InputProcessor::mapControllersInput(RawInput & aInput)
+InputProcessor::mapControllersInput(RawInput & aInput, const char * aBoundMode, const char * aUnboundMode)
 {
     std::vector<ControllerCommand> controllers;
 
     mPlayers.each(
         [&](component::Controller & aController)
         {
+        bool connected = false;
         switch (aController.mType)
         {
         case ControllerType::Keyboard:
             aController.mInput = convertKeyboardInput(
-                "player", aInput.mKeyboard, (*mMappingContext)->mKeyboardMapping);
+                aBoundMode, aInput.mKeyboard, (*mMappingContext)->mKeyboardMapping);
+            connected = true;
             break;
         case ControllerType::Gamepad:
+        {
+            GamepadState gamepad = aInput.mGamepads.at(aController.mControllerId);
             aController.mInput = convertGamepadInput(
-                "player", aInput.mGamepads.at(aController.mControllerId),
+                aBoundMode, gamepad,
                 (*mMappingContext)->mGamepadMapping);
+            connected = gamepad.mConnected;
             break;
+        }
+        case ControllerType::Dummy:
         default:
             break;
         }
 
         controllers.push_back({(int)aController.mControllerId,
                                       aController.mType, aController.mInput,
-                                      true});
+                                      true, connected});
     });
 
     for (int controlIndex = 0; controlIndex < (int) aInput.mGamepads.size() + 1;
@@ -63,14 +70,14 @@ InputProcessor::mapControllersInput(RawInput & aInput)
 
             if (controllerIsKeyboard)
             {
-                input = convertKeyboardInput("unbound", aInput.mKeyboard,
+                input = convertKeyboardInput(aUnboundMode, aInput.mKeyboard,
                                              (*mMappingContext)->mKeyboardMapping);
                 controllers.push_back({gKeyboardControllerIndex, ControllerType::Keyboard, input, false});
             }
             else
             {
                 GamepadState & rawGamepad = aInput.mGamepads.at(controlIndex);
-                input = convertGamepadInput("unbound", rawGamepad,
+                input = convertGamepadInput(aUnboundMode, rawGamepad,
                                             (*mMappingContext)->mGamepadMapping);
                 controllers.push_back({controlIndex, ControllerType::Keyboard, input, false});
             }
