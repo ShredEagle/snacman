@@ -267,10 +267,19 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 
         mSystems.get(update)->get<system::RoundMonitor>().updateRoundScore();
 
-        std::vector<unsigned int> playerControllerIndices;
+        //Transfer controller to slot before deleting player models
+        {
+            Phase transferController;
+            mSlots.each([&](EntHandle aSlotHandle, component::PlayerSlot & aSlot)
+            {
+                component::Controller & controller = snac::getComponent<component::Controller>(aSlot.mPlayer);
+                aSlotHandle.get(transferController)->add(controller);
+            });
+        }
+
         {
             Phase cleanup;
-            // This removes everything from the level players included
+            // This removes everything from the level players models included
             eraseEntityRecursive(mLevel, cleanup);
         }
     }
