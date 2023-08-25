@@ -26,6 +26,8 @@
 #include "../GameParameters.h"
 #include "../typedef.h"
 
+#include <climits>
+#include <cstdarg>
 #include <cstdio>
 #include <entity/EntityManager.h>
 #include <snacman/Profiling.h>
@@ -33,6 +35,19 @@
 namespace ad {
 namespace snacgame {
 namespace scene {
+
+int safePrint(char * buffer, const char * format, ...)
+{
+    va_list arg;
+    va_start (arg, format);
+#ifdef _MSC_VER
+        int ret = sprintf_s(buffer, INT_MAX, format, arg);
+#else
+        int ret = sprintf(buffer, format, arg);
+#endif
+    va_end(arg);
+    return ret;
+}
 
 DisconnectedControllerScene::DisconnectedControllerScene(
     GameContext & aGameContext,
@@ -87,17 +102,17 @@ void DisconnectedControllerScene::onEnter(Transition aTransition)
 
     if (disconnectedControllers.size() > 1)
     {
-        sprintf(sceneTitle, "Controllers ");
+        safePrint(sceneTitle, "Controllers ");
     }
     else
     {
-        sprintf(sceneTitle, "Controller ");
+        safePrint(sceneTitle, "Controller ");
     }
     unsigned int stringCursor = (unsigned int)strlen(sceneTitle);
 
     for (int controllerId : disconnectedControllers)
     {
-        sprintf(sceneTitle + stringCursor, "%d and ", controllerId);
+        safePrint(sceneTitle + stringCursor, "%d and ", controllerId);
         stringCursor = (unsigned int)strlen(sceneTitle);
     }
 
@@ -105,11 +120,11 @@ void DisconnectedControllerScene::onEnter(Transition aTransition)
 
     if (disconnectedControllers.size() > 1)
     {
-        sprintf(sceneTitle + stringCursor, "are disconnected");
+        safePrint(sceneTitle + stringCursor, "are disconnected");
     }
     else
     {
-        sprintf(sceneTitle + stringCursor, "is disconnected");
+        safePrint(sceneTitle + stringCursor, "is disconnected");
     }
 
     Phase onEnterPhase;
