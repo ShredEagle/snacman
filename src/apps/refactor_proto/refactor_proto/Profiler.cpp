@@ -2,6 +2,11 @@
 
 #include "Logging.h"
 
+#if defined(_WIN32)
+#include "ProviderRdtsc.h"
+#include "ProviderWindows.h"
+#endif
+
 #include <cassert>
 
 
@@ -10,7 +15,13 @@ namespace ad::renderer {
 
 Profiler::Profiler()
 {
+#if defined(_WIN32)
+    mMetricProviders.push_back(std::make_unique<ProviderCpuRdtsc>());
+    //mMetricProviders.push_back(std::make_unique<ProviderCpuPerformanceCounter>());
+#else
     mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
+#endif
+
     mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
     mMetricProviders.push_back(std::make_unique<ProviderGL>());
 
@@ -307,9 +318,9 @@ void Profiler::prettyPrint(std::ostream & aOut) const
             const ProviderInterface & provider = getProvider(metric);
 
             aOut << " " << provider.mQuantityName << " " 
-                << metric.mValues.average() 
+                << provider.scale(metric.mValues.average())
                 // Show what has not been accounted for by child sections in between parenthesis
-                << " (" << metric.mValues.average() - section.mAccountedFor[valueIdx] << ")"
+                << " (" << provider.scale(metric.mValues.average() - section.mAccountedFor[valueIdx]) << ")"
                 << " " << provider.mUnit << ","
                 ;
         }
@@ -363,7 +374,11 @@ bool ProviderCPUTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLui
 {
     const auto & interval = getInterval(aEntryIndex, aQueryFrame);
     // TODO address this case (potentially with Values of the correct type)
-    aSampleResult = (GLuint)getTicks<std::chrono::microseconds>(interval.mEnd - interval.mBegin);
+    aSampleResult = (GLuint)(interval.mEnd - interval.mBegin).count();
+    //if(aSampleResult == 0)
+    //{
+    //    SELOG(warn)("Read a null sample, resolution of the timer might not be enough for some sections.");
+    //}
     return true;
 }
 

@@ -18,6 +18,8 @@ set(${TARGET_NAME}_HEADERS
     Profiler.h
     ProfilerSeattle.h
     Profiling.h
+    ProviderRdtsc.h
+    ProviderWindows.h
     RenderGraph.h
     Repositories.h
     SetupDrawing.h
@@ -37,6 +39,18 @@ set(${TARGET_NAME}_SOURCES
     RenderGraph.cpp
     SetupDrawing.cpp
 )
+
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    list(APPEND ${TARGET_NAME}_HEADERS
+        ProviderWindows.h
+    )
+
+    list(APPEND ${TARGET_NAME}_SOURCES
+        ProviderWindows.cpp
+    )
+endif()
+
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
              FILES ${${TARGET_NAME}_HEADERS} ${${TARGET_NAME}_SOURCES}

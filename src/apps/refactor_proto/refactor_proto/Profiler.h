@@ -6,6 +6,7 @@
 #include <renderer/Query.h> 
 
 #include <array>
+#include <numeric>
 
 
 // Implementation notes:
@@ -38,15 +39,56 @@
 namespace ad::renderer {
 
 
+/// @brief Runtime (dynamic) ratio, by opposition to the compile-time (static) std::ratio.
+struct Ratio
+{
+    template<class T_ratio>
+    static constexpr Ratio MakeRatio()
+    {
+        return Ratio{
+            .num = T_ratio::num,
+            .den = T_ratio::den,
+        };
+    }
+
+    template<class T_ratioSource, class T_ratioDestination>
+    static constexpr Ratio MakeConversion()
+    {
+        return MakeRatio<std::ratio_divide<T_ratioSource, T_ratioDestination>>();
+    }
+
+    static constexpr Ratio MakeConversion(Ratio aSource, Ratio aDestination)
+    {
+        Ratio r{
+            .num = aSource.num * aDestination.den,
+            .den = aSource.den * aDestination.num,
+        };
+        r.reduce();
+        return r;
+    }
+
+    constexpr void reduce()
+    {
+        auto gcd = std::gcd(num, den);
+        num /= gcd;
+        den /= gcd;
+    }
+
+    GLuint num;
+    GLuint den;
+};
+
+
 /// @brief Specialize this interface to provide new metrics.
 class ProviderInterface
 {
 public:
     using EntryIndex = std::size_t;
 
-    ProviderInterface(const char * aQuantityName, const char * aUnit) :
+    ProviderInterface(const char * aQuantityName, const char * aUnit, Ratio aScaleFactor = {.num = 1, .den = 1}) :
         mQuantityName{aQuantityName},
-        mUnit{aUnit}
+        mUnit{aUnit},
+        mScaleFactor{aScaleFactor}
     {}
 
     virtual ~ProviderInterface() = default;
@@ -59,8 +101,12 @@ public:
 
     virtual void resize(std::size_t aNewEntriesCount) = 0;
 
+    GLuint scale(GLuint aInput) const
+    { return aInput * mScaleFactor.num / mScaleFactor.den; }
+
     const char * mQuantityName = "quantity";
     const char * mUnit = "u";
+    Ratio mScaleFactor;
 };
 
 
@@ -199,10 +245,11 @@ private:
 };
 
 
-struct ProviderCPUTime : public ProviderInterface
-{
+struct ProviderCPUTime : public ProviderInterface {
     ProviderCPUTime() : 
-        ProviderInterface{"CPU time", "us"}
+        ProviderInterface{"CPU time",
+                          "us",
+                           Ratio::MakeConversion<Clock::period, std::micro>()}
     {}
 
     void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;

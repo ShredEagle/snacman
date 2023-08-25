@@ -1,7 +1,7 @@
 #pragma once
 
 
-//#include "Profiler.h"
+#include "Profiler.h"
 #include "ProfilerSeattle.h"
 
 #include <handy/Guard.h>
@@ -10,7 +10,8 @@
 namespace ad::renderer {
 
 
-using Profiler_t = ProfilerSeattle;
+using Profiler_t = Profiler;
+//using Profiler_t = ProfilerSeattle;
 
 
 extern std::unique_ptr<Profiler_t> globalProfiler;
