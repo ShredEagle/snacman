@@ -17,7 +17,28 @@ namespace ad::imguiui {
 namespace ad::renderer {
 
 
-using DrawList = std::vector<Instance>;
+struct DrawInstance
+{
+    GLsizei mInstanceTransformIdx; // index in the instance UBO
+    GLsizei mMaterialIdx;
+};
+
+struct PartAndMaterial
+{
+    const Part * mPart;
+    const Material * mMaterial;
+};
+
+struct DrawList
+{
+    // The individual renderer::Objects transforms. Several parts might index to the same transform.
+    // (Same way several parts might index the same material parameters)
+    std::vector<math::AffineMatrix<4, GLfloat>> mInstanceTransforms;
+
+    // SOA: Those two vectors must have the same size, i.e. the total number of part instances to be drawn
+    std::vector<PartAndMaterial> mParts;
+    std::vector<DrawInstance> mDrawInstances; // Intended to be loaded as a GL instance buffer
+};
 
 struct Scene
 {
@@ -53,6 +74,8 @@ struct RenderGraph
     // for camera movements, should be moved out to the simuation of course
     void update(float aDeltaTime);
     void render();
+
+    void loadDrawBuffers(const DrawList & aDrawList);
 
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;

@@ -76,7 +76,7 @@ constexpr float gRadialDistancingFactor{1.5f};
 /// @brief The far plane will be at least at this factor times the model depth.
 constexpr float gDepthFactor{20.f};
 
-constexpr std::size_t gMaxInstances = 1;
+constexpr std::size_t gMaxDrawInstances = 2048;
 
 namespace {
 
@@ -202,11 +202,9 @@ namespace {
     }
 
 
-    void draw(const Instance & aInstance,
-              const GenericStream & aInstanceBufferView,
+    void draw(const DrawList & aDrawList,
               Storage & aStorage,
-              const RepositoryUBO & aUboRepository,
-              GLuint aTransformIdx)
+              const RepositoryUBO & aUboRepository)
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
         // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
@@ -214,41 +212,21 @@ namespace {
         // (We could even separate actual texture from the "format", allowing to change an underlying texture without revisiting the program)
         // This would address the warnings repetitions (only issued when the compiled state is (re-)generated), and be better for perfs.
 
-        for(const Part & part : aInstance.mObject->mParts)
+        // An instance buffer (vertex buffer with divisor 1) was populated in the order of the drawlist.
+        // Keep track of which instance we are at.
+        GLuint baseInstance = 0; 
+        for(const PartAndMaterial & partMaterial : aDrawList.mParts)
         {
             PROFILER_SCOPE_SECTION("draw_part", CpuTime);
-            // TODO replace program selection with something not hardcoded, this is a quick test
-            // (Ideally, a shader system with some form of render list)
-            // Also, this selection should be done while the drawlist is generated, so it is shared by all passes
-            // Also, the drawlist generation should be at the part level, not the object instance level
-            PROFILER_PUSH_SECTION("discard_1", CpuTime);
-            const Material & material = aInstance.mMaterialOverride ?
-                *aInstance.mMaterialOverride : part.mMaterial;
-            PROFILER_POP_SECTION;
-            
-            
-            // TODO should be done ahead of the draw call, at once for all instances.
-            // TODO there is a tension between what is actually per object instance 
-            // (the transformation matrix if there cannot be any per part transformation)
-            // and what is per part (the material, ...). Note that the GL instance
-            // corresponds to a Part in our data model.
-            {
-                PROFILER_SCOPE_SECTION("prepare_instance_transform", CpuTime);
-                InstanceData instanceData{
-                    .mModelTransformIdx = aTransformIdx,
-                    .mMaterialIdx = (GLuint)material.mPhongMaterialIdx,
-                };
-                
-                graphics::replaceSubset(
-                    *aInstanceBufferView.mVertexBufferViews.at(0).mGLBuffer,
-                    0, /*offset*/
-                    std::span{&instanceData, 1}
-                );
-            }
 
             PROFILER_PUSH_SECTION("discard_2", CpuTime);
+            const Part & part = *partMaterial.mPart;
+            const Material & material = *partMaterial.mMaterial;
+
             assert(material.mEffect->mTechniques.size() == 1);
             
+            // TODO replace program selection with something not hardcoded, this is a quick test
+            // (Ideally, a shader system with some form of render list)
             const ConfiguredProgram & configuredProgram = *material.mEffect->mTechniques.at(0).mConfiguredProgram;
             const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
 
@@ -303,29 +281,33 @@ namespace {
 
                 {
                     // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
+                    // Can we have efficient GPU measures?
                     PROFILER_SCOPE_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
                     // TODO multi draw
                     if(vertexStream.mIndicesType == NULL)
                     {
-                        glDrawArraysInstanced(
+                        glDrawArraysInstancedBaseInstance(
                             part.mPrimitiveMode,
                             part.mVertexFirst,
                             part.mVertexCount,
-                            1);
+                            1,
+                            baseInstance);
                     }
                     else
                     {
-                        glDrawElementsInstanced(
+                        glDrawElementsInstancedBaseInstance(
                             part.mPrimitiveMode,
                             part.mIndicesCount,
                             vertexStream.mIndicesType,
                             (const void *)
                                 (vertexStream.mIndexBufferView.mOffset 
                                 + (part.mIndexFirst * graphics::getByteSize(vertexStream.mIndicesType))),
-                            1);
+                            1,
+                            baseInstance);
                     }
                 }
             }
+            ++baseInstance;
         }
     }
 
@@ -337,11 +319,22 @@ namespace {
         if(Object * object = aNode.mInstance.mObject;
            object != nullptr)
         {
-            aDrawList.push_back(Instance{
-                .mObject = object,
-                .mPose = absolutePose,
-                .mMaterialOverride = aNode.mInstance.mMaterialOverride,
-            });
+            for(const Part & part: object->mParts)
+            {
+                const Material & material =
+                    aNode.mInstance.mMaterialOverride ?
+                    *aNode.mInstance.mMaterialOverride : part.mMaterial;
+
+                aDrawList.mParts.push_back({&part, &material});
+                aDrawList.mDrawInstances.push_back(DrawInstance{
+                    .mInstanceTransformIdx = (GLsizei)aDrawList.mInstanceTransforms.size(), // pushed after
+                    .mMaterialIdx = (GLsizei)material.mPhongMaterialIdx,
+                });
+            }
+
+            aDrawList.mInstanceTransforms.push_back(
+                math::trans3d::scaleUniform(absolutePose.mUniformScale)
+                * math::trans3d::translate(absolutePose.mPosition));
         }
 
         for(const auto & child : aNode.mChildren)
@@ -355,6 +348,8 @@ namespace {
 
 DrawList Scene::populateDrawList() const
 {
+    PROFILER_SCOPE_SECTION("populate_draw_list", CpuTime);
+
     static constexpr Pose gIdentityPose{
         .mPosition{0.f, 0.f, 0.f},
         .mUniformScale = 1,
@@ -367,22 +362,6 @@ DrawList Scene::populateDrawList() const
     }
 
     return drawList;
-}
-
-
-void prepareInstanceTransforms(const DrawList & drawList, const graphics::UniformBufferObject & aUbo)
-{
-    PROFILER_SCOPE_SECTION("prepare_instance_transforms", CpuTime);
-    std::vector<math::AffineMatrix<4, GLfloat>> transforms;
-    transforms.reserve(drawList.size());
-    for(const auto & instance : drawList)
-    {
-        transforms.push_back(
-            math::trans3d::scaleUniform(instance.mPose.mUniformScale)
-            * math::trans3d::translate(instance.mPose.mPosition));
-    }
-
-    graphics::load(aUbo, std::span{transforms}, graphics::BufferHint::DynamicDraw);
 }
 
 
@@ -496,7 +475,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
 
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
-    mInstanceStream = makeInstanceStream(mStorage, gMaxInstances);
+    mInstanceStream = makeInstanceStream(mStorage, gMaxDrawInstances);
 
     //static Object triangle;
     //triangle.mParts.push_back(Part{
@@ -611,17 +590,34 @@ void RenderGraph::update(float aDeltaTime)
 }
 
 
+void RenderGraph::loadDrawBuffers(const DrawList & aDrawList)
+{
+    PROFILER_SCOPE_SECTION("load_draw_buffers", CpuTime);
+
+    assert(aDrawList.mDrawInstances.size() <= gMaxDrawInstances);
+
+    graphics::load(*mUbos.mModelTransformUbo,
+                   std::span{aDrawList.mInstanceTransforms},
+                   graphics::BufferHint::DynamicDraw);
+
+    graphics::load(*mInstanceStream.mVertexBufferViews.at(0).mGLBuffer,
+                   std::span{aDrawList.mDrawInstances},
+                   graphics::BufferHint::DynamicDraw);
+}
+
+
 void RenderGraph::render()
 {
+    PROFILER_SCOPE_SECTION("RenderGraph::render()", CpuTime, GpuTime);
     nvtx3::mark("RenderGraph::render()");
     NVTX3_FUNC_RANGE();
 
-
-    // Implement material/program selection while generating drawlist
+    // TODO: Implement material/program selection while generating drawlist
+    // The complication is when the camera (or pass itself?) might override the materials 
     DrawList drawList = mScene.populateDrawList();
 
     // Load the model-transform UBO with each intance global matrix
-    prepareInstanceTransforms(drawList, *mUbos.mModelTransformUbo);
+    loadDrawBuffers(drawList);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -655,16 +651,11 @@ void RenderGraph::render()
                mGlfwAppInterface->getFramebufferSize().width(),
                mGlfwAppInterface->getFramebufferSize().height());
 
-    PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
-    // We loaded one transformation matrix per instance, in the draw list order
-    GLuint transformIdx = 0;
-    for(const auto & instance : drawList)
     {
-        draw(instance,
-             mInstanceStream,
-             mStorage,
-             mUbos.mUboRepository,
-             transformIdx++);
+        PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
+        draw(drawList,
+            mStorage,
+            mUbos.mUboRepository);
     }
 }
 
