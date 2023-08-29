@@ -112,6 +112,8 @@ GameScene::GameScene(GameContext & aGameContext,
                                      "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/missile/area.gltf",
                                      "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/bomb/bomb.gltf",
+                                     "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel(
         "models/square_biscuit/square_biscuit.gltf",
         "effects/MeshTextures.sefx");

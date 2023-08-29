@@ -45,7 +45,8 @@ const std::array<math::Quaternion<float>, 4> gHudOrientationsWorld{
 const std::array<std::string, static_cast<unsigned int>(PowerUpType::None)> gPowerUpName{
     "Seeking dog",
     "Donut swapper",
-    "Controlled missile"
+    "Controlled missile",
+    "Bomb",
 };
 
 std::string getPowerUpName(ent::Handle<ent::Entity> aPlayer);

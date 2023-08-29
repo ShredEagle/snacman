@@ -1,5 +1,6 @@
 #include "PowerUpUsage.h"
 
+#include "math/Interpolation/ParameterAnimation.h"
 #include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 
 #include "../component/AllowedMovement.h"
@@ -151,6 +152,10 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                         case component::PowerUpType::Missile:
                         {
                             aRoundData.mInfo = component::MissilePowerUpInfo{};
+                            break;
+                        }
+                        case component::PowerUpType::Bomb:
+                        {
                             break;
                         }
                         default:
@@ -460,6 +465,37 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 aHandle.get(usage)->add(component::ControllingMissile{});
 
                 aRoundData.mType = component::PowerUpType::None;
+            }
+            break;
+        }
+        case component::PowerUpType::Bomb:
+        {
+            if (aController.mInput.mCommand & gPlayerUsePowerup)
+            {
+                EntHandle rootPowerup = aRoundData.mPowerUp;
+                component::Geometry & playerModelGeo =
+                    aRoundData.mModel.get()->get<component::Geometry>();
+                EntHandle bombModel = mGameContext->mWorld.addEntity();
+                {
+                    Phase bombPhase;
+                    constexpr ModelInfo info = gPlayerPowerupInfoByType[(
+                        unsigned int) component::PowerUpType::Bomb];
+                    Entity bombEnt = *bombModel.get(bombPhase);
+                    addMeshGeoNode(
+                        *mGameContext, bombEnt, info.mPath, info.mProgPath,
+                        {0.f, 0.f, gPillHeight}, info.mScaling,
+                        info.mInstanceScale,
+                        playerModelGeo.mOrientation);
+                    bombEnt.add(component::RoundTransient{});
+                    ParameterAnimation<float, math::FullRange, math::None, math::ease::CubicSpline> animation(
+                            math::ease::CubicSpline<float>({0.f, 0.5f, 1.f, 1.01f, 1.25f, 1.5f, 1.58f, 1.79f, 2.12f, 2.3f, 2.402f, 2.451f, 2.5},
+                                {1.f, 1.2f, 2.f, 0.25f, 0.25f, 0.63f, 0.96f, 1.17f, 1.23f, 1.245f, 1.249f, 1.250f})
+                    );
+                }
+                transferEntity(rootPowerup, aLevel);
+                insertEntityInScene(bombModel, rootPowerup);
+                updateGlobalPosition(
+                    snac::getComponent<component::SceneNode>(bombModel));
             }
             break;
         }

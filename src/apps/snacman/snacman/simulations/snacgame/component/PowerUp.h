@@ -17,6 +17,7 @@ enum class PowerUpType : unsigned int
     Dog,
     Teleport,
     Missile,
+    Bomb,
     None,
     _End = None,
 };

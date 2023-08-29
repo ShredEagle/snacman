@@ -56,7 +56,13 @@ constexpr std::array<ModelInfo,
         ModelInfo{.mPath = "models/missile/missile.gltf",
                         .mProgPath = "effects/MeshTextures.sefx",
                         .mScaling = 0.3f,
-                        }};
+                        },
+        ModelInfo{
+            .mPath = "models/bomb/bomb.gltf",
+            .mProgPath = "effects/MeshTextures.sefx",
+            .mScaling = 0.3f,
+        },
+    };
 
 constexpr std::array<ModelInfo,
                      static_cast<unsigned int>(component::PowerUpType::_End)>
@@ -78,7 +84,13 @@ constexpr std::array<ModelInfo,
                         .mProgPath = "effects/MeshTextures.sefx",
                         .mOrientation = gBaseMissileOrientation,
                         .mInstanceScale = {0.3f, 0.3f, 0.3f},
-                        .mScaling = 1.f}};
+                        .mScaling = 1.f},
+        ModelInfo{
+            .mPath = "models/bomb/bomb.gltf",
+            .mProgPath = "effects/MeshTextures.sefx",
+            .mScaling = 0.3f,
+        },
+    };
 constexpr float gNumbersBaseScale = 0.5f;
 constexpr math::Vec<3, float> gNumbersPosOffset = {0.f, 2.f, 0.f};
 constexpr std::array<ModelInfo,
