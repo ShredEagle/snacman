@@ -204,7 +204,8 @@ namespace {
 
     void draw(const DrawList & aDrawList,
               Storage & aStorage,
-              const RepositoryUBO & aUboRepository)
+              const RepositoryUBO & aUboRepository,
+              const RepositoryTexture & aTextureRepository)
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
         // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
@@ -271,7 +272,7 @@ namespace {
                         textureIdx != TextureInput::gNoEntry)
                     {
                         PROFILER_SCOPE_SECTION("set_textures", CpuTime);
-                        setTextures(selectedProgram, {{semantic::gDiffuseTexture, &aStorage.mTextures[textureIdx]},});
+                        setTextures(selectedProgram, aTextureRepository);
                     }
                 }
 
@@ -647,6 +648,10 @@ void RenderGraph::render()
         loadCameraUbo(*mUbos.mViewingUbo, mCamera);
     }
 
+    // A single texture array at the moment
+    assert(mStorage.mTextures.size() == 1);
+    RepositoryTexture textureRepository{{semantic::gDiffuseTexture, &mStorage.mTextures.front()}};
+
     // TODO should be done once per viewport
     glViewport(0, 0,
                mGlfwAppInterface->getFramebufferSize().width(),
@@ -654,9 +659,11 @@ void RenderGraph::render()
 
     {
         PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
+
         draw(drawList,
-            mStorage,
-            mUbos.mUboRepository);
+             mStorage,
+             mUbos.mUboRepository,
+             textureRepository);
     }
 }
 

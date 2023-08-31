@@ -6,12 +6,17 @@
 #include "../../refactor_proto/refactor_proto/BinaryArchive.h"
 #include "../../refactor_proto/refactor_proto/Material.h"
 
-#include <math/Box.h>
-#include <math/Homogeneous.h>
-
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
+
+#include <arte/Image.h>
+#include <arte/ImageConvolution.h>
+
+#include <math/Box.h>
+#include <math/Homogeneous.h>
+
+#include <fmt/ostream.h>
 
 #include <fstream>
 #include <iostream>
@@ -64,7 +69,8 @@ namespace {
     {
         FileWriter(std::filesystem::path aDestinationFile) :
             mArchive{
-                .mOut = std::ofstream{aDestinationFile, std::ios::binary}
+                .mOut = std::ofstream{aDestinationFile, std::ios::binary},
+                .mParentPath = aDestinationFile.parent_path(),
             }
         {
             unsigned int version = 1;
@@ -75,6 +81,13 @@ namespace {
         void write(const math::Box<float> aBox)
         {
             mArchive.write(aBox);
+        }
+
+        // TODO this feels out of place, this file writer being inteded to be high level
+        template <int N_dimension, class T_number>
+        void write(const math::Size<N_dimension, T_number> aSize)
+        {
+            mArchive.write(aSize);
         }
 
         void write(const aiNode * aNode)
@@ -166,6 +179,7 @@ namespace {
     //  numMaterials
     //  raw memory dump of span<PhongMaterial>
     //  numTexturePaths
+    //  texturesUnifiedDimensions (as math::Size<2, int>)
     //  each texturePath:
     //    string size
     //    string characters
@@ -260,6 +274,83 @@ namespace {
     }
 
 
+    math::Size<2, int> resampleImages(std::vector<std::string> & aTexturePaths, filesystem::path aParentPath)
+    {
+        using Image = arte::Image<math::sdr::Rgba>;
+
+        // Find max dimension
+        int maxDimension = 0;
+        for(auto imagePath = aTexturePaths.begin(); imagePath != aTexturePaths.end(); ++imagePath)
+        {
+            auto dimensions = Image{aParentPath / *imagePath}.dimensions();
+            maxDimension = std::max(maxDimension, *dimensions.getMaxMagnitudeElement());
+
+            if(dimensions.width() != dimensions.height())
+            {
+                SELOG(warn)("Texture image {} does not have square dimensions {}.",
+                            *imagePath, fmt::streamed(dimensions));
+            }
+        }
+
+        // Resample what is needed
+        math::Size<2, int> commonDimensions = {maxDimension, maxDimension};
+        for(auto imagePath = aTexturePaths.begin(); imagePath != aTexturePaths.end(); ++imagePath)
+        {
+            filesystem::path path{*imagePath};
+            Image image{aParentPath / path};
+
+            if(image.dimensions().width() < maxDimension || image.dimensions().height() < maxDimension)
+            {
+                SELOG(info)("Resampling image {} to {}.", *imagePath, fmt::streamed(commonDimensions));
+
+                path = path.parent_path() / "upsampled" / path.filename();
+                resampleImage(image, commonDimensions).saveFile(aParentPath / path);
+                *imagePath = path.string();
+            }
+        }
+        return commonDimensions;
+    }
+
+
+    void dumpTextures(std::vector<std::string> & aTexturePaths, FileWriter & aWriter)
+    {
+        using Image = arte::Image<math::sdr::Rgba>;
+
+        filesystem::path basePath = aWriter.mArchive.mParentPath;
+
+        math::Size<2, int> commonDimensions;
+        if(!aTexturePaths.empty())
+        {
+            filesystem::path path =  basePath / aTexturePaths.front();
+            filesystem::path upsampledDir = path.parent_path() / "upsampled";
+            if(is_directory(upsampledDir))
+            {
+                commonDimensions = Image{upsampledDir / path.filename()}.dimensions();
+                SELOG(info)("Upsampled images already found, with dimensions {}.",
+                            fmt::streamed(commonDimensions));
+
+                // Fixup paths for resampled images
+                for(auto & imagePath : aTexturePaths)
+                {
+                    filesystem::path path{imagePath};
+                    auto upsampledRelativePath = path.parent_path() / "upsampled" / path.filename();
+                    if(is_regular_file(basePath / upsampledRelativePath))
+                    {
+                        imagePath = upsampledRelativePath.string();
+                    }
+                }
+            }
+            else
+            {
+                create_directory(upsampledDir);
+                commonDimensions = resampleImages(aTexturePaths, basePath);
+            }
+        }
+
+        aWriter.write(commonDimensions);
+        aWriter.write(aTexturePaths);
+    }
+
     void dumpMaterials(const aiScene * aScene, FileWriter & aWriter)
     {
         std::vector<PhongMaterial> materials;
@@ -337,7 +428,7 @@ namespace {
         }
 
         aWriter.writeRaw(std::span{materials});
-        aWriter.write(texturePaths);
+        dumpTextures(texturePaths, aWriter);
     }
 
 } // unnamed namespace

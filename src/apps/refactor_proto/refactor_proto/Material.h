@@ -16,9 +16,6 @@ struct TextureInput
 };
 
 
-// TODO Redesign, the intent is to get something that can be loaded at once into a buffer (as an array of)
-// but currently the texture index is here, which is of no use from within shader code.
-// Maybe it should be split in two classes?
 // Note: 16-aligned, because it is intended to be stored as an array in a buffer object
 // and then the elements are accessed via a std140 uniform block 
 struct alignas(16) PhongMaterial 

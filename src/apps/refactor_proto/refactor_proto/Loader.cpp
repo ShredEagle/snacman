@@ -245,12 +245,18 @@ namespace {
     }
 
 
-    graphics::Texture loadTexture(std::filesystem::path aTexturePath)
+    void loadTextureLayer(graphics::Texture & a3dTexture,
+                          GLint aLayerIdx,
+                          std::filesystem::path aTexturePath,
+                          math::Size<2, int> aExpectedDimensions)
     {
-        graphics::Texture texture{GL_TEXTURE_2D};
         arte::Image<math::sdr::Rgba> image{aTexturePath, arte::ImageOrientation::InvertVerticalAxis};
-        graphics::loadImageCompleteMipmaps(texture, image);
-        return texture;
+        assert(aExpectedDimensions == image.dimensions());
+
+        graphics::writeTo(a3dTexture,
+                          static_cast<const std::byte *>(image),
+                          graphics::InputImageParameters::From(image),
+                          math::Position<3, GLint>{0, 0, aLayerIdx});
     }
 
 
@@ -264,13 +270,36 @@ namespace {
         std::vector<PhongMaterial> materials{materialsCount};
         aIn.read(std::span{materials});
 
+        math::Size<2, int> imageSize;        
+        aIn.read(imageSize);
+
         unsigned int pathsCount;
         aIn.read(pathsCount);
+
+        graphics::Texture textureArray{GL_TEXTURE_2D_ARRAY};
+        graphics::ScopedBind boundTextureArray{textureArray};
+        glTexStorage3D(textureArray.mTarget, 
+                       graphics::countCompleteMipmaps(imageSize),
+                       graphics::MappedSizedPixel_v<math::sdr::Rgba>,
+                       imageSize.width(), imageSize.height(), pathsCount);
+        { // scoping `isSuccess`
+            GLint isSuccess;
+            glGetTexParameteriv(textureArray.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);
+            if(!isSuccess)
+            {
+                SELOG(error)("Cannot create immutable storage for textures array.");
+                throw std::runtime_error{"Error creating immutable storage for textures."};
+            }
+        }
+
         for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
         {
             std::string path = aIn.readString();
-            aStorage.mTextures.push_back(loadTexture(aIn.mParentPath / path));
+            loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize);
         }
+
+        glGenerateMipmap(textureArray.mTarget);
+        aStorage.mTextures.push_back(std::move(textureArray));
 
         aStorage.mPhongMaterials = std::move(materials);
     }
