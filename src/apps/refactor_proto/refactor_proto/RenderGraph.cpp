@@ -586,6 +586,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
 
 void RenderGraph::update(float aDeltaTime)
 {
+    PROFILER_SCOPE_SECTION("RenderGraph::update()", CpuTime);
     mFirstPersonControl.update(aDeltaTime);
 }
 
