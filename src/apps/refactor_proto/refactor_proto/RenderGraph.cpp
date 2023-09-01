@@ -322,11 +322,12 @@ namespace {
             assert(vertexStream.mIndexBufferView.mOffset == 0);
             result.mDrawCommands.push_back(
                 DrawElementsIndirectCommand{
-                    .mCount = (GLuint)part.mIndicesCount,
+                    .mCount = part.mIndicesCount,
                     .mInstanceCount = 1,
                     .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset 
-                                            / graphics::getByteSize(vertexStream.mIndicesType)),
-                    .mBaseVertex = 0, // TODO #mergebuffer Handle the base index offset
+                                            / graphics::getByteSize(vertexStream.mIndicesType))
+                                    + part.mIndexFirst,
+                    .mBaseVertex = part.mVertexFirst,
                     .mBaseInstance = (GLuint)partIdx,
                 }
             );

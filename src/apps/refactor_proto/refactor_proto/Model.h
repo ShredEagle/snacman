@@ -161,12 +161,13 @@ struct Part
 {
     Material mMaterial; // TODO #matref: should probably be a "reference", as it is likely shared
                         // on the other hand, it is currently very lightweight
-    Handle<VertexStream> mVertexStream;
+    Handle<const VertexStream> mVertexStream;
     GLenum mPrimitiveMode = NULL;
-    GLsizei mVertexFirst = 0;
-    GLsizei mVertexCount = 0;
-    GLsizei mIndexFirst = 0;
-    GLsizei mIndicesCount = 0;
+    // GLuint because it is the type used in the Draw Indirect buffer
+    GLuint mVertexFirst = 0;
+    GLuint mVertexCount = 0;
+    GLuint mIndexFirst = 0;
+    GLuint mIndicesCount = 0;
     math::Box<GLfloat> mAabb;
     //FeatureSet mFeatures;
 };

@@ -79,55 +79,45 @@ namespace {
     }
 
 
-    // TODO consolidate loading several attribute, several meshes into the same GL buffers
-    // (the attribute interleaving might be done on the exporter side though).
-    Part loadMesh(BinaryInArchive & aIn, Storage & aStorage, Material aDefaultMaterial, const GenericStream & aStream)
+
+    /// @brief Create a GL buffer of specified size (without loading data into it).
+    /// @return Buffer view to the buffer.
+    BufferView createBuffer(GLsizei aElementSize, GLsizeiptr aBufferSize, Storage & aStorage)
     {
-        auto loadBuffer = [&aStorage, &aIn](GLsizei aElementSize, std::size_t aElementCount)
-        {
-            std::size_t bufferSize = aElementCount * aElementSize;
-            std::unique_ptr<char[]> cpuBuffer = aIn.readBytes(bufferSize);
+        graphics::BufferAny glBuffer; // glGenBuffers()
+        // Note: Using a random target, the underlying buffer objects are all identical.
+        constexpr auto target = graphics::BufferType::Array;
+        graphics::ScopedBind boundBuffer{glBuffer, target}; // glBind()
 
-            auto [glBuffer, glBufferSize] = 
-                makeMutableBuffer(std::span{cpuBuffer.get(), bufferSize}, GL_STATIC_DRAW);
+        glBufferData(
+            static_cast<GLenum>(target),
+            aBufferSize,
+            nullptr,
+            GL_STATIC_DRAW);
 
-            aStorage.mBuffers.push_back(std::move(glBuffer));
+        aStorage.mBuffers.push_back(std::move(glBuffer));
+        graphics::BufferAny * buffer = &aStorage.mBuffers.back();
 
-            return BufferView {
-                .mGLBuffer = &aStorage.mBuffers.back(),
-                .mStride = aElementSize,
-                .mOffset = 0,
-                .mSize = glBufferSize, // The view has access to the whole buffer
-            };
+        return BufferView{
+            .mGLBuffer = buffer,
+            .mStride = aElementSize,
+            .mOffset = 0,
+            .mSize = aBufferSize, // The view has access to the whole buffer ATM
         };
+    };
 
-        unsigned int materialIndex;
-        aIn.read(materialIndex);
+    constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
+    constexpr auto gNormalSize = gPositionSize;
+    constexpr auto gUvSize = 2 * sizeof(float);
+    constexpr auto gIndexSize = sizeof(unsigned int);
 
-        unsigned int verticesCount;
-        aIn.read(verticesCount);
-        constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
-        BufferView positionView = loadBuffer(gPositionSize, verticesCount);
+    VertexStream * prepareConsolidatedStream(GLsizeiptr aBufferSize, 
+                                             Storage & aStorage,
+                                             const GenericStream & aStream)
+    {
+        BufferView iboView = createBuffer(gIndexSize, aBufferSize, aStorage);
 
-        constexpr auto gNormalSize = gPositionSize;
-        BufferView normalView = loadBuffer(gNormalSize, verticesCount);
-
-        unsigned int uvChannelsCount;
-        aIn.read(uvChannelsCount);
-        assert(uvChannelsCount <= 1);
-        BufferView uvView;
-        for(unsigned int uvIdx = 0; uvIdx != uvChannelsCount; ++uvIdx)
-        {
-            uvView = loadBuffer(2 * sizeof(float), verticesCount);
-        }
-
-        unsigned int primitiveCount;
-        aIn.read(primitiveCount);
-        const unsigned int indicesCount = 3 * primitiveCount;
-        constexpr auto gIndexSize = sizeof(unsigned int);
-        BufferView iboView = loadBuffer(gIndexSize, indicesCount);
-
-        // TODO this is the stream we should reuse when storing several parts in the same buffer
+        // The consolidated vertex stream
         aStorage.mVertexStreams.push_back({
             .mVertexBufferViews{aStream.mVertexBufferViews},
             .mSemanticToAttribute{aStream.mSemanticToAttribute},
@@ -137,62 +127,131 @@ namespace {
 
         VertexStream & vertexStream = aStorage.mVertexStreams.back();
 
-        vertexStream.mVertexBufferViews.insert(vertexStream.mVertexBufferViews.end(), { positionView, normalView});
+        BufferView positionView = createBuffer(gPositionSize, aBufferSize, aStorage);
+        BufferView normalView = createBuffer(gNormalSize, aBufferSize, aStorage);
+        BufferView uvView = createBuffer(gUvSize, aBufferSize, aStorage);
+
+        vertexStream.mVertexBufferViews.insert(
+            vertexStream.mVertexBufferViews.end(), {positionView, normalView, uvView});
+
         vertexStream.mSemanticToAttribute.insert({
             {
                 semantic::gPosition,
+                AttributeAccessor{
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 3, // view is added above
+                    .mClientDataFormat{
+                        .mDimension = 3,
+                        .mOffset = 0,
+                        .mComponentType = GL_FLOAT
+                    },
+                },
+            },
+            {
+                semantic::gNormal,
                 AttributeAccessor{
                     .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 2, // view is added above
                     .mClientDataFormat{
                         .mDimension = 3,
                         .mOffset = 0,
                         .mComponentType = GL_FLOAT
-                    }
+                    },
                 }
             },
             {
-                semantic::gNormal,
-                AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 1, // view is added above
-                    .mClientDataFormat{
-                        .mDimension = 3,
-                        .mOffset = 0,
-                        .mComponentType = GL_FLOAT
-                    }
-                }
-            },
-        });
-
-        if(uvChannelsCount != 0)
-        {
-            vertexStream.mSemanticToAttribute.emplace(
                 semantic::gUv,
                 AttributeAccessor{
-                    // Size taken before pushing back
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size(),
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 1, // view is added above
                     .mClientDataFormat{
                         .mDimension = 2,
                         .mOffset = 0,
                         .mComponentType = GL_FLOAT,
                     },
-                });
-            vertexStream.mVertexBufferViews.push_back(std::move(uvView));
+                },
+            }
+        });
+
+        return &vertexStream;
+    }
+
+    // TODO Do we want attribute interleaving, or are we content with one buffer / attribute ?
+    // (the attribute interleaving should then be done on the exporter side).
+    Part loadMesh(BinaryInArchive & aIn, 
+                  const VertexStream & aVertexStream,
+                  // TODO #inout replace this inout by something more sane
+                  GLuint & aVertexFirst,
+                  GLuint & aIndexFirst,
+                  Material aDefaultMaterial)
+    {
+        // Load data into an existing buffer, with offset aElementFirst.
+        auto loadBuffer = [&aIn](graphics::BufferAny & aBuffer, 
+                                 GLuint aElementFirst,
+                                 GLsizei aElementSize,
+                                 std::size_t aElementCount)
+        {
+            std::size_t bufferSize = aElementCount * aElementSize;
+            std::unique_ptr<char[]> cpuBuffer = aIn.readBytes(bufferSize);
+
+            // Note: Using a random target, the underlying buffer objects are all identical.
+            constexpr auto target = graphics::BufferType::Array;
+            graphics::ScopedBind boundBuffer{aBuffer, target}; // glBind()
+
+            glBufferSubData(
+                static_cast<GLenum>(target),
+                aElementFirst * aElementSize, // offset
+                bufferSize, // data length
+                cpuBuffer.get());
+        };
+
+        graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
+        graphics::BufferAny & normalBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
+        graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
+        graphics::BufferAny & indexBuffer = *(aVertexStream.mIndexBufferView.mGLBuffer);
+
+        unsigned int materialIndex;
+        aIn.read(materialIndex);
+
+        unsigned int verticesCount;
+        aIn.read(verticesCount);
+        
+        // load positions
+        loadBuffer(positionBuffer, aVertexFirst, gPositionSize, verticesCount);
+        // load normals
+        loadBuffer(normalBuffer, aVertexFirst, gNormalSize, verticesCount);
+
+        unsigned int uvChannelsCount;
+        aIn.read(uvChannelsCount);
+        assert(uvChannelsCount <= 1);
+        
+        // TODO handle no UV channel by adding all of them at the end? (so it is not problem we index out of range)
+        assert(uvChannelsCount == 1);
+
+        for(unsigned int uvIdx = 0; uvIdx != uvChannelsCount; ++uvIdx)
+        {
+            loadBuffer(uvBuffer, aVertexFirst, gUvSize, verticesCount);
         }
 
+        unsigned int primitiveCount;
+        aIn.read(primitiveCount);
+        const unsigned int indicesCount = 3 * primitiveCount;
+        loadBuffer(indexBuffer, aIndexFirst, gIndexSize, indicesCount);
 
         Part part{
             .mMaterial{
                 .mPhongMaterialIdx = materialIndex,
                 .mEffect = aDefaultMaterial.mEffect,
             },
-            .mVertexStream = &vertexStream,
+            .mVertexStream = &aVertexStream,
             .mPrimitiveMode = GL_TRIANGLES,
-            .mVertexCount = (GLsizei)verticesCount,
-            .mIndicesCount = (GLsizei)indicesCount,
+            .mVertexFirst = aVertexFirst,
+            .mVertexCount = verticesCount,
+            .mIndexFirst = aIndexFirst,
+            .mIndicesCount = indicesCount,
         };
 
         aIn.read(part.mAabb);
 
+        aVertexFirst += verticesCount;
+        aIndexFirst += indicesCount;
         return part;
     }
 
@@ -204,7 +263,13 @@ namespace {
     }
 
 
-    Node loadNode(BinaryInArchive & aIn, Storage & aStorage, const Material aDefaultMaterial, const GenericStream & aStream)
+    Node loadNode(BinaryInArchive & aIn,
+                  Storage & aStorage,
+                  const Material aDefaultMaterial,
+                  const VertexStream & aVertexStream,
+                  // TODO #inout replace this inout by something more sane
+                  GLuint & aVertexFirst,
+                  GLuint & aIndexFirst)
     {
         unsigned int meshesCount, childrenCount;
         aIn.read(meshesCount);
@@ -223,7 +288,7 @@ namespace {
         for(std::size_t meshIdx = 0; meshIdx != meshesCount; ++meshIdx)
         {
             node.mInstance.mObject->mParts.push_back(
-                loadMesh(aIn, aStorage, aDefaultMaterial, aStream)
+                loadMesh(aIn, aVertexStream, aVertexFirst, aIndexFirst, aDefaultMaterial)
             );
         }
         
@@ -236,7 +301,7 @@ namespace {
 
         for(std::size_t childIdx = 0; childIdx != childrenCount; ++childIdx)
         {
-            node.mChildren.push_back(loadNode(aIn, aStorage, aDefaultMaterial, aStream));
+            node.mChildren.push_back(loadNode(aIn, aStorage, aDefaultMaterial, aVertexStream, aVertexFirst, aIndexFirst));
         }
 
         aIn.read(node.mAabb);
@@ -310,7 +375,10 @@ namespace {
 
 // TODO should not take a default material, but have a way to get the actual effect to use 
 // (maybe directly from the binary file)
-Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, Material aDefaultMaterial, const GenericStream & aStream)
+Node loadBinary(const std::filesystem::path & aBinaryFile,
+                Storage & aStorage,
+                Material aDefaultMaterial,
+                const GenericStream & aStream)
 {
     BinaryInArchive in{
         .mIn{std::ifstream{aBinaryFile, std::ios::binary}},
@@ -322,7 +390,14 @@ Node loadBinary(const std::filesystem::path & aBinaryFile, Storage & aStorage, M
     in.read(version);
     assert(version == 1);
 
-    Node result = loadNode(in, aStorage, aDefaultMaterial, aStream);
+    // Prepare the single buffer storage for the whole binary
+    // TODO actually read the correct buffer size (i.e. write it first)
+    constexpr GLsizei gBufferSize = 512 * 1024 * 1024;
+    VertexStream * consolidatedStream = prepareConsolidatedStream(gBufferSize, aStorage, aStream);
+
+    GLuint vertexFirst = 0;
+    GLuint indexFirst = 0;
+    Node result = loadNode(in, aStorage, aDefaultMaterial, *consolidatedStream, vertexFirst, indexFirst);
 
     loadMaterials(in, aStorage);
 
