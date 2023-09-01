@@ -16,6 +16,14 @@ namespace ad::imguiui {
 
 namespace ad::renderer {
 
+struct DrawElementsIndirectCommand
+{
+    GLuint  mCount;
+    GLuint  mInstanceCount;
+    GLuint  mFirstIndex;
+    GLuint  mBaseVertex;
+    GLuint  mBaseInstance;
+};
 
 struct DrawInstance
 {
@@ -83,6 +91,7 @@ struct RenderGraph
     GenericStream mInstanceStream;
     Loader mLoader;
     HardcodedUbos mUbos;
+    graphics::BufferAny mIndirectBuffer;
 
     Camera mCamera;
     

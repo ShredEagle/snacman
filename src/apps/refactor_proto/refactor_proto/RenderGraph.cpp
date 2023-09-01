@@ -205,7 +205,8 @@ namespace {
     void draw(const DrawList & aDrawList,
               Storage & aStorage,
               const RepositoryUBO & aUboRepository,
-              const RepositoryTexture & aTextureRepository)
+              const RepositoryTexture & aTextureRepository,
+              const graphics::BufferAny & aIndirectBuffer) // TODO indirect buffer should be populated once, ahead of draw()
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
         // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
@@ -296,15 +297,25 @@ namespace {
                     }
                     else
                     {
-                        glDrawElementsInstancedBaseInstance(
+                        // TODO handle the case where there is an offset
+                        // This is more complicated with indirect draw commands, because they do not
+                        // accept a (void*) offset, but a number of indices (firstIndex).
+                        assert(vertexStream.mIndexBufferView.mOffset == 0);
+                        DrawElementsIndirectCommand command{
+                            .mCount = (GLuint)part.mIndicesCount,
+                            .mInstanceCount = 1,
+                            .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset 
+                                                    / graphics::getByteSize(vertexStream.mIndicesType)),
+                            .mBaseVertex = 0, // TODO #mergebuffer Handle the base index offset
+                            .mBaseInstance = baseInstance,
+                        };
+
+                        graphics::loadSingle(aIndirectBuffer, command, graphics::BufferHint::StreamDraw);
+
+                        glDrawElementsIndirect(
                             part.mPrimitiveMode,
-                            part.mIndicesCount,
                             vertexStream.mIndicesType,
-                            (const void *)
-                                (vertexStream.mIndexBufferView.mOffset 
-                                + (part.mIndexFirst * graphics::getByteSize(vertexStream.mIndicesType))),
-                            1,
-                            baseInstance);
+                            0);
                     }
                 }
             }
@@ -652,6 +663,9 @@ void RenderGraph::render()
     assert(mStorage.mTextures.size() == 1);
     RepositoryTexture textureRepository{{semantic::gDiffuseTexture, &mStorage.mTextures.front()}};
 
+    // Use the same indirect buffer for all drawings
+    graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
+
     // TODO should be done once per viewport
     glViewport(0, 0,
                mGlfwAppInterface->getFramebufferSize().width(),
@@ -663,7 +677,8 @@ void RenderGraph::render()
         draw(drawList,
              mStorage,
              mUbos.mUboRepository,
-             textureRepository);
+             textureRepository,
+             mIndirectBuffer);
     }
 }
 
