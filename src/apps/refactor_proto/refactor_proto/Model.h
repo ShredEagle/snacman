@@ -71,10 +71,11 @@ struct ProgramConfig
 {
     struct Entry
     {
-        // Note: When moving to VAB (separate format) this would become too conservative:
+        // TODO: When moving to VAB (separate format), reuse the VAO for distinct buffers
         // all buffer sets with the same format (attribute size, component type, relative offset) can share a VAO.
+        // (and the buffer would be bound to the VAO)
         Handle<const VertexStream> mVertexStream;
-        graphics::VertexArrayObject mVao;
+        Handle<graphics::VertexArrayObject> mVao;
     };
     // Note: The cache is implemented as a vector, lookup is made by visiting elements and comparing VertexStream handles.
     std::vector<Entry> mEntries;
@@ -234,6 +235,7 @@ struct Storage
     std::list<graphics::UniformBufferObject> mUbos;
     std::list<VertexStream> mVertexStreams;
     std::list<ProgramConfig> mProgramConfigs;
+    std::list<graphics::VertexArrayObject> mVaos;
 };
 
 

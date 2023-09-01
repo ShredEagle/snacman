@@ -202,11 +202,9 @@ namespace {
     }
 
 
-    void draw(const DrawList & aDrawList,
-              Storage & aStorage,
+    void draw(const PassCache & aPassCache,
               const RepositoryUBO & aUboRepository,
-              const RepositoryTexture & aTextureRepository,
-              const graphics::BufferAny & aIndirectBuffer) // TODO indirect buffer should be populated once, ahead of draw()
+              const RepositoryTexture & aTextureRepository)
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
         // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
@@ -217,48 +215,17 @@ namespace {
         // An instance buffer (vertex buffer with divisor 1) was populated in the order of the drawlist.
         // Keep track of which instance we are at.
         GLuint baseInstance = 0; 
-        for(const PartAndMaterial & partMaterial : aDrawList.mParts)
+        for (std::size_t partIdx = 0; partIdx != aPassCache.mDrawCommands.size(); ++partIdx)
         {
             PROFILER_SCOPE_SECTION("draw_part", CpuTime);
 
             PROFILER_PUSH_SECTION("discard_2", CpuTime);
-            const Part & part = *partMaterial.mPart;
-            const Material & material = *partMaterial.mMaterial;
-
-            assert(material.mEffect->mTechniques.size() == 1);
-            
-            // TODO replace program selection with something not hardcoded, this is a quick test
-            // (Ideally, a shader system with some form of render list)
-            const ConfiguredProgram & configuredProgram = *material.mEffect->mTechniques.at(0).mConfiguredProgram;
-            const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
-
-            const VertexStream & vertexStream = *part.mVertexStream;
+            const IntrospectProgram & selectedProgram = *aPassCache.mPrograms[partIdx];
+            const graphics::VertexArrayObject & vao = *aPassCache.mVaos[partIdx];
             PROFILER_POP_SECTION;
 
             {
-                PROFILER_PUSH_SECTION("prepare_VAO", CpuTime);
-                // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
-                const auto & vao = [&, &entries = configuredProgram.mConfig->mEntries]() -> const graphics::VertexArrayObject &
-                {
-                    if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
-                                                    [&vertexStream, &part](const auto & aEntry)
-                                                    {
-                                                        return aEntry.mVertexStream == part.mVertexStream;
-                                                    });
-                        foundConfig != entries.end())
-                    {
-                        return foundConfig->mVao;
-                    }
-                    else
-                    {
-                        entries.push_back(
-                            ProgramConfig::Entry{
-                                .mVertexStream = part.mVertexStream,
-                                .mVao = prepareVAO(selectedProgram, vertexStream),
-                            });
-                        return entries.back().mVao;
-                    }
-                }();
+                PROFILER_PUSH_SECTION("bind_VAO", CpuTime);
                 graphics::ScopedBind vaoScope{vao};
                 PROFILER_POP_SECTION;
                 
@@ -267,14 +234,9 @@ namespace {
                     setBufferBackedBlocks(selectedProgram, aUboRepository);
                 }
 
-                if(material.mPhongMaterialIdx != -1)
                 {
-                    if(auto textureIdx = aStorage.mPhongMaterials[material.mPhongMaterialIdx].mDiffuseMap.mTextureIndex;
-                        textureIdx != TextureInput::gNoEntry)
-                    {
-                        PROFILER_SCOPE_SECTION("set_textures", CpuTime);
-                        setTextures(selectedProgram, aTextureRepository);
-                    }
+                    PROFILER_SCOPE_SECTION("set_textures", CpuTime);
+                    setTextures(selectedProgram, aTextureRepository);
                 }
 
                 PROFILER_PUSH_SECTION("bind_program", CpuTime);
@@ -285,38 +247,12 @@ namespace {
                     // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
                     // Can we have efficient GPU measures?
                     PROFILER_SCOPE_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
-                    // TODO multi draw
-                    if(vertexStream.mIndicesType == NULL)
-                    {
-                        glDrawArraysInstancedBaseInstance(
-                            part.mPrimitiveMode,
-                            part.mVertexFirst,
-                            part.mVertexCount,
-                            1,
-                            baseInstance);
-                    }
-                    else
-                    {
-                        // TODO handle the case where there is an offset
-                        // This is more complicated with indirect draw commands, because they do not
-                        // accept a (void*) offset, but a number of indices (firstIndex).
-                        assert(vertexStream.mIndexBufferView.mOffset == 0);
-                        DrawElementsIndirectCommand command{
-                            .mCount = (GLuint)part.mIndicesCount,
-                            .mInstanceCount = 1,
-                            .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset 
-                                                    / graphics::getByteSize(vertexStream.mIndicesType)),
-                            .mBaseVertex = 0, // TODO #mergebuffer Handle the base index offset
-                            .mBaseInstance = baseInstance,
-                        };
-
-                        graphics::loadSingle(aIndirectBuffer, command, graphics::BufferHint::StreamDraw);
-
-                        glDrawElementsIndirect(
-                            part.mPrimitiveMode,
-                            vertexStream.mIndicesType,
-                            0);
-                    }
+                    
+                    // TODO Multi Draw instead of one by one with offset
+                    glDrawElementsIndirect(
+                        aPassCache.mPrimitiveMode,
+                        aPassCache.mIndicesType,
+                        (void *)(baseInstance * sizeof(DrawElementsIndirectCommand)));
                 }
             }
             ++baseInstance;
@@ -337,11 +273,10 @@ namespace {
                     aNode.mInstance.mMaterialOverride ?
                     *aNode.mInstance.mMaterialOverride : part.mMaterial;
 
-                aDrawList.mParts.push_back({&part, &material});
-                aDrawList.mDrawInstances.push_back(DrawInstance{
-                    .mInstanceTransformIdx = (GLsizei)aDrawList.mInstanceTransforms.size(), // pushed after
-                    .mMaterialIdx = (GLsizei)material.mPhongMaterialIdx,
-                });
+                aDrawList.mParts.push_back(&part);
+                aDrawList.mMaterials.push_back(&material);
+                // pushed after
+                aDrawList.mTransformIdx.push_back((GLsizei)aDrawList.mInstanceTransforms.size());
             }
 
             aDrawList.mInstanceTransforms.push_back(
@@ -353,6 +288,92 @@ namespace {
         {
             populateDrawList(aDrawList, child, absolutePose);
         }
+    }
+
+
+    PassCache preparePass(const DrawList & aDrawList,
+                          Storage & aStorage)
+    {
+        PROFILER_SCOPE_SECTION("prepare_pass", CpuTime);
+
+        PassCache result;
+
+        if(!aDrawList.mParts.empty())
+        {
+            const Part & part = *aDrawList.mParts.front();
+            const VertexStream & vertexStream = *part.mVertexStream;
+            result.mPrimitiveMode = part.mPrimitiveMode;
+            result.mIndicesType = vertexStream.mIndicesType;
+        }
+
+        for (std::size_t partIdx = 0; partIdx != aDrawList.mParts.size(); ++partIdx)
+        {
+            const Part & part = *aDrawList.mParts[partIdx];
+            const VertexStream & vertexStream = *part.mVertexStream;
+            const Material & material = *aDrawList.mMaterials[partIdx];
+
+            // TODO handle segregation by those values, instead of requiring the same everywhere
+            assert(part.mPrimitiveMode == result.mPrimitiveMode);
+            assert(vertexStream.mIndicesType == result.mIndicesType);
+
+            // TODO handle the case where there is an offset
+            // This is more complicated with indirect draw commands, because they do not
+            // accept a (void*) offset, but a number of indices (firstIndex).
+            assert(vertexStream.mIndexBufferView.mOffset == 0);
+            result.mDrawCommands.push_back(
+                DrawElementsIndirectCommand{
+                    .mCount = (GLuint)part.mIndicesCount,
+                    .mInstanceCount = 1,
+                    .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset 
+                                            / graphics::getByteSize(vertexStream.mIndicesType)),
+                    .mBaseVertex = 0, // TODO #mergebuffer Handle the base index offset
+                    .mBaseInstance = (GLuint)partIdx,
+                }
+            );
+
+            result.mDrawInstances.push_back(DrawInstance{
+                .mInstanceTransformIdx = aDrawList.mTransformIdx[partIdx], // pushed after
+                .mMaterialIdx = (GLsizei)material.mPhongMaterialIdx,
+            });
+
+            // TODO replace program selection with something not hardcoded, this is a quick test
+            // (Ideally, a shader system with some form of render list)
+            assert(material.mEffect->mTechniques.size() == 1);
+            const ConfiguredProgram & configuredProgram = 
+                *material.mEffect->mTechniques.at(0).mConfiguredProgram;
+            const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
+
+            result.mPrograms.push_back(&selectedProgram);
+
+            // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
+            auto vao =
+                [&, &entries = configuredProgram.mConfig->mEntries]() 
+                -> const graphics::VertexArrayObject *
+                {
+                    if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
+                                                    [&vertexStream, &part](const auto & aEntry)
+                                                    {
+                                                        return aEntry.mVertexStream == part.mVertexStream;
+                                                    });
+                        foundConfig != entries.end())
+                    {
+                        return foundConfig->mVao;
+                    }
+                    else
+                    {
+                        aStorage.mVaos.push_back(prepareVAO(selectedProgram, vertexStream));
+                        entries.push_back(
+                            ProgramConfig::Entry{
+                                .mVertexStream = part.mVertexStream,
+                                .mVao = &aStorage.mVaos.back(),
+                            });
+                        return entries.back().mVao;
+                    }
+                }();
+            result.mVaos.push_back(vao);
+        }
+
+        return result;
     }
 
 } // unnamed namespace
@@ -603,18 +624,23 @@ void RenderGraph::update(float aDeltaTime)
 }
 
 
-void RenderGraph::loadDrawBuffers(const DrawList & aDrawList)
+void RenderGraph::loadDrawBuffers(const DrawList & aDrawList,
+                                  const PassCache & aPassCache)
 {
     PROFILER_SCOPE_SECTION("load_draw_buffers", CpuTime);
 
-    assert(aDrawList.mDrawInstances.size() <= gMaxDrawInstances);
+    assert(aPassCache.mDrawInstances.size() <= gMaxDrawInstances);
 
     graphics::load(*mUbos.mModelTransformUbo,
                    std::span{aDrawList.mInstanceTransforms},
                    graphics::BufferHint::DynamicDraw);
 
     graphics::load(*mInstanceStream.mVertexBufferViews.at(0).mGLBuffer,
-                   std::span{aDrawList.mDrawInstances},
+                   std::span{aPassCache.mDrawInstances},
+                   graphics::BufferHint::DynamicDraw);
+
+    graphics::load(mIndirectBuffer,
+                   std::span{aPassCache.mDrawCommands},
                    graphics::BufferHint::DynamicDraw);
 }
 
@@ -629,8 +655,11 @@ void RenderGraph::render()
     // The complication is when the camera (or pass itself?) might override the materials 
     DrawList drawList = mScene.populateDrawList();
 
+    // TODO should be done per pass
+    PassCache passCache = preparePass(drawList, mStorage);
+
     // Load the model-transform UBO with each intance global matrix
-    loadDrawBuffers(drawList);
+    loadDrawBuffers(drawList, passCache);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -673,12 +702,7 @@ void RenderGraph::render()
 
     {
         PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
-
-        draw(drawList,
-             mStorage,
-             mUbos.mUboRepository,
-             textureRepository,
-             mIndirectBuffer);
+        draw(passCache, mUbos.mUboRepository, textureRepository);
     }
 }
 

@@ -16,6 +16,7 @@ namespace ad::imguiui {
 
 namespace ad::renderer {
 
+
 struct DrawElementsIndirectCommand
 {
     GLuint  mCount;
@@ -25,28 +26,42 @@ struct DrawElementsIndirectCommand
     GLuint  mBaseInstance;
 };
 
+
 struct DrawInstance
 {
     GLsizei mInstanceTransformIdx; // index in the instance UBO
     GLsizei mMaterialIdx;
 };
 
-struct PartAndMaterial
-{
-    const Part * mPart;
-    const Material * mMaterial;
-};
 
+// TODO rename to PartList (also the functions)
 struct DrawList
 {
     // The individual renderer::Objects transforms. Several parts might index to the same transform.
     // (Same way several parts might index the same material parameters)
     std::vector<math::AffineMatrix<4, GLfloat>> mInstanceTransforms;
 
-    // SOA: Those two vectors must have the same size, i.e. the total number of part instances to be drawn
-    std::vector<PartAndMaterial> mParts;
-    std::vector<DrawInstance> mDrawInstances; // Intended to be loaded as a GL instance buffer
+    // SOA
+    std::vector<const Part *> mParts;
+    std::vector<const Material *> mMaterials;
+    std::vector<GLsizei> mTransformIdx;
 };
+
+
+// TODO rename to DrawXxx
+struct PassCache
+{
+    GLenum mPrimitiveMode = NULL;
+    GLenum mIndicesType = NULL;
+
+    // SOA at the moment
+    std::vector<DrawElementsIndirectCommand> mDrawCommands;
+    std::vector<DrawInstance> mDrawInstances; // Intended to be loaded as a GL instance buffer
+    // TODO program should be the first consolidation dimension
+    std::vector<const IntrospectProgram *> mPrograms;
+    std::vector<const graphics::VertexArrayObject *> mVaos;
+};
+
 
 struct Scene
 {
@@ -83,7 +98,7 @@ struct RenderGraph
     void update(float aDeltaTime);
     void render();
 
-    void loadDrawBuffers(const DrawList & aDrawList);
+    void loadDrawBuffers(const DrawList & aDrawList, const PassCache & aPassCache);
 
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
