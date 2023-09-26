@@ -225,7 +225,7 @@ struct Node
 // and storage of graphics API level objects (i.e. names of textures, buffers, ...)
 struct Storage
 {
-    // TODO Ad 2023/08/04: Change what is possible to lists (avoid relocation of elements)
+    // Uses list as much as possible to avoid invalidating "Handle" on insertion.
     // Some are actually used for random access though, so this class needs a deep refactoring anyway
     std::list<graphics::BufferAny> mBuffers;
     std::list<Object> mObjects;
