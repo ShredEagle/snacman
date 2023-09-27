@@ -77,19 +77,6 @@ namespace {
             mArchive.write(version);
         }
 
-        // TODO this feels out of place, this file writer being inteded to be high level
-        void write(const math::Box<float> aBox)
-        {
-            mArchive.write(aBox);
-        }
-
-        // TODO this feels out of place, this file writer being inteded to be high level
-        template <int N_dimension, class T_number>
-        void write(const math::Size<N_dimension, T_number> aSize)
-        {
-            mArchive.write(aSize);
-        }
-
         void write(const aiNode * aNode)
         {
             mArchive.write(aNode->mNumMeshes);
@@ -154,28 +141,72 @@ namespace {
             mArchive.write(aData);
         }
 
+        // TODO this feels out of place, this file writer being inteded to be high level
+        template <class T_data>
+        void forward(const T_data & aData)
+        {
+            mArchive.write(aData);
+        }
+
         BinaryOutArchive mArchive;
     };
+    
+
+    struct NodeResult
+    {
+        math::Box<float> mAabb;
+        unsigned int mVerticesCount = 0;
+        unsigned int mIndicesCount = 0;
+    };
+
+    
+    BinaryOutArchive::Position_t reservePreamble(FileWriter & aWriter)
+    {
+        BinaryOutArchive::Position_t preamblePosition = aWriter.mArchive.getPosition();
+        // Vertices count
+        aWriter.forward(0u);
+        // Indices count
+        aWriter.forward(0u);
+        return preamblePosition;
+    }
+
+
+    // TODO #binarypreamble This preamble approach assumes that all vertices have the same set of attributes
+    // (i.e. position, normal, uv, ...)
+    void completePreamble(FileWriter & aWriter,
+                          BinaryOutArchive::Position_t aPreamblePosition,
+                          const NodeResult & aResult)
+    {
+        auto initialPosition = aWriter.mArchive.getPosition();
+        aWriter.mArchive.mOut.seekp(aPreamblePosition);
+        aWriter.forward(aResult.mVerticesCount);
+        aWriter.forward(aResult.mIndicesCount);
+        aWriter.mArchive.mOut.seekp(initialPosition);
+    }
+
 
     // Current binary format as of 2023/07/25:
-    //  node.numMeshes
-    //  node.numChildren
-    //  node.transformation
-    //  each node.mesh:
-    //    mesh.materialIndex
-    //    mesh.numVertices
-    //    [mesh.vertices(i.e. positions, 3 floats per vertex)]
-    //    [mesh.normals(3 floats per vertex)]
-    //    mesh.numUVChannels
-    //    each mesh.UVChannel:
-    //      [UVChannel.coordinates(2 floats per vertex)]
-    //    mesh.numFaces
-    //    [mesh.faces(i.e. 3 unsigned int per face)]
-    //    mesh.boundingBox (AABB, as a math::Box<float>)
-    //  bounding box union of all meshes (AABB, as a math::Box<float>, even if there are no meshes)
-    //  each node.child:
-    //    // recurse
-    //  node.boundingBox (AABB, as a math::Box<float>) // Note: I dislike having the node bounding box after the children BB, but it is computed form children's...
+    //  vertices count
+    //  indices count
+    //  Node:
+    //    node.numMeshes
+    //    node.numChildren
+    //    node.transformation
+    //    each node.mesh:
+    //      mesh.materialIndex
+    //      mesh.numVertices
+    //      [mesh.vertices(i.e. positions, 3 floats per vertex)]
+    //      [mesh.normals(3 floats per vertex)]
+    //      mesh.numUVChannels
+    //      each mesh.UVChannel:
+    //        [UVChannel.coordinates(2 floats per vertex)]
+    //      mesh.numFaces
+    //      [mesh.faces(i.e. 3 unsigned int per face)]
+    //      mesh.boundingBox (AABB, as a math::Box<float>)
+    //    bounding box union of all meshes (AABB, as a math::Box<float>, even if there are no meshes)
+    //    each node.child:
+    //      // recurse Node:
+    //    node.boundingBox (AABB, as a math::Box<float>) // Note: I dislike having the node bounding box after the children BB, but it is computed form children's...
     //  numMaterials
     //  raw memory dump of span<PhongMaterial>
     //  numTexturePaths
@@ -183,12 +214,12 @@ namespace {
     //  each texturePath:
     //    string size
     //    string characters
-    
+
     /// @return AABB of the node, as the union of nested nodes and meshes AABBs.
-    math::Box<float> recurseNodes(aiNode * aNode,
-                                  const aiScene * aScene,
-                                  FileWriter & aWriter,
-                                  unsigned int level = 0)
+    NodeResult recurseNodes(aiNode * aNode,
+                            const aiScene * aScene,
+                            FileWriter & aWriter,
+                            unsigned int level = 0)
     {
         math::AffineMatrix<4, float> nodeTransform = extractTransformation(aNode);
 
@@ -201,11 +232,11 @@ namespace {
 
         aWriter.write(aNode);
 
-        math::Box<float> nodeAabb;
+        NodeResult result;
         // Prime this node's bounding box
         if(aNode->mNumMeshes != 0)
         {
-            nodeAabb = extractAabb(aScene->mMeshes[0]);
+            result.mAabb = extractAabb(aScene->mMeshes[0]);
         }
 
         for(std::size_t meshIdx = 0; meshIdx != aNode->mNumMeshes; ++meshIdx)
@@ -216,7 +247,9 @@ namespace {
             assert(hasTrianglesOnly(mesh));
 
             math::Box<float> meshAabb = extractAabb(mesh);
-            nodeAabb.uniteAssign(meshAabb);
+            result.mAabb.uniteAssign(meshAabb);
+            result.mVerticesCount += mesh->mNumVertices;
+            result.mIndicesCount += mesh->mNumFaces * 3;
 
             std::cout << std::string(2 * level, ' ')
                 << "- Mesh " << globalMeshIndex << " with " << mesh->mNumVertices << " vertices, " 
@@ -226,31 +259,35 @@ namespace {
                 ;
 
             aWriter.write(mesh);
-            aWriter.write(meshAabb);
+            aWriter.forward(meshAabb);
         }
 
-        aWriter.write(nodeAabb); // this is the AABB of all direct parts, without children nodes. (i.e the `Object`).
+        aWriter.forward(result.mAabb); // this is the AABB of all direct parts, without children nodes. (i.e the `Object`).
 
         // TODO do we really want to compute the node's AABB? This is tricky, because there might be transformations
         // between nodes.
         // Yet the client will usually be interested in the top node AABB to define camera parameters...
         for(std::size_t childIdx = 0; childIdx != aNode->mNumChildren; ++childIdx)
         {
-            math::Box<float> childAabb = 
+            NodeResult childResult = 
                 recurseNodes(aNode->mChildren[childIdx], aScene, aWriter, level + 1);
             if(childIdx == 0 && aNode->mNumMeshes == 0) // The box was not primed yet
             {
-                nodeAabb = childAabb;
+                result.mAabb = childResult.mAabb;
             }
             else
             {
-                nodeAabb.uniteAssign(childAabb);
+                result.mAabb.uniteAssign(childResult.mAabb);
             }
+
+            result.mVerticesCount += childResult.mVerticesCount;
+            result.mIndicesCount  += childResult.mIndicesCount;
         }
 
-        aWriter.write(nodeAabb);
+        // This is now the AABB including the children nodes.
+        aWriter.forward(result.mAabb);
 
-        return nodeAabb;
+        return result;
     }
 
 
@@ -347,7 +384,7 @@ namespace {
             }
         }
 
-        aWriter.write(commonDimensions);
+        aWriter.forward(commonDimensions);
         aWriter.write(aTexturePaths);
     }
 
@@ -468,11 +505,22 @@ void processModel(const std::filesystem::path & aFile)
     std::filesystem::path output = aFile.parent_path() / aFile.stem().replace_extension(".seum");
     FileWriter writer{output};
 
+    // Reserve room for the total vertex count
+    auto preamblePosition = reservePreamble(writer);
+
     // Now we can access the file's contents. 
-    math::Box<float> modelAabb = recurseNodes(scene->mRootNode, scene, writer);
-    std::cout << "Model bounding box: " << modelAabb << "\n";
+    NodeResult topResult = recurseNodes(scene->mRootNode, scene, writer);
+
+    completePreamble(writer, preamblePosition, topResult);
 
     dumpMaterials(scene, writer);
+
+    std::cout << "\nResult: Dumped model with "
+              << topResult.mVerticesCount << " vertices and " 
+              << topResult.mIndicesCount << " indices, bounding box: " 
+              << topResult.mAabb << ", " 
+              << scene->mNumMaterials << " materials."
+              << "\n";
 
     // We're done. Everything will be cleaned up by the importer destructor
 }

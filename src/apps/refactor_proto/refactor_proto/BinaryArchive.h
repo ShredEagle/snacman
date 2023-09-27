@@ -17,11 +17,18 @@ namespace ad::renderer {
 
 struct BinaryOutArchive
 {
+    using Position_t = std::ofstream::pos_type;
+
     template <class T> requires std::is_arithmetic_v<T>
     BinaryOutArchive & write(T aValue)
     {
         mOut.write((const char *)&aValue, sizeof(T));
         return *this;
+    }
+
+    Position_t getPosition()
+    {
+        return mOut.tellp();
     }
 
     template <class T>

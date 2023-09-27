@@ -82,16 +82,18 @@ namespace {
 
     /// @brief Create a GL buffer of specified size (without loading data into it).
     /// @return Buffer view to the buffer.
-    BufferView createBuffer(GLsizei aElementSize, GLsizeiptr aBufferSize, Storage & aStorage)
+    BufferView createBuffer(GLsizei aElementSize, GLsizei aElementCount, Storage & aStorage)
     {
         graphics::BufferAny glBuffer; // glGenBuffers()
         // Note: Using a random target, the underlying buffer objects are all identical.
         constexpr auto target = graphics::BufferType::Array;
         graphics::ScopedBind boundBuffer{glBuffer, target}; // glBind()
 
+        const GLsizeiptr bufferSize = aElementSize * aElementCount;
+
         glBufferData(
             static_cast<GLenum>(target),
-            aBufferSize,
+            bufferSize,
             nullptr,
             GL_STATIC_DRAW);
 
@@ -102,7 +104,7 @@ namespace {
             .mGLBuffer = buffer,
             .mStride = aElementSize,
             .mOffset = 0,
-            .mSize = aBufferSize, // The view has access to the whole buffer ATM
+            .mSize = bufferSize, // The view has access to the whole buffer ATM
         };
     };
 
@@ -111,11 +113,12 @@ namespace {
     constexpr auto gUvSize = 2 * sizeof(float);
     constexpr auto gIndexSize = sizeof(unsigned int);
 
-    VertexStream * prepareConsolidatedStream(GLsizeiptr aBufferSize, 
+    VertexStream * prepareConsolidatedStream(unsigned int aVerticesCount,
+                                             unsigned int aIndicesCount,
                                              Storage & aStorage,
                                              const GenericStream & aStream)
     {
-        BufferView iboView = createBuffer(gIndexSize, aBufferSize, aStorage);
+        BufferView iboView = createBuffer(gIndexSize, aIndicesCount, aStorage);
 
         // The consolidated vertex stream
         aStorage.mVertexStreams.push_back({
@@ -127,9 +130,9 @@ namespace {
 
         VertexStream & vertexStream = aStorage.mVertexStreams.back();
 
-        BufferView positionView = createBuffer(gPositionSize, aBufferSize, aStorage);
-        BufferView normalView = createBuffer(gNormalSize, aBufferSize, aStorage);
-        BufferView uvView = createBuffer(gUvSize, aBufferSize, aStorage);
+        BufferView positionView = createBuffer(gPositionSize, aVerticesCount, aStorage);
+        BufferView normalView = createBuffer(gNormalSize, aVerticesCount, aStorage);
+        BufferView uvView = createBuffer(gUvSize, aVerticesCount, aStorage);
 
         vertexStream.mVertexBufferViews.insert(
             vertexStream.mVertexBufferViews.end(), {positionView, normalView, uvView});
@@ -202,6 +205,7 @@ namespace {
                 cpuBuffer.get());
         };
 
+        // TODO Those hardcoded indices are smelly.
         graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
         graphics::BufferAny & normalBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
         graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
@@ -390,10 +394,15 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
     in.read(version);
     assert(version == 1);
 
+    unsigned int verticesCount = 0;
+    unsigned int indicesCount = 0;
+    in.read(verticesCount);
+    in.read(indicesCount);
+
     // Prepare the single buffer storage for the whole binary
     // TODO actually read the correct buffer size (i.e. write it first)
-    constexpr GLsizei gBufferSize = 512 * 1024 * 1024;
-    VertexStream * consolidatedStream = prepareConsolidatedStream(gBufferSize, aStorage, aStream);
+    //constexpr GLsizei gBufferSize = 512 * 1024 * 1024;
+    VertexStream * consolidatedStream = prepareConsolidatedStream(verticesCount, indicesCount, aStorage, aStream);
 
     GLuint vertexFirst = 0;
     GLuint indexFirst = 0;
