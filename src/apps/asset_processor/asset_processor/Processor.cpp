@@ -423,8 +423,11 @@ namespace {
                     material->GetName().C_Str(), material->GetTextureCount(aiTextureType_AMBIENT));
             }
 
-            setColor(phongMaterial.mAmbientColor,  material, AI_MATKEY_COLOR_AMBIENT);
             setColor(phongMaterial.mDiffuseColor,  material, AI_MATKEY_COLOR_DIFFUSE);
+            // Default other colors to the diffuse colors (in case they are not directly defined)
+            phongMaterial.mAmbientColor = phongMaterial.mDiffuseColor;
+            phongMaterial.mSpecularColor = phongMaterial.mDiffuseColor;
+            setColor(phongMaterial.mAmbientColor,  material, AI_MATKEY_COLOR_AMBIENT);
             setColor(phongMaterial.mSpecularColor, material, AI_MATKEY_COLOR_SPECULAR);
 
             constexpr unsigned int indexInStack = 0;
