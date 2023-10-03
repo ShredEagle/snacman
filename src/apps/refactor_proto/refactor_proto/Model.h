@@ -71,10 +71,11 @@ struct ProgramConfig
 {
     struct Entry
     {
-        // Note: When moving to VAB (separate format) this would become too conservative:
+        // TODO: When moving to VAB (separate format), reuse the VAO for distinct buffers
         // all buffer sets with the same format (attribute size, component type, relative offset) can share a VAO.
+        // (and the buffer would be bound to the VAO)
         Handle<const VertexStream> mVertexStream;
-        graphics::VertexArrayObject mVao;
+        Handle<graphics::VertexArrayObject> mVao;
     };
     // Note: The cache is implemented as a vector, lookup is made by visiting elements and comparing VertexStream handles.
     std::vector<Entry> mEntries;
@@ -160,12 +161,13 @@ struct Part
 {
     Material mMaterial; // TODO #matref: should probably be a "reference", as it is likely shared
                         // on the other hand, it is currently very lightweight
-    Handle<VertexStream> mVertexStream;
+    Handle<const VertexStream> mVertexStream;
     GLenum mPrimitiveMode = NULL;
-    GLsizei mVertexFirst = 0;
-    GLsizei mVertexCount = 0;
-    GLsizei mIndexFirst = 0;
-    GLsizei mIndicesCount = 0;
+    // GLuint because it is the type used in the Draw Indirect buffer
+    GLuint mVertexFirst = 0;
+    GLuint mVertexCount = 0;
+    GLuint mIndexFirst = 0;
+    GLuint mIndicesCount = 0;
     math::Box<GLfloat> mAabb;
     //FeatureSet mFeatures;
 };
@@ -223,7 +225,7 @@ struct Node
 // and storage of graphics API level objects (i.e. names of textures, buffers, ...)
 struct Storage
 {
-    // TODO Ad 2023/08/04: Change what is possible to lists (avoid relocation of elements)
+    // Uses list as much as possible to avoid invalidating "Handle" on insertion.
     // Some are actually used for random access though, so this class needs a deep refactoring anyway
     std::list<graphics::BufferAny> mBuffers;
     std::list<Object> mObjects;
@@ -234,6 +236,7 @@ struct Storage
     std::list<graphics::UniformBufferObject> mUbos;
     std::list<VertexStream> mVertexStreams;
     std::list<ProgramConfig> mProgramConfigs;
+    std::list<graphics::VertexArrayObject> mVaos;
 };
 
 

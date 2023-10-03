@@ -120,7 +120,7 @@ public:
     inline static constexpr std::size_t gMaxMetricsPerSection{16};
     /// @brief Delay before querying metrics.
     /// This is initially implemented so asynchronous GPU request have a good chance to be ready when queried.
-    inline static constexpr std::uint32_t gFrameDelay{3};
+    inline static constexpr std::uint32_t gFrameDelay{4};
 
     using EntryIndex = ProviderInterface::EntryIndex;
     using ProviderIndex = std::size_t;

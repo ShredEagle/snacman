@@ -76,6 +76,8 @@ constexpr float gRadialDistancingFactor{1.5f};
 /// @brief The far plane will be at least at this factor times the model depth.
 constexpr float gDepthFactor{20.f};
 
+constexpr std::size_t gMaxDrawInstances = 2048;
+
 namespace {
 
     resource::ResourceFinder makeResourceFinder()
@@ -200,10 +202,9 @@ namespace {
     }
 
 
-    void draw(const Instance & aInstance,
-              const GenericStream & aInstanceBufferView,
-              Storage & aStorage,
-              const RepositoryUBO & aUboRepository)
+    void draw(const PassCache & aPassCache,
+              const RepositoryUBO & aUboRepository,
+              const RepositoryTexture & aTextureRepository)
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
         // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
@@ -211,53 +212,113 @@ namespace {
         // (We could even separate actual texture from the "format", allowing to change an underlying texture without revisiting the program)
         // This would address the warnings repetitions (only issued when the compiled state is (re-)generated), and be better for perfs.
 
-        for(const Part & part : aInstance.mObject->mParts)
+        GLuint firstInstance = 0; 
+        for (const DrawCall & aCall : aPassCache.mCalls)
         {
-            PROFILER_SCOPE_SECTION("draw_part", CpuTime);
-            // TODO replace program selection with something not hardcoded, this is a quick test
-            // (Ideally, a shader system with some form of render list)
-            // Also, this selection should be done while the drawlist is generated, so it is shared by all passes
-            // Also, the drawlist generation should be at the part level, not the object instance level
-            PROFILER_PUSH_SECTION("discard_1", CpuTime);
-            const Material & material = aInstance.mMaterialOverride ?
-                *aInstance.mMaterialOverride : part.mMaterial;
-            PROFILER_POP_SECTION;
-            
-            
-            // TODO should be done ahead of the draw call, at once for all instances.
-            // TODO there is a tension between what is actually per object instance 
-            // (the transformation matrix if there cannot be any per part transformation)
-            // and what is per part (the material, ...). Note that the GL instance
-            // corresponds to a Part in our data model.
-            {
-                PROFILER_SCOPE_SECTION("prepare_instance_transform", CpuTime);
-                InstanceData instanceData{
-                    .mModelTransform =
-                        math::trans3d::scaleUniform(aInstance.mPose.mUniformScale)
-                        * math::trans3d::translate(aInstance.mPose.mPosition),
-                    .mMaterialIdx = (GLuint)material.mPhongMaterialIdx,
-                };
-                
-                graphics::replaceSubset(
-                    *aInstanceBufferView.mVertexBufferViews.at(0).mGLBuffer,
-                    0, /*offset*/
-                    std::span{&instanceData, 1}
-                );
-            }
+            PROFILER_SCOPE_SECTION("drawcall_iteration", CpuTime);
 
             PROFILER_PUSH_SECTION("discard_2", CpuTime);
-            assert(material.mEffect->mTechniques.size() == 1);
-            
-            const ConfiguredProgram & configuredProgram = *material.mEffect->mTechniques.at(0).mConfiguredProgram;
-            const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
-
-            const VertexStream & vertexStream = *part.mVertexStream;
+            const IntrospectProgram & selectedProgram = *aCall.mProgram;
+            const graphics::VertexArrayObject & vao = *aCall.mVao;
             PROFILER_POP_SECTION;
 
             {
-                PROFILER_PUSH_SECTION("prepare_VAO", CpuTime);
-                // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
-                const auto & vao = [&, &entries = configuredProgram.mConfig->mEntries]() -> const graphics::VertexArrayObject &
+                PROFILER_PUSH_SECTION("bind_VAO", CpuTime);
+                graphics::ScopedBind vaoScope{vao};
+                PROFILER_POP_SECTION;
+                
+                {
+                    PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
+                    setBufferBackedBlocks(selectedProgram, aUboRepository);
+                }
+
+                {
+                    PROFILER_SCOPE_SECTION("set_textures", CpuTime);
+                    setTextures(selectedProgram, aTextureRepository);
+                }
+
+                PROFILER_PUSH_SECTION("bind_program", CpuTime);
+                graphics::ScopedBind programScope{selectedProgram};
+                PROFILER_POP_SECTION;
+
+                {
+                    // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
+                    // Can we have efficient GPU measures?
+                    PROFILER_SCOPE_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
+                    
+                    glMultiDrawElementsIndirect(
+                        aCall.mPrimitiveMode,
+                        aCall.mIndicesType,
+                        (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
+                        aCall.mPartCount,
+                        sizeof(DrawElementsIndirectCommand));
+                }
+            }
+            firstInstance += aCall.mPartCount;
+        }
+    }
+
+    void populatePartList(PartList & aPartList, const Node & aNode, const Pose & aParentPose)
+    {
+        const Pose & localPose = aNode.mInstance.mPose;
+        Pose absolutePose = aParentPose.transform(localPose);
+
+        if(Object * object = aNode.mInstance.mObject;
+           object != nullptr)
+        {
+            for(const Part & part: object->mParts)
+            {
+                const Material & material =
+                    aNode.mInstance.mMaterialOverride ?
+                    *aNode.mInstance.mMaterialOverride : part.mMaterial;
+
+                aPartList.mParts.push_back(&part);
+                aPartList.mMaterials.push_back(&material);
+                // pushed after
+                aPartList.mTransformIdx.push_back((GLsizei)aPartList.mInstanceTransforms.size());
+            }
+
+            aPartList.mInstanceTransforms.push_back(
+                math::trans3d::scaleUniform(absolutePose.mUniformScale)
+                * math::trans3d::translate(absolutePose.mPosition));
+        }
+
+        for(const auto & child : aNode.mChildren)
+        {
+            populatePartList(aPartList, child, absolutePose);
+        }
+    }
+
+
+    PassCache preparePass(const PartList & aPartList,
+                          Storage & aStorage)
+    {
+        PROFILER_SCOPE_SECTION("prepare_pass", CpuTime);
+
+        PassCache result;
+        // TODO Ad 2023/09/26: #multipass Handle several drawcalls, by sorting
+        DrawCall singleCallAtm;
+
+        if(!aPartList.mParts.empty())
+        {
+            const Part & part = *aPartList.mParts.front();
+            const VertexStream & vertexStream = *part.mVertexStream;
+            singleCallAtm.mPrimitiveMode = part.mPrimitiveMode;
+            singleCallAtm.mIndicesType = vertexStream.mIndicesType;
+
+            // TODO Implement program selection, this is a hardcoded quick test
+            // (Ideally, a shader system with some form of render list)
+            const Material & material = *aPartList.mMaterials.front();
+            assert(material.mEffect->mTechniques.size() == 1);
+            const ConfiguredProgram & configuredProgram = 
+                *material.mEffect->mTechniques.at(0).mConfiguredProgram;
+            const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
+            singleCallAtm.mProgram = &selectedProgram;
+
+            // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
+            auto vao =
+                [&, &entries = configuredProgram.mConfig->mEntries]() 
+                -> const graphics::VertexArrayObject *
                 {
                     if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
                                                     [&vertexStream, &part](const auto & aEntry)
@@ -270,102 +331,83 @@ namespace {
                     }
                     else
                     {
+                        aStorage.mVaos.push_back(prepareVAO(selectedProgram, vertexStream));
                         entries.push_back(
                             ProgramConfig::Entry{
                                 .mVertexStream = part.mVertexStream,
-                                .mVao = prepareVAO(selectedProgram, vertexStream),
+                                .mVao = &aStorage.mVaos.back(),
                             });
                         return entries.back().mVao;
                     }
                 }();
-                graphics::ScopedBind vaoScope{vao};
-                PROFILER_POP_SECTION;
-                
-                {
-                    PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
-                    setBufferBackedBlocks(selectedProgram, aUboRepository);
-                }
+            singleCallAtm.mVao = vao;
 
-                if(material.mPhongMaterialIdx != -1)
-                {
-                    if(auto textureIdx = aStorage.mPhongMaterials[material.mPhongMaterialIdx].mDiffuseMap.mTextureIndex;
-                        textureIdx != TextureInput::gNoEntry)
-                    {
-                        PROFILER_SCOPE_SECTION("set_textures", CpuTime);
-                        setTextures(selectedProgram, {{semantic::gDiffuseTexture, &aStorage.mTextures[textureIdx]},});
-                    }
-                }
-
-                PROFILER_PUSH_SECTION("bind_program", CpuTime);
-                graphics::ScopedBind programScope{selectedProgram};
-                PROFILER_POP_SECTION;
-
-                {
-                    // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
-                    PROFILER_SCOPE_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
-                    // TODO multi draw
-                    if(vertexStream.mIndicesType == NULL)
-                    {
-                        glDrawArraysInstanced(
-                            part.mPrimitiveMode,
-                            part.mVertexFirst,
-                            part.mVertexCount,
-                            1);
-                    }
-                    else
-                    {
-                        glDrawElementsInstanced(
-                            part.mPrimitiveMode,
-                            part.mIndicesCount,
-                            vertexStream.mIndicesType,
-                            (const void *)
-                                (vertexStream.mIndexBufferView.mOffset 
-                                + (part.mIndexFirst * graphics::getByteSize(vertexStream.mIndicesType))),
-                            1);
-                    }
-                }
-            }
+            // TODO Ad 2023/09/26: #multipass This should be changed.
+            // Currently we expect all parts to be drawn by the same call.
+            singleCallAtm.mPartCount = (GLsizei)aPartList.mParts.size();
         }
-    }
 
-    void populateDrawList(DrawList & aDrawList, const Node & aNode, const Pose & aParentPose)
-    {
-        const Pose & localPose = aNode.mInstance.mPose;
-        Pose absolutePose = aParentPose.transform(localPose);
-
-        if(Object * object = aNode.mInstance.mObject;
-           object != nullptr)
+        for (std::size_t partIdx = 0; partIdx != aPartList.mParts.size(); ++partIdx)
         {
-            aDrawList.push_back(Instance{
-                .mObject = object,
-                .mPose = absolutePose,
-                .mMaterialOverride = aNode.mInstance.mMaterialOverride,
+            const Part & part = *aPartList.mParts[partIdx];
+            const VertexStream & vertexStream = *part.mVertexStream;
+            // TODO #multipass
+            assert(&vertexStream == aPartList.mParts.front()->mVertexStream);
+            const Material & material = *aPartList.mMaterials[partIdx];
+
+            // TODO #multipass handle segregation by those values, instead of requiring the same everywhere
+            assert(part.mPrimitiveMode == singleCallAtm.mPrimitiveMode);
+            assert(vertexStream.mIndicesType == singleCallAtm.mIndicesType);
+            // Same effect implies same program would be selected 
+            assert(part.mMaterial.mEffect == aPartList.mMaterials.front()->mEffect);
+
+            // TODO handle the case where there is an offset
+            // This is more complicated with indirect draw commands, because they do not
+            // accept a (void*) offset, but a number of indices (firstIndex).
+            assert(vertexStream.mIndexBufferView.mOffset == 0);
+            result.mDrawCommands.push_back(
+                DrawElementsIndirectCommand{
+                    .mCount = part.mIndicesCount,
+                    // TODO Ad 2023/09/26: #bench Is it worth it to group identical parts and do "instanced" drawing?
+                    // For the moment, draw a single instance for each part (i.e. no instancing)
+                    .mInstanceCount = 1,
+                    .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset 
+                                            / graphics::getByteSize(vertexStream.mIndicesType))
+                                    + part.mIndexFirst,
+                    .mBaseVertex = part.mVertexFirst,
+                    .mBaseInstance = (GLuint)partIdx,
+                }
+            );
+
+            result.mDrawInstances.push_back(DrawInstance{
+                .mInstanceTransformIdx = aPartList.mTransformIdx[partIdx],
+                .mMaterialIdx = (GLsizei)material.mPhongMaterialIdx,
             });
         }
 
-        for(const auto & child : aNode.mChildren)
-        {
-            populateDrawList(aDrawList, child, absolutePose);
-        }
+        result.mCalls.push_back(std::move(singleCallAtm));
+        return result;
     }
 
 } // unnamed namespace
 
 
-DrawList Scene::populateDrawList() const
+PartList Scene::populatePartList() const
 {
+    PROFILER_SCOPE_SECTION("populate_draw_list", CpuTime);
+
     static constexpr Pose gIdentityPose{
         .mPosition{0.f, 0.f, 0.f},
         .mUniformScale = 1,
     };
 
-    DrawList drawList;
+    PartList partList;
     for(const Node & topNode : mRoot)
     {
-        renderer::populateDrawList(drawList, topNode, gIdentityPose);
+        renderer::populatePartList(partList, topNode, gIdentityPose);
     }
 
-    return drawList;
+    return partList;
 }
 
 
@@ -378,6 +420,10 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
     aStorage.mUbos.emplace_back();
     mViewingUbo = &aStorage.mUbos.back();
     mUboRepository.emplace(semantic::gView, mViewingUbo);
+
+    aStorage.mUbos.emplace_back();
+    mModelTransformUbo = &aStorage.mUbos.back();
+    mUboRepository.emplace(semantic::gLocalToWorld, mModelTransformUbo);
 }
 
 
@@ -474,7 +520,8 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
-    mInstanceStream = makeInstanceStream(mStorage, 1);
+    // At the moment, hardcode a maximum number
+    mInstanceStream = makeInstanceStream(mStorage, gMaxDrawInstances);
 
     //static Object triangle;
     //triangle.mParts.push_back(Part{
@@ -585,18 +632,49 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
 
 void RenderGraph::update(float aDeltaTime)
 {
+    PROFILER_SCOPE_SECTION("RenderGraph::update()", CpuTime);
     mFirstPersonControl.update(aDeltaTime);
+}
+
+
+// TODO Ad 2023/09/26: Could be splitted between the part list load (which should be valid accross passes)
+// and the pass cache load (which might only be valid for a single pass)
+void RenderGraph::loadDrawBuffers(const PartList & aPartList,
+                                  const PassCache & aPassCache)
+{
+    PROFILER_SCOPE_SECTION("load_draw_buffers", CpuTime);
+
+    assert(aPassCache.mDrawInstances.size() <= gMaxDrawInstances);
+
+    graphics::load(*mUbos.mModelTransformUbo,
+                   std::span{aPartList.mInstanceTransforms},
+                   graphics::BufferHint::DynamicDraw);
+
+    graphics::load(*mInstanceStream.mVertexBufferViews.at(0).mGLBuffer,
+                   std::span{aPassCache.mDrawInstances},
+                   graphics::BufferHint::DynamicDraw);
+
+    graphics::load(mIndirectBuffer,
+                   std::span{aPassCache.mDrawCommands},
+                   graphics::BufferHint::DynamicDraw);
 }
 
 
 void RenderGraph::render()
 {
+    PROFILER_SCOPE_SECTION("RenderGraph::render()", CpuTime, GpuTime);
     nvtx3::mark("RenderGraph::render()");
     NVTX3_FUNC_RANGE();
 
+    // TODO: How to handle material/program selection while generating the part list,
+    // if the camera (or pass itself?) might override the materials?
+    PartList partList = mScene.populatePartList();
 
-    // Implement material/program selection while generating drawlist
-    DrawList drawList = mScene.populateDrawList();
+    // TODO should be done per pass
+    PassCache passCache = preparePass(partList, mStorage);
+
+    // Load the data for the part and pass related UBOs (TODO: SSBOs)
+    loadDrawBuffers(partList, passCache);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -620,23 +698,26 @@ void RenderGraph::render()
 
     {
         PROFILER_SCOPE_SECTION("load_dynamic_UBOs", CpuTime, GpuTime);
-        loadFrameUbo(*mUbos.mFrameUbo);
+        loadFrameUbo(*mUbos.mFrameUbo); // TODO Separate, the frame ubo should likely be at the top, once per frame
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, mCamera);
     }
+
+    // A single texture array at the moment
+    assert(mStorage.mTextures.size() == 1);
+    RepositoryTexture textureRepository{{semantic::gDiffuseTexture, &mStorage.mTextures.front()}};
+
+    // Use the same indirect buffer for all drawings
+    graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
 
     // TODO should be done once per viewport
     glViewport(0, 0,
                mGlfwAppInterface->getFramebufferSize().width(),
                mGlfwAppInterface->getFramebufferSize().height());
 
-    PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
-    for(const auto & instance : drawList)
     {
-        draw(instance,
-             mInstanceStream,
-             mStorage,
-             mUbos.mUboRepository);
+        PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
+        draw(passCache, mUbos.mUboRepository, textureRepository);
     }
 }
 

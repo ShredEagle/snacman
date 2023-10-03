@@ -73,7 +73,7 @@ void runApplication(int argc, char * argv[])
         PROFILER_PUSH_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
 
         {
-            PROFILER_SCOPE_SECTION("fps_counter", renderer::CpuTime, renderer::GpuTime);
+            PROFILER_SCOPE_SECTION("fps_counter", renderer::CpuTime);
             {
                 // TODO this could be integrated into the Profiler::beginFrame()
                 auto startTime = Clock::now();
@@ -96,15 +96,19 @@ void runApplication(int argc, char * argv[])
 
         renderGraph.update(stepDuration);
         renderGraph.render();
+
+        PROFILER_PUSH_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
         imguiUi.newFrame();
         ImGui::Begin("Profiler");
         ImGui::Text(profilerOut.str().c_str());
         ImGui::End();
         imguiUi.render();
         imguiUi.renderBackend();
+        PROFILER_POP_SECTION;
+
         glfwApp.swapBuffers();
 
-        PROFILER_POP_SECTION;
+        PROFILER_POP_SECTION; // frame
         PROFILER_END_FRAME;
 
         // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame

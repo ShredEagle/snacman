@@ -58,12 +58,14 @@ file(GENERATE
 
 
 find_package(Math CONFIG REQUIRED COMPONENTS math)
+find_package(Graphics CONFIG REQUIRED COMPONENTS arte)
 
 find_package(assimp CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
+        ad::arte
         ad::math
 
         assimp::assimp

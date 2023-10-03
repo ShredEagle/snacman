@@ -17,7 +17,63 @@ namespace ad::imguiui {
 namespace ad::renderer {
 
 
-using DrawList = std::vector<Instance>;
+/// @brief A list of parts to be drawn, each associated to a Material and a transformation.
+/// It is intended to be reused accross distinct passes inside a frame (or even accross frame for static parts).
+struct PartList
+{
+    // The individual renderer::Objects transforms. Several parts might index to the same transform.
+    // (Same way several parts might index the same material parameters)
+    std::vector<math::AffineMatrix<4, GLfloat>> mInstanceTransforms;
+
+    // SOA
+    std::vector<const Part *> mParts;
+    std::vector<const Material *> mMaterials;
+    std::vector<GLsizei> mTransformIdx;
+};
+
+
+/// @brief Entry to populate the GL_DRAW_INDIRECT_BUFFER used with indexed (glDrawElements) geometry.
+struct DrawElementsIndirectCommand
+{
+    GLuint  mCount;
+    GLuint  mInstanceCount;
+    GLuint  mFirstIndex;
+    GLuint  mBaseVertex;
+    GLuint  mBaseInstance;
+};
+
+
+/// @brief Entry to populate the instance buffer (attribute divisor == 1).
+/// Each instance (mapping to a `Part` in client data model) has a pose and a material.
+struct DrawInstance
+{
+    GLsizei mInstanceTransformIdx; // index in the instance UBO
+    GLsizei mMaterialIdx;
+};
+
+
+/// @brief Store state and parameters required to issue a GL draw call.
+struct DrawCall
+{
+    GLenum mPrimitiveMode = NULL;
+    GLenum mIndicesType = NULL;
+
+    const IntrospectProgram * mProgram;
+    const graphics::VertexArrayObject * mVao;
+
+    GLsizei mPartCount;
+};
+
+
+// TODO rename to DrawXxx
+struct PassCache
+{
+    std::vector<DrawCall> mCalls;
+
+    // SOA at the moment, one entry per part
+    std::vector<DrawElementsIndirectCommand> mDrawCommands;
+    std::vector<DrawInstance> mDrawInstances; // Intended to be loaded as a GL instance buffer
+};
 
 struct Scene
 {
@@ -29,7 +85,7 @@ struct Scene
 
     std::vector<Node> mRoot; 
 
-    DrawList populateDrawList() const;
+    PartList populatePartList() const;
 };
 
 struct HardcodedUbos
@@ -41,6 +97,7 @@ struct HardcodedUbos
     RepositoryUBO mUboRepository;
     graphics::UniformBufferObject * mFrameUbo;
     graphics::UniformBufferObject * mViewingUbo;
+    graphics::UniformBufferObject * mModelTransformUbo;
 };
 
 struct RenderGraph
@@ -53,12 +110,15 @@ struct RenderGraph
     void update(float aDeltaTime);
     void render();
 
+    void loadDrawBuffers(const PartList & aPartList, const PassCache & aPassCache);
+
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
     Scene mScene;
     GenericStream mInstanceStream;
     Loader mLoader;
     HardcodedUbos mUbos;
+    graphics::BufferAny mIndirectBuffer;
 
     Camera mCamera;
     

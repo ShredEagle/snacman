@@ -17,11 +17,18 @@ namespace ad::renderer {
 
 struct BinaryOutArchive
 {
+    using Position_t = std::ofstream::pos_type;
+
     template <class T> requires std::is_arithmetic_v<T>
     BinaryOutArchive & write(T aValue)
     {
         mOut.write((const char *)&aValue, sizeof(T));
         return *this;
+    }
+
+    Position_t getPosition()
+    {
+        return mOut.tellp();
     }
 
     template <class T>
@@ -45,6 +52,16 @@ struct BinaryOutArchive
         return *this;
     }
 
+    template <int N_dimension, class T_number>
+    BinaryOutArchive & write(const math::Size<N_dimension, T_number> aSize)
+    {
+        for(std::size_t idx = 0; idx != aSize.Dimension; ++idx)
+        { 
+            write(aSize[idx]);
+        }
+        return *this;
+    }
+
     BinaryOutArchive & write(const std::string & aString)
     {
         write((unsigned int)aString.size());
@@ -52,6 +69,7 @@ struct BinaryOutArchive
     }
 
     std::ofstream mOut;
+    std::filesystem::path mParentPath;
 };
 
 
@@ -100,6 +118,17 @@ struct BinaryInArchive
         read(aBox.mDimension);
         return *this;
     }
+
+    template <int N_dimension, class T_number>
+    BinaryInArchive & read(math::Size<N_dimension, T_number> & aSize)
+    {
+        for(std::size_t idx = 0; idx != aSize.Dimension; ++idx)
+        { 
+            read(aSize[idx]);
+        }
+        return *this;
+    }
+
 
     std::ifstream mIn;
     std::filesystem::path mParentPath;

@@ -15,8 +15,8 @@ namespace ad::renderer {
 
 struct InstanceData
 {
-    math::AffineMatrix<4, GLfloat> mModelTransform;
-    GLuint mMaterialIdx = (GLsizei)-1;
+    GLuint mModelTransformIdx = (GLuint)-1;
+    GLuint mMaterialIdx = (GLuint)-1;
 };
 
 
@@ -25,13 +25,14 @@ namespace semantic
     const Semantic gPosition{"Position"};
     const Semantic gNormal{"Normal"};
     const Semantic gUv{"Uv"};
-    const Semantic gLocalToWorld{"LocalToWorld"};
     const Semantic gDiffuseTexture{"DiffuseTexture"};
+    const Semantic gModelTransformIdx{"ModelTransformIdx"};
     const Semantic gMaterialIdx{"MaterialIdx"};
 
     const BlockSemantic gFrame{"Frame"};
     const BlockSemantic gView{"View"};
     const BlockSemantic gMaterials{"Materials"};
+    const BlockSemantic gLocalToWorld{"LocalToWorld"};
 } // namespace semantic
 
 

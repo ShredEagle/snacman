@@ -8,19 +8,19 @@ in vec3 ex_Normal_cam;
 in vec2[4] ex_Uv;
 in flat uint ex_MaterialIdx;
 
-uniform sampler2D u_DiffuseTexture;
+uniform sampler2DArray u_DiffuseTexture;
 
 struct PhongMaterial
 {
     vec4 ambientColor;
     vec4 diffuseColor;
     vec4 specularColor;
-    uint _unused_textureindex;
+    uint textureIndex;
     uint diffuseUvChannel;
     float specularExponent;
 };
 
-layout(std140, binding = 1) uniform MaterialsBlock
+layout(std140, binding = 2) uniform MaterialsBlock
 {
     PhongMaterial ub_Phong[128];
 };
@@ -32,7 +32,7 @@ void main()
 {
     // Material
     PhongMaterial material = ub_Phong[ex_MaterialIdx];
-    vec4 albedo = texture(u_DiffuseTexture, ex_Uv[material.diffuseUvChannel]);
+    vec4 albedo = texture(u_DiffuseTexture, vec3(ex_Uv[material.diffuseUvChannel], material.textureIndex));
     // Implement "cut-out" transparency: everything below 50% opacity is discarded (i.e. no depth write).
     if(albedo.a < 0.5)
     {

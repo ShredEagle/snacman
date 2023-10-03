@@ -7,14 +7,24 @@ renderer building on top?
 
 ## Trying to describre the problem
 
+My current view, in essence a renderer is two things:
+* an API allowing clients to render frames of their own composition.
+* an implementation providing the API and rendering with the best speed and quality it can provide.
+
+A lot of tension exists in providing a good API, not exposing too much while allowing clients
+to customize rendering (e.g. custom materials and effects),
+provided by an efficient implementation.
+
+### Frame graphs
+
 When rendering a scene, there is a bipartite graph (resources are input to passes which produces resources as output, used by other passes as input, etc.)
 
 At the lowest level, a pass is making drawcall(s) to a graphics API,
 using the currently active program. The program takes input from:
 * Vertex Buffers/Primitive assembly (VAO in OGL. Anything else?)
 * Uniforms (Constants in Vulkan?)
-* Textures
 * Buffer backed blocks (Uniform Blocks and Shader Storage Blocks)
+* Textures
 * The active Pipeline State (fixed functions configuration)
 
 The input can come from:
@@ -41,7 +51,7 @@ i.e. the idea that a material contains the map of "pass" -> "shader program" see
 
 ourmachinery make the conceptual distinction between "context state" (~ the current scope of the code provides it)
 and the "instance state", that might be shared between distinct passes but can change with each instance/object.
-They model it with the same types in code, but the first can easily be provided consolidated as a stack (mapping the code scope),
+They model it with the same types in code, but the first can easily be provided as a consolidated stack (mapping to the code scopes),
 while the second is more "ad-hoc", provided with each instance.
 
 It seems the context could be fixed for a pass (takable as const ref).
@@ -76,6 +86,56 @@ The material/shader sytem should ideally ouptut:
 * A shader program (picking correct variant)
 to be fed into the lower level renderer.
 
+## Questions and Decisions
+
+### Prelude: Of perfectionnist humans
+
+The path is long, especially because it is filled with questions and design decisions.
+
+To try to keep decision-paralysis under control, I have to be better at taking a direction, accepting to revisit early / often.
+
+### The decision log
+
+#### Binding Meshes to shader programs
+
+**Decision DMB**: Dynamic mesh binding is done via the "shader binding set" determined via introspection at shader compile time (`IntrospectProgram`).
+The solution is closes to what is described by https://www.gamedev.net/forums/topic/713364-vertex-attribute-abstraction-design/5452686/.
+
+#### VAO cache
+
+Designing a VAO cache is always proving difficult for me.
+
+The vertex format is kept open (is it a good decision?), and the system provides dynamic mapping of buffers to custom programs -> There is not closed list of potential VAOs.
+We can construct VAO as we need them, but this is a lengthy operation and we need to cache the results.
+
+What we identify as VAO identity:
+* Shader program has the same semantic and type, at the same attribute indices. (This means distinct program can share a VAO as long as this holds true).
+* Buffer have the same "data-format" (element sizes, component types, relative offset (i.e. same interleaving))
+* Without ARB_vertex_attrib_binding (VAB): Same actual buffers (applying offsets when drawing does not reqire a distinct VAO).
+
+* We expect the programs to exist in the largest number (larger than variations in data-format, and even vertex buffers), we make a link from the program to its VAO (via reference, for sharing).
+* Without VAB, GL buffer identity should cover all cases of changes in data-format (i.e. if the data-format is different, it will always be via a different GL buffer). The program links to a repository of VAOs, one for each "set of buffers" it encountered.
+
+**Decision VSU**: To make the last point easier, we decided to merge the per-instance (glDivisor 1) "vertex" attributes into the Vertex Stream at the `Part` level.
+This decision is not very strong, as it blurs some lines:
+initially, `VertexStream` was only for per-part data (actual vertex arrays, index buffer).
+Now it also holds data that cannot be loaded with the model (instance positions, material index, ...), and has to be patched-in.
+On the other hand it has other benefits:
+* simplyfing some signatures (no need to pass a collection of extra buffers alongside the main VertexStream).
+
+#### OpenGL state caching
+
+It is tempting, to avoid potential redundant state setting.
+But Nicol Bolas points out how dangerous it is, (since it can go out of sync with the real GL state)[https://stackoverflow.com/a/38887089/1027706].
+
+#### Bounding boxes
+
+Assimp can compute bounding boxes for meshes (i.e. `Part`), and we can unite all parts AABB to get the `Object` AABB.
+
+A complication arises for Nodes: should they cache their bounding box?
+Nodes can have an `Object`, plus potential children nodes (with transformations).
+The transformations change the bounding boxes, and if they are dynamic it means cached AABB has to be recomputed each time.
+
 ## Validation scene
 
 * 3D meshes made of multiple parts.
@@ -83,6 +143,7 @@ to be fed into the lower level renderer.
   * PBR material.
   * Custom material.
   * Skeletal animation (distinct timelines).
+    * Have the skeletal animation implemented client-side, to validate that the API let clients implement their own systems.
 
 * Billboards
 
@@ -96,7 +157,9 @@ to be fed into the lower level renderer.
 
 * Multiple viewports
 
-## Hand waving processus
+## Hand waving processus - godot inspired
+
+Attention: not necessarily what we want to implement, this is a bit rigid.
 
 beginFrame()
     //scope frame statistics
