@@ -207,7 +207,7 @@ namespace {
                   // TODO #inout replace this inout by something more sane
                   GLuint & aVertexFirst,
                   GLuint & aIndexFirst,
-                  Material aDefaultMaterial)
+                  Material aPartsMaterial)
     {
         // Load data into an existing buffer, with offset aElementFirst.
         auto loadBuffer = [&aIn](graphics::BufferAny & aBuffer, 
@@ -272,11 +272,10 @@ namespace {
         const unsigned int indicesCount = 3 * primitiveCount;
         loadBuffer(indexBuffer, aIndexFirst, gIndexSize, indicesCount);
 
+        // Assign the part material index to the otherwise common material
+        aPartsMaterial.mPhongMaterialIdx = materialIndex;
         Part part{
-            .mMaterial{
-                .mPhongMaterialIdx = materialIndex,
-                .mEffect = aDefaultMaterial.mEffect,
-            },
+            .mMaterial = aPartsMaterial,
             .mVertexStream = &aVertexStream,
             .mPrimitiveMode = GL_TRIANGLES,
             .mVertexFirst = aVertexFirst,
@@ -364,7 +363,9 @@ namespace {
 
     // TODO Ad 2023/08/01: 
     // Review how the effects (the programs) are provided to the parts (currently hardcoded)
-    void loadMaterials(BinaryInArchive & aIn, Storage & aStorage)
+    void loadMaterials(BinaryInArchive & aIn,
+                       graphics::UniformBufferObject & aDestinationUbo,
+                       graphics::Texture & aDestinationTexture)
     {
         {
             unsigned int materialsCount;
@@ -372,7 +373,8 @@ namespace {
 
             std::vector<PhongMaterial> materials{materialsCount};
             aIn.read(std::span{materials});
-            aStorage.mPhongMaterials = std::move(materials);
+
+            graphics::load(aDestinationUbo, std::span{materials}, graphics::BufferHint::StaticDraw);
         }
 
         math::Size<2, int> imageSize;        
@@ -408,7 +410,8 @@ namespace {
             }
 
             glGenerateMipmap(textureArray.mTarget);
-            aStorage.mTextures.push_back(std::move(textureArray));
+
+            aDestinationTexture = std::move(textureArray);
         }
     }
 
@@ -420,7 +423,7 @@ namespace {
 // (maybe directly from the binary file)
 Node loadBinary(const std::filesystem::path & aBinaryFile,
                 Storage & aStorage,
-                Material aDefaultMaterial,
+                Effect * aPartsEffect,
                 const GenericStream & aStream)
 {
     BinaryInArchive in{
@@ -443,11 +446,29 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
     //constexpr GLsizei gBufferSize = 512 * 1024 * 1024;
     VertexStream * consolidatedStream = prepareConsolidatedStream(verticesCount, indicesCount, aStorage, aStream);
 
+    // Prepare a MaterialContext for the whole binary, 
+    // I.e. in a scene, each entry gets its own material UBO and its own Texture array.
+    // TODO #azdo #perf we could load textures and materials in a single buffer for a whole scene to further consolidate
+    // TODO #assetprocessor If materials were loaded first, it loadMaterials could directly create the UBO and Texture
+    {
+        aStorage.mUbos.emplace_back();
+        aStorage.mTextures.emplace_back(GL_TEXTURE_2D_ARRAY); // Will be overwritten anyway
+
+        aStorage.mMaterialContexts.push_back(MaterialContext{
+            .mUboRepo = {{semantic::gMaterials, &aStorage.mUbos.back()}},
+            .mTextureRepo = {{semantic::gDiffuseTexture, &aStorage.mTextures.back()}},
+        });
+    }
+    Material partsMaterial{
+        .mContext = &aStorage.mMaterialContexts.back(),
+        .mEffect = aPartsEffect,
+    };
+
     GLuint vertexFirst = 0;
     GLuint indexFirst = 0;
-    Node result = loadNode(in, aStorage, aDefaultMaterial, *consolidatedStream, vertexFirst, indexFirst);
+    Node result = loadNode(in, aStorage, partsMaterial, *consolidatedStream, vertexFirst, indexFirst);
 
-    loadMaterials(in, aStorage);
+    loadMaterials(in, aStorage.mUbos.back(), aStorage.mTextures.back());
 
     return result;
 }
@@ -455,8 +476,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
 
 Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
                             Storage & aStorage,
-                            const std::vector<std::string> & aDefines_temp/*,
-                            const FeatureSet & aFeatures*/)
+                            const std::vector<std::string> & aDefines_temp)
 {
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
@@ -544,6 +564,38 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
             graphics::makeLinkedProgram(shaders.begin(), shaders.end()),
             aProgFile.filename().string()
     };
+}
+
+
+Scene Loader::loadScene(const filesystem::path & aSceneFile,
+                        const filesystem::path & aEffectFile,
+                        const GenericStream & aStream,
+                        Storage & aStorage)
+{
+    Scene scene;
+
+    filesystem::path scenePath = mFinder.pathFor(aSceneFile);
+    Json description = Json::parse(std::ifstream{mFinder.pathFor(aSceneFile)});
+    filesystem::path workingDir = scenePath.parent_path();
+
+    for (const auto & entry : description.at("entries"))
+    {
+        std::vector<std::string> defines = entry["features"].get<std::vector<std::string>>();
+        filesystem::path modelFile = entry.at("model");
+
+        Node model = loadBinary(workingDir / modelFile,
+                                aStorage,
+                                loadEffect(aEffectFile, aStorage, defines),
+                                aStream);
+
+        // TODO store and load names in the binary file format
+        SELOG(info)("Loaded model '{}' with bouding box {}.",
+                     modelFile.stem().string(), fmt::streamed(model.mAabb));
+
+        scene.addToRoot(std::move(model));
+    }
+
+    return scene;
 }
 
 

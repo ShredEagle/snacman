@@ -179,14 +179,6 @@ namespace {
     };
 
 
-    graphics::UniformBufferObject prepareMaterialBuffer(const Storage & aStorage)
-    {
-        graphics::UniformBufferObject ubo;
-        graphics::load(ubo, std::span{aStorage.mPhongMaterials}, graphics::BufferHint::StaticDraw);
-        return ubo;
-    }
-
-
     void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
     {
         GLfloat time =
@@ -230,11 +222,15 @@ namespace {
                 {
                     PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
                     setBufferBackedBlocks(selectedProgram, aUboRepository);
+                    // TODO #repos This should be consolidated
+                    setBufferBackedBlocks(selectedProgram, aCall.mCallContext->mUboRepo);
                 }
 
                 {
                     PROFILER_SCOPE_SECTION("set_textures", CpuTime);
                     setTextures(selectedProgram, aTextureRepository);
+                    // TODO #repos This should be consolidated
+                    setTextures(selectedProgram, aCall.mCallContext->mTextureRepo);
                 }
 
                 PROFILER_PUSH_SECTION("bind_program", CpuTime);
@@ -315,6 +311,8 @@ namespace {
             const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
             singleCallAtm.mProgram = &selectedProgram;
 
+            singleCallAtm.mCallContext = part.mMaterial.mContext;
+
             // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
             auto vao =
                 [&, &entries = configuredProgram.mConfig->mEntries]() 
@@ -360,6 +358,7 @@ namespace {
             assert(vertexStream.mIndicesType == singleCallAtm.mIndicesType);
             // Same effect implies same program would be selected 
             assert(part.mMaterial.mEffect == aPartList.mMaterials.front()->mEffect);
+            assert(part.mMaterial.mContext == singleCallAtm.mCallContext);
 
             // TODO handle the case where there is an offset
             // This is more complicated with indirect draw commands, because they do not
@@ -506,7 +505,7 @@ void registerGlfwCallbacks(graphics::AppInterface & aAppInterface,
 
 
 RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
-                         const std::filesystem::path & aModelFile,
+                         const std::filesystem::path & aSceneFile,
                          const imguiui::ImguiUi & aImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
     mLoader{makeResourceFinder()},
@@ -552,20 +551,11 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     //    }
     //});
 
-    //std::vector<std::string> defines = {"TEXTURED",};
-    std::vector<std::string> defines = {"VERTEX_COLOR",};
-    Effect * phongEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage, defines);
-    static Material defaultPhongMaterial{
-        .mEffect = phongEffect,
-    };
+    mScene = mLoader.loadScene(aSceneFile, "effects/Mesh.sefx", mInstanceStream, mStorage);
+    /*const*/Node & model = mScene.mRoot.front();
 
-    Node model = loadBinary(aModelFile, mStorage, defaultPhongMaterial, mInstanceStream);
-
-    // TODO store and load names in the binary file format
-    SELOG(info)("Loaded model '{}' with bouding box {}.", aModelFile.stem().string(), fmt::streamed(model.mAabb));
-
-    mUbos.addUbo(mStorage, semantic::gMaterials, prepareMaterialBuffer(mStorage));
-
+    // TODO Ad 2023/10/03: Sort out this bit of logic: remove hardcoded sections,
+    // better handle camera placement / projections scene wide
     // Setup instance and camera poses
     {
         // TODO automatically handle scaling via model bounding box.
@@ -602,33 +592,6 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
             .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
         });
     }
-
-    // TODO restore the ability to make a model copy, with a distinct material
-    // Add a a copy of the model (hardcoded for teapot), to test another material idx
-    //{
-    //    Node copy = model;
-    //    Material materialOverride{
-    //        .mPhongMaterialIdx = mStorage.mPhongMaterials.size(), // The index of the material that will be pushed.
-    //        .mEffect = phongEffect,
-    //    };
-    //    copy.mInstance.mPose.mPosition.y() = -0.8f;
-    //    copy.mChildren.at(0).mInstance.mMaterialOverride = materialOverride;
-    //    copy.mChildren.at(1).mInstance.mMaterialOverride = materialOverride;
-    //    mScene.mRoot.push_back(std::move(copy));
-    //}
-
-    //// Creates another phong material, for the model copy
-    //{
-    //    mStorage.mPhongMaterials.push_back(mStorage.mPhongMaterials.at(0));
-    //    auto & phong = mStorage.mPhongMaterials.at(1);
-    //    phong.mDiffuseColor = math::hdr::gCyan<float> * 0.75f;
-    //    phong.mAmbientColor = math::hdr::gCyan<float> * 0.2f;
-    //    phong.mSpecularColor = math::hdr::gWhite<float> * 0.5f;
-    //    phong.mSpecularExponent = 100.f;
-    //}
-
-    mScene.mRoot.push_back(std::move(model));
-
 }
 
 

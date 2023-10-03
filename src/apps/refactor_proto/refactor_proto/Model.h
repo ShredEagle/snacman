@@ -4,6 +4,7 @@
 #include "Commons.h" 
 #include "IntrospectProgram.h" 
 #include "Material.h"
+#include "Repositories.h"
 
 #include <renderer/Texture.h>
 #include <renderer/UniformBuffer.h>
@@ -116,12 +117,23 @@ struct Effect
 };
 
 
+struct MaterialContext
+{
+    RepositoryUBO mUboRepo;
+    RepositoryTexture mTextureRepo;
+};
+
+
 struct Material
 {
     // TODO currently, hardcodes the parameters type to be for phong model
     // later on, it should allow for different types of parameters (that will have to match the different shader program expectations)
-    // also, we will probably load all parameters of a given type into buffers, and access them in shaders via indices (AZDO)
     std::size_t mPhongMaterialIdx = (std::size_t)-1;
+
+    // Allow sorting on the Handle 
+    // (lookup for an existing MaterialContext should be done by consolidation at load, not each frame)
+    Handle<MaterialContext> mContext;
+
     Effect * mEffect;
 };
 
@@ -219,7 +231,7 @@ struct Node
     Instance mInstance;
     std::vector<Node> mChildren;
     // TODO Ad 2023/08/09: I am not sure we want to "cache" the AABB at the node level
-    // it is dependent on transformations, and the node is intended ot only live in client code.
+    // it is dependent on transformations, and the node is intended to only live in client code.
     math::Box<GLfloat> mAabb;
 };
 
@@ -236,12 +248,12 @@ struct Storage
     std::list<Object> mObjects;
     std::list<Effect> mEffects;
     std::list<ConfiguredProgram> mPrograms;
-    std::vector<PhongMaterial> mPhongMaterials;
     std::vector<graphics::Texture> mTextures;
     std::list<graphics::UniformBufferObject> mUbos;
     std::list<VertexStream> mVertexStreams;
     std::list<ProgramConfig> mProgramConfigs;
     std::list<graphics::VertexArrayObject> mVaos;
+    std::list<MaterialContext> mMaterialContexts;
 };
 
 

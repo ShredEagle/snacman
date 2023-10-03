@@ -24,7 +24,10 @@ std::filesystem::path handleArguments(int argc, char * argv[])
     }
 
     std::filesystem::path inputPath{argv[1]};
-    inputPath.replace_extension(".seum");
+    if(inputPath.extension() != ".sew")
+    {
+        inputPath.replace_extension(".seum");
+    }
 
     if(!is_regular_file(inputPath))
     {

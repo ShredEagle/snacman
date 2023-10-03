@@ -22,6 +22,7 @@ set(${TARGET_NAME}_HEADERS
     ProviderWindows.h
     RenderGraph.h
     Repositories.h
+    Scene.h
     SetupDrawing.h
     Time.h
 )

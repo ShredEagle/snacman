@@ -2,6 +2,7 @@
 
 
 #include "Model.h"
+#include "Scene.h"
 
 #include <math/Homogeneous.h>
 
@@ -41,7 +42,7 @@ namespace semantic
 // has to be extended to actually load complex models.
 Node loadBinary(const std::filesystem::path & aBinaryFile,
                 Storage & aStorage,
-                Material aDefaultMaterial,
+                Effect * aPartsEffect,
                 // TODO should be replaced by the Handle to a shared VertexStream (when it is properly reused),
                 // stream already containing the instance data
                 const GenericStream & aStream/*to provide instance data, such as model transform*/);
@@ -53,13 +54,17 @@ struct Loader
     Effect * loadEffect(const std::filesystem::path & aEffectFile,
                         Storage & aStorage,
                         // TODO Ad 2023/10/03: #shader-system Remove this temporary.
-                        const std::vector<std::string> & aDefines_temp/*,
-                        const FeatureSet & aFeatures*/);
+                        const std::vector<std::string> & aDefines_temp);
 
     /// @brief Load a `.prog` file as an IntrospectProgram.
     IntrospectProgram loadProgram(const filesystem::path & aProgFile,
-                                    // TODO Ad 2023/10/03: #shader-system Remove this temporary.
+                                  // TODO Ad 2023/10/03: #shader-system Remove this temporary.
                                   const std::vector<std::string> & aDefines_temp);
+
+    Scene loadScene(const filesystem::path & aSceneFile,
+                    const filesystem::path & aEffectFile,
+                    const GenericStream & aStream,
+                    Storage & aStorage);
 
     resource::ResourceFinder mFinder;
 };

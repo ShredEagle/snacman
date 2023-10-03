@@ -5,6 +5,7 @@
 #include "Model.h"
 #include "Loader.h"
 #include "Repositories.h"
+#include "Scene.h"
 
 #include <graphics/ApplicationGlfw.h>
 
@@ -15,21 +16,6 @@ namespace ad::imguiui {
 
 
 namespace ad::renderer {
-
-
-/// @brief A list of parts to be drawn, each associated to a Material and a transformation.
-/// It is intended to be reused accross distinct passes inside a frame (or even accross frame for static parts).
-struct PartList
-{
-    // The individual renderer::Objects transforms. Several parts might index to the same transform.
-    // (Same way several parts might index the same material parameters)
-    std::vector<math::AffineMatrix<4, GLfloat>> mInstanceTransforms;
-
-    // SOA
-    std::vector<const Part *> mParts;
-    std::vector<const Material *> mMaterials;
-    std::vector<GLsizei> mTransformIdx;
-};
 
 
 /// @brief Entry to populate the GL_DRAW_INDIRECT_BUFFER used with indexed (glDrawElements) geometry.
@@ -60,6 +46,8 @@ struct DrawCall
 
     const IntrospectProgram * mProgram;
     const graphics::VertexArrayObject * mVao;
+    // TODO I am not sure having the call context here is a good idea, it feels a bit high level
+    Handle<MaterialContext> mCallContext;
 
     GLsizei mPartCount;
 };
@@ -73,19 +61,6 @@ struct PassCache
     // SOA at the moment, one entry per part
     std::vector<DrawElementsIndirectCommand> mDrawCommands;
     std::vector<DrawInstance> mDrawInstances; // Intended to be loaded as a GL instance buffer
-};
-
-struct Scene
-{
-    Scene & addToRoot(Instance aInstance)
-    {
-        mRoot.push_back(Node{.mInstance = std::move(aInstance)});
-        return *this;
-    }
-
-    std::vector<Node> mRoot; 
-
-    PartList populatePartList() const;
 };
 
 struct HardcodedUbos
@@ -103,7 +78,7 @@ struct HardcodedUbos
 struct RenderGraph
 {
     RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
-                const std::filesystem::path & aModelFile,
+                const std::filesystem::path & aSceneFile,
                 const imguiui::ImguiUi & aImguiUi);
 
     // for camera movements, should be moved out to the simuation of course
