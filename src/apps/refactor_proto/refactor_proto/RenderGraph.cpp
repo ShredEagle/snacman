@@ -552,7 +552,9 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     //    }
     //});
 
-    Effect * phongEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage);
+    //std::vector<std::string> defines = {"TEXTURED",};
+    std::vector<std::string> defines = {"VERTEX_COLOR",};
+    Effect * phongEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage, defines);
     static Material defaultPhongMaterial{
         .mEffect = phongEffect,
     };
@@ -703,9 +705,13 @@ void RenderGraph::render()
         loadCameraUbo(*mUbos.mViewingUbo, mCamera);
     }
 
-    // A single texture array at the moment
-    assert(mStorage.mTextures.size() == 1);
-    RepositoryTexture textureRepository{{semantic::gDiffuseTexture, &mStorage.mTextures.front()}};
+    RepositoryTexture textureRepository;
+    if(!mStorage.mTextures.empty())
+    {
+        // A single texture array at the moment
+        assert(mStorage.mTextures.size() == 1);
+        textureRepository = {{semantic::gDiffuseTexture, &mStorage.mTextures.front()}};
+    }
 
     // Use the same indirect buffer for all drawings
     graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);

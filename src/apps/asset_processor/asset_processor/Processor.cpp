@@ -98,10 +98,14 @@ namespace {
             assert(aMesh->mNormals != nullptr);
             mArchive.write(std::span{aMesh->mNormals, aMesh->mNumVertices});
 
-            assert(aMesh->GetNumColorChannels() == 0); // TODO handle this if some assets use vertex colors
+            mArchive.write(aMesh->GetNumColorChannels());
+            for (unsigned int colorIdx = 0; colorIdx != aMesh->GetNumColorChannels(); ++colorIdx)
+            {
+                mArchive.write(std::span{aMesh->mColors[colorIdx], aMesh->mNumVertices});
+            }
 
             mArchive.write(aMesh->GetNumUVChannels());
-            for (unsigned int uvIdx = 0; uvIdx != aMesh->GetNumUVChannels(); ++ uvIdx)
+            for (unsigned int uvIdx = 0; uvIdx != aMesh->GetNumUVChannels(); ++uvIdx)
             {
                 // Only support bidimensionnal texture sampling atm.
                 // Sadly, some models have a 3 here, even if they actually use only 2 (e.g. teapot.obj)
@@ -152,6 +156,7 @@ namespace {
     };
     
 
+    /// @brief Return type on "visiting" a node (i.e. recurseNode())
     struct NodeResult
     {
         math::Box<float> mAabb;
@@ -197,6 +202,9 @@ namespace {
     //      mesh.numVertices
     //      [mesh.vertices(i.e. positions, 3 floats per vertex)]
     //      [mesh.normals(3 floats per vertex)]
+    //      mesh.numColorChannels
+    //      each mesh.ColorChannel:
+    //        [ColorChannel.color(4 floats per vertex)]
     //      mesh.numUVChannels
     //      each mesh.UVChannel:
     //        [UVChannel.coordinates(2 floats per vertex)]

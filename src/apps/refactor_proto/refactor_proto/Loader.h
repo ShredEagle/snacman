@@ -24,6 +24,7 @@ namespace semantic
 {
     const Semantic gPosition{"Position"};
     const Semantic gNormal{"Normal"};
+    const Semantic gColor{"Color"};
     const Semantic gUv{"Uv"};
     const Semantic gDiffuseTexture{"DiffuseTexture"};
     const Semantic gModelTransformIdx{"ModelTransformIdx"};
@@ -50,11 +51,15 @@ struct Loader
 {
     /// @brief Load an effect file (.sefx), store it in `aStorage` and return its handle.
     Effect * loadEffect(const std::filesystem::path & aEffectFile,
-                        Storage & aStorage/*,
+                        Storage & aStorage,
+                        // TODO Ad 2023/10/03: #shader-system Remove this temporary.
+                        const std::vector<std::string> & aDefines_temp/*,
                         const FeatureSet & aFeatures*/);
 
     /// @brief Load a `.prog` file as an IntrospectProgram.
-    IntrospectProgram loadProgram(const filesystem::path & aProgFile);
+    IntrospectProgram loadProgram(const filesystem::path & aProgFile,
+                                    // TODO Ad 2023/10/03: #shader-system Remove this temporary.
+                                  const std::vector<std::string> & aDefines_temp);
 
     resource::ResourceFinder mFinder;
 };

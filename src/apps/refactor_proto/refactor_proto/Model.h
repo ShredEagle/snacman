@@ -35,8 +35,10 @@ static constexpr auto gNullHandle = nullptr;
 
 // Note: Represent an "homogeneous" chunck in a buffer, for example an array of per-vertex or per-instance data
 // (with a shared stride and instance divisor).
-// If we allow to store distinct logical objects in the same view, we can then use the view as an identifier
-// to match VAOs (while batching). Yet this mean that a Part will need an offset into its buffer view.
+// If we allow to store distinct logical objects in the same view, we can then use the view (or VertexStream) 
+// as an identifier to match VAOs (while batching).
+// Yet this mean that a Part will need an offset into its buffer views.
+// This offset in implemented by the Part m*First and m*Count members.
 struct BufferView
 {
     graphics::BufferAny * mGLBuffer;
@@ -161,6 +163,9 @@ struct Part
 {
     Material mMaterial; // TODO #matref: should probably be a "reference", as it is likely shared
                         // on the other hand, it is currently very lightweight
+    // Note: Distinct parts can reference the same VertexStream, and use Vertex/Index|First/Count to index it.
+    // This is a central feature for AZDO, because it allows using a single VAO for different parts 
+    // sharing their attributes format (under matching shader inputs).
     Handle<const VertexStream> mVertexStream;
     GLenum mPrimitiveMode = NULL;
     // GLuint because it is the type used in the Draw Indirect buffer

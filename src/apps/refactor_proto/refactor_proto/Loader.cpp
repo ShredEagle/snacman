@@ -53,6 +53,13 @@ namespace {
         return std::make_pair(std::move(buffer), size);
     }
 
+    template <std::floating_point T_value>
+    bool isWithinTolerance(T_value aLhs, T_value aRhs, T_value aRelativeTolerance)
+    {
+        T_value diff = std::abs(aLhs - aRhs);
+        T_value maxMagnitude = std::max(std::abs(aLhs), std::abs(aRhs));
+        return diff <= (maxMagnitude * aRelativeTolerance);
+    }
 
     Pose decompose(const math::AffineMatrix<4, GLfloat> & aTransformation)
     {
@@ -72,8 +79,12 @@ namespace {
         };
 
         // TODO we will need to introduce some tolerance here
-        assert(scale[0] == scale[1] && scale[0] == scale[2]);
-        result.mUniformScale = scale[0];
+        assert(isWithinTolerance(scale[0], 1.f, 1E-6f));
+        assert(isWithinTolerance(scale[1], 1.f, 1E-6f));
+        assert(isWithinTolerance(scale[2], 1.f, 1E-6f));
+        result.mUniformScale = 1;
+        //assert(scale[0] == scale[1] && scale[0] == scale[2]);
+        //result.mUniformScale = scale[0];
 
         return result;
     }
@@ -111,6 +122,7 @@ namespace {
     constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
     constexpr auto gNormalSize = gPositionSize;
     constexpr auto gUvSize = 2 * sizeof(float);
+    constexpr auto gColorSize = 4 * sizeof(float);
     constexpr auto gIndexSize = sizeof(unsigned int);
 
     VertexStream * prepareConsolidatedStream(unsigned int aVerticesCount,
@@ -132,16 +144,17 @@ namespace {
 
         BufferView positionView = createBuffer(gPositionSize, aVerticesCount, aStorage);
         BufferView normalView = createBuffer(gNormalSize, aVerticesCount, aStorage);
+        BufferView colorView = createBuffer(gColorSize, aVerticesCount, aStorage);
         BufferView uvView = createBuffer(gUvSize, aVerticesCount, aStorage);
 
         vertexStream.mVertexBufferViews.insert(
-            vertexStream.mVertexBufferViews.end(), {positionView, normalView, uvView});
+            vertexStream.mVertexBufferViews.end(), {positionView, normalView, colorView, uvView});
 
         vertexStream.mSemanticToAttribute.insert({
             {
                 semantic::gPosition,
                 AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 3, // view is added above
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 4, // view is added above
                     .mClientDataFormat{
                         .mDimension = 3,
                         .mOffset = 0,
@@ -152,9 +165,20 @@ namespace {
             {
                 semantic::gNormal,
                 AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 2, // view is added above
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 3, // view is added above
                     .mClientDataFormat{
                         .mDimension = 3,
+                        .mOffset = 0,
+                        .mComponentType = GL_FLOAT
+                    },
+                }
+            },
+            {
+                semantic::gColor,
+                AttributeAccessor{
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 2, // view is added above
+                    .mClientDataFormat{
+                        .mDimension = 4,
                         .mOffset = 0,
                         .mComponentType = GL_FLOAT
                     },
@@ -206,8 +230,9 @@ namespace {
         };
 
         // TODO Those hardcoded indices are smelly.
-        graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
-        graphics::BufferAny & normalBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
+        graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
+        graphics::BufferAny & normalBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
+        graphics::BufferAny & colorBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
         graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
         graphics::BufferAny & indexBuffer = *(aVertexStream.mIndexBufferView.mGLBuffer);
 
@@ -221,6 +246,14 @@ namespace {
         loadBuffer(positionBuffer, aVertexFirst, gPositionSize, verticesCount);
         // load normals
         loadBuffer(normalBuffer, aVertexFirst, gNormalSize, verticesCount);
+
+        unsigned int colorChannelsCount;
+        aIn.read(colorChannelsCount);
+        assert(colorChannelsCount <= 1);
+        for(unsigned int colorIdx = 0; colorIdx != colorChannelsCount; ++colorIdx)
+        {
+            loadBuffer(colorBuffer, aVertexFirst, gColorSize, verticesCount);
+        }
 
         unsigned int uvChannelsCount;
         aIn.read(uvChannelsCount);
@@ -333,11 +366,14 @@ namespace {
     // Review how the effects (the programs) are provided to the parts (currently hardcoded)
     void loadMaterials(BinaryInArchive & aIn, Storage & aStorage)
     {
-        unsigned int materialsCount;
-        aIn.read(materialsCount);
+        {
+            unsigned int materialsCount;
+            aIn.read(materialsCount);
 
-        std::vector<PhongMaterial> materials{materialsCount};
-        aIn.read(std::span{materials});
+            std::vector<PhongMaterial> materials{materialsCount};
+            aIn.read(std::span{materials});
+            aStorage.mPhongMaterials = std::move(materials);
+        }
 
         math::Size<2, int> imageSize;        
         aIn.read(imageSize);
@@ -345,32 +381,35 @@ namespace {
         unsigned int pathsCount;
         aIn.read(pathsCount);
 
-        graphics::Texture textureArray{GL_TEXTURE_2D_ARRAY};
-        graphics::ScopedBind boundTextureArray{textureArray};
-        glTexStorage3D(textureArray.mTarget, 
-                       graphics::countCompleteMipmaps(imageSize),
-                       graphics::MappedSizedPixel_v<math::sdr::Rgba>,
-                       imageSize.width(), imageSize.height(), pathsCount);
-        { // scoping `isSuccess`
-            GLint isSuccess;
-            glGetTexParameteriv(textureArray.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);
-            if(!isSuccess)
-            {
-                SELOG(error)("Cannot create immutable storage for textures array.");
-                throw std::runtime_error{"Error creating immutable storage for textures."};
-            }
-        }
-
-        for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
+        if(pathsCount > 0)
         {
-            std::string path = aIn.readString();
-            loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize);
+            assert(imageSize.width() > 0 && imageSize.height() > 1);
+
+            graphics::Texture textureArray{GL_TEXTURE_2D_ARRAY};
+            graphics::ScopedBind boundTextureArray{textureArray};
+            glTexStorage3D(textureArray.mTarget, 
+                        graphics::countCompleteMipmaps(imageSize),
+                        graphics::MappedSizedPixel_v<math::sdr::Rgba>,
+                        imageSize.width(), imageSize.height(), pathsCount);
+            { // scoping `isSuccess`
+                GLint isSuccess;
+                glGetTexParameteriv(textureArray.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);
+                if(!isSuccess)
+                {
+                    SELOG(error)("Cannot create immutable storage for textures array.");
+                    throw std::runtime_error{"Error creating immutable storage for textures."};
+                }
+            }
+
+            for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
+            {
+                std::string path = aIn.readString();
+                loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize);
+            }
+
+            glGenerateMipmap(textureArray.mTarget);
+            aStorage.mTextures.push_back(std::move(textureArray));
         }
-
-        glGenerateMipmap(textureArray.mTarget);
-        aStorage.mTextures.push_back(std::move(textureArray));
-
-        aStorage.mPhongMaterials = std::move(materials);
     }
 
 
@@ -415,7 +454,8 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
 
 
 Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
-                            Storage & aStorage/*,
+                            Storage & aStorage,
+                            const std::vector<std::string> & aDefines_temp/*,
                             const FeatureSet & aFeatures*/)
 {
     aStorage.mEffects.emplace_back();
@@ -425,7 +465,7 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
     for (const auto & technique : effect.at("techniques"))
     {
         aStorage.mPrograms.push_back(ConfiguredProgram{
-            .mProgram = loadProgram(technique.at("programfile")),
+            .mProgram = loadProgram(technique.at("programfile"), aDefines_temp),
             // TODO Share Configs between programs that are compatibles (i.e., same input semantic and type at same attribute index)
             // (For simplicity, we create one Config per program at the moment).
             .mConfig = (aStorage.mProgramConfigs.emplace_back(), &aStorage.mProgramConfigs.back()),
@@ -447,7 +487,8 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
 }
 
 
-IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile)
+IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
+                                      const std::vector<std::string> & aDefines_temp)
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 
@@ -469,7 +510,6 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile)
     // or to be found in the current "assets" folders of ResourceFinder.
     graphics::FileLookup lookup{programPath};
 
-    std::vector<std::string> defines;
     for (auto [shaderStage, shaderFile] : program.items())
     {
         GLenum stageEnumerator;
@@ -495,7 +535,7 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile)
         auto [inputStream, identifier] = lookup(shaderFile);
         shaders.emplace_back(
             stageEnumerator,
-            graphics::ShaderSource::Preprocess(*inputStream, defines, identifier, lookup));
+            graphics::ShaderSource::Preprocess(*inputStream, aDefines_temp, identifier, lookup));
     }
 
     SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());
