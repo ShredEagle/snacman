@@ -39,6 +39,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/SimulationControl.h
     simulations/snacgame/typedef.h
 
+    simulations/snacgame/component/ChangeSize.h
     simulations/snacgame/component/Collision.h
     simulations/snacgame/component/Context.h
     simulations/snacgame/component/Controller.h
