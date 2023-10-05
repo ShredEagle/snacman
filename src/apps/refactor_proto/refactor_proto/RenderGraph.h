@@ -67,8 +67,6 @@ struct HardcodedUbos
 {
     HardcodedUbos(Storage & aStorage);
 
-    void addUbo(Storage & aStorage, BlockSemantic aSemantic, graphics::UniformBufferObject && aUbo);
-
     RepositoryUbo mUboRepository;
     graphics::UniformBufferObject * mFrameUbo;
     graphics::UniformBufferObject * mViewingUbo;

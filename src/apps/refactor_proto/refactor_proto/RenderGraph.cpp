@@ -221,16 +221,24 @@ namespace {
                 
                 {
                     PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
-                    setBufferBackedBlocks(selectedProgram, aUboRepository);
                     // TODO #repos This should be consolidated
-                    setBufferBackedBlocks(selectedProgram, aCall.mCallContext->mUboRepo);
+                    RepositoryUbo callRepo{aCall.mCallContext->mUboRepo};
+                    {
+                        RepositoryUbo scopeRepo{aUboRepository};
+                        callRepo.merge(scopeRepo);
+                    }
+                    setBufferBackedBlocks(selectedProgram, callRepo);
                 }
 
                 {
                     PROFILER_SCOPE_SECTION("set_textures", CpuTime);
-                    setTextures(selectedProgram, aTextureRepository);
                     // TODO #repos This should be consolidated
-                    setTextures(selectedProgram, aCall.mCallContext->mTextureRepo);
+                    RepositoryTexture callRepo{aCall.mCallContext->mTextureRepo};
+                    {
+                        RepositoryTexture scopeRepo{aTextureRepository};
+                        callRepo.merge(scopeRepo);
+                    }
+                    setTextures(selectedProgram, callRepo);
                 }
 
                 PROFILER_PUSH_SECTION("bind_program", CpuTime);
@@ -423,13 +431,6 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
     aStorage.mUbos.emplace_back();
     mModelTransformUbo = &aStorage.mUbos.back();
     mUboRepository.emplace(semantic::gLocalToWorld, mModelTransformUbo);
-}
-
-
-void HardcodedUbos::addUbo(Storage & aStorage, BlockSemantic aSemantic, graphics::UniformBufferObject && aUbo)
-{
-    aStorage.mUbos.push_back(std::move(aUbo));
-    mUboRepository.emplace(aSemantic, &aStorage.mUbos.back());
 }
 
 
@@ -669,15 +670,14 @@ void RenderGraph::render()
     }
 
     RepositoryTexture textureRepository;
-    if(!mStorage.mTextures.empty())
-    {
-        // A single texture array at the moment
-        assert(mStorage.mTextures.size() == 1);
-        textureRepository = {{semantic::gDiffuseTexture, &mStorage.mTextures.front()}};
-    }
 
     // Use the same indirect buffer for all drawings
     graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
+
+    // Make this texturing not work by binding accident
+    // this could be extended to reset everything in the context.
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
     // TODO should be done once per viewport
     glViewport(0, 0,
