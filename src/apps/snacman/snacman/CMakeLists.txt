@@ -206,6 +206,7 @@ find_package(MarkovJunior CONFIG REQUIRED markovjunior)
 
 find_package(nlohmann_json 3.11.2 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+find_package(implot CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
@@ -221,6 +222,7 @@ target_link_libraries(${TARGET_NAME}
 
         spdlog::spdlog
         nlohmann_json::nlohmann_json
+        implot::implot
 )
 
 
