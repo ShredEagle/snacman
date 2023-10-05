@@ -3,7 +3,7 @@ editables:
         path: ../../../MarkovJunior.cpp/conan
     entity/e3b28a133b@adnn/develop:
         path: ../../../entity/conan
-    graphics/81280a6e5a@adnn/develop:
+    graphics/89593a18fe@adnn/develop:
         path: ../../../graphics/conan
     handy/3e495de542@adnn/develop:
         path: ../../../handy/conan

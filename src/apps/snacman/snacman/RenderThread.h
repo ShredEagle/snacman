@@ -12,6 +12,7 @@
 
 #include <imguiui/ImguiUi.h>
 
+#include <implot.h>
 #include <resource/ResourceFinder.h>
 
 #include <snac-renderer/Camera.h>
@@ -130,6 +131,7 @@ public:
             .mInterpolate = aSettingsIncludingControls.mInterpolate,
         }
     {
+        ImPlot::CreateContext();
         mThread = std::thread{
             [this, &aStates]() mutable {
                 run(aStates);
@@ -141,6 +143,7 @@ public:
     // terminate would be called (thus missing the top-level catch in main)
     ~RenderThread()
     {
+        ImPlot::DestroyContext();
         if(mThread.joinable())
         {
             SELOG(warn)("Destructor stopping render thread which was not finalized.");
