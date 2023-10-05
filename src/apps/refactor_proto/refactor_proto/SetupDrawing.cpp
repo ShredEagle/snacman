@@ -110,7 +110,7 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
 
 
 void setBufferBackedBlocks(const IntrospectProgram & aProgram,
-                           const RepositoryUBO & aUniformBufferObjects)
+                           const RepositoryUbo & aUniformBufferObjects)
 {
     for (const IntrospectProgram::UniformBlock & shaderBlock : aProgram.mUniformBlocks)
     {

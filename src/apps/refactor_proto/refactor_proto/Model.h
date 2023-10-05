@@ -119,7 +119,7 @@ struct Effect
 
 struct MaterialContext
 {
-    RepositoryUBO mUboRepo;
+    RepositoryUbo mUboRepo;
     RepositoryTexture mTextureRepo;
 };
 

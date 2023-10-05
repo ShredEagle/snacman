@@ -195,7 +195,7 @@ namespace {
 
 
     void draw(const PassCache & aPassCache,
-              const RepositoryUBO & aUboRepository,
+              const RepositoryUbo & aUboRepository,
               const RepositoryTexture & aTextureRepository)
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
