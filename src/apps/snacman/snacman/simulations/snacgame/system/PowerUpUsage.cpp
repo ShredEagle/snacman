@@ -1,6 +1,7 @@
 #include "PowerUpUsage.h"
 
 #include "math/Interpolation/ParameterAnimation.h"
+#include "snacman/simulations/snacgame/component/ChangeSize.h"
 #include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 
 #include "../component/AllowedMovement.h"
@@ -100,8 +101,7 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
             {
                 Phase powerupDestroyOnPickup;
                 mPowerups.each(
-                    [&playerHitbox, this, &aPlayer,
-                     &powerupDestroyOnPickup,
+                    [&playerHitbox, this, &aPlayer, &powerupDestroyOnPickup,
                      &aRoundData](ent::Handle<ent::Entity> aPowerupHandle,
                                   component::PowerUp & aPowerup,
                                   const component::GlobalPose & aPowerupGeo,
@@ -122,17 +122,17 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                     if (component::collideWithSat(powerupHitbox, playerHitbox))
                     {
                         EntHandle hud =
-                            snac::getComponent<component::PlayerGameData>(aRoundData.mSlot)
+                            snac::getComponent<component::PlayerGameData>(
+                                aRoundData.mSlot)
                                 .mHud;
-                        auto & playerHud = snac::getComponent<component::PlayerHud>(hud);
+                        auto & playerHud =
+                            snac::getComponent<component::PlayerHud>(hud);
                         EntHandle playerPowerup =
                             createPlayerPowerUp(*mGameContext, aPowerup.mType);
                         aRoundData.mType = aPowerup.mType;
                         aRoundData.mPowerUp = playerPowerup;
 
-                        insertEntityInScene(
-                            playerPowerup,
-                            aRoundData.mModel);
+                        insertEntityInScene(playerPowerup, aRoundData.mModel);
                         updateGlobalPosition(
                             snac::getComponent<component::SceneNode>(
                                 playerPowerup));
@@ -411,7 +411,7 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 puGeo.mInstanceScaling = {1.f, 1.f, 1.f};
                 puGeo.mPosition.z() = 0.f;
 
-                EntHandle ring = mGameContext->mWorld.addEntity();
+                EntHandle ring = mGameContext->mWorld.addEntity("ring");
                 {
                     Phase ringPhase;
                     Entity ringEnt = *ring.get(ringPhase);
@@ -426,7 +426,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                     ringEnt.add(component::RoundTransient{});
                 }
 
-                EntHandle missileModel = mGameContext->mWorld.addEntity();
+                EntHandle missileModel =
+                    mGameContext->mWorld.addEntity("missile model");
                 {
                     Phase missilePhase;
                     constexpr ModelInfo info = gPlayerPowerupInfoByType[(
@@ -475,22 +476,23 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 EntHandle rootPowerup = aRoundData.mPowerUp;
                 component::Geometry & playerModelGeo =
                     aRoundData.mModel.get()->get<component::Geometry>();
-                EntHandle bombModel = mGameContext->mWorld.addEntity();
+                EntHandle bombModel =
+                    mGameContext->mWorld.addEntity("bomb model");
                 {
                     Phase bombPhase;
                     constexpr ModelInfo info = gPlayerPowerupInfoByType[(
                         unsigned int) component::PowerUpType::Bomb];
                     Entity bombEnt = *bombModel.get(bombPhase);
-                    addMeshGeoNode(
-                        *mGameContext, bombEnt, info.mPath, info.mProgPath,
-                        {0.f, 0.f, gPillHeight}, info.mScaling,
-                        info.mInstanceScale,
-                        playerModelGeo.mOrientation);
+                    addMeshGeoNode(*mGameContext, bombEnt, info.mPath,
+                                   info.mProgPath, {0.f, 0.f, gPillHeight},
+                                   info.mScaling, info.mInstanceScale,
+                                   playerModelGeo.mOrientation);
                     bombEnt.add(component::RoundTransient{});
-                    ParameterAnimation<float, math::FullRange, math::None, math::ease::CubicSpline> animation(
-                            math::ease::CubicSpline<float>({0.f, 0.5f, 1.f, 1.01f, 1.25f, 1.5f, 1.58f, 1.79f, 2.12f, 2.3f, 2.402f, 2.451f, 2.5},
-                                {1.f, 1.2f, 2.f, 0.25f, 0.25f, 0.63f, 0.96f, 1.17f, 1.23f, 1.245f, 1.249f, 1.250f})
-                    );
+                    bombEnt.add(component::ChangeSize{
+                        .mCurve = ParameterAnimation<float, math::FullRange,
+                                                     math::None,
+                                                     math::ease::Bezier>(
+                            math::ease::Bezier<float>())});
                 }
                 transferEntity(rootPowerup, aLevel);
                 insertEntityInScene(bombModel, rootPowerup);

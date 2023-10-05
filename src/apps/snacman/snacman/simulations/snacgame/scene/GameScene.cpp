@@ -194,7 +194,6 @@ void GameScene::onExit(Transition aTransition)
         eraseEntityRecursive(mLevel, destroyEnvironment);
 
         mSystems.get(destroyEnvironment)->erase();
-        mSystems = mGameContext.mWorld.addEntity();
     }
     {
         // TODO: (franz) remove this at some point

@@ -19,7 +19,7 @@ struct EntityWrap
 {
     template <class... VT_ctorArgs>
     EntityWrap(ent::EntityManager & aWorld, VT_ctorArgs &&... aCtorArgs) :
-        mWrapped{aWorld.addEntity()}
+        mWrapped{aWorld.addEntity("wrap")}
     {
         ent::Phase init;
         // TODO emplace when entity offers it

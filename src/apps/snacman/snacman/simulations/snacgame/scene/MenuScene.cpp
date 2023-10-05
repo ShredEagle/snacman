@@ -93,7 +93,6 @@ void MenuScene::onExit(Transition aTransition)
 
     mOwnedEntities.clear();
     mSystems.get(destroy)->erase();
-    mSystems = mGameContext.mWorld.addEntity();
 }
 
 void MenuScene::update(const snac::Time & aTime, RawInput & aInput)

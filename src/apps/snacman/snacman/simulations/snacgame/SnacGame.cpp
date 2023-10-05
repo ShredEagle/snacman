@@ -40,6 +40,7 @@
 #include <filesystem>
 #include <handy/Guard.h>
 #include <imgui.h>
+#include <implot.h>
 #include <imguiui/ImguiUi.h>
 #include <map>
 #include <math/Color.h>
@@ -128,13 +129,13 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         if (mImguiDisplays.mShowSceneEditor)
         {
             mSceneEditor.showEditor(
-                mGameContext.mSceneRoot);
+                mGameContext.mWorld);
         }
         scene::Scene * scene = mGameContext.mSceneStack->getActiveScene();
         if (mImguiDisplays.mShowRoundInfo && scene->mName == "game")
         {
             static ent::Query<component::Pill> pills{mGameContext.mWorld};
-            ImGui::Begin("Round info", &mImguiDisplays.mShowPlayerInfo);
+            ImGui::Begin("Round info", &mImguiDisplays.mShowRoundInfo);
             if (ImGui::Button("next round"))
             {
                 ent::Phase pillRemove;
@@ -144,95 +145,6 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             scene::GameScene * gameScene = (scene::GameScene *) scene;
             component::LevelSetupData levelData = *gameScene->mLevelData;
             ImGui::Text("%d", levelData.mSeed);
-            ImGui::End();
-        }
-        if (mImguiDisplays.mShowPlayerInfo)
-        {
-            ImGui::Begin("Player Info", &mImguiDisplays.mShowPlayerInfo);
-            static ent::Query<component::PlayerSlot> playerSlotQuery{
-                mGameContext.mWorld};
-            static ent::Query<component::Controller> controllerQuery{
-                mGameContext.mWorld};
-            playerSlotQuery.each(
-                [&](EntHandle aPlayer,
-                    const component::PlayerSlot & aPlayerSlot)
-                {
-                ImGui::PushID(aPlayerSlot.mSlotIndex);
-                char playerHeader[64];
-                std::snprintf(playerHeader, IM_ARRAYSIZE(playerHeader),
-                              "Player %d", aPlayerSlot.mSlotIndex + 1);
-                if (ImGui::CollapsingHeader(playerHeader))
-                {
-                    // This is an assumption but currently player that have
-                    // a geometry should have a globalPose
-                    if (aPlayer.get()->has<component::Geometry>())
-                    {
-                        ent::Entity_view player = *aPlayer.get();
-                        const component::Geometry & geo =
-                            player.get<component::Geometry>();
-                        const component::Controller & controller =
-                            player.get<component::Controller>();
-                        const component::GlobalPose & pose =
-                            player.get<component::GlobalPose>();
-
-                        ImGui::BeginChild("Action", ImVec2(200.f, 0.f), true);
-                        if (controller.mType == ControllerType::Dummy)
-                        {
-                            if (ImGui::Button("Bind to keyboard"))
-                            {
-                                EntHandle oldController = snac::getFirstHandle(
-                                    controllerQuery,
-                                    [](const component::Controller &
-                                           aController) {
-                                    return aController.mType
-                                           == ControllerType::Keyboard;
-                                    });
-
-                                if (oldController.isValid())
-                                {
-                                    oldController.get()
-                                        ->get<component::Controller>()
-                                        .mType = ControllerType::Dummy;
-                                    oldController.get()
-                                        ->get<component::Controller>()
-                                        .mControllerId = aPlayerSlot.mSlotIndex;
-                                }
-                                aPlayer.get()
-                                    ->get<component::Controller>()
-                                    .mType = ControllerType::Keyboard;
-                                aPlayer.get()
-                                    ->get<component::Controller>()
-                                    .mControllerId = gKeyboardControllerIndex;
-                            }
-
-                            if (ImGui::Button("Remove player"))
-                            {
-                                Phase update;
-                                eraseEntityRecursive(aPlayer, update);
-                            }
-                        }
-                        ImGui::EndChild();
-                        ImGui::SameLine();
-                        ImGui::BeginChild("Info");
-                        geo.drawUi();
-                        pose.drawUi();
-                        controller.drawUi();
-                        ImGui::EndChild();
-                    }
-                    else
-                    {
-                        if (ImGui::Button("Create dummy player"))
-                        {
-                            {
-                                /* addPlayer(mGameContext, aPlayerSlot.mIndex,
-                                 */
-                                /*           ControllerType::Dummy); */
-                            }
-                        }
-                    }
-                }
-                ImGui::PopID();
-            });
             ImGui::End();
         }
         if (mImguiDisplays.mShowLogLevel)
@@ -251,6 +163,10 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         if (mImguiDisplays.mShowImguiDemo)
         {
             ImGui::ShowDemoWindow(&mImguiDisplays.mShowImguiDemo);
+        }
+        if (mImguiDisplays.mShowImplotDemo)
+        {
+            ImPlot::ShowDemoWindow(&mImguiDisplays.mShowImplotDemo);
         }
         if (mImguiDisplays.mSpeedControl)
         {
@@ -329,7 +245,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             ImGui::Begin("Debug function", &mImguiDisplays.mPathfinding);
             if (ImGui::Button("Create pathfinder"))
             {
-                EntHandle pathfinder = mGameContext.mWorld.addEntity();
+                EntHandle pathfinder = mGameContext.mWorld.addEntity("pathfinder test");
                 EntHandle player = snac::getFirstHandle(
                     ent::Query<component::PlayerSlot, component::Geometry>{
                         mGameContext.mWorld});

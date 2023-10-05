@@ -13,7 +13,7 @@ GameContext::GameContext(snac::Resources aResources, snac::RenderThread<Renderer
     mResources{aResources},
     mRenderThread{aRenderThread},
     mSceneStack{mWorld},
-    mSceneRoot{mWorld.addEntity()},
+    mSceneRoot{mWorld.addEntity("gc scene root")},
     mSlotManager(this)
 {
     ent::Phase addSceneNodeToSceneRoot;

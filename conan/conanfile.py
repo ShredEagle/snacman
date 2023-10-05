@@ -27,7 +27,7 @@ class SnacmanConan(ConanFile):
         ("handy/3e495de542@adnn/develop"),
         ("math/dd29e310ac@adnn/develop"),
         ("MarkovJunior.cpp/01458bc65b@adnn/develop"),
-        ("implot/0.14"), # MIT
+        ("implot/0.16"), # MIT
         ("imgui/1.89.8"),
 
         ("spdlog/1.11.0@#1e0f4eb6338d05e4bd6fcc6bf4734172"),

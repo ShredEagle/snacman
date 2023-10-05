@@ -23,7 +23,7 @@ struct Geometry
     math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
     math::hdr::Rgba_f mColor = math::hdr::gWhite<float>;
 
-    void drawUi() const;
+    void drawUi();
 };
 
 

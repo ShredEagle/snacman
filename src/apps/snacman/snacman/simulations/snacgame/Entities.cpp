@@ -24,6 +24,7 @@
 #include "GameContext.h"
 #include "GameParameters.h"
 #include "SceneGraph.h"
+#include "snacman/simulations/snacgame/component/ChangeSize.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "ModelInfos.h"
 #include "typedef.h"
@@ -120,7 +121,7 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
                                          const component::GlobalPose & aPose)
 {
     ent::Phase init;
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity("world text");
     Entity text = *handle.get(init);
 
     auto font =
@@ -143,7 +144,7 @@ createAnimatedTest(GameContext & aContext,
                    snac::Clock::time_point aStartTime,
                    const math::Position<2, float> & aGridPos)
 {
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity("animated test");
     Entity entity = *handle.get(aPhase);
     std::shared_ptr<snac::Model> model = addMeshGeoNode(
         aContext, entity, "models/anim/anim.gltf", "effects/MeshRigging.sefx",
@@ -168,7 +169,7 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
                                     Phase & aPhase,
                                     const math::Position<2, float> & aGridPos)
 {
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity("pill");
     Entity pill = *handle.get(aPhase);
     addMeshGeoNode(aContext, pill, "models/burger/burger.gltf",
                    "effects/MeshTextures.sefx",
@@ -196,7 +197,7 @@ createPowerUp(GameContext & aContext,
               const component::PowerUpType aType,
               float aSwapPeriod)
 {
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity("power up");
     Entity powerUp = *handle.get(aPhase);
     ModelInfo info =
         gLevelPowerupInfoByType.at(static_cast<unsigned int>(aType));
@@ -224,7 +225,7 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
                               const component::PowerUpType aType)
 {
     ent::Phase init;
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity("player powerup");
     Entity powerUp = *handle.get(init);
     ModelInfo info =
         gPlayerPowerupInfoByType.at(static_cast<unsigned int>(aType));
@@ -240,7 +241,7 @@ EntHandle createPathEntity(GameContext & aContext,
                            Phase & aPhase,
                            const math::Position<2, float> & aGridPos)
 {
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity("path");
     createLevelElement(aPhase, handle, aContext, aGridPos,
                        math::hdr::gWhite<float>);
     return handle;
@@ -252,7 +253,7 @@ createPortalEntity(GameContext & aContext,
                    const math::Position<2, float> & aGridPos,
                    int aPortalIndex)
 {
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity("Portal");
     createLevelElement(aPhase, handle, aContext, aGridPos,
                        math::hdr::gRed<float>);
     Entity portal = *handle.get(aPhase);
@@ -276,7 +277,7 @@ void addPortalInfo(GameContext & aContext,
     aPortal.mExitHitbox = portalExit;
     aPortal.mMirrorSpawnPosition = aGeo.mPosition + aDirection;
 
-    auto model = aContext.mWorld.addEntity();
+    auto model = aContext.mWorld.addEntity("portal model");
     {
         Phase portalModelPhase;
         Entity modelEnt = *model.get(portalModelPhase);
@@ -292,7 +293,6 @@ void addPortalInfo(GameContext & aContext,
                          Turn_f{0.25f}});
         modelEnt.add(component::RoundTransient{});
     }
-    model.get()->get<component::SceneNode>().mName = "portal";
     insertEntityInScene(model, aLevel);
 }
 
@@ -301,7 +301,7 @@ createCopPenEntity(GameContext & aContext,
                    Phase & aPhase,
                    const math::Position<2, float> & aGridPos)
 {
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity("cop pen");
     createLevelElement(aPhase, handle, aContext, aGridPos,
                        math::hdr::gYellow<float>);
     return handle;
@@ -315,7 +315,7 @@ createPlayerSpawnEntity(GameContext & aContext,
     math::Position<3, float> spawnPos = {static_cast<float>(aGridPos.x()),
                                          static_cast<float>(aGridPos.y()),
                                          gPlayerHeight};
-    auto spawner = aContext.mWorld.addEntity();
+    auto spawner = aContext.mWorld.addEntity("spawner");
     createLevelElement(aPhase, spawner, aContext, aGridPos,
                        math::hdr::gCyan<float>);
     spawner.get(aPhase)->add(component::Spawner{.mSpawnPosition = spawnPos});
@@ -326,7 +326,7 @@ createPlayerSpawnEntity(GameContext & aContext,
 ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
                                           const int aPlayerIndex)
 {
-    EntHandle hudHandle = aContext.mWorld.addEntity();
+    EntHandle hudHandle = aContext.mWorld.addEntity("hud");
     {
         Phase createHud;
 
@@ -341,10 +341,10 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
     }
 
     // The score text line
-    EntHandle scoreHandle = aContext.mWorld.addEntity();
-    EntHandle roundHandle = aContext.mWorld.addEntity();
-    EntHandle powerupHandle = aContext.mWorld.addEntity();
-    EntHandle billpadHandle = aContext.mWorld.addEntity();
+    EntHandle scoreHandle = aContext.mWorld.addEntity("score");
+    EntHandle roundHandle = aContext.mWorld.addEntity("round");
+    EntHandle powerupHandle = aContext.mWorld.addEntity("powerup hud");
+    EntHandle billpadHandle = aContext.mWorld.addEntity("bill pad");
     {
         Phase createScore;
 
@@ -432,7 +432,7 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
 {
     const component::PlayerSlot & slot =
         aSlotHandle.get()->get<component::PlayerSlot>();
-    EntHandle playerModelHandle = aContext.mWorld.addEntity();
+    EntHandle playerModelHandle = aContext.mWorld.addEntity("player model");
     {
         Phase createModel;
         Entity model = *playerModelHandle.get(createModel);
@@ -455,6 +455,11 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
                 decltype(component::RigAnimation::mParameter){
                     animation.mEndTime},
         });
+        model.add(component::ChangeSize{
+            .mCurve = ParameterAnimation<float, math::FullRange,
+                                         math::None,
+                                         math::ease::Bezier>(
+                math::ease::Bezier<float>())});
     }
 
     return playerModelHandle;
@@ -463,7 +468,7 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
 ent::Handle<ent::Entity> createCrown(GameContext & aContext)
 {
     Phase createCrown;
-    EntHandle crownHandle = aContext.mWorld.addEntity();
+    EntHandle crownHandle = aContext.mWorld.addEntity("crown");
     Entity crown = *crownHandle.get(createCrown);
 
     std::shared_ptr<snac::Model> crownData = addMeshGeoNode(
@@ -480,7 +485,7 @@ ent::Handle<ent::Entity> createCrown(GameContext & aContext)
 EntHandle createJoinGamePlayer(GameContext & aContext, EntHandle aSlotHandle, int aSlotIndex)
 {
     EntHandle playerModelHandle = createPlayerModel(aContext, aSlotHandle);
-    EntHandle numberHandle = aContext.mWorld.addEntity();
+    EntHandle numberHandle = aContext.mWorld.addEntity("player number");
 
     component::Geometry & aGeo =
         snac::getComponent<component::Geometry>(playerModelHandle);
@@ -526,7 +531,7 @@ EntHandle createInGamePlayer(GameContext & aContext,
                              const Pos3 & aPosition)
 {
     EntHandle playerModelHandle = createPlayerModel(aContext, aSlotHandle);
-    EntHandle playerHandle = aContext.mWorld.addEntity();
+    EntHandle playerHandle = aContext.mWorld.addEntity("in game player");
 
     {
         Phase sceneInit;
@@ -547,7 +552,7 @@ EntHandle createInGamePlayer(GameContext & aContext,
 
 EntHandle addPlayer(GameContext & aContext, const int aControllerIndex)
 {
-    EntHandle playerSlot = aContext.mWorld.addEntity();
+    EntHandle playerSlot = aContext.mWorld.addEntity("player slot");
     if (aContext.mSlotManager.addPlayer(aContext, playerSlot, aControllerIndex))
     {
         return playerSlot;
@@ -602,7 +607,7 @@ makeText(GameContext & aContext,
          const math::Position<2, float> & aPosition_unitscreen,
          const math::Size<2, float> & aScale)
 {
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity("text");
 
     handle.get(aPhase)
         ->add(component::Text{
@@ -631,7 +636,7 @@ void swapPlayerPosition(Phase & aPhase, EntHandle aPlayer, EntHandle aOther)
 
 EntHandle createStageDecor(GameContext & aContext)
 {
-    EntHandle result = aContext.mWorld.addEntity();
+    EntHandle result = aContext.mWorld.addEntity("stage decor");
     {
         Phase createStage;
         Entity stageEntity = *result.get(createStage);
@@ -649,7 +654,7 @@ EntHandle createStageDecor(GameContext & aContext)
 
 EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
 {
-    EntHandle result = aContext.mWorld.addEntity();
+    EntHandle result = aContext.mWorld.addEntity("target arrow");
     {
         Phase createTargetArrow;
         Entity targetArrow = *result.get(createTargetArrow);
@@ -675,7 +680,7 @@ EntHandle createExplosion(GameContext & aContext,
                           const math::Position<3, float> & aPos,
                           const snac::Time & aTime)
 {
-    EntHandle explosion = aContext.mWorld.addEntity();
+    EntHandle explosion = aContext.mWorld.addEntity("explosion");
     {
         Phase createExplosion;
         Entity explosionEnt = *explosion.get(createExplosion);
@@ -695,7 +700,7 @@ EntHandle createPortalImage(GameContext & aContext,
                             component::PlayerRoundData & aPlayerData,
                             const component::Portal & aPortal)
 {
-    EntHandle newPortalImage = aContext.mWorld.addEntity();
+    EntHandle newPortalImage = aContext.mWorld.addEntity("portal image");
     {
         Phase addPortalImage;
         component::Geometry modelGeo =

@@ -75,7 +75,6 @@ void PauseScene::onExit(Transition aTransition)
 
     mOwnedEntities.clear();
     mSystems.get(destroy)->erase();
-    mSystems = mGameContext.mWorld.addEntity();
 }
 
 void PauseScene::update(const snac::Time & aTime, RawInput & aInput)

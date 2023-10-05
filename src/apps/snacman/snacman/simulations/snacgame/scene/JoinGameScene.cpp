@@ -38,7 +38,7 @@ JoinGameScene::JoinGameScene(GameContext & aGameContext,
                              ent::Wrap<component::MappingContext> & aMappingContext) :
     Scene(gJoinGameSceneName, aGameContext, aMappingContext),
     mSlots{aGameContext.mWorld},
-    mJoinGameRoot{mGameContext.mWorld.addEntity()}
+    mJoinGameRoot{mGameContext.mWorld.addEntity("join game root")}
 {
     Phase init;
     mSystems.get(init)
@@ -159,6 +159,7 @@ void JoinGameScene::onExit(Transition aTransition) {
     {
         snac::eraseAllInQuery(mSlots);
     }
+    mSystems.get(onExitPhase)->erase();
 }
 
 } // namespace scene
