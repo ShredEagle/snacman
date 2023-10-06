@@ -204,7 +204,7 @@ struct Object
 struct Pose
 {
     math::Vec<3, float> mPosition;
-    float mUniformScale;
+    float mUniformScale{1.f};
 
     Pose transform(Pose aNested) const
     {

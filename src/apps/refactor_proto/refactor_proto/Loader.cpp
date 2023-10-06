@@ -5,6 +5,8 @@
 #include "Logging.h"
 
 #include <arte/Image.h>
+// TODO Ad 2023/10/06: Move the Json <-> Math type converters to a better place
+#include <arte/detail/GltfJson.h>
 
 #include <renderer/BufferLoad.h>
 #include <renderer/ShaderSource.h>
@@ -597,7 +599,22 @@ Scene Loader::loadScene(const filesystem::path & aSceneFile,
         SELOG(info)("Loaded model '{}' with bouding box {}.",
                      modelFile.stem().string(), fmt::streamed(model.mAabb));
 
-        scene.addToRoot(std::move(model));
+        Pose pose;
+        if(entry.contains("pose"))
+        {
+            pose.mPosition = entry.at("pose").value<math::Vec<3, float>>("position", {});
+            pose.mUniformScale = entry.at("pose").value("uniform_scale", 1.f);
+
+            
+        }
+
+        Node modelPoser{
+            .mInstance = Instance{
+                .mPose = pose,
+            },
+            .mChildren = {std::move(model)},
+        };
+        scene.addToRoot(std::move(modelPoser));
     }
 
     return scene;

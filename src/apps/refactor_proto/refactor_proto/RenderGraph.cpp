@@ -740,20 +740,14 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     // better handle camera placement / projections scene wide
     // Setup instance and camera poses
     {
-        // TODO automatically handle scaling via model bounding box.
+        // TODO For a "Model viewer mode", automatically handle scaling via model bounding box.
         // Note that visually this has the same effect as moving the radial camera away
-        // Actually, an automatic scaling could be detected for an "object viewer", but it is much harder for an environment
-        // From the values of teapot and sponza, they seem to be in centimeters
-        model.mInstance.mPose.mUniformScale = 0.01f;
-        model.mAabb *= model.mInstance.mPose.mUniformScale;
-
-        // Center the model on world origin
-        model.mInstance.mPose.mPosition = -model.mAabb.center().as<math::Vec>();
+        // (it is much harder when loading and navigating inside an environment)
 
         // move the orbital camera away, depending on the model size
-        mCameraControl.mOrbital.mSpherical.radius() = 
-            std::max(mCameraControl.mOrbital.mSpherical.radius(),
-                    gRadialDistancingFactor * (*model.mAabb.mDimension.getMaxMagnitudeElement()));
+        //mCameraControl.mOrbital.mSpherical.radius() = 
+        //    std::max(mCameraControl.mOrbital.mSpherical.radius(),
+        //             gRadialDistancingFactor * (*model.mAabb.mDimension.getMaxMagnitudeElement()));
 
 
         // TODO #camera do this only the correct setup, on each projection change
