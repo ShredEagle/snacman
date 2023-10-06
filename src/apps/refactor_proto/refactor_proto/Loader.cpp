@@ -413,6 +413,10 @@ namespace {
 
             aDestinationTexture = std::move(textureArray);
         }
+        else
+        {
+            aDestinationTexture = graphics::Texture{GL_TEXTURE_2D_ARRAY, graphics::Texture::NullTag{}};
+        }
     }
 
 
@@ -450,6 +454,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
     // I.e. in a scene, each entry gets its own material UBO and its own Texture array.
     // TODO #azdo #perf we could load textures and materials in a single buffer for a whole scene to further consolidate
     // TODO #assetprocessor If materials were loaded first, it loadMaterials could directly create the UBO and Texture
+    //    * no need to add a texture if the model does not use them.
     {
         aStorage.mUbos.emplace_back();
         aStorage.mTextures.emplace_back(GL_TEXTURE_2D_ARRAY); // Will be overwritten anyway

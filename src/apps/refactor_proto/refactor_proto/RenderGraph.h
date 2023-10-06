@@ -46,7 +46,7 @@ struct DrawCall
 
     const IntrospectProgram * mProgram;
     const graphics::VertexArrayObject * mVao;
-    // TODO I am not sure having the call context here is a good idea, it feels a bit high level
+    // TODO I am not sure having the material context here is a good idea, it feels a bit high level
     Handle<MaterialContext> mCallContext;
 
     GLsizei mPartCount;

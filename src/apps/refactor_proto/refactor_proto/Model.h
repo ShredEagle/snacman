@@ -248,7 +248,7 @@ struct Storage
     std::list<Object> mObjects;
     std::list<Effect> mEffects;
     std::list<ConfiguredProgram> mPrograms;
-    std::vector<graphics::Texture> mTextures;
+    std::list<graphics::Texture> mTextures;
     std::list<graphics::UniformBufferObject> mUbos;
     std::list<VertexStream> mVertexStreams;
     std::list<ProgramConfig> mProgramConfigs;

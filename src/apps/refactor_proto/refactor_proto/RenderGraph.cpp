@@ -214,6 +214,9 @@ namespace {
             const graphics::VertexArrayObject & vao = *aCall.mVao;
             PROFILER_POP_SECTION;
 
+            // TODO Ad 2023/10/05: #perf #azdo 
+            // Only change what is necessary, instead of rebiding everything each time.
+            // Since we sorted our draw calls, it is very likely that program remain the same, and VAO changes.
             {
                 PROFILER_PUSH_SECTION("bind_VAO", CpuTime);
                 graphics::ScopedBind vaoScope{vao};
@@ -294,79 +297,256 @@ namespace {
     }
 
 
-    PassCache preparePass(const PartList & aPartList,
+    /// @brief Find the program satisfying all annotations.
+    /// @return The first program in aEffect for which all annotations are matching (i.e. present and same value),
+    /// or a null handle otherwise.
+    template <class T_iterator>
+    Handle<ConfiguredProgram> getProgram(const Effect & aEffect,
+                                         T_iterator aAnnotationsBegin, T_iterator aAnnotationsEnd)
+    {
+        for (const Technique & technique : aEffect.mTechniques)
+        {
+            if(std::all_of(aAnnotationsBegin, aAnnotationsEnd,
+                    [&technique](const Technique::Annotation & aRequiredAnnotation)
+                    {
+                        const auto & availableAnnotations = technique.mAnnotations;
+                        if(auto found = availableAnnotations.find(aRequiredAnnotation.mCategory);
+                            found != availableAnnotations.end())
+                        {
+                            return (found->second == aRequiredAnnotation.mValue);
+                        }
+                        return false;
+                    }))
+            {
+                return technique.mConfiguredProgram;
+            }
+        }
+
+        return nullptr;
+    }
+
+
+    /// @brief Specializes getProgram, returning first program matching provided pass name.
+    Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName)
+    {
+        const std::array<Technique::Annotation, 1> annotations{
+            {"pass", aPassName},
+        };
+        return getProgram(aEffect, annotations.begin(), annotations.end());
+    }
+    
+
+    /// @brief Returns the VAO matching the given program and part.
+    /// Under the hood, the VAO is cached.
+    Handle<graphics::VertexArrayObject> getVao(const ConfiguredProgram & aProgram,
+                                               const Part & aPart,
+                                               Storage & aStorage)
+    {
+        // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
+        return
+            [&, &entries = aProgram.mConfig->mEntries]() 
+            -> graphics::VertexArrayObject *
+            {
+                if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
+                                                [&aPart](const auto & aEntry)
+                                                {
+                                                    return aEntry.mVertexStream == aPart.mVertexStream;
+                                                });
+                    foundConfig != entries.end())
+                {
+                    return foundConfig->mVao;
+                }
+                else
+                {
+                    aStorage.mVaos.push_back(prepareVAO(aProgram.mProgram, *aPart.mVertexStream));
+                    entries.push_back(
+                        ProgramConfig::Entry{
+                            .mVertexStream = aPart.mVertexStream,
+                            .mVao = &aStorage.mVaos.back(),
+                        });
+                    return entries.back().mVao;
+                }
+            }();
+    }
+
+
+    // TODO Ad 2023/10/05: for OpenGL resource, maybe we should directly use the GL name?
+    // or do we want to reimplement Handle<> in term of index in storage containers?
+    /// @brief Hackish class, associating a resource to an integer value.
+    ///
+    /// The value is suitable to compose a DrawEntry::Key via bitwise operations.
+    template <class T_resource, unsigned int N_valueBits>
+    struct ResourceIdMap
+    {
+        static_assert(N_valueBits <= 16);
+        static constexpr std::uint16_t gMaxValue = (std::uint16_t)((1 << N_valueBits) - 1);
+
+        ResourceIdMap()
+        {
+            // By adding the nullptr as the zero value, this helps debugging
+            get(nullptr);
+            assert(get(nullptr)== 0);
+        }
+
+        /// @brief Get the value associated to provided resource.
+        /// A given map instance will always return the same value for the same resource.
+        std::uint16_t get(Handle<T_resource> aResource)
+        {
+            assert(mResourceToId.size() < gMaxValue);
+            auto [iterator, didInsert] = mResourceToId.try_emplace(aResource,
+                                                                   (std::uint16_t)mResourceToId.size());
+            return iterator->second;
+        }
+
+        /// @brief Return the resource from it value.
+        Handle<T_resource> reverseLookup(std::uint16_t aValue)
+        {
+            if(auto found = std::find_if(mResourceToId.begin(), mResourceToId.end(),
+                                         [aValue](const auto & aPair)
+                                         {
+                                             return aPair.second == aValue;
+                                         });
+               found != mResourceToId.end())
+            {
+                return found->first;
+            }
+            throw std::logic_error{"The provided value is not present in this ResourceIdMap."};
+        }
+
+        std::unordered_map<Handle<T_resource>, std::uint16_t> mResourceToId;
+    };
+
+
+    /// @brief Associate an integer key to a part.
+    /// Used to sort an array with one entry for each part, by manually composing a key by sort dimensions.
+    /// @see https://realtimecollisiondetection.net/blog/?p=86
+    struct DrawEntry
+    {
+        using Key = std::uint64_t;
+        static constexpr Key gInvalidKey = std::numeric_limits<Key>::max();
+
+        /// @brief Order purely by key.
+        /// @param aRhs 
+        /// @return 
+        bool operator<(const DrawEntry & aRhs) const
+        {
+            return mKey < aRhs.mKey;
+        }
+
+        Key mKey = 0;
+        std::size_t mPartListIdx;
+    };
+
+
+    constexpr std::uint64_t makeMask(unsigned int aBitCount)
+    {
+        assert(aBitCount <= 64);
+        return (1 << aBitCount) - 1;
+    }
+
+
+    PassCache preparePass(StringKey aPass,
+                          const PartList & aPartList,
                           Storage & aStorage)
     {
         PROFILER_SCOPE_SECTION("prepare_pass", CpuTime);
 
-        PassCache result;
-        // TODO Ad 2023/09/26: #multipass Handle several drawcalls, by sorting
-        DrawCall singleCallAtm;
+        constexpr unsigned int gProgramIdBits = 16;
+        constexpr std::uint64_t gProgramIdMask = makeMask(gProgramIdBits);
+        using ProgramId = std::uint16_t;
+        assert(aStorage.mPrograms.size() < (1 << gProgramIdBits));
 
-        if(!aPartList.mParts.empty())
-        {
-            const Part & part = *aPartList.mParts.front();
-            const VertexStream & vertexStream = *part.mVertexStream;
-            singleCallAtm.mPrimitiveMode = part.mPrimitiveMode;
-            singleCallAtm.mIndicesType = vertexStream.mIndicesType;
+        constexpr unsigned int gPrimitiveModes = 12; // I counted 12 primitive modes
+        unsigned int gPrimitiveModeIdBits = (unsigned int)std::ceil(std::log2(gPrimitiveModes));
 
-            // TODO Implement program selection, this is a hardcoded quick test
-            // (Ideally, a shader system with some form of render list)
-            const Material & material = *aPartList.mMaterials.front();
-            assert(material.mEffect->mTechniques.size() == 1);
-            const ConfiguredProgram & configuredProgram = 
-                *material.mEffect->mTechniques.at(0).mConfiguredProgram;
-            const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
-            singleCallAtm.mProgram = &selectedProgram;
+        constexpr unsigned int gVaoBits = 10;
+        constexpr std::uint64_t gVaoIdMask = makeMask(gVaoBits);
+        assert(aStorage.mVaos.size() < (1 << gVaoBits));
+        using VaoId = std::uint16_t;
 
-            singleCallAtm.mCallContext = part.mMaterial.mContext;
+        constexpr unsigned int gMaterialContextBits = 10;
+        constexpr std::uint64_t gMaterialContextIdMask = makeMask(gMaterialContextBits);
+        assert(aStorage.mMaterialContexts.size() < (1 << gMaterialContextBits));
+        using MaterialContextId = std::uint16_t;
 
-            // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
-            auto vao =
-                [&, &entries = configuredProgram.mConfig->mEntries]() 
-                -> const graphics::VertexArrayObject *
-                {
-                    if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
-                                                    [&vertexStream, &part](const auto & aEntry)
-                                                    {
-                                                        return aEntry.mVertexStream == part.mVertexStream;
-                                                    });
-                        foundConfig != entries.end())
-                    {
-                        return foundConfig->mVao;
-                    }
-                    else
-                    {
-                        aStorage.mVaos.push_back(prepareVAO(selectedProgram, vertexStream));
-                        entries.push_back(
-                            ProgramConfig::Entry{
-                                .mVertexStream = part.mVertexStream,
-                                .mVao = &aStorage.mVaos.back(),
-                            });
-                        return entries.back().mVao;
-                    }
-                }();
-            singleCallAtm.mVao = vao;
+        ResourceIdMap<ConfiguredProgram, gProgramIdBits> programToId;
+        ResourceIdMap<graphics::VertexArrayObject, gVaoBits> vaoToId;
+        ResourceIdMap<MaterialContext, gMaterialContextBits> materialContextToId;
 
-            // TODO Ad 2023/09/26: #multipass This should be changed.
-            // Currently we expect all parts to be drawn by the same call.
-            singleCallAtm.mPartCount = (GLsizei)aPartList.mParts.size();
-        }
+        //
+        // For each part, associated it to its sort key and store them in an array
+        // (this will already prune parts for which there is no program for aPass)
+        //
+        std::vector<DrawEntry> entries;
+        entries.reserve(aPartList.mParts.size());
 
         for (std::size_t partIdx = 0; partIdx != aPartList.mParts.size(); ++partIdx)
         {
             const Part & part = *aPartList.mParts[partIdx];
-            const VertexStream & vertexStream = *part.mVertexStream;
-            // TODO #multipass
-            assert(&vertexStream == aPartList.mParts.front()->mVertexStream);
             const Material & material = *aPartList.mMaterials[partIdx];
 
-            // TODO #multipass handle segregation by those values, instead of requiring the same everywhere
-            assert(part.mPrimitiveMode == singleCallAtm.mPrimitiveMode);
-            assert(vertexStream.mIndicesType == singleCallAtm.mIndicesType);
-            // Same effect implies same program would be selected 
-            assert(part.mMaterial.mEffect == aPartList.mMaterials.front()->mEffect);
-            assert(part.mMaterial.mContext == singleCallAtm.mCallContext);
+            // TODO Ad 2023/10/05: Also add those as sorting dimensions (to the LSB)
+            assert(part.mPrimitiveMode == GL_TRIANGLES);
+            assert(part.mVertexStream->mIndicesType == GL_UNSIGNED_INT);
+            
+            if(Handle<ConfiguredProgram> configuredProgram = getProgramForPass(*material.mEffect, aPass);
+               configuredProgram)
+            {
+                Handle<graphics::VertexArrayObject> vao = getVao(*configuredProgram, part, aStorage);
+
+                ProgramId programId = programToId.get(configuredProgram);
+                VaoId vaoId = vaoToId.get(vao);
+                MaterialContextId materialContextId = materialContextToId.get(material.mContext);
+
+                std::uint64_t key = vaoId ;
+                key |= materialContextId << gVaoBits;
+                key |= programId << (gVaoBits + gMaterialContextBits);
+
+                entries.push_back(DrawEntry{.mKey = key, .mPartListIdx = partIdx});
+            }
+        }
+
+        //
+        // Sort the entries
+        //
+        {
+            PROFILER_SCOPE_SECTION("sort_draw_entries", CpuTime);
+            std::sort(entries.begin(), entries.end());
+        }
+
+        //
+        // Traverse the sorted array to generate the actuall draw commands and draw calls
+        //
+        PassCache result;
+        DrawEntry::Key drawKey = DrawEntry::gInvalidKey;
+        for(const DrawEntry & entry : entries)
+        {
+            const Part & part = *aPartList.mParts[entry.mPartListIdx];
+            const VertexStream & vertexStream = *part.mVertexStream;
+
+            // If true: this is the start of a new DrawCall
+            if(entry.mKey != drawKey)
+            {
+                // Record the new drawkey
+                drawKey = entry.mKey;
+
+                // Push the new DrawCall
+                result.mCalls.push_back(
+                    DrawCall{
+                        .mPrimitiveMode = part.mPrimitiveMode,
+                        .mIndicesType = vertexStream.mIndicesType,
+                        .mProgram = 
+                            &programToId.reverseLookup(gProgramIdMask & (drawKey >> (gVaoBits + gMaterialContextBits)))
+                                ->mProgram,
+                        .mVao = vaoToId.reverseLookup(gVaoIdMask & drawKey),
+                        .mCallContext = materialContextToId.reverseLookup(gMaterialContextIdMask & (drawKey >> gVaoBits)),
+                        .mPartCount = 0,
+                    }
+                );
+            }
+            
+            // Increment the part count of current DrawCall
+            ++result.mCalls.back().mPartCount;
 
             // TODO handle the case where there is an offset
             // This is more complicated with indirect draw commands, because they do not
@@ -382,17 +562,18 @@ namespace {
                                             / graphics::getByteSize(vertexStream.mIndicesType))
                                     + part.mIndexFirst,
                     .mBaseVertex = part.mVertexFirst,
-                    .mBaseInstance = (GLuint)partIdx,
+                    .mBaseInstance = (GLuint)result.mDrawInstances.size(), // pushed below
                 }
             );
 
+            const Material & material = *aPartList.mMaterials[entry.mPartListIdx];
+
             result.mDrawInstances.push_back(DrawInstance{
-                .mInstanceTransformIdx = aPartList.mTransformIdx[partIdx],
+                .mInstanceTransformIdx = aPartList.mTransformIdx[entry.mPartListIdx],
                 .mMaterialIdx = (GLsizei)material.mPhongMaterialIdx,
             });
         }
 
-        result.mCalls.push_back(std::move(singleCallAtm));
         return result;
     }
 
@@ -637,7 +818,7 @@ void RenderGraph::render()
     PartList partList = mScene.populatePartList();
 
     // TODO should be done per pass
-    PassCache passCache = preparePass(partList, mStorage);
+    PassCache passCache = preparePass("forward", partList, mStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(partList, passCache);
