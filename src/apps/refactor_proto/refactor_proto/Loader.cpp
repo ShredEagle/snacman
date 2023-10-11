@@ -121,88 +121,67 @@ namespace {
         };
     };
 
+    // TODO Ad 2023/10/11: #loader Get rid of those hardcoded types when the binary streams are dynamic.
     constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
     constexpr auto gNormalSize = gPositionSize;
     constexpr auto gUvSize = 2 * sizeof(float);
     constexpr auto gColorSize = 4 * sizeof(float);
     constexpr auto gIndexSize = sizeof(unsigned int);
 
+    struct AttributeDescription
+    {
+        Semantic mSemantic;
+        // To replace wih graphics::ClientAttribute if we support interleaved buffers (i.e. with offset)
+        graphics::AttributeDimension mDimension;
+        GLenum mComponentType;   // data individual components' type.
+    };
+
+    // Provide a distinct buffer for each attribute stream at the moment (i.e. no interleaving).
     VertexStream * prepareConsolidatedStream(unsigned int aVerticesCount,
                                              unsigned int aIndicesCount,
+                                             std::span<const AttributeDescription> aBufferedStreams,
                                              Storage & aStorage,
                                              const GenericStream & aStream)
     {
-        BufferView iboView = createBuffer(gIndexSize, aIndicesCount, aStorage);
+        // TODO Ad 2023/10/11: Should we support smaller index types.
+        using Index_t = GLuint;
+        BufferView iboView = createBuffer(sizeof(Index_t), aIndicesCount, aStorage);
 
         // The consolidated vertex stream
         aStorage.mVertexStreams.push_back({
             .mVertexBufferViews{aStream.mVertexBufferViews},
             .mSemanticToAttribute{aStream.mSemanticToAttribute},
             .mIndexBufferView = iboView,
-            .mIndicesType = GL_UNSIGNED_INT,
+            .mIndicesType = graphics::MappedGL_v<Index_t>,
         });
 
         VertexStream & vertexStream = aStorage.mVertexStreams.back();
 
-        BufferView positionView = createBuffer(gPositionSize, aVerticesCount, aStorage);
-        BufferView normalView = createBuffer(gNormalSize, aVerticesCount, aStorage);
-        BufferView colorView = createBuffer(gColorSize, aVerticesCount, aStorage);
-        BufferView uvView = createBuffer(gUvSize, aVerticesCount, aStorage);
+        for(const auto & attribute : aBufferedStreams)
+        {
+            const GLsizei attributeSize = 
+                attribute.mDimension.countComponents() * graphics::getByteSize(attribute.mComponentType);
+            BufferView attributeView = createBuffer(attributeSize, aVerticesCount, aStorage);
 
-        vertexStream.mVertexBufferViews.insert(
-            vertexStream.mVertexBufferViews.end(), {positionView, normalView, colorView, uvView});
-
-        vertexStream.mSemanticToAttribute.insert({
-            {
-                semantic::gPosition,
+            vertexStream.mSemanticToAttribute.emplace(
+                attribute.mSemantic,
                 AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 4, // view is added above
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size(), // view is added next
                     .mClientDataFormat{
-                        .mDimension = 3,
-                        .mOffset = 0,
-                        .mComponentType = GL_FLOAT
-                    },
-                },
-            },
-            {
-                semantic::gNormal,
-                AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 3, // view is added above
-                    .mClientDataFormat{
-                        .mDimension = 3,
+                        .mDimension = attribute.mDimension,
                         .mOffset = 0,
                         .mComponentType = GL_FLOAT
                     },
                 }
-            },
-            {
-                semantic::gColor,
-                AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 2, // view is added above
-                    .mClientDataFormat{
-                        .mDimension = 4,
-                        .mOffset = 0,
-                        .mComponentType = GL_FLOAT
-                    },
-                }
-            },
-            {
-                semantic::gUv,
-                AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size() - 1, // view is added above
-                    .mClientDataFormat{
-                        .mDimension = 2,
-                        .mOffset = 0,
-                        .mComponentType = GL_FLOAT,
-                    },
-                },
-            }
-        });
+            );
+
+            vertexStream.mVertexBufferViews.push_back(attributeView);
+        }
 
         return &vertexStream;
     }
 
-    // TODO Do we want attribute interleaving, or are we content with one buffer / attribute ?
+    // TODO Do we want attribute interleaving, or are we content with one distinct buffer per attribute ?
     // (the attribute interleaving should then be done on the exporter side).
     Part loadMesh(BinaryInArchive & aIn, 
                   const VertexStream & aVertexStream,
@@ -231,7 +210,7 @@ namespace {
                 cpuBuffer.get());
         };
 
-        // TODO Those hardcoded indices are smelly.
+        // TODO #loader Those hardcoded indices are smelly, hard-coupled to the attribute streams structure in the binary.
         graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
         graphics::BufferAny & normalBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
         graphics::BufferAny & colorBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
@@ -447,15 +426,45 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
     in.read(verticesCount);
     in.read(indicesCount);
 
+
+    // Binary attributes descriptions
+    // TODO Ad 2023/10/11: #loader Support dynamic set of attributes in the binary
+    static const std::array<AttributeDescription, 4> gAttributeStreamsInBinary {
+        AttributeDescription{
+            .mSemantic = semantic::gPosition,
+            .mDimension = 3,
+            .mComponentType = GL_FLOAT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gNormal,
+            .mDimension = 3,
+            .mComponentType = GL_FLOAT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gColor,
+            .mDimension = 4,
+            .mComponentType = GL_FLOAT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gUv,
+            .mDimension = 2,
+            .mComponentType = GL_FLOAT,
+        },
+    };
+
     // Prepare the single buffer storage for the whole binary
     // TODO actually read the correct buffer size (i.e. write it first)
     //constexpr GLsizei gBufferSize = 512 * 1024 * 1024;
-    VertexStream * consolidatedStream = prepareConsolidatedStream(verticesCount, indicesCount, aStorage, aStream);
+    VertexStream * consolidatedStream = prepareConsolidatedStream(verticesCount,
+                                                                  indicesCount,
+                                                                  gAttributeStreamsInBinary,
+                                                                  aStorage,
+                                                                  aStream);
 
     // Prepare a MaterialContext for the whole binary, 
-    // I.e. in a scene, each entry gets its own material UBO and its own Texture array.
+    // I.e. in a scene, each entry (each binary) gets its own material UBO and its own Texture array.
     // TODO #azdo #perf we could load textures and materials in a single buffer for a whole scene to further consolidate
-    // TODO #assetprocessor If materials were loaded first, it loadMaterials could directly create the UBO and Texture
+    // TODO #assetprocessor If materials were loaded first, then loadMaterials could directly create the UBO and Texture
     //    * no need to add a texture if the model does not use them.
     {
         aStorage.mUbos.emplace_back();
