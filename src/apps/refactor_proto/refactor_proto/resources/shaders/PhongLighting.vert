@@ -19,7 +19,7 @@ layout(std140, binding = 0) uniform ViewBlock
     mat4 viewingProjection;
 };
 
-// TODO Use a shader storage block, due to the unbound nature of the number of instances
+// TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
 layout(std140, binding = 1) uniform LocalToWorldBlock
 {
     mat4 localToWorld[512];

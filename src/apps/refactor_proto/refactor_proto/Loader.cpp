@@ -1,12 +1,15 @@
 #include "Loader.h"
 
 #include "BinaryArchive.h" 
+#include "Cube.h"
 #include "Json.h"
 #include "Logging.h"
 
 #include <arte/Image.h>
 // TODO Ad 2023/10/06: Move the Json <-> Math type converters to a better place
 #include <arte/detail/GltfJson.h>
+
+#include <math/Transformations.h>
 
 #include <renderer/BufferLoad.h>
 #include <renderer/ShaderSource.h>
@@ -121,6 +124,25 @@ namespace {
         };
     };
 
+    /// @brief Load data into an existing buffer, with offset aElementFirst.
+    template <class T_element>
+    void loadBuffer(const graphics::BufferAny & aBuffer, 
+                    GLuint aElementFirst,
+                    std::span<T_element> aCpuBuffer)
+    {
+        const std::size_t elementSize = sizeof(T_element);
+
+        // Note: Using a random target, the underlying buffer objects are all identical.
+        constexpr auto target = graphics::BufferType::Array;
+        graphics::ScopedBind boundBuffer{aBuffer, target}; // glBind()
+
+        glBufferSubData(
+            static_cast<GLenum>(target),
+            aElementFirst * elementSize, // offset
+            aCpuBuffer.size_bytes(), // data length
+            aCpuBuffer.data());
+    };
+
     // TODO Ad 2023/10/11: #loader Get rid of those hardcoded types when the binary streams are dynamic.
     constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
     constexpr auto gNormalSize = gPositionSize;
@@ -137,11 +159,11 @@ namespace {
     };
 
     // Provide a distinct buffer for each attribute stream at the moment (i.e. no interleaving).
-    VertexStream * prepareConsolidatedStream(unsigned int aVerticesCount,
-                                             unsigned int aIndicesCount,
-                                             std::span<const AttributeDescription> aBufferedStreams,
-                                             Storage & aStorage,
-                                             const GenericStream & aStream)
+    Handle<VertexStream> prepareConsolidatedStream(unsigned int aVerticesCount,
+                                                   unsigned int aIndicesCount,
+                                                   std::span<const AttributeDescription> aBufferedStreams,
+                                                   Storage & aStorage,
+                                                   const GenericStream & aStream)
     {
         // TODO Ad 2023/10/11: Should we support smaller index types.
         using Index_t = GLuint;
@@ -170,7 +192,7 @@ namespace {
                     .mClientDataFormat{
                         .mDimension = attribute.mDimension,
                         .mOffset = 0,
-                        .mComponentType = GL_FLOAT
+                        .mComponentType = attribute.mComponentType,
                     },
                 }
             );
@@ -180,6 +202,7 @@ namespace {
 
         return &vertexStream;
     }
+
 
     // TODO Do we want attribute interleaving, or are we content with one distinct buffer per attribute ?
     // (the attribute interleaving should then be done on the exporter side).
@@ -191,24 +214,16 @@ namespace {
                   Material aPartsMaterial)
     {
         // Load data into an existing buffer, with offset aElementFirst.
-        auto loadBuffer = [&aIn](graphics::BufferAny & aBuffer, 
-                                 GLuint aElementFirst,
-                                 GLsizei aElementSize,
-                                 std::size_t aElementCount)
-        {
-            std::size_t bufferSize = aElementCount * aElementSize;
-            std::unique_ptr<char[]> cpuBuffer = aIn.readBytes(bufferSize);
-
-            // Note: Using a random target, the underlying buffer objects are all identical.
-            constexpr auto target = graphics::BufferType::Array;
-            graphics::ScopedBind boundBuffer{aBuffer, target}; // glBind()
-
-            glBufferSubData(
-                static_cast<GLenum>(target),
-                aElementFirst * aElementSize, // offset
-                bufferSize, // data length
-                cpuBuffer.get());
-        };
+        auto loadBufferFromArchive = 
+            [&aIn](graphics::BufferAny & aBuffer, 
+                   GLuint aElementFirst,
+                   GLsizei aElementSize,
+                   std::size_t aElementCount)
+            {
+                std::size_t bufferSize = aElementCount * aElementSize;
+                std::unique_ptr<char[]> cpuBuffer = aIn.readBytes(bufferSize);
+                loadBuffer(aBuffer, aElementFirst * aElementSize, std::span{cpuBuffer.get(), bufferSize});
+            };
 
         // TODO #loader Those hardcoded indices are smelly, hard-coupled to the attribute streams structure in the binary.
         graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
@@ -224,16 +239,16 @@ namespace {
         aIn.read(verticesCount);
         
         // load positions
-        loadBuffer(positionBuffer, aVertexFirst, gPositionSize, verticesCount);
+        loadBufferFromArchive(positionBuffer, aVertexFirst, gPositionSize, verticesCount);
         // load normals
-        loadBuffer(normalBuffer, aVertexFirst, gNormalSize, verticesCount);
+        loadBufferFromArchive(normalBuffer, aVertexFirst, gNormalSize, verticesCount);
 
         unsigned int colorChannelsCount;
         aIn.read(colorChannelsCount);
         assert(colorChannelsCount <= 1);
         for(unsigned int colorIdx = 0; colorIdx != colorChannelsCount; ++colorIdx)
         {
-            loadBuffer(colorBuffer, aVertexFirst, gColorSize, verticesCount);
+            loadBufferFromArchive(colorBuffer, aVertexFirst, gColorSize, verticesCount);
         }
 
         unsigned int uvChannelsCount;
@@ -245,13 +260,13 @@ namespace {
 
         for(unsigned int uvIdx = 0; uvIdx != uvChannelsCount; ++uvIdx)
         {
-            loadBuffer(uvBuffer, aVertexFirst, gUvSize, verticesCount);
+            loadBufferFromArchive(uvBuffer, aVertexFirst, gUvSize, verticesCount);
         }
 
         unsigned int primitiveCount;
         aIn.read(primitiveCount);
         const unsigned int indicesCount = 3 * primitiveCount;
-        loadBuffer(indexBuffer, aIndexFirst, gIndexSize, indicesCount);
+        loadBufferFromArchive(indexBuffer, aIndexFirst, gIndexSize, indicesCount);
 
         // Assign the part material index to the otherwise common material
         aPartsMaterial.mPhongMaterialIdx = materialIndex;
@@ -404,6 +419,163 @@ namespace {
 } // unnamed namespace
 
 
+std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage, 
+                                            Effect * aPartsEffect,
+                                            const GenericStream & aStream)
+{
+    // Hardcoded attributes descriptions
+    static const std::array<AttributeDescription, 3> gAttributeStreamsInBinary {
+        AttributeDescription{
+            .mSemantic = semantic::gPosition,
+            .mDimension = 3,
+            .mComponentType = GL_FLOAT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gNormal,
+            .mDimension = 3,
+            .mComponentType = GL_FLOAT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gColor,
+            .mDimension = 4,
+            .mComponentType = GL_FLOAT,
+        },
+    };
+
+    std::vector<math::Position<3, GLfloat>> trianglePositions;
+    std::vector<math::Vec<3, GLfloat>> triangleNormals;
+    std::vector<math::hdr::Rgba_f> triangleColors{
+        math::hdr::gRed<GLfloat>,
+        math::hdr::gGreen<GLfloat>,
+        math::hdr::gBlue<GLfloat>,
+    };
+    for(unsigned int vertex = 0; vertex != triangle::Maker::gVertexCount; ++vertex)
+    {
+        trianglePositions.push_back(triangle::Maker::getPosition(vertex));
+        triangleNormals.push_back(triangle::Maker::getNormal(vertex));
+    }
+    std::vector<GLuint> triangleIndices(triangle::Maker::gVertexCount);
+    std::iota(triangleIndices.begin(), triangleIndices.end(), 0);
+
+    auto cubePositions = getExpandedCubePositions();
+    auto cubeNormals = getExpandedCubeNormals();
+    std::vector<math::hdr::Rgba_f> cubeColors(cubePositions.size(), math::hdr::gWhite<GLfloat>);
+    assert(cubePositions.size() == cubeNormals.size());
+
+    std::vector<GLuint> cubeIndices;
+    cubeIndices.reserve(cubePositions.size());
+    for(GLuint idx = 0; idx != cubePositions.size(); ++idx)
+    {
+        cubeIndices.push_back(idx);
+    }
+
+    const unsigned int verticesCount = (unsigned int)(trianglePositions.size() + cubePositions.size());
+    const unsigned int indicesCount = (unsigned int)(triangleIndices.size() + cubeIndices.size());
+
+    // Prepare the common buffer storage for the whole binary (one buffer / attribute)
+    Handle<VertexStream> consolidatedStream = prepareConsolidatedStream(verticesCount,
+                                                                        indicesCount,
+                                                                        gAttributeStreamsInBinary,
+                                                                        aStorage,
+                                                                        aStream);
+    
+    // Load the buffers of the vertex stream
+    // This is the pendant of hardcoded vertex attributes description, and must be kept in sync
+    // (which is a code smell, we should do better)
+    GLuint cubeFirstVertex = (GLuint)trianglePositions.size();
+    {
+        // The first view (index = 0) is the Index Buffer.
+        const graphics::BufferAny & positionBuffer = *consolidatedStream->mVertexBufferViews.at(1).mGLBuffer;
+        const graphics::BufferAny & normalBuffer   = *consolidatedStream->mVertexBufferViews.at(2).mGLBuffer;
+        const graphics::BufferAny & colorBuffer    = *consolidatedStream->mVertexBufferViews.at(3).mGLBuffer;
+        loadBuffer(positionBuffer, 0, std::span{trianglePositions});
+        loadBuffer(positionBuffer, cubeFirstVertex, std::span{cubePositions});
+        loadBuffer(normalBuffer, 0, std::span{triangleNormals});
+        loadBuffer(normalBuffer, cubeFirstVertex, std::span{cubeNormals});
+        loadBuffer(colorBuffer, 0, std::span{triangleColors});
+        loadBuffer(colorBuffer, cubeFirstVertex, std::span{cubeColors});
+    }
+
+    {
+        const graphics::BufferAny & indexBuffer = *consolidatedStream->mIndexBufferView.mGLBuffer;
+        loadBuffer(indexBuffer, 0, std::span{triangleIndices});
+        loadBuffer(indexBuffer, cubeFirstVertex, std::span{cubeIndices});
+    }
+
+    //
+    // Push the objects
+    //
+
+    // Triangle
+    math::Vec<3, GLfloat> positionOffset = {0.f, 0.f, 1.5f};
+
+    math::Box<GLfloat> aabb{
+        .mPosition = {-1.f, -1.f, 0.f},
+        .mDimension = {2.f, 2.f, 0.f},
+    };
+    aStorage.mObjects.push_back(Object{
+        .mParts = {
+            Part{
+                .mMaterial = Material{
+                    .mEffect = aPartsEffect,
+                },
+                .mVertexStream = consolidatedStream,
+                .mPrimitiveMode = GL_TRIANGLES,
+                .mVertexFirst = 0,
+                .mVertexCount = (GLuint)trianglePositions.size(),
+                .mIndexFirst = 0,
+                .mIndicesCount = (GLuint)triangleIndices.size(),
+                .mAabb = aabb,
+            }
+        },
+        .mAabb = aabb,
+    });
+
+    Node triangleNode{
+        .mInstance = Instance{
+            .mObject = &aStorage.mObjects.back(),
+            .mPose = Pose{
+                .mPosition = -positionOffset,
+            },
+        },
+        .mAabb = aabb * math::trans3d::translate(-positionOffset),
+    };
+
+    // Cube
+    aabb.mDimension.depth() = 2;
+    aStorage.mObjects.push_back(Object{
+        .mParts = {
+            Part{
+                .mMaterial = Material{
+                    .mEffect = aPartsEffect,
+                },
+                .mVertexStream = consolidatedStream,
+                .mPrimitiveMode = GL_TRIANGLES,
+                .mVertexFirst = cubeFirstVertex,
+                .mVertexCount = (GLuint)cubePositions.size(),
+                .mIndexFirst = cubeFirstVertex,
+                .mIndicesCount = (GLuint)cubeIndices.size(),
+                .mAabb = aabb,
+            }
+        },
+        .mAabb = aabb,
+    });
+
+    Node cubeNode{
+        .mInstance = Instance{
+            .mObject = &aStorage.mObjects.back(),
+            .mPose = Pose{
+                .mPosition = positionOffset,
+            },
+        },
+        .mAabb = aabb * math::trans3d::translate(positionOffset),
+    };
+
+    // Return the nodes, one per shape
+    return {triangleNode, cubeNode};
+}
+
+
 // TODO should not take a default material, but have a way to get the actual effect to use 
 // (maybe directly from the binary file)
 Node loadBinary(const std::filesystem::path & aBinaryFile,
@@ -453,8 +625,6 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
     };
 
     // Prepare the single buffer storage for the whole binary
-    // TODO actually read the correct buffer size (i.e. write it first)
-    //constexpr GLsizei gBufferSize = 512 * 1024 * 1024;
     VertexStream * consolidatedStream = prepareConsolidatedStream(verticesCount,
                                                                   indicesCount,
                                                                   gAttributeStreamsInBinary,
@@ -628,39 +798,6 @@ Scene Loader::loadScene(const filesystem::path & aSceneFile,
 
     return scene;
 }
-
-
-//VertexStream makeFromPositions(Storage & aStorage, std::span<math::Position<3, GLfloat>> aPositions)
-//{
-//    auto [vbo, size] = makeMutableBuffer(aPositions, GL_STATIC_DRAW);
-//    aStorage.mBuffers.push_back(std::move(vbo));
-//
-//    BufferView vboView{
-//        .mGLBuffer = &aStorage.mBuffers.back(),
-//        .mStride = sizeof(decltype(aPositions)::value_type),
-//        .mOffset = 0,
-//        .mSize = size, // The view has access to the whole buffer
-//    };
-//
-//    return VertexStream{
-//        .mVertexBufferViews{ vboView, },
-//        .mSemanticToAttribute{
-//            {
-//                semantic::gPosition,
-//                AttributeAccessor{
-//                    .mBufferViewIndex = 0, // view is added above
-//                    .mClientDataFormat{
-//                        .mDimension = 3,
-//                        .mOffset = 0,
-//                        .mComponentType = GL_FLOAT
-//                    }
-//                }
-//            },
-//        },
-//        .mVertexCount = (GLsizei)std::size(aPositions),
-//        .mPrimitiveMode = GL_TRIANGLES,
-//    };
-//}
 
 
 GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)

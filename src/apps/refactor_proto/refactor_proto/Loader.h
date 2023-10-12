@@ -48,6 +48,12 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
                 const GenericStream & aStream/*to provide instance data, such as model transform*/);
 
 
+/// @brief Load a triangle and a cube models in the same buffer objects (they do not share vertices though).
+std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage, 
+                                          Effect * aPartsEffect,
+                                          const GenericStream & aStream);
+
+
 struct Loader
 {
     /// @brief Load an effect file (.sefx), store it in `aStorage` and return its handle.
@@ -68,8 +74,6 @@ struct Loader
 
     resource::ResourceFinder mFinder;
 };
-
-VertexStream makeFromPositions(Storage & aStorage, std::span<math::Position<3, GLfloat>> aPositions);
 
 GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount);
 

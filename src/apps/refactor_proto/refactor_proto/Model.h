@@ -128,11 +128,15 @@ struct Material
 {
     // TODO currently, hardcodes the parameters type to be for phong model
     // later on, it should allow for different types of parameters (that will have to match the different shader program expectations)
+    // TODO Ad 2023/10/12: Review how this index is passed: we should make that generic so materials can index into
+    // user defined buffers easily, not hardcoding Phong model. 
+    // (The material context is already generic, so complete the job)
     std::size_t mPhongMaterialIdx = (std::size_t)-1;
 
-    // Allow sorting on the Handle 
-    // (lookup for an existing MaterialContext should be done by consolidation at load, not each frame)
-    Handle<MaterialContext> mContext;
+    // Allow sorting on the Handle, if the MaterialContext are consolidated.
+    // (lookup for an existing MaterialContext should be done by consolidation when the material in instantiated,
+    // not each frame)
+    Handle<MaterialContext> mContext = gNullHandle;
 
     Effect * mEffect;
 };

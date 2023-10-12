@@ -127,12 +127,34 @@ namespace cube {
 
 } // namespace cube
 
-template <class T_vertex>
-constexpr std::vector<T_vertex> getExpandedCubeVertices();
+
+namespace triangle {
+
+    constexpr std::array<math::Position<3, float>, 3> gPositions{
+        math::Position<3, float>{ 1.f, -1.f, 0.f},
+        math::Position<3, float>{ 0.f,  1.f, 0.f},
+        math::Position<3, float>{-1.f, -1.f, 0.f},
+    };
+
+    struct Maker
+    {
+        static constexpr unsigned int gVertexCount = 3;
+
+        static math::Position<3, float> getPosition(unsigned int aIdx)
+        {
+            return gPositions[aIdx];
+        }
+
+        static math::Vec<3, float> getNormal(unsigned int aIdx)
+        {
+            return {0.f, 0.f, 1.f};
+        }
+    };
+
+} // namespace triangle
 
 
-template <>
-inline std::vector<math::Position<3, float>> getExpandedCubeVertices()
+inline std::vector<math::Position<3, float>> getExpandedCubePositions()
 {
     std::vector<math::Position<3, float>> result;
     result.reserve(36);
@@ -141,6 +163,29 @@ inline std::vector<math::Position<3, float>> getExpandedCubeVertices()
         result.push_back(cube::gVertices[cube::gIndices[i]]);
     }
     return result;
+}
+
+
+inline std::vector<math::Vec<3, float>> getExpandedCubeNormals()
+{
+    std::vector<math::Vec<3, float>> result;
+    result.reserve(36);
+    for (int i = 0; i < 36; i++) 
+    {
+        result.push_back(cube::gNormals[i / 6]);
+    }
+    return result;
+}
+
+
+template <class T_vertex>
+constexpr std::vector<T_vertex> getExpandedCubeVertices();
+
+
+template <>
+inline std::vector<math::Position<3, float>> getExpandedCubeVertices()
+{
+    return getExpandedCubePositions();
 }
 
 inline const std::array<math::Position<3, float>, 10> & getArrowVertices()

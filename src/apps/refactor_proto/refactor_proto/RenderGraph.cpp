@@ -34,9 +34,10 @@ namespace ad::renderer {
 const char * gVertexShader = R"#(
     #version 420
 
-    in vec3 v_Position_local;
+    in vec3 ve_Position_local;
+    in vec4 ve_Color;
 
-    in mat4 i_LocalToWorld;
+    in uint in_ModelTransformIdx;
 
     layout(std140, binding = 1) uniform ViewBlock
     {
@@ -45,14 +46,27 @@ const char * gVertexShader = R"#(
         mat4 viewingProjection;
     };
 
+    // TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
+    layout(std140, binding = 0) uniform LocalToWorldBlock
+    {
+        mat4 localToWorld[512];
+    };
+
+    out vec4 ex_Color;
+
     void main()
     {
-        gl_Position = viewingProjection * i_LocalToWorld * vec4(v_Position_local, 1.f);
+        ex_Color = ve_Color;
+        gl_Position = viewingProjection 
+            * localToWorld[in_ModelTransformIdx] 
+            * vec4(ve_Position_local, 1.f);
     }
 )#";
 
 const char * gFragmentShader = R"#(
     #version 420
+
+    in vec4 ex_Color;
 
     layout(std140, binding = 2) uniform FrameBlock
     {
@@ -63,7 +77,9 @@ const char * gFragmentShader = R"#(
 
     void main()
     {
-        color = vec4(1.0, 0.5, 0.25, 1.f) * vec4(mod(time, 1.0));
+        // TODO Ad 2023/10/12: #transparency This would be a nice transparency effect
+        //color = vec4(ex_Color.rgb, mod(time, 1.0));
+        color = vec4(ex_Color.rgb, 1.) * vec4(mod(time, 1.0));
     }
 )#";
 
@@ -113,47 +129,33 @@ namespace {
     }
 
 
-
-    //VertexStream makeTriangle(Storage & aStorage)
-    //{
-    //    std::array<math::Position<3, GLfloat>, 3> vertices{{
-    //        { 1.f, -1.f, 0.f},
-    //        { 0.f,  1.f, 0.f},
-    //        {-1.f, -1.f, 0.f},
-    //    }};
-    //    return makeFromPositions(aStorage, std::span{vertices});
-    //}
-
-    //VertexStream makeCube(Storage & aStorage)
-    //{
-    //    auto cubeVertices = getExpandedCubeVertices<math::Position<3, GLfloat>>();
-    //    return makeFromPositions(aStorage, std::span{cubeVertices});
-    //}
-
-    Material makeWhiteMaterial(Storage & aStorage)
+    Handle<Effect> makeWhiteEffect(Storage & aStorage)
     {
-        aStorage.mPrograms.push_back({
-            .mProgram = {
+        aStorage.mProgramConfigs.emplace_back();
+        aStorage.mPrograms.push_back(ConfiguredProgram{
+            .mProgram = IntrospectProgram{
                 graphics::makeLinkedProgram({
                     {GL_VERTEX_SHADER, gVertexShader},
                     {GL_FRAGMENT_SHADER, gFragmentShader},
                 }),
                 "white",
             },
+            .mConfig = &aStorage.mProgramConfigs.back(),
         });
 
         Effect effect{
             .mTechniques{makeVector(
                 Technique{
+                    .mAnnotations{
+                        {"pass", "forward"},
+                    },
                     .mConfiguredProgram{ &aStorage.mPrograms.back() }
                 }
             )},
         };
         aStorage.mEffects.push_back(std::move(effect));
 
-        return Material{
-            .mEffect = &aStorage.mEffects.back(),
-        };
+        return &aStorage.mEffects.back();
     }
 
 
@@ -225,23 +227,25 @@ namespace {
                 {
                     PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
                     // TODO #repos This should be consolidated
-                    RepositoryUbo callRepo{aCall.mCallContext->mUboRepo};
+                    RepositoryUbo uboRepo{aUboRepository};
+                    if(aCall.mCallContext)
                     {
-                        RepositoryUbo scopeRepo{aUboRepository};
-                        callRepo.merge(scopeRepo);
+                        RepositoryUbo callRepo{aCall.mCallContext->mUboRepo};
+                        uboRepo.merge(callRepo);
                     }
-                    setBufferBackedBlocks(selectedProgram, callRepo);
+                    setBufferBackedBlocks(selectedProgram, uboRepo);
                 }
 
                 {
                     PROFILER_SCOPE_SECTION("set_textures", CpuTime);
                     // TODO #repos This should be consolidated
-                    RepositoryTexture callRepo{aCall.mCallContext->mTextureRepo};
+                    RepositoryTexture textureRepo{aTextureRepository};
+                    if(aCall.mCallContext)
                     {
-                        RepositoryTexture scopeRepo{aTextureRepository};
-                        callRepo.merge(scopeRepo);
+                        RepositoryTexture callRepo{aCall.mCallContext->mTextureRepo};
+                        textureRepo.merge(callRepo);
                     }
-                    setTextures(selectedProgram, callRepo);
+                    setTextures(selectedProgram, textureRepo);
                 }
 
                 PROFILER_PUSH_SECTION("bind_program", CpuTime);
@@ -342,6 +346,9 @@ namespace {
                                                const Part & aPart,
                                                Storage & aStorage)
     {
+        // This is a common mistake, it would be nice to find a safer way
+        assert(aProgram.mConfig);
+
         // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
         return
             [&, &entries = aProgram.mConfig->mEntries]() 
@@ -515,7 +522,7 @@ namespace {
         }
 
         //
-        // Traverse the sorted array to generate the actuall draw commands and draw calls
+        // Traverse the sorted array to generate the actual draw commands and draw calls
         //
         PassCache result;
         DrawEntry::Key drawKey = DrawEntry::gInvalidKey;
@@ -690,6 +697,9 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
                          const std::filesystem::path & aSceneFile,
                          const imguiui::ImguiUi & aImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
+    // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
+    // At the moment, hardcode a maximum number
+    mInstanceStream{makeInstanceStream(mStorage, gMaxDrawInstances)},
     mLoader{makeResourceFinder()},
     mUbos{mStorage},
     mCameraControl{mGlfwAppInterface->getWindowSize(),
@@ -699,39 +709,6 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
 {
     registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close, &aImguiUi);
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
-
-    // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
-    // At the moment, hardcode a maximum number
-    mInstanceStream = makeInstanceStream(mStorage, gMaxDrawInstances);
-
-    //static Object triangle;
-    //triangle.mParts.push_back(Part{
-    //    .mVertexStream = makeTriangle(mStorage),
-    //    .mMaterial = makeWhiteMaterial(mStorage),
-    //});
-
-    //mScene.addToRoot(Instance{
-    //    .mObject = &triangle,
-    //    .mPose = {
-    //        .mPosition = {-0.5f, -0.2f, 0.f},
-    //        .mUniformScale = 0.3f,
-    //    }
-    //});
-
-    //// TODO cache materials
-    //static Object cube;
-    //cube.mParts.push_back(Part{
-    //    .mVertexStream = makeCube(mStorage),
-    //    .mMaterial = triangle.mParts[0].mMaterial,
-    //});
-
-    //mScene.addToRoot(Instance{
-    //    .mObject = &cube,
-    //    .mPose = {
-    //        .mPosition = {0.5f, -0.2f, 0.f},
-    //        .mUniformScale = 0.3f,
-    //    }
-    //});
 
     mScene = mLoader.loadScene(aSceneFile, "effects/Mesh.sefx", mInstanceStream, mStorage);
     /*const*/Node & model = mScene.mRoot.front();
@@ -768,6 +745,12 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
             .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
         });
     }
+
+    // Add basic shapes to the the scene
+    Handle<Effect> whiteEffect = makeWhiteEffect(mStorage);
+    auto [triangle, cube] = loadTriangleAndCube(mStorage, whiteEffect, mInstanceStream);
+    mScene.addToRoot(triangle);
+    mScene.addToRoot(cube);
 }
 
 
@@ -849,7 +832,7 @@ void RenderGraph::render()
     // Use the same indirect buffer for all drawings
     graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
 
-    // Make this texturing not work by binding accident
+    // Reset texture bindings (to make sure that texturing does not work by "accident")
     // this could be extended to reset everything in the context.
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
