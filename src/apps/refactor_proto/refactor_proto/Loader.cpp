@@ -22,42 +22,7 @@ namespace ad::renderer {
 
 namespace {
 
-    template <class T_data>
-    std::pair<graphics::BufferAny, GLsizeiptr>
-    makeMutableBuffer(std::size_t aInstanceCount, GLenum aHint)
-    {
-        graphics::BufferAny buffer; // glGenBuffers()
-        // Note: Using a random target, the underlying buffer objects are all identical.
-        constexpr auto target = graphics::BufferType::Array;
-        graphics::ScopedBind boundBuffer{buffer, target}; // glBind()
-        const GLsizeiptr size = sizeof(T_data) * aInstanceCount;
-        glBufferData(
-            static_cast<GLenum>(target),
-            size,
-            nullptr,
-            aHint);
-        return std::make_pair(std::move(buffer), size);
-    }
-
-
-    template <class T_data, std::size_t N_extent>
-    std::pair<graphics::BufferAny, GLsizeiptr>
-    makeMutableBuffer(std::span<T_data, N_extent> aInitialData, GLenum aHint)
-    {
-        graphics::BufferAny buffer; // glGenBuffers()
-        // Note: Using a random target, the underlying buffer objects are all identical.
-        constexpr auto target = graphics::BufferType::Array;
-        graphics::ScopedBind boundBuffer{buffer, target}; // glBind()
-        const GLsizeiptr size = aInitialData.size_bytes();
-        // TODO enable GL 4.5+, so we could use DSA here
-        glBufferData(
-            static_cast<GLenum>(target),
-            size,
-            aInitialData.data(),
-            aHint);
-        return std::make_pair(std::move(buffer), size);
-    }
-
+    // TODO move to math library
     template <std::floating_point T_value>
     bool isWithinTolerance(T_value aLhs, T_value aRhs, T_value aRelativeTolerance)
     {
@@ -66,6 +31,7 @@ namespace {
         return diff <= (maxMagnitude * aRelativeTolerance);
     }
 
+    // TODO move to a more generic library (graphics?)
     Pose decompose(const math::AffineMatrix<4, GLfloat> & aTransformation)
     {
         Pose result {
@@ -95,10 +61,13 @@ namespace {
     }
 
 
-
     /// @brief Create a GL buffer of specified size (without loading data into it).
     /// @return Buffer view to the buffer.
-    BufferView createBuffer(GLsizei aElementSize, GLsizei aElementCount, Storage & aStorage)
+    BufferView createBuffer(GLsizei aElementSize,
+                            GLsizeiptr aElementCount,
+                            GLuint aInstanceDivisor,
+                            GLenum aHint,
+                            Storage & aStorage)
     {
         graphics::BufferAny glBuffer; // glGenBuffers()
         // Note: Using a random target, the underlying buffer objects are all identical.
@@ -111,7 +80,7 @@ namespace {
             static_cast<GLenum>(target),
             bufferSize,
             nullptr,
-            GL_STATIC_DRAW);
+            aHint);
 
         aStorage.mBuffers.push_back(std::move(glBuffer));
         graphics::BufferAny * buffer = &aStorage.mBuffers.back();
@@ -119,6 +88,7 @@ namespace {
         return BufferView{
             .mGLBuffer = buffer,
             .mStride = aElementSize,
+            .mInstanceDivisor = aInstanceDivisor,
             .mOffset = 0,
             .mSize = bufferSize, // The view has access to the whole buffer ATM
         };
@@ -142,6 +112,7 @@ namespace {
             aCpuBuffer.size_bytes(), // data length
             aCpuBuffer.data());
     };
+
 
     // TODO Ad 2023/10/11: #loader Get rid of those hardcoded types when the binary streams are dynamic.
     constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
@@ -167,7 +138,7 @@ namespace {
     {
         // TODO Ad 2023/10/11: Should we support smaller index types.
         using Index_t = GLuint;
-        BufferView iboView = createBuffer(sizeof(Index_t), aIndicesCount, aStorage);
+        BufferView iboView = createBuffer(sizeof(Index_t), aIndicesCount, 0, GL_STATIC_DRAW, aStorage);
 
         // The consolidated vertex stream
         aStorage.mVertexStreams.push_back({
@@ -183,7 +154,7 @@ namespace {
         {
             const GLsizei attributeSize = 
                 attribute.mDimension.countComponents() * graphics::getByteSize(attribute.mComponentType);
-            BufferView attributeView = createBuffer(attributeSize, aVerticesCount, aStorage);
+            BufferView attributeView = createBuffer(attributeSize, aVerticesCount, 0, GL_STATIC_DRAW, aStorage);
 
             vertexStream.mSemanticToAttribute.emplace(
                 attribute.mSemantic,
@@ -802,16 +773,11 @@ Scene Loader::loadScene(const filesystem::path & aSceneFile,
 
 GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
 {
-    auto [vbo, size] = makeMutableBuffer<InstanceData>(aInstanceCount, GL_STREAM_DRAW);
-    aStorage.mBuffers.push_back(std::move(vbo));
-
-    BufferView vboView{
-        .mGLBuffer = &aStorage.mBuffers.back(),
-        .mStride = sizeof(InstanceData),
-        .mInstanceDivisor = 1,
-        .mOffset = 0,
-        .mSize = size, // The view has access to the whole buffer
-    };
+    BufferView vboView = createBuffer(sizeof(InstanceData),
+                                      aInstanceCount,
+                                      1,
+                                      GL_STREAM_DRAW,
+                                      aStorage);
 
     return GenericStream{
         .mVertexBufferViews = { vboView, },
