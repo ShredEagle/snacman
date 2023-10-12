@@ -749,13 +749,16 @@ Scene Loader::loadScene(const filesystem::path & aSceneFile,
         SELOG(info)("Loaded model '{}' with bouding box {}.",
                      modelFile.stem().string(), fmt::streamed(model.mAabb));
 
+        math::Box<GLfloat> poserAabb = model.mAabb;
+
         Pose pose;
         if(entry.contains("pose"))
         {
             pose.mPosition = entry.at("pose").value<math::Vec<3, float>>("position", {});
             pose.mUniformScale = entry.at("pose").value("uniform_scale", 1.f);
 
-            
+            poserAabb *= math::trans3d::scaleUniform(pose.mUniformScale)
+                        * math::trans3d::translate(pose.mPosition);
         }
 
         Node modelPoser{
@@ -763,6 +766,7 @@ Scene Loader::loadScene(const filesystem::path & aSceneFile,
                 .mPose = pose,
             },
             .mChildren = {std::move(model)},
+            .mAabb = poserAabb,
         };
         scene.addToRoot(std::move(modelPoser));
     }
