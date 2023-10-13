@@ -555,18 +555,19 @@ namespace {
             // Increment the part count of current DrawCall
             ++result.mCalls.back().mPartCount;
 
-            // TODO handle the case where there is an offset
-            // This is more complicated with indirect draw commands, because they do not
-            // accept a (void*) offset, but a number of indices (firstIndex).
-            assert(vertexStream.mIndexBufferView.mOffset == 0);
+            const std::size_t indiceSize = graphics::getByteSize(vertexStream.mIndicesType);
+
+            // Indirect draw commands do not accept a (void*) offset, but a number of indices (firstIndex).
+            // This means the offset into the buffer must be aligned with the index size.
+            assert((vertexStream.mIndexBufferView.mOffset %  indiceSize) == 0);
+
             result.mDrawCommands.push_back(
                 DrawElementsIndirectCommand{
                     .mCount = part.mIndicesCount,
                     // TODO Ad 2023/09/26: #bench Is it worth it to group identical parts and do "instanced" drawing?
                     // For the moment, draw a single instance for each part (i.e. no instancing)
                     .mInstanceCount = 1,
-                    .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset 
-                                            / graphics::getByteSize(vertexStream.mIndicesType))
+                    .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset / indiceSize)
                                     + part.mIndexFirst,
                     .mBaseVertex = part.mVertexFirst,
                     .mBaseInstance = (GLuint)result.mDrawInstances.size(), // pushed below

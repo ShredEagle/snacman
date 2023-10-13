@@ -20,7 +20,7 @@ namespace {
     /// Make several sanity checks regarding the data and attribute "compatibility"
     /// (dimensions, etc.)
     void attachAttribute(const IntrospectProgram::Attribute & aShaderAttribute,
-                         const graphics::ClientAttribute & aClientAttribute,
+                         graphics::ClientAttribute aClientAttribute, // taken by copy because we need to mutate locally
                          const BufferView & aVertexBufferView,
                          std::string_view aProgramName /* for log messages */)
     {
@@ -54,6 +54,9 @@ namespace {
             }
 
             graphics::ScopedBind scopeVertexBuffer{*aVertexBufferView.mGLBuffer, graphics::BufferType::Array};
+            // The client attribute, as provided by the VertexStream, contains the offset from the start of the BufferView
+            // We need to add the offset of the BufferView from the start of the Buffer, before calling attachBoundVertexBuffer()
+            aClientAttribute.mOffset += aVertexBufferView.mOffset;
             graphics::attachBoundVertexBuffer(
                 {aShaderAttribute.toShaderParameter(), aClientAttribute},
                 aVertexBufferView.mStride,

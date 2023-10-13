@@ -94,6 +94,23 @@ namespace {
         };
     };
 
+    BufferView makeBufferView(graphics::BufferAny * aBuffer,
+                              GLsizei aElementSize,
+                              GLsizeiptr aElementCount,
+                              GLuint aInstanceDivisor,
+                              GLintptr aOffsetIntoBuffer)
+    {
+        const GLsizeiptr bufferSize = aElementSize * aElementCount;
+
+        return BufferView{
+            .mGLBuffer = aBuffer,
+            .mStride = aElementSize,
+            .mInstanceDivisor = aInstanceDivisor,
+            .mOffset = aOffsetIntoBuffer,
+            .mSize = bufferSize, // The view has access to the provided range of elements
+        };
+    };
+
     /// @brief Load data into an existing buffer, with offset aElementFirst.
     template <class T_element>
     void loadBuffer(const graphics::BufferAny & aBuffer, 
@@ -174,6 +191,65 @@ namespace {
         return &vertexStream;
     }
 
+
+    // TODO consolidate
+    // Provide a distinct buffer for each attribute stream at the moment (i.e. no interleaving).
+    Handle<VertexStream> makeStreamReuseBuffers(const VertexStream & aVertexStream,
+                                                unsigned int aVerticesCount,
+                                                unsigned int aIndicesCount,
+                                                std::span<const AttributeDescription> aBufferedStreams,
+                                                Storage & aStorage,
+                                                const GenericStream & aStream)
+    {
+        const BufferView & previousIndexBufferView = aVertexStream.mIndexBufferView;
+        GLintptr indexOffset = previousIndexBufferView.mSize;
+
+        // TODO Ad 2023/10/11: Should we support smaller index types.
+        using Index_t = GLuint;
+        BufferView iboView =
+            makeBufferView(aVertexStream.mIndexBufferView.mGLBuffer, sizeof(Index_t), aIndicesCount, 0, indexOffset);
+
+        // The consolidated vertex stream
+        aStorage.mVertexStreams.push_back({
+            .mVertexBufferViews{aStream.mVertexBufferViews},
+            .mSemanticToAttribute{aStream.mSemanticToAttribute},
+            .mIndexBufferView = iboView,
+            .mIndicesType = graphics::MappedGL_v<Index_t>,
+        });
+
+        VertexStream & vertexStream = aStorage.mVertexStreams.back();
+
+        for(const auto & attribute : aBufferedStreams)
+        {
+            const GLsizei attributeSize = 
+                attribute.mDimension.countComponents() * graphics::getByteSize(attribute.mComponentType);
+
+            // Will throw if there is no buffer for the attribute's semantic in the source VertexStream.
+            const BufferView & previousBufferView = 
+                aVertexStream.mVertexBufferViews.at(
+                    aVertexStream.mSemanticToAttribute.at(attribute.mSemantic).mBufferViewIndex);
+            graphics::BufferAny * attributeBuffer = previousBufferView.mGLBuffer;
+
+            BufferView attributeView = 
+                makeBufferView(attributeBuffer, attributeSize, aVerticesCount, 0, previousBufferView.mSize);
+
+            vertexStream.mSemanticToAttribute.emplace(
+                attribute.mSemantic,
+                AttributeAccessor{
+                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size(), // view is added next
+                    .mClientDataFormat{
+                        .mDimension = attribute.mDimension,
+                        .mOffset = 0,
+                        .mComponentType = attribute.mComponentType,
+                    },
+                }
+            );
+
+            vertexStream.mVertexBufferViews.push_back(attributeView);
+        }
+
+        return &vertexStream;
+    }
 
     // TODO Do we want attribute interleaving, or are we content with one distinct buffer per attribute ?
     // (the attribute interleaving should then be done on the exporter side).
@@ -422,56 +498,80 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
     };
     for(unsigned int vertex = 0; vertex != triangle::Maker::gVertexCount; ++vertex)
     {
-        trianglePositions.push_back(triangle::Maker::getPosition(vertex));
+        // Translated outside a side of the cube, to make it obvious if the cube is not offseting 
+        // its view into the shared vertex buffers.
+        trianglePositions.push_back(triangle::Maker::getPosition(vertex) + math::Vec<3, GLfloat>{0.f, 0.f, -1.1f});
         triangleNormals.push_back(triangle::Maker::getNormal(vertex));
     }
-    std::vector<GLuint> triangleIndices(triangle::Maker::gVertexCount);
-    std::iota(triangleIndices.begin(), triangleIndices.end(), 0);
+    std::vector<GLuint> triangleIndices{0, 1, 2};
 
     auto cubePositions = getExpandedCubePositions();
     auto cubeNormals = getExpandedCubeNormals();
     std::vector<math::hdr::Rgba_f> cubeColors(cubePositions.size(), math::hdr::gWhite<GLfloat>);
     assert(cubePositions.size() == cubeNormals.size());
 
-    std::vector<GLuint> cubeIndices;
-    cubeIndices.reserve(cubePositions.size());
-    for(GLuint idx = 0; idx != cubePositions.size(); ++idx)
-    {
-        cubeIndices.push_back(idx);
-    }
+    std::vector<GLuint> cubeIndices(cubePositions.size());
+    std::iota(cubeIndices.begin(), cubeIndices.end(), 0);
 
     const unsigned int verticesCount = (unsigned int)(trianglePositions.size() + cubePositions.size());
     const unsigned int indicesCount = (unsigned int)(triangleIndices.size() + cubeIndices.size());
 
     // Prepare the common buffer storage for the whole binary (one buffer / attribute)
-    Handle<VertexStream> consolidatedStream = prepareConsolidatedStream(verticesCount,
-                                                                        indicesCount,
-                                                                        gAttributeStreamsInBinary,
-                                                                        aStorage,
-                                                                        aStream);
+    Handle<VertexStream> triangleStream = prepareConsolidatedStream(verticesCount,
+                                                                    indicesCount,
+                                                                    gAttributeStreamsInBinary,
+                                                                    aStorage,
+                                                                    aStream);
     
-    // Load the buffers of the vertex stream
+    
     // This is the pendant of hardcoded vertex attributes description, and must be kept in sync
     // (which is a code smell, we should do better)
-    GLuint cubeFirstVertex = (GLuint)trianglePositions.size();
-    {
-        // The first view (index = 0) is the Index Buffer.
-        const graphics::BufferAny & positionBuffer = *consolidatedStream->mVertexBufferViews.at(1).mGLBuffer;
-        const graphics::BufferAny & normalBuffer   = *consolidatedStream->mVertexBufferViews.at(2).mGLBuffer;
-        const graphics::BufferAny & colorBuffer    = *consolidatedStream->mVertexBufferViews.at(3).mGLBuffer;
-        loadBuffer(positionBuffer, 0, std::span{trianglePositions});
-        loadBuffer(positionBuffer, cubeFirstVertex, std::span{cubePositions});
-        loadBuffer(normalBuffer, 0, std::span{triangleNormals});
-        loadBuffer(normalBuffer, cubeFirstVertex, std::span{cubeNormals});
-        loadBuffer(colorBuffer, 0, std::span{triangleColors});
-        loadBuffer(colorBuffer, cubeFirstVertex, std::span{cubeColors});
-    }
+    // The buffer views from aStream have been added at the beginning of the vertex buffer views
+    // so we fetch back from the end.
+    BufferView & positionBufferView = *(triangleStream->mVertexBufferViews.end() - 3);
+    BufferView & normalBufferView   = *(triangleStream->mVertexBufferViews.end() - 2);
+    BufferView & colorBufferView    = *(triangleStream->mVertexBufferViews.end() - 1);
+    BufferView & indexBufferView    = triangleStream->mIndexBufferView;
 
-    {
-        const graphics::BufferAny & indexBuffer = *consolidatedStream->mIndexBufferView.mGLBuffer;
-        loadBuffer(indexBuffer, 0, std::span{triangleIndices});
-        loadBuffer(indexBuffer, cubeFirstVertex, std::span{cubeIndices});
-    }
+    // We want each shape to use distinct BufferViews (so distinct VertexStream)
+    // to test BufferView offsets.
+    // Manually get there.
+    positionBufferView.mSize = sizeof(GLfloat) * 3 * trianglePositions.size();
+    normalBufferView.mSize   = sizeof(GLfloat) * 3 * trianglePositions.size();
+    colorBufferView.mSize    = sizeof(GLfloat) * 4 * trianglePositions.size();
+    indexBufferView.mSize    = sizeof(GLuint) * triangleIndices.size();
+
+    Handle<VertexStream> cubeStream = makeStreamReuseBuffers(
+        *triangleStream,
+        (GLuint)cubePositions.size(),
+        (GLuint)cubeIndices.size(),
+        gAttributeStreamsInBinary,
+        aStorage,
+        aStream);
+
+    // Load the buffers of the vertex streams
+
+    auto load =
+        [](Handle<VertexStream>  aStream,
+           GLuint aFirstIndex,  // write offset
+           auto aIndices, auto aPositions, auto aNormals, auto aColors)
+        {
+            const graphics::BufferAny & indexBuffer = *aStream->mIndexBufferView.mGLBuffer;
+
+            loadBuffer(indexBuffer, aFirstIndex, std::span{aIndices});
+
+            const graphics::BufferAny & positionBuffer = *(aStream->mVertexBufferViews.end() - 3)->mGLBuffer;
+            const graphics::BufferAny & normalBuffer   = *(aStream->mVertexBufferViews.end() - 2)->mGLBuffer;
+            const graphics::BufferAny & colorBuffer    = *(aStream->mVertexBufferViews.end() - 1)->mGLBuffer;
+
+            loadBuffer(positionBuffer, aFirstIndex, std::span{aPositions});
+            loadBuffer(normalBuffer,   aFirstIndex, std::span{aNormals});
+            loadBuffer(colorBuffer,    aFirstIndex, std::span{aColors});
+        };
+
+    GLuint cubeFirstVertex = (GLuint)trianglePositions.size();
+    load(triangleStream, 0, triangleIndices, trianglePositions, triangleNormals, triangleColors);
+    load(cubeStream, cubeFirstVertex, cubeIndices, cubePositions, cubeNormals, cubeColors);
 
     //
     // Push the objects
@@ -490,7 +590,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
                 .mMaterial = Material{
                     .mEffect = aPartsEffect,
                 },
-                .mVertexStream = consolidatedStream,
+                .mVertexStream = triangleStream,
                 .mPrimitiveMode = GL_TRIANGLES,
                 .mVertexFirst = 0,
                 .mVertexCount = (GLuint)trianglePositions.size(),
@@ -520,11 +620,11 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
                 .mMaterial = Material{
                     .mEffect = aPartsEffect,
                 },
-                .mVertexStream = consolidatedStream,
+                .mVertexStream = cubeStream,
                 .mPrimitiveMode = GL_TRIANGLES,
-                .mVertexFirst = cubeFirstVertex,
+                .mVertexFirst = 0,
                 .mVertexCount = (GLuint)cubePositions.size(),
-                .mIndexFirst = cubeFirstVertex,
+                .mIndexFirst = 0,
                 .mIndicesCount = (GLuint)cubeIndices.size(),
                 .mAabb = aabb,
             }

@@ -50,10 +50,7 @@ struct BufferView
     // The reasoning is that since the view is supposed to represent an homogeneous chunck of the buffer,
     // the divisor (like the stride) will be shared by all vertices pulled from the view.
     GLuint mInstanceDivisor = 0;
-    // TODO #bufferoffset Implement (and test) buffer offsets for both vertex and index buffers.
-    // Note that it should already be taken into account by the draw command for index buffer, 
-    // but it is not in place for vertex buffer (should probably be handled when setting the vertex format)
-    GLintptr mOffset;
+    GLintptr mOffset; // Offset of this View into the GL Buffer.
     GLsizeiptr mSize; // The size (in bytes) this buffer view has access to, starting from mOffset.
                       // Intended to be used for safety checks.
 };
