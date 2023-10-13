@@ -146,16 +146,34 @@ namespace {
         GLenum mComponentType;   // data individual components' type.
     };
 
-    // Provide a distinct buffer for each attribute stream at the moment (i.e. no interleaving).
-    Handle<VertexStream> prepareConsolidatedStream(unsigned int aVerticesCount,
-                                                   unsigned int aIndicesCount,
-                                                   std::span<const AttributeDescription> aBufferedStreams,
-                                                   Storage & aStorage,
-                                                   const GenericStream & aStream)
+    /// @note Provide a distinct buffer for each attribute stream at the moment (i.e. no interleaving).
+    /// @param aVertexStream If not nullptr, create views into this vertex stream buffers instead of creating
+    /// new buffers.
+    Handle<VertexStream> makeVertexStream(unsigned int aVerticesCount,
+                                          unsigned int aIndicesCount,
+                                          std::span<const AttributeDescription> aBufferedStreams,
+                                          Storage & aStorage,
+                                          const GenericStream & aStream,
+                                          // This is probably only useful to create debug data buffers
+                                          // (as there is little sense to not reuse the existing views)
+                                          const VertexStream * aVertexStream = nullptr)
     {
         // TODO Ad 2023/10/11: Should we support smaller index types.
         using Index_t = GLuint;
-        BufferView iboView = createBuffer(sizeof(Index_t), aIndicesCount, 0, GL_STATIC_DRAW, aStorage);
+        BufferView iboView = [&]()
+        {
+            if(aVertexStream)
+            {
+                const BufferView & previousIndexBufferView = aVertexStream->mIndexBufferView;
+                GLintptr indexOffset = previousIndexBufferView.mSize;
+                graphics::BufferAny * existingBuffer = aVertexStream->mIndexBufferView.mGLBuffer;
+                return makeBufferView(existingBuffer, sizeof(Index_t), aIndicesCount, 0, indexOffset);
+            }
+            else
+            {
+                return createBuffer(sizeof(Index_t), aIndicesCount, 0, GL_STATIC_DRAW, aStorage);
+            }
+        }();
 
         // The consolidated vertex stream
         aStorage.mVertexStreams.push_back({
@@ -171,7 +189,24 @@ namespace {
         {
             const GLsizei attributeSize = 
                 attribute.mDimension.countComponents() * graphics::getByteSize(attribute.mComponentType);
-            BufferView attributeView = createBuffer(attributeSize, aVerticesCount, 0, GL_STATIC_DRAW, aStorage);
+
+            BufferView attributeView = [&]()
+            {
+                if(aVertexStream)
+                {
+                    // Will throw if there is no buffer for the attribute's semantic in the source VertexStream.
+                    const BufferView & previousBufferView = 
+                        aVertexStream->mVertexBufferViews.at(
+                            aVertexStream->mSemanticToAttribute.at(attribute.mSemantic).mBufferViewIndex);
+                    graphics::BufferAny * attributeBuffer = previousBufferView.mGLBuffer;
+
+                    return makeBufferView(attributeBuffer, attributeSize, aVerticesCount, 0, previousBufferView.mSize);
+                }
+                else
+                {
+                    return createBuffer(attributeSize, aVerticesCount, 0, GL_STATIC_DRAW, aStorage);
+                }
+            }();
 
             vertexStream.mSemanticToAttribute.emplace(
                 attribute.mSemantic,
@@ -191,65 +226,6 @@ namespace {
         return &vertexStream;
     }
 
-
-    // TODO consolidate
-    // Provide a distinct buffer for each attribute stream at the moment (i.e. no interleaving).
-    Handle<VertexStream> makeStreamReuseBuffers(const VertexStream & aVertexStream,
-                                                unsigned int aVerticesCount,
-                                                unsigned int aIndicesCount,
-                                                std::span<const AttributeDescription> aBufferedStreams,
-                                                Storage & aStorage,
-                                                const GenericStream & aStream)
-    {
-        const BufferView & previousIndexBufferView = aVertexStream.mIndexBufferView;
-        GLintptr indexOffset = previousIndexBufferView.mSize;
-
-        // TODO Ad 2023/10/11: Should we support smaller index types.
-        using Index_t = GLuint;
-        BufferView iboView =
-            makeBufferView(aVertexStream.mIndexBufferView.mGLBuffer, sizeof(Index_t), aIndicesCount, 0, indexOffset);
-
-        // The consolidated vertex stream
-        aStorage.mVertexStreams.push_back({
-            .mVertexBufferViews{aStream.mVertexBufferViews},
-            .mSemanticToAttribute{aStream.mSemanticToAttribute},
-            .mIndexBufferView = iboView,
-            .mIndicesType = graphics::MappedGL_v<Index_t>,
-        });
-
-        VertexStream & vertexStream = aStorage.mVertexStreams.back();
-
-        for(const auto & attribute : aBufferedStreams)
-        {
-            const GLsizei attributeSize = 
-                attribute.mDimension.countComponents() * graphics::getByteSize(attribute.mComponentType);
-
-            // Will throw if there is no buffer for the attribute's semantic in the source VertexStream.
-            const BufferView & previousBufferView = 
-                aVertexStream.mVertexBufferViews.at(
-                    aVertexStream.mSemanticToAttribute.at(attribute.mSemantic).mBufferViewIndex);
-            graphics::BufferAny * attributeBuffer = previousBufferView.mGLBuffer;
-
-            BufferView attributeView = 
-                makeBufferView(attributeBuffer, attributeSize, aVerticesCount, 0, previousBufferView.mSize);
-
-            vertexStream.mSemanticToAttribute.emplace(
-                attribute.mSemantic,
-                AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size(), // view is added next
-                    .mClientDataFormat{
-                        .mDimension = attribute.mDimension,
-                        .mOffset = 0,
-                        .mComponentType = attribute.mComponentType,
-                    },
-                }
-            );
-
-            vertexStream.mVertexBufferViews.push_back(attributeView);
-        }
-
-        return &vertexStream;
-    }
 
     // TODO Do we want attribute interleaving, or are we content with one distinct buffer per attribute ?
     // (the attribute interleaving should then be done on the exporter side).
@@ -517,11 +493,12 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
     const unsigned int indicesCount = (unsigned int)(triangleIndices.size() + cubeIndices.size());
 
     // Prepare the common buffer storage for the whole binary (one buffer / attribute)
-    Handle<VertexStream> triangleStream = prepareConsolidatedStream(verticesCount,
-                                                                    indicesCount,
-                                                                    gAttributeStreamsInBinary,
-                                                                    aStorage,
-                                                                    aStream);
+    Handle<VertexStream> triangleStream = makeVertexStream(
+        verticesCount,
+        indicesCount,
+        gAttributeStreamsInBinary,
+        aStorage,
+        aStream);
     
     
     // This is the pendant of hardcoded vertex attributes description, and must be kept in sync
@@ -541,13 +518,13 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
     colorBufferView.mSize    = sizeof(GLfloat) * 4 * trianglePositions.size();
     indexBufferView.mSize    = sizeof(GLuint) * triangleIndices.size();
 
-    Handle<VertexStream> cubeStream = makeStreamReuseBuffers(
-        *triangleStream,
+    Handle<VertexStream> cubeStream = makeVertexStream(
         (GLuint)cubePositions.size(),
         (GLuint)cubeIndices.size(),
         gAttributeStreamsInBinary,
         aStorage,
-        aStream);
+        aStream,
+        triangleStream);
 
     // Load the buffers of the vertex streams
 
@@ -696,11 +673,12 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
     };
 
     // Prepare the single buffer storage for the whole binary
-    VertexStream * consolidatedStream = prepareConsolidatedStream(verticesCount,
-                                                                  indicesCount,
-                                                                  gAttributeStreamsInBinary,
-                                                                  aStorage,
-                                                                  aStream);
+    VertexStream * consolidatedStream = makeVertexStream(
+        verticesCount,
+        indicesCount,
+        gAttributeStreamsInBinary,
+        aStorage,
+        aStream);
 
     // Prepare a MaterialContext for the whole binary, 
     // I.e. in a scene, each entry (each binary) gets its own material UBO and its own Texture array.
