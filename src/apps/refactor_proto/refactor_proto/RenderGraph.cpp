@@ -1,10 +1,12 @@
 #include "RenderGraph.h"
 
 #include "Cube.h"
+#include "GlApi.h"
 #include "Json.h"
 #include "Loader.h"
 #include "Logging.h"
 #include "Profiling.h"
+#include "RendererReimplement.h" // TODO Ad 2023/10/18: Should get rid of this repeated implementation
 #include "SetupDrawing.h"
 
 #include <handy/vector_utils.h>
@@ -34,9 +36,10 @@ namespace ad::renderer {
 const char * gVertexShader = R"#(
     #version 420
 
-    in vec3 v_Position_local;
+    in vec3 ve_Position_local;
+    in vec4 ve_Color;
 
-    in mat4 i_LocalToWorld;
+    in uint in_ModelTransformIdx;
 
     layout(std140, binding = 1) uniform ViewBlock
     {
@@ -45,14 +48,27 @@ const char * gVertexShader = R"#(
         mat4 viewingProjection;
     };
 
+    // TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
+    layout(std140, binding = 0) uniform LocalToWorldBlock
+    {
+        mat4 localToWorld[512];
+    };
+
+    out vec4 ex_Color;
+
     void main()
     {
-        gl_Position = viewingProjection * i_LocalToWorld * vec4(v_Position_local, 1.f);
+        ex_Color = ve_Color;
+        gl_Position = viewingProjection 
+            * localToWorld[in_ModelTransformIdx] 
+            * vec4(ve_Position_local, 1.f);
     }
 )#";
 
 const char * gFragmentShader = R"#(
     #version 420
+
+    in vec4 ex_Color;
 
     layout(std140, binding = 2) uniform FrameBlock
     {
@@ -63,7 +79,9 @@ const char * gFragmentShader = R"#(
 
     void main()
     {
-        color = vec4(1.0, 0.5, 0.25, 1.f) * vec4(mod(time, 1.0));
+        // TODO Ad 2023/10/12: #transparency This would be a nice transparency effect
+        //color = vec4(ex_Color.rgb, mod(time, 1.0));
+        color = vec4(ex_Color.rgb, 1.) * vec4(mod(time, 1.0));
     }
 )#";
 
@@ -113,47 +131,33 @@ namespace {
     }
 
 
-
-    //VertexStream makeTriangle(Storage & aStorage)
-    //{
-    //    std::array<math::Position<3, GLfloat>, 3> vertices{{
-    //        { 1.f, -1.f, 0.f},
-    //        { 0.f,  1.f, 0.f},
-    //        {-1.f, -1.f, 0.f},
-    //    }};
-    //    return makeFromPositions(aStorage, std::span{vertices});
-    //}
-
-    //VertexStream makeCube(Storage & aStorage)
-    //{
-    //    auto cubeVertices = getExpandedCubeVertices<math::Position<3, GLfloat>>();
-    //    return makeFromPositions(aStorage, std::span{cubeVertices});
-    //}
-
-    Material makeWhiteMaterial(Storage & aStorage)
+    Handle<Effect> makeWhiteEffect(Storage & aStorage)
     {
-        aStorage.mPrograms.push_back({
-            .mProgram = {
+        aStorage.mProgramConfigs.emplace_back();
+        aStorage.mPrograms.push_back(ConfiguredProgram{
+            .mProgram = IntrospectProgram{
                 graphics::makeLinkedProgram({
                     {GL_VERTEX_SHADER, gVertexShader},
                     {GL_FRAGMENT_SHADER, gFragmentShader},
                 }),
                 "white",
             },
+            .mConfig = &aStorage.mProgramConfigs.back(),
         });
 
         Effect effect{
             .mTechniques{makeVector(
                 Technique{
+                    .mAnnotations{
+                        {"pass", "forward"},
+                    },
                     .mConfiguredProgram{ &aStorage.mPrograms.back() }
                 }
             )},
         };
         aStorage.mEffects.push_back(std::move(effect));
 
-        return Material{
-            .mEffect = &aStorage.mEffects.back(),
-        };
+        return &aStorage.mEffects.back();
     }
 
 
@@ -179,31 +183,23 @@ namespace {
     };
 
 
-    graphics::UniformBufferObject prepareMaterialBuffer(const Storage & aStorage)
-    {
-        graphics::UniformBufferObject ubo;
-        graphics::load(ubo, std::span{aStorage.mPhongMaterials}, graphics::BufferHint::StaticDraw);
-        return ubo;
-    }
-
-
     void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
     {
         GLfloat time =
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 1000.f;
-        graphics::loadSingle(aUbo, time, graphics::BufferHint::DynamicDraw);
+        proto::loadSingle(aUbo, time, graphics::BufferHint::DynamicDraw);
     }
 
 
     void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
     {
-        graphics::loadSingle(aUbo, GpuViewBlock{aCamera}, graphics::BufferHint::DynamicDraw);
+        proto::loadSingle(aUbo, GpuViewBlock{aCamera}, graphics::BufferHint::DynamicDraw);
     }
 
 
     void draw(const PassCache & aPassCache,
-              const RepositoryUBO & aUboRepository,
+              const RepositoryUbo & aUboRepository,
               const RepositoryTexture & aTextureRepository)
     {
         //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
@@ -222,6 +218,9 @@ namespace {
             const graphics::VertexArrayObject & vao = *aCall.mVao;
             PROFILER_POP_SECTION;
 
+            // TODO Ad 2023/10/05: #perf #azdo 
+            // Only change what is necessary, instead of rebiding everything each time.
+            // Since we sorted our draw calls, it is very likely that program remain the same, and VAO changes.
             {
                 PROFILER_PUSH_SECTION("bind_VAO", CpuTime);
                 graphics::ScopedBind vaoScope{vao};
@@ -229,12 +228,26 @@ namespace {
                 
                 {
                     PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
-                    setBufferBackedBlocks(selectedProgram, aUboRepository);
+                    // TODO #repos This should be consolidated
+                    RepositoryUbo uboRepo{aUboRepository};
+                    if(aCall.mCallContext)
+                    {
+                        RepositoryUbo callRepo{aCall.mCallContext->mUboRepo};
+                        uboRepo.merge(callRepo);
+                    }
+                    setBufferBackedBlocks(selectedProgram, uboRepo);
                 }
 
                 {
                     PROFILER_SCOPE_SECTION("set_textures", CpuTime);
-                    setTextures(selectedProgram, aTextureRepository);
+                    // TODO #repos This should be consolidated
+                    RepositoryTexture textureRepo{aTextureRepository};
+                    if(aCall.mCallContext)
+                    {
+                        RepositoryTexture callRepo{aCall.mCallContext->mTextureRepo};
+                        textureRepo.merge(callRepo);
+                    }
+                    setTextures(selectedProgram, textureRepo);
                 }
 
                 PROFILER_PUSH_SECTION("bind_program", CpuTime);
@@ -246,7 +259,7 @@ namespace {
                     // Can we have efficient GPU measures?
                     PROFILER_SCOPE_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
                     
-                    glMultiDrawElementsIndirect(
+                    gl.MultiDrawElementsIndirect(
                         aCall.mPrimitiveMode,
                         aCall.mIndicesType,
                         (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
@@ -290,102 +303,287 @@ namespace {
     }
 
 
-    PassCache preparePass(const PartList & aPartList,
+    /// @brief Find the program satisfying all annotations.
+    /// @return The first program in aEffect for which all annotations are matching (i.e. present and same value),
+    /// or a null handle otherwise.
+    template <class T_iterator>
+    Handle<ConfiguredProgram> getProgram(const Effect & aEffect,
+                                         T_iterator aAnnotationsBegin, T_iterator aAnnotationsEnd)
+    {
+        for (const Technique & technique : aEffect.mTechniques)
+        {
+            if(std::all_of(aAnnotationsBegin, aAnnotationsEnd,
+                    [&technique](const Technique::Annotation & aRequiredAnnotation)
+                    {
+                        const auto & availableAnnotations = technique.mAnnotations;
+                        if(auto found = availableAnnotations.find(aRequiredAnnotation.mCategory);
+                            found != availableAnnotations.end())
+                        {
+                            return (found->second == aRequiredAnnotation.mValue);
+                        }
+                        return false;
+                    }))
+            {
+                return technique.mConfiguredProgram;
+            }
+        }
+
+        return nullptr;
+    }
+
+
+    /// @brief Specializes getProgram, returning first program matching provided pass name.
+    Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName)
+    {
+        const std::array<Technique::Annotation, 1> annotations{
+            {"pass", aPassName},
+        };
+        return getProgram(aEffect, annotations.begin(), annotations.end());
+    }
+    
+
+    /// @brief Returns the VAO matching the given program and part.
+    /// Under the hood, the VAO is cached.
+    Handle<graphics::VertexArrayObject> getVao(const ConfiguredProgram & aProgram,
+                                               const Part & aPart,
+                                               Storage & aStorage)
+    {
+        // This is a common mistake, it would be nice to find a safer way
+        assert(aProgram.mConfig);
+
+        // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
+        return
+            [&, &entries = aProgram.mConfig->mEntries]() 
+            -> graphics::VertexArrayObject *
+            {
+                if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
+                                                [&aPart](const auto & aEntry)
+                                                {
+                                                    return aEntry.mVertexStream == aPart.mVertexStream;
+                                                });
+                    foundConfig != entries.end())
+                {
+                    return foundConfig->mVao;
+                }
+                else
+                {
+                    aStorage.mVaos.push_back(prepareVAO(aProgram.mProgram, *aPart.mVertexStream));
+                    entries.push_back(
+                        ProgramConfig::Entry{
+                            .mVertexStream = aPart.mVertexStream,
+                            .mVao = &aStorage.mVaos.back(),
+                        });
+                    return entries.back().mVao;
+                }
+            }();
+    }
+
+
+    // TODO Ad 2023/10/05: for OpenGL resource, maybe we should directly use the GL name?
+    // or do we want to reimplement Handle<> in term of index in storage containers?
+    /// @brief Hackish class, associating a resource to an integer value.
+    ///
+    /// The value is suitable to compose a DrawEntry::Key via bitwise operations.
+    template <class T_resource, unsigned int N_valueBits>
+    struct ResourceIdMap
+    {
+        static_assert(N_valueBits <= 16);
+        static constexpr std::uint16_t gMaxValue = (std::uint16_t)((1 << N_valueBits) - 1);
+
+        ResourceIdMap()
+        {
+            // By adding the nullptr as the zero value, this helps debugging
+            get(nullptr);
+            assert(get(nullptr)== 0);
+        }
+
+        /// @brief Get the value associated to provided resource.
+        /// A given map instance will always return the same value for the same resource.
+        std::uint16_t get(Handle<T_resource> aResource)
+        {
+            assert(mResourceToId.size() < gMaxValue);
+            auto [iterator, didInsert] = mResourceToId.try_emplace(aResource,
+                                                                   (std::uint16_t)mResourceToId.size());
+            return iterator->second;
+        }
+
+        /// @brief Return the resource from it value.
+        Handle<T_resource> reverseLookup(std::uint16_t aValue)
+        {
+            if(auto found = std::find_if(mResourceToId.begin(), mResourceToId.end(),
+                                         [aValue](const auto & aPair)
+                                         {
+                                             return aPair.second == aValue;
+                                         });
+               found != mResourceToId.end())
+            {
+                return found->first;
+            }
+            throw std::logic_error{"The provided value is not present in this ResourceIdMap."};
+        }
+
+        std::unordered_map<Handle<T_resource>, std::uint16_t> mResourceToId;
+    };
+
+
+    /// @brief Associate an integer key to a part.
+    /// Used to sort an array with one entry for each part, by manually composing a key by sort dimensions.
+    /// @see https://realtimecollisiondetection.net/blog/?p=86
+    struct DrawEntry
+    {
+        using Key = std::uint64_t;
+        static constexpr Key gInvalidKey = std::numeric_limits<Key>::max();
+
+        /// @brief Order purely by key.
+        /// @param aRhs 
+        /// @return 
+        bool operator<(const DrawEntry & aRhs) const
+        {
+            return mKey < aRhs.mKey;
+        }
+
+        Key mKey = 0;
+        std::size_t mPartListIdx;
+    };
+
+
+    constexpr std::uint64_t makeMask(unsigned int aBitCount)
+    {
+        assert(aBitCount <= 64);
+        return (1 << aBitCount) - 1;
+    }
+
+
+    PassCache preparePass(StringKey aPass,
+                          const PartList & aPartList,
                           Storage & aStorage)
     {
         PROFILER_SCOPE_SECTION("prepare_pass", CpuTime);
 
-        PassCache result;
-        // TODO Ad 2023/09/26: #multipass Handle several drawcalls, by sorting
-        DrawCall singleCallAtm;
+        constexpr unsigned int gProgramIdBits = 16;
+        constexpr std::uint64_t gProgramIdMask = makeMask(gProgramIdBits);
+        using ProgramId = std::uint16_t;
+        assert(aStorage.mPrograms.size() < (1 << gProgramIdBits));
 
-        if(!aPartList.mParts.empty())
-        {
-            const Part & part = *aPartList.mParts.front();
-            const VertexStream & vertexStream = *part.mVertexStream;
-            singleCallAtm.mPrimitiveMode = part.mPrimitiveMode;
-            singleCallAtm.mIndicesType = vertexStream.mIndicesType;
+        constexpr unsigned int gPrimitiveModes = 12; // I counted 12 primitive modes
+        unsigned int gPrimitiveModeIdBits = (unsigned int)std::ceil(std::log2(gPrimitiveModes));
 
-            // TODO Implement program selection, this is a hardcoded quick test
-            // (Ideally, a shader system with some form of render list)
-            const Material & material = *aPartList.mMaterials.front();
-            assert(material.mEffect->mTechniques.size() == 1);
-            const ConfiguredProgram & configuredProgram = 
-                *material.mEffect->mTechniques.at(0).mConfiguredProgram;
-            const IntrospectProgram & selectedProgram = configuredProgram.mProgram;
-            singleCallAtm.mProgram = &selectedProgram;
+        constexpr unsigned int gVaoBits = 10;
+        constexpr std::uint64_t gVaoIdMask = makeMask(gVaoBits);
+        assert(aStorage.mVaos.size() < (1 << gVaoBits));
+        using VaoId = std::uint16_t;
 
-            // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
-            auto vao =
-                [&, &entries = configuredProgram.mConfig->mEntries]() 
-                -> const graphics::VertexArrayObject *
-                {
-                    if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
-                                                    [&vertexStream, &part](const auto & aEntry)
-                                                    {
-                                                        return aEntry.mVertexStream == part.mVertexStream;
-                                                    });
-                        foundConfig != entries.end())
-                    {
-                        return foundConfig->mVao;
-                    }
-                    else
-                    {
-                        aStorage.mVaos.push_back(prepareVAO(selectedProgram, vertexStream));
-                        entries.push_back(
-                            ProgramConfig::Entry{
-                                .mVertexStream = part.mVertexStream,
-                                .mVao = &aStorage.mVaos.back(),
-                            });
-                        return entries.back().mVao;
-                    }
-                }();
-            singleCallAtm.mVao = vao;
+        constexpr unsigned int gMaterialContextBits = 10;
+        constexpr std::uint64_t gMaterialContextIdMask = makeMask(gMaterialContextBits);
+        assert(aStorage.mMaterialContexts.size() < (1 << gMaterialContextBits));
+        using MaterialContextId = std::uint16_t;
 
-            // TODO Ad 2023/09/26: #multipass This should be changed.
-            // Currently we expect all parts to be drawn by the same call.
-            singleCallAtm.mPartCount = (GLsizei)aPartList.mParts.size();
-        }
+        ResourceIdMap<ConfiguredProgram, gProgramIdBits> programToId;
+        ResourceIdMap<graphics::VertexArrayObject, gVaoBits> vaoToId;
+        ResourceIdMap<MaterialContext, gMaterialContextBits> materialContextToId;
+
+        //
+        // For each part, associated it to its sort key and store them in an array
+        // (this will already prune parts for which there is no program for aPass)
+        //
+        std::vector<DrawEntry> entries;
+        entries.reserve(aPartList.mParts.size());
 
         for (std::size_t partIdx = 0; partIdx != aPartList.mParts.size(); ++partIdx)
         {
             const Part & part = *aPartList.mParts[partIdx];
-            const VertexStream & vertexStream = *part.mVertexStream;
-            // TODO #multipass
-            assert(&vertexStream == aPartList.mParts.front()->mVertexStream);
             const Material & material = *aPartList.mMaterials[partIdx];
 
-            // TODO #multipass handle segregation by those values, instead of requiring the same everywhere
-            assert(part.mPrimitiveMode == singleCallAtm.mPrimitiveMode);
-            assert(vertexStream.mIndicesType == singleCallAtm.mIndicesType);
-            // Same effect implies same program would be selected 
-            assert(part.mMaterial.mEffect == aPartList.mMaterials.front()->mEffect);
+            // TODO Ad 2023/10/05: Also add those as sorting dimensions (to the LSB)
+            assert(part.mPrimitiveMode == GL_TRIANGLES);
+            assert(part.mVertexStream->mIndicesType == GL_UNSIGNED_INT);
+            
+            if(Handle<ConfiguredProgram> configuredProgram = getProgramForPass(*material.mEffect, aPass);
+               configuredProgram)
+            {
+                Handle<graphics::VertexArrayObject> vao = getVao(*configuredProgram, part, aStorage);
 
-            // TODO handle the case where there is an offset
-            // This is more complicated with indirect draw commands, because they do not
-            // accept a (void*) offset, but a number of indices (firstIndex).
-            assert(vertexStream.mIndexBufferView.mOffset == 0);
+                ProgramId programId = programToId.get(configuredProgram);
+                VaoId vaoId = vaoToId.get(vao);
+                MaterialContextId materialContextId = materialContextToId.get(material.mContext);
+
+                std::uint64_t key = vaoId ;
+                key |= materialContextId << gVaoBits;
+                key |= programId << (gVaoBits + gMaterialContextBits);
+
+                entries.push_back(DrawEntry{.mKey = key, .mPartListIdx = partIdx});
+            }
+        }
+
+        //
+        // Sort the entries
+        //
+        {
+            PROFILER_SCOPE_SECTION("sort_draw_entries", CpuTime);
+            std::sort(entries.begin(), entries.end());
+        }
+
+        //
+        // Traverse the sorted array to generate the actual draw commands and draw calls
+        //
+        PassCache result;
+        DrawEntry::Key drawKey = DrawEntry::gInvalidKey;
+        for(const DrawEntry & entry : entries)
+        {
+            const Part & part = *aPartList.mParts[entry.mPartListIdx];
+            const VertexStream & vertexStream = *part.mVertexStream;
+
+            // If true: this is the start of a new DrawCall
+            if(entry.mKey != drawKey)
+            {
+                // Record the new drawkey
+                drawKey = entry.mKey;
+
+                // Push the new DrawCall
+                result.mCalls.push_back(
+                    DrawCall{
+                        .mPrimitiveMode = part.mPrimitiveMode,
+                        .mIndicesType = vertexStream.mIndicesType,
+                        .mProgram = 
+                            &programToId.reverseLookup(gProgramIdMask & (drawKey >> (gVaoBits + gMaterialContextBits)))
+                                ->mProgram,
+                        .mVao = vaoToId.reverseLookup(gVaoIdMask & drawKey),
+                        .mCallContext = materialContextToId.reverseLookup(gMaterialContextIdMask & (drawKey >> gVaoBits)),
+                        .mPartCount = 0,
+                    }
+                );
+            }
+            
+            // Increment the part count of current DrawCall
+            ++result.mCalls.back().mPartCount;
+
+            const std::size_t indiceSize = graphics::getByteSize(vertexStream.mIndicesType);
+
+            // Indirect draw commands do not accept a (void*) offset, but a number of indices (firstIndex).
+            // This means the offset into the buffer must be aligned with the index size.
+            assert((vertexStream.mIndexBufferView.mOffset %  indiceSize) == 0);
+
             result.mDrawCommands.push_back(
                 DrawElementsIndirectCommand{
                     .mCount = part.mIndicesCount,
                     // TODO Ad 2023/09/26: #bench Is it worth it to group identical parts and do "instanced" drawing?
                     // For the moment, draw a single instance for each part (i.e. no instancing)
                     .mInstanceCount = 1,
-                    .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset 
-                                            / graphics::getByteSize(vertexStream.mIndicesType))
+                    .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset / indiceSize)
                                     + part.mIndexFirst,
                     .mBaseVertex = part.mVertexFirst,
-                    .mBaseInstance = (GLuint)partIdx,
+                    .mBaseInstance = (GLuint)result.mDrawInstances.size(), // pushed below
                 }
             );
 
+            const Material & material = *aPartList.mMaterials[entry.mPartListIdx];
+
             result.mDrawInstances.push_back(DrawInstance{
-                .mInstanceTransformIdx = aPartList.mTransformIdx[partIdx],
+                .mInstanceTransformIdx = aPartList.mTransformIdx[entry.mPartListIdx],
                 .mMaterialIdx = (GLsizei)material.mPhongMaterialIdx,
             });
         }
 
-        result.mCalls.push_back(std::move(singleCallAtm));
         return result;
     }
 
@@ -424,13 +622,6 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
     aStorage.mUbos.emplace_back();
     mModelTransformUbo = &aStorage.mUbos.back();
     mUboRepository.emplace(semantic::gLocalToWorld, mModelTransformUbo);
-}
-
-
-void HardcodedUbos::addUbo(Storage & aStorage, BlockSemantic aSemantic, graphics::UniformBufferObject && aUbo)
-{
-    aStorage.mUbos.push_back(std::move(aUbo));
-    mUboRepository.emplace(aSemantic, &aStorage.mUbos.back());
 }
 
 
@@ -506,9 +697,12 @@ void registerGlfwCallbacks(graphics::AppInterface & aAppInterface,
 
 
 RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
-                         const std::filesystem::path & aModelFile,
+                         const std::filesystem::path & aSceneFile,
                          const imguiui::ImguiUi & aImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
+    // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
+    // At the moment, hardcode a maximum number
+    mInstanceStream{makeInstanceStream(mStorage, gMaxDrawInstances)},
     mLoader{makeResourceFinder()},
     mUbos{mStorage},
     mCameraControl{mGlfwAppInterface->getWindowSize(),
@@ -519,67 +713,21 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close, &aImguiUi);
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
-    // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
-    // At the moment, hardcode a maximum number
-    mInstanceStream = makeInstanceStream(mStorage, gMaxDrawInstances);
+    mScene = mLoader.loadScene(aSceneFile, "effects/Mesh.sefx", mInstanceStream, mStorage);
+    /*const*/Node & model = mScene.mRoot.front();
 
-    //static Object triangle;
-    //triangle.mParts.push_back(Part{
-    //    .mVertexStream = makeTriangle(mStorage),
-    //    .mMaterial = makeWhiteMaterial(mStorage),
-    //});
-
-    //mScene.addToRoot(Instance{
-    //    .mObject = &triangle,
-    //    .mPose = {
-    //        .mPosition = {-0.5f, -0.2f, 0.f},
-    //        .mUniformScale = 0.3f,
-    //    }
-    //});
-
-    //// TODO cache materials
-    //static Object cube;
-    //cube.mParts.push_back(Part{
-    //    .mVertexStream = makeCube(mStorage),
-    //    .mMaterial = triangle.mParts[0].mMaterial,
-    //});
-
-    //mScene.addToRoot(Instance{
-    //    .mObject = &cube,
-    //    .mPose = {
-    //        .mPosition = {0.5f, -0.2f, 0.f},
-    //        .mUniformScale = 0.3f,
-    //    }
-    //});
-
-    Effect * phongEffect = mLoader.loadEffect("effects/Mesh.sefx", mStorage);
-    static Material defaultPhongMaterial{
-        .mEffect = phongEffect,
-    };
-
-    Node model = loadBinary(aModelFile, mStorage, defaultPhongMaterial, mInstanceStream);
-
-    // TODO store and load names in the binary file format
-    SELOG(info)("Loaded model '{}' with bouding box {}.", aModelFile.stem().string(), fmt::streamed(model.mAabb));
-
-    mUbos.addUbo(mStorage, semantic::gMaterials, prepareMaterialBuffer(mStorage));
-
+    // TODO Ad 2023/10/03: Sort out this bit of logic: remove hardcoded sections,
+    // better handle camera placement / projections scene wide
     // Setup instance and camera poses
     {
-        // TODO automatically handle scaling via model bounding box.
+        // TODO For a "Model viewer mode", automatically handle scaling via model bounding box.
         // Note that visually this has the same effect as moving the radial camera away
-        // Actually, an automatic scaling could be detected for an "object viewer", but it is much harder for an environment
-        // From the values of teapot and sponza, they seem to be in centimeters
-        model.mInstance.mPose.mUniformScale = 0.01f;
-        model.mAabb *= model.mInstance.mPose.mUniformScale;
-
-        // Center the model on world origin
-        model.mInstance.mPose.mPosition = -model.mAabb.center().as<math::Vec>();
+        // (it is much harder when loading and navigating inside an environment)
 
         // move the orbital camera away, depending on the model size
-        mCameraControl.mOrbital.mSpherical.radius() = 
-            std::max(mCameraControl.mOrbital.mSpherical.radius(),
-                    gRadialDistancingFactor * (*model.mAabb.mDimension.getMaxMagnitudeElement()));
+        //mCameraControl.mOrbital.mSpherical.radius() = 
+        //    std::max(mCameraControl.mOrbital.mSpherical.radius(),
+        //             gRadialDistancingFactor * (*model.mAabb.mDimension.getMaxMagnitudeElement()));
 
 
         // TODO #camera do this only the correct setup, on each projection change
@@ -601,32 +749,11 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
         });
     }
 
-    // TODO restore the ability to make a model copy, with a distinct material
-    // Add a a copy of the model (hardcoded for teapot), to test another material idx
-    //{
-    //    Node copy = model;
-    //    Material materialOverride{
-    //        .mPhongMaterialIdx = mStorage.mPhongMaterials.size(), // The index of the material that will be pushed.
-    //        .mEffect = phongEffect,
-    //    };
-    //    copy.mInstance.mPose.mPosition.y() = -0.8f;
-    //    copy.mChildren.at(0).mInstance.mMaterialOverride = materialOverride;
-    //    copy.mChildren.at(1).mInstance.mMaterialOverride = materialOverride;
-    //    mScene.mRoot.push_back(std::move(copy));
-    //}
-
-    //// Creates another phong material, for the model copy
-    //{
-    //    mStorage.mPhongMaterials.push_back(mStorage.mPhongMaterials.at(0));
-    //    auto & phong = mStorage.mPhongMaterials.at(1);
-    //    phong.mDiffuseColor = math::hdr::gCyan<float> * 0.75f;
-    //    phong.mAmbientColor = math::hdr::gCyan<float> * 0.2f;
-    //    phong.mSpecularColor = math::hdr::gWhite<float> * 0.5f;
-    //    phong.mSpecularExponent = 100.f;
-    //}
-
-    mScene.mRoot.push_back(std::move(model));
-
+    // Add basic shapes to the the scene
+    Handle<Effect> whiteEffect = makeWhiteEffect(mStorage);
+    auto [triangle, cube] = loadTriangleAndCube(mStorage, whiteEffect, mInstanceStream);
+    mScene.addToRoot(triangle);
+    mScene.addToRoot(cube);
 }
 
 
@@ -642,27 +769,27 @@ void RenderGraph::update(float aDeltaTime)
 void RenderGraph::loadDrawBuffers(const PartList & aPartList,
                                   const PassCache & aPassCache)
 {
-    PROFILER_SCOPE_SECTION("load_draw_buffers", CpuTime);
+    PROFILER_SCOPE_SECTION("load_draw_buffers", CpuTime, BufferMemoryWritten);
 
     assert(aPassCache.mDrawInstances.size() <= gMaxDrawInstances);
 
-    graphics::load(*mUbos.mModelTransformUbo,
-                   std::span{aPartList.mInstanceTransforms},
-                   graphics::BufferHint::DynamicDraw);
+    proto::load(*mUbos.mModelTransformUbo,
+                std::span{aPartList.mInstanceTransforms},
+                graphics::BufferHint::DynamicDraw);
 
-    graphics::load(*mInstanceStream.mVertexBufferViews.at(0).mGLBuffer,
-                   std::span{aPassCache.mDrawInstances},
-                   graphics::BufferHint::DynamicDraw);
+    proto::load(*mInstanceStream.mVertexBufferViews.at(0).mGLBuffer,
+                std::span{aPassCache.mDrawInstances},
+                graphics::BufferHint::DynamicDraw);
 
-    graphics::load(mIndirectBuffer,
-                   std::span{aPassCache.mDrawCommands},
-                   graphics::BufferHint::DynamicDraw);
+    proto::load(mIndirectBuffer,
+                std::span{aPassCache.mDrawCommands},
+                graphics::BufferHint::DynamicDraw);
 }
 
 
 void RenderGraph::render()
 {
-    PROFILER_SCOPE_SECTION("RenderGraph::render()", CpuTime, GpuTime);
+    PROFILER_SCOPE_SECTION("RenderGraph::render()", CpuTime, GpuTime, BufferMemoryWritten);
     nvtx3::mark("RenderGraph::render()");
     NVTX3_FUNC_RANGE();
 
@@ -671,12 +798,12 @@ void RenderGraph::render()
     PartList partList = mScene.populatePartList();
 
     // TODO should be done per pass
-    PassCache passCache = preparePass(partList, mStorage);
+    PassCache passCache = preparePass("forward", partList, mStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(partList, passCache);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // TODO handle pipeline state with an abstraction
     //glEnable(GL_CULL_FACE);
@@ -697,18 +824,21 @@ void RenderGraph::render()
     mCamera.setPose(mFirstPersonControl.getParentToLocal());
 
     {
-        PROFILER_SCOPE_SECTION("load_dynamic_UBOs", CpuTime, GpuTime);
+        PROFILER_SCOPE_SECTION("load_dynamic_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
         loadFrameUbo(*mUbos.mFrameUbo); // TODO Separate, the frame ubo should likely be at the top, once per frame
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, mCamera);
     }
 
-    // A single texture array at the moment
-    assert(mStorage.mTextures.size() == 1);
-    RepositoryTexture textureRepository{{semantic::gDiffuseTexture, &mStorage.mTextures.front()}};
+    RepositoryTexture textureRepository;
 
     // Use the same indirect buffer for all drawings
     graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
+
+    // Reset texture bindings (to make sure that texturing does not work by "accident")
+    // this could be extended to reset everything in the context.
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
     // TODO should be done once per viewport
     glViewport(0, 0,
@@ -716,7 +846,7 @@ void RenderGraph::render()
                mGlfwAppInterface->getFramebufferSize().height());
 
     {
-        PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
+        PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
         draw(passCache, mUbos.mUboRepository, textureRepository);
     }
 }

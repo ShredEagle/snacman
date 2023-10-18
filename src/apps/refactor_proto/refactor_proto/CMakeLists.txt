@@ -9,6 +9,7 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Commons.h
     Cube.h
+    GlApi.h
     IntrospectProgram.h
     Json.h
     Loader.h
@@ -18,12 +19,17 @@ set(${TARGET_NAME}_HEADERS
     Profiler.h
     ProfilerSeattle.h
     Profiling.h
-    ProviderRdtsc.h
-    ProviderWindows.h
     RenderGraph.h
+    RendererReimplement.h
     Repositories.h
+    Scene.h
     SetupDrawing.h
     Time.h
+
+    providers/ProviderApi.h
+    providers/ProviderCpu.h
+    providers/ProviderGL.h
+    providers/ProviderRdtsc.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -38,16 +44,19 @@ set(${TARGET_NAME}_SOURCES
     Profiling.cpp
     RenderGraph.cpp
     SetupDrawing.cpp
+
+    providers/ProviderGL.cpp
+    providers/ProviderCpu.cpp
 )
 
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     list(APPEND ${TARGET_NAME}_HEADERS
-        ProviderWindows.h
+        providers/ProviderWindows.h
     )
 
     list(APPEND ${TARGET_NAME}_SOURCES
-        ProviderWindows.cpp
+        providers/ProviderWindows.cpp
     )
 endif()
 

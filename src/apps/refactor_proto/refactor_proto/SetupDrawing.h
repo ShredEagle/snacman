@@ -20,7 +20,7 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
 
 
 void setBufferBackedBlocks(const IntrospectProgram & aProgram,
-                           const RepositoryUBO & aUniformBufferObjects);
+                           const RepositoryUbo & aUniformBufferObjects);
 
 
 void setTextures(const IntrospectProgram & aProgram,

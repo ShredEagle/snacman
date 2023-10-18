@@ -1,12 +1,13 @@
 #pragma once
 
 
-#include "Time.h"
-
-#include <renderer/Query.h> 
+#include <renderer/GL_Loader.h>
 
 #include <array>
 #include <numeric>
+#include <ostream>
+#include <ratio>
+#include <vector>
 
 
 // Implementation notes:
@@ -244,84 +245,5 @@ private:
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
 };
 
-
-struct ProviderCPUTime : public ProviderInterface {
-    ProviderCPUTime() : 
-        ProviderInterface{"CPU time",
-                          "us",
-                           Ratio::MakeConversion<Clock::period, std::micro>()}
-    {}
-
-    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-
-    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
-
-    void resize(std::size_t aNewEntriesCount) override
-    { mTimePoints.resize(aNewEntriesCount * Profiler::gFrameDelay); }
-
-    //////
-    struct TimeInterval
-    {
-        Clock::time_point mBegin;
-        Clock::time_point mEnd;
-    };
-
-    TimeInterval & getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame);
-
-    std::vector<TimeInterval> mTimePoints;
-};
-
-
-struct ProviderGL : public ProviderInterface
-{
-    ProviderGL() :
-        ProviderInterface{"GPU generated", "primitive(s)"}
-    {}
-
-    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-
-    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
-
-    void resize(std::size_t aNewEntriesCount) override
-    { mQueriesPool.resize(aNewEntriesCount * Profiler::gFrameDelay); }
-
-    //////
-
-    graphics::Query & getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame);
-
-    std::vector<graphics::Query> mQueriesPool;
-    bool mActive{false}; // There can be at most 1 query active per target (per index, for indexed targets)
-};
-
-
-struct ProviderGLTime : public ProviderInterface
-{
-    enum class Event
-    {
-        Begin,
-        End,
-    };
-
-    ProviderGLTime() :
-        ProviderInterface{"GPU time", "us"}
-    {}
-
-    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-
-    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
-
-    // This is currently very conservative, having enough queries to recorded begin/end time for each section
-    // in each "frame delay slot".
-    void resize(std::size_t aNewEntriesCount) override
-    { mQueriesPool.resize(2 * aNewEntriesCount * Profiler::gFrameDelay); }
-
-    //////
-    graphics::Query & getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame, Event aEvent);
-
-    std::vector<graphics::Query> mQueriesPool;
-};
 
 } // namespace ad::renderer
