@@ -1,18 +1,22 @@
 #pragma once
 
 
-#include "Profiler.h"
+#include "../Profiler.h"
+#include "../Time.h"
+
+
+#include <cstddef>
 
 
 namespace ad::renderer {
 
 
-struct ProviderCpuPerformanceCounter : public ProviderInterface
-{
-    // see https://learn.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter#examples
-    using TickCount_t = std::int64_t;
-
-    ProviderCpuPerformanceCounter();
+struct ProviderCPUTime : public ProviderInterface {
+    ProviderCPUTime() : 
+        ProviderInterface{"CPU time",
+                          "us",
+                           Ratio::MakeConversion<Clock::period, std::micro>()}
+    {}
 
     void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
     void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
@@ -23,11 +27,19 @@ struct ProviderCpuPerformanceCounter : public ProviderInterface
     { mTimePoints.resize(aNewEntriesCount * Profiler::gFrameDelay); }
 
     //////
-    using TimeInterval = TickCount_t;
+    struct TimeInterval
+    {
+        Clock::time_point mBegin;
+        Clock::time_point mEnd;
+    };
+
     TimeInterval & getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame);
 
     std::vector<TimeInterval> mTimePoints;
 };
+
+
+
 
 
 } // namespace ad::renderer

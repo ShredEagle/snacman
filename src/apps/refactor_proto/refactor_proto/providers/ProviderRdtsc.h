@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include "Profiler.h"
-#include "Time.h"
+#include "../Profiler.h"
+#include "../Time.h"
 
 
 namespace ad::renderer {
