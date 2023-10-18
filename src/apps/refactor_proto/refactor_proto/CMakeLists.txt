@@ -9,6 +9,7 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Commons.h
     Cube.h
+    GlApi.h
     IntrospectProgram.h
     Json.h
     Loader.h
@@ -21,6 +22,7 @@ set(${TARGET_NAME}_HEADERS
     ProviderRdtsc.h
     ProviderWindows.h
     RenderGraph.h
+    RenderReimplement.h
     Repositories.h
     Scene.h
     SetupDrawing.h

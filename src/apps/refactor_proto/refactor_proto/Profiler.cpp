@@ -24,6 +24,8 @@ Profiler::Profiler()
 
     mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
     mMetricProviders.push_back(std::make_unique<ProviderGL>());
+    mMetricProviders.push_back(std::make_unique<ProviderApi<unsigned int, &GlApi::Metrics::drawCount>>("draw", ""));
+    mMetricProviders.push_back(std::make_unique<ProviderApi<std::size_t, &GlApi::Metrics::bufferMemoryWritten>>("buffer w", "B"));
 
     resize(gInitialEntries);
 }

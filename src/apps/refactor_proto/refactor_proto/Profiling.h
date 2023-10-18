@@ -35,6 +35,8 @@ enum
     CpuTime = 0,
     GpuTime,
     GpuPrimitiveGen,
+    DrawCalls,
+    BufferMemoryWritten,
 };
 
 #ifdef SE_FEATURE_PROFILER

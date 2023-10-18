@@ -1,10 +1,12 @@
 #include "RenderGraph.h"
 
 #include "Cube.h"
+#include "GlApi.h"
 #include "Json.h"
 #include "Loader.h"
 #include "Logging.h"
 #include "Profiling.h"
+#include "RendererReimplement.h" // TODO Ad 2023/10/18: Should get rid of this repeated implementation
 #include "SetupDrawing.h"
 
 #include <handy/vector_utils.h>
@@ -186,13 +188,13 @@ namespace {
         GLfloat time =
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 1000.f;
-        graphics::loadSingle(aUbo, time, graphics::BufferHint::DynamicDraw);
+        proto::loadSingle(aUbo, time, graphics::BufferHint::DynamicDraw);
     }
 
 
     void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
     {
-        graphics::loadSingle(aUbo, GpuViewBlock{aCamera}, graphics::BufferHint::DynamicDraw);
+        proto::loadSingle(aUbo, GpuViewBlock{aCamera}, graphics::BufferHint::DynamicDraw);
     }
 
 
@@ -257,7 +259,7 @@ namespace {
                     // Can we have efficient GPU measures?
                     PROFILER_SCOPE_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
                     
-                    glMultiDrawElementsIndirect(
+                    gl.MultiDrawElementsIndirect(
                         aCall.mPrimitiveMode,
                         aCall.mIndicesType,
                         (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
@@ -767,27 +769,27 @@ void RenderGraph::update(float aDeltaTime)
 void RenderGraph::loadDrawBuffers(const PartList & aPartList,
                                   const PassCache & aPassCache)
 {
-    PROFILER_SCOPE_SECTION("load_draw_buffers", CpuTime);
+    PROFILER_SCOPE_SECTION("load_draw_buffers", CpuTime, BufferMemoryWritten);
 
     assert(aPassCache.mDrawInstances.size() <= gMaxDrawInstances);
 
-    graphics::load(*mUbos.mModelTransformUbo,
-                   std::span{aPartList.mInstanceTransforms},
-                   graphics::BufferHint::DynamicDraw);
+    proto::load(*mUbos.mModelTransformUbo,
+                std::span{aPartList.mInstanceTransforms},
+                graphics::BufferHint::DynamicDraw);
 
-    graphics::load(*mInstanceStream.mVertexBufferViews.at(0).mGLBuffer,
-                   std::span{aPassCache.mDrawInstances},
-                   graphics::BufferHint::DynamicDraw);
+    proto::load(*mInstanceStream.mVertexBufferViews.at(0).mGLBuffer,
+                std::span{aPassCache.mDrawInstances},
+                graphics::BufferHint::DynamicDraw);
 
-    graphics::load(mIndirectBuffer,
-                   std::span{aPassCache.mDrawCommands},
-                   graphics::BufferHint::DynamicDraw);
+    proto::load(mIndirectBuffer,
+                std::span{aPassCache.mDrawCommands},
+                graphics::BufferHint::DynamicDraw);
 }
 
 
 void RenderGraph::render()
 {
-    PROFILER_SCOPE_SECTION("RenderGraph::render()", CpuTime, GpuTime);
+    PROFILER_SCOPE_SECTION("RenderGraph::render()", CpuTime, GpuTime, BufferMemoryWritten);
     nvtx3::mark("RenderGraph::render()");
     NVTX3_FUNC_RANGE();
 
@@ -801,7 +803,7 @@ void RenderGraph::render()
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(partList, passCache);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // TODO handle pipeline state with an abstraction
     //glEnable(GL_CULL_FACE);
@@ -822,7 +824,7 @@ void RenderGraph::render()
     mCamera.setPose(mFirstPersonControl.getParentToLocal());
 
     {
-        PROFILER_SCOPE_SECTION("load_dynamic_UBOs", CpuTime, GpuTime);
+        PROFILER_SCOPE_SECTION("load_dynamic_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
         loadFrameUbo(*mUbos.mFrameUbo); // TODO Separate, the frame ubo should likely be at the top, once per frame
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, mCamera);
@@ -844,7 +846,7 @@ void RenderGraph::render()
                mGlfwAppInterface->getFramebufferSize().height());
 
     {
-        PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen);
+        PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
         draw(passCache, mUbos.mUboRepository, textureRepository);
     }
 }

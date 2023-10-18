@@ -2,6 +2,7 @@
 
 #include "BinaryArchive.h" 
 #include "Cube.h"
+#include "GlApi.h"
 #include "Json.h"
 #include "Logging.h"
 
@@ -76,7 +77,7 @@ namespace {
 
         const GLsizeiptr bufferSize = aElementSize * aElementCount;
 
-        glBufferData(
+        gl.BufferData(
             static_cast<GLenum>(target),
             bufferSize,
             nullptr,
@@ -123,7 +124,7 @@ namespace {
         constexpr auto target = graphics::BufferType::Array;
         graphics::ScopedBind boundBuffer{aBuffer, target}; // glBind()
 
-        glBufferSubData(
+        gl.BufferSubData(
             static_cast<GLenum>(target),
             aElementFirst * elementSize, // offset
             aCpuBuffer.size_bytes(), // data length
@@ -486,6 +487,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
     std::vector<math::hdr::Rgba_f> cubeColors(cubePositions.size(), math::hdr::gWhite<GLfloat>);
     assert(cubePositions.size() == cubeNormals.size());
 
+    //TODO handle non-indexed geometry in draw(), so we can get rid of the sequential indices.
     std::vector<GLuint> cubeIndices(cubePositions.size());
     std::iota(cubeIndices.begin(), cubeIndices.end(), 0);
 
@@ -571,6 +573,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
                 .mPrimitiveMode = GL_TRIANGLES,
                 .mVertexFirst = 0,
                 .mVertexCount = (GLuint)trianglePositions.size(),
+                // TODO Ad 2023/10/12: Remove the need for indices
                 .mIndexFirst = 0,
                 .mIndicesCount = (GLuint)triangleIndices.size(),
                 .mAabb = aabb,
@@ -601,6 +604,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
                 .mPrimitiveMode = GL_TRIANGLES,
                 .mVertexFirst = 0,
                 .mVertexCount = (GLuint)cubePositions.size(),
+                // TODO Ad 2023/10/12: Remove the need for indices
                 .mIndexFirst = 0,
                 .mIndicesCount = (GLuint)cubeIndices.size(),
                 .mAabb = aabb,

@@ -2,6 +2,7 @@
 
 
 #include "Time.h"
+#include "GlApi.h"
 
 #include <renderer/Query.h> 
 
@@ -323,5 +324,45 @@ struct ProviderGLTime : public ProviderInterface
 
     std::vector<graphics::Query> mQueriesPool;
 };
+
+
+template <class T_value, T_value(GlApi::Metrics::*F_getter)() const>
+struct ProviderApi : public ProviderInterface
+{
+    ProviderApi(const char * aQuantityName, const char * aUnit) :
+        ProviderInterface{aQuantityName, aUnit}
+    {}
+
+    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override
+    {
+        getRecord(aEntryIndex, aCurrentFrame) = (gl.get().*F_getter)();
+    }
+
+    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override
+    {
+        auto & count = getRecord(aEntryIndex, aCurrentFrame);
+        count = (gl.get().*F_getter)() - count;
+    }
+
+    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override
+    {
+        aSampleResult = (GLuint)getRecord(aEntryIndex, aQueryFrame);
+        return true;
+    }
+
+    // This is currently very conservative, having enough queries to recorded begin/end time for each section
+    // in each "frame delay slot".
+    void resize(std::size_t aNewEntriesCount) override
+    { mCounts.resize(aNewEntriesCount * Profiler::gFrameDelay); }
+
+    /////
+    T_value & getRecord(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+    {
+        return mCounts[aEntryIndex * Profiler::gFrameDelay + aCurrentFrame];
+    }
+
+    std::vector<T_value> mCounts;
+};
+
 
 } // namespace ad::renderer

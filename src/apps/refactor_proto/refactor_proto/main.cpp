@@ -1,3 +1,4 @@
+#include "GlApi.h"
 #include "Logging.h"
 #include "Profiler.h" // For Profiler::Values
 #include "Profiling.h"
@@ -104,6 +105,15 @@ void runApplication(int argc, char * argv[])
         imguiUi.newFrame();
         ImGui::Begin("Profiler");
         ImGui::Text(profilerOut.str().c_str());
+        ImGui::End();
+
+        ImGui::Begin("GL metrics");
+        std::ostringstream metricsOs;
+        metricsOs << "Buffer memory:" 
+            << "\n\tallocated:" << ad::renderer::gl.get().mBufferMemory.mAllocated / 1024 << " kB."
+            << "\n\twritten:"   << ad::renderer::gl.get().mBufferMemory.mWritten / 1024 << " kB."
+            ;
+        ImGui::Text(metricsOs.str().c_str());
         ImGui::End();
         imguiUi.render();
         imguiUi.renderBackend();
