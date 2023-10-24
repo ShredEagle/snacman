@@ -62,6 +62,28 @@ namespace proto {
     }
 
 
+    inline void writeTo(const graphics::Texture & aTexture,
+                        const std::byte * aRawData,
+                        const graphics::InputImageParameters & aInput,
+                        math::Position<3, GLint> aTextureOffset,
+                        GLint aMipmapLevelId = 0)
+    {
+        // TODO assert that texture target is of correct dimension.
+
+        // TODO replace with DSA
+        graphics::ScopedBind bound(aTexture);
+
+        // Handle alignment
+        Guard scopedAlignemnt = graphics::detail::scopeUnpackAlignment(aInput.alignment);
+
+        gl.TexSubImage3D(aTexture.mTarget, aMipmapLevelId,
+                         aTextureOffset.x(), aTextureOffset.y(), aTextureOffset.z(),
+                         aInput.resolution.width(), aInput.resolution.height(), 1,
+                         aInput.format, aInput.type,
+                         aRawData);
+    }
+
+
 } // namespace proto
 
 

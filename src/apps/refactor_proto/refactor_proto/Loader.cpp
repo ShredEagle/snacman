@@ -5,6 +5,7 @@
 #include "GlApi.h"
 #include "Json.h"
 #include "Logging.h"
+#include "RendererReimplement.h"
 
 #include <arte/Image.h>
 // TODO Ad 2023/10/06: Move the Json <-> Math type converters to a better place
@@ -374,10 +375,10 @@ namespace {
         arte::Image<math::sdr::Rgba> image{aTexturePath, arte::ImageOrientation::InvertVerticalAxis};
         assert(aExpectedDimensions == image.dimensions());
 
-        graphics::writeTo(a3dTexture,
-                          static_cast<const std::byte *>(image),
-                          graphics::InputImageParameters::From(image),
-                          math::Position<3, GLint>{0, 0, aLayerIdx});
+        proto::writeTo(a3dTexture,
+                       static_cast<const std::byte *>(image),
+                       graphics::InputImageParameters::From(image),
+                       math::Position<3, GLint>{0, 0, aLayerIdx});
     }
 
 
@@ -409,10 +410,10 @@ namespace {
 
             graphics::Texture textureArray{GL_TEXTURE_2D_ARRAY};
             graphics::ScopedBind boundTextureArray{textureArray};
-            glTexStorage3D(textureArray.mTarget, 
-                        graphics::countCompleteMipmaps(imageSize),
-                        graphics::MappedSizedPixel_v<math::sdr::Rgba>,
-                        imageSize.width(), imageSize.height(), pathsCount);
+            gl.TexStorage3D(textureArray.mTarget, 
+                            graphics::countCompleteMipmaps(imageSize),
+                            graphics::MappedSizedPixel_v<math::sdr::Rgba>,
+                            imageSize.width(), imageSize.height(), pathsCount);
             { // scoping `isSuccess`
                 GLint isSuccess;
                 glGetTexParameteriv(textureArray.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);

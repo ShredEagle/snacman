@@ -112,6 +112,9 @@ void runApplication(int argc, char * argv[])
         metricsOs << "Buffer memory:" 
             << "\n\tallocated:" << ad::renderer::gl.get().mBufferMemory.mAllocated / 1024 << " kB."
             << "\n\twritten:"   << ad::renderer::gl.get().mBufferMemory.mWritten / 1024 << " kB."
+            << "\n\nTexture memory:"
+            << "\n\tallocated:" << ad::renderer::gl.get().mTextureMemory.mAllocated / 1024 << " kB."
+            << "\n\twritten:"   << ad::renderer::gl.get().mTextureMemory.mWritten / 1024 << " kB."
             ;
         ImGui::Text(metricsOs.str().c_str());
         ImGui::End();

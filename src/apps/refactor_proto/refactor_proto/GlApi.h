@@ -19,8 +19,8 @@ class GlApi
 public:
     struct Memory
     {
-        std::size_t mAllocated;
-        std::size_t mWritten;
+        std::size_t mAllocated{0};
+        std::size_t mWritten{0};
     };
 
     struct Metrics
@@ -32,13 +32,17 @@ public:
         { return mBufferMemory.mWritten ; }
 
         unsigned int mDrawCount{0};
-        Memory mBufferMemory{0};
+        Memory mBufferMemory;
+        Memory mTextureMemory;
     };
 
     void BufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
     void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
     void Clear(GLbitfield mask);
     void MultiDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect, GLsizei drawcount, GLsizei stride);
+    void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
+    void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
+
 
     // Note: Give access to the Metrics even if the instrumentation is not macro enabled
     // (this way the reporting code can still compile)
@@ -109,6 +113,44 @@ inline void GlApi::MultiDrawElementsIndirect(GLenum mode, GLenum type, const voi
     ++v().mDrawCount;
 #endif
     return glMultiDrawElementsIndirect(mode, type, indirect, drawcount, stride);
+}
+
+
+inline void GlApi::TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth)
+{
+#if defined(SE_INSTRUMENT_GL)
+    // Only gives an approximation at the moment
+    // TODO Ad 2023/10/24: Is it actually how the reserved memory is computed?
+    // Do we need to take into account some further alignment constraints?
+    // How is byte rounding implemeneted?
+    GLuint bitsPerPixel = graphics::getPixelFormatBitSize(internalformat);
+    GLsizei w = width;
+    GLsizei h = height;
+    GLsizei d = depth;
+    for (GLsizei i = 0; i < levels; i++) {
+        // Currently rounding each level independently.
+        v().mTextureMemory.mAllocated += (w * h * d * bitsPerPixel) / 8;
+        w = std::max(1, (w / 2));
+        h = std::max(1, (h / 2));
+        if(target == GL_TEXTURE_3D || target == GL_PROXY_TEXTURE_3D)
+        {
+            d = std::max(1, (d / 2));
+        }
+    }
+#endif
+    return glTexStorage3D(target, levels, internalformat, width, height, depth);
+}
+
+
+inline void GlApi::TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels)
+{
+#if defined(SE_INSTRUMENT_GL)
+    // TODO Ad 2023/10/24: Handle packed pixel data types, such as GL_UNSIGNED_BYTE_3_3_2
+    // see: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexSubImage3D.xhtml
+    v().mTextureMemory.mWritten += 
+        width * height * depth * graphics::getComponentsCount(format) * graphics::getByteSize(type);
+#endif
+    return glTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, pixels);
 }
 
 

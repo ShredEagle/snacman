@@ -94,6 +94,21 @@ The path is long, especially because it is filled with questions and design deci
 
 To try to keep decision-paralysis under control, I have to be better at taking a direction, accepting to revisit early / often.
 
+### How should one wrap graphics library (OpenGL) calls?
+
+We can read in the litterature / see in presentation that "developers usually have some inhouse abstraction sitting on top of the API".
+We use a loader (glad) to give access to OpenGL functions, it does not seem to easily let us insert code.
+
+Should we look for a way to insert ourselve in between the loader and the actual driver call?
+This might not be robust to separately compiled libraries.
+
+Should we model some API object? It could be static and easily accessible by all client code.
+But how do we allow "wrapped resources" such as textures to use it for freeing? Overloaded ctors?
+
+How to handle binds?
+
+How to count allocated memory? For example, calling glBufferData() discard the buffer memory if it was already allocated, but how to track that?
+
 ### The decision log
 
 #### Binding Meshes to shader programs
