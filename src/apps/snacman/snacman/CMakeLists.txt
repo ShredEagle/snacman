@@ -20,6 +20,7 @@ set(${TARGET_NAME}_HEADERS
     QueryManipulation.h
     RenderThread.h
     Resources.h
+    SnacArchive.h
     SparseSet.h
     TemporaryRendererHelpers.h # TODO should be removed, this was a hack waiting to host Object instead of Node in VisualModel
     Timing.h
@@ -105,6 +106,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/SceneStack.h
 
     detail/Logger.h
+    detail/Serialization.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -163,6 +165,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/SceneStack.cpp
 
     detail/Logger.cpp
+    detail/Serialization.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
