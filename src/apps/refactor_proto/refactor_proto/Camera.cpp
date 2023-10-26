@@ -238,13 +238,13 @@ void FirstPersonControl::callbackCursorPosition(double xpos, double ypos)
     if(mControlMode == ControlMode::Aiming)
     {
         auto angularIncrements = (cursorPosition - mPreviousCursorPosition).cwMul(gMouseControlFactor);
-        mOrientation.roll.data() -= angularIncrements.y(); // mouse down -> +Y -> negative roation around X (to look down)
-        mOrientation.pitch.data() -= angularIncrements.x(); // mouse right -> +X -> negative rotation around Y (to look right)
+        mOrientation.x.data() -= angularIncrements.y(); // mouse down -> +Y -> negative roation around X (to look down)
+        mOrientation.y.data() -= angularIncrements.x(); // mouse right -> +X -> negative rotation around Y (to look right)
 
-        // First clamp the pitch, then reduce
+        // First clamp the vertical orientation (around X axis), then reduce
         static constexpr float quarterRevolution = math::Turn<float>{1.f/4.f}.as<math::Radian>().value();
-        auto & roll = mOrientation.roll.data();
-        roll = std::clamp(roll, -quarterRevolution, quarterRevolution);
+        auto & x = mOrientation.x.data();
+        x = std::clamp(x, -quarterRevolution, quarterRevolution);
 
         mOrientation = reduce(mOrientation);
     }
@@ -284,35 +284,34 @@ void FirstPersonControl::callbackKeyboard(int key, int scancode, int action, int
 }
 
 
-/// @brief Rotation matrix applying rotations to match the EulerAngles orientation,
+/// @brief Rotation matrix applying rotations to align the parent frame to the EulerAngle basis.
 /// i.e. a change of basis from local to parent.
 math::LinearMatrix<3, 3, float> dummyToRotationMatrix(math::EulerAngles<float> aEuler)
 {
-    return math::trans3d::rotateX(aEuler.roll)
-        * math::trans3d::rotateY(aEuler.pitch)
-        * math::trans3d::rotateZ(aEuler.yaw);
+    return math::trans3d::rotateX(aEuler.x)
+        * math::trans3d::rotateY(aEuler.y)
+        * math::trans3d::rotateZ(aEuler.z);
 }
 
+/// @brief A Change of basis from parent to local.
+/// Or as an active transformation: rotate the EulerAngle basis to align it to its parent frame.
 math::LinearMatrix<3, 3, float> dummyToRotationMatrixInverse(math::EulerAngles<float> aEuler)
 {
-    //return math::trans3d::rotateX(-aEuler.roll)
-    //    * math::trans3d::rotateY(-aEuler.pitch)
-    //    * math::trans3d::rotateZ(-aEuler.yaw);
-    // TODO understand why this order, when I expected the opposite
-    // I guess this is because the other order is for local to parent
-    return math::trans3d::rotateZ(-aEuler.yaw)
-        * math::trans3d::rotateY(-aEuler.pitch)
-        * math::trans3d::rotateX(-aEuler.roll);
+    // Note in linear algebra (A * B)^-1 = B^-1 * A^-1,
+    // and the inverse of a rotation matrix is the rotation by negated angle.
+    return math::trans3d::rotateZ(-aEuler.z)
+        * math::trans3d::rotateY(-aEuler.y)
+        * math::trans3d::rotateX(-aEuler.x);
 }
+
 void FirstPersonControl::update(float aDeltaTime)
 {
     float movement = aDeltaTime * gSpeed;
     // This is the rotation matrix in parent frame:
     // its rows are the base vectors of the camera frame, expressed in canonical coordinates.
-    math::LinearMatrix<3, 3, float> rotation = dummyToRotationMatrix(mOrientation);
-    // TODO I expected both toe be equivalent, but the quaternion form causes issue with the "backward"
-    // vector when there is enough roll
-    //math::LinearMatrix<3, 3, float> rotation = toQuaternion(mOrientation).toRotationMatrix();
+    math::LinearMatrix<3, 3, float> rotation = toQuaternion(mOrientation).toRotationMatrix();
+    // It is equivalent to:
+    //math::LinearMatrix<3, 3, float> rotation = dummyToRotationMatrix(mOrientation);
     math::Vec<3, float> backward{rotation[2]}; // camera looks in -Z, so +Z is the backward vector
     math::Vec<3, float> right{rotation[0]};
     if(mF) mPosition -= backward * movement;
@@ -326,9 +325,9 @@ math::AffineMatrix<4, float> FirstPersonControl::getParentToLocal() const
 {
     // Translate the world by negated camera position, then rotate by inverse camera orientation
     return math::trans3d::translate(-mPosition.as<math::Vec>()) 
-        * dummyToRotationMatrixInverse(mOrientation);
-        // TODO investigate why the quaternion path is clipping roll to 3/4 turn instead of 1/4.
-        //* math::toQuaternion(mOrientation).inverse().toRotationMatrix();
+        * math::toQuaternion(mOrientation).inverse().toRotationMatrix();
+        // It is equivalent to:
+        //* dummyToRotationMatrixInverse(mOrientation);
 }
 
 } // namespace ad::renderer
