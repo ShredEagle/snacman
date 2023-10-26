@@ -351,7 +351,7 @@ inline VertexStream makeRectangle(math::Rectangle<GLfloat> aRectangle)
     {
         graphics::ClientAttribute normal{
             .mDimension = 3,
-            .mOffset = offsetof(PositionNormal, normal),
+            .mOffset = offsetof(PositionNormalUV, normal),
             .mComponentType = GL_FLOAT
         };
         geometry.mAttributes.emplace(Semantic::Normal, AttributeAccessor{index, normal});

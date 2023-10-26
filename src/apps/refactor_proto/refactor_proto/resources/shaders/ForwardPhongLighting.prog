@@ -1,0 +1,8 @@
+{
+    "features": {
+        "texturing": ["TEXTURES"],
+        "shadow_receiver": ["SHADOW"]
+    },
+    "vertex": "PhongLighting.vert",
+    "fragment": "PhongLighting.frag"
+}

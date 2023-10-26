@@ -108,6 +108,9 @@ void Profiler::endFrame()
       if(entry.splitter)
         continue;
 
+      // Note Ad: The query frame is the oldest entry in the circular buffer of size FRAME_DELAY.
+      // This gives the most chances that async GPU queries did complete.
+      // (Important: Entry instances are kept alive between frames)
       uint32_t queryFrame = (m_data->numFrames + 1) % FRAME_DELAY;
       bool     available  = entry.api == nullptr || entry.gpuTimeProvider(i, queryFrame, entry.gpuTimes[queryFrame]);
 
@@ -393,6 +396,7 @@ Profiler::SectionID Profiler::getSectionID(bool singleShot, const char* name)
   else
   {
     // find non-single shot slot
+    // Note Ad: Return the first Entry index that is not used for a single shot, or the first index after last entry.
     while(m_data->nextSection < numEntries && m_data->entries[m_data->nextSection].level == LEVEL_SINGLESHOT)
     {
       m_data->nextSection++;

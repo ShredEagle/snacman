@@ -1,17 +1,18 @@
 #include "IntrospectProgram.h"
-#include "Semantic.h"
+
+#include <handy/StringUtilities.h>
 
 #include <array>
 #include <iterator>
 #include <memory>
+#include <ostream>
+#include <set>
 #include <string>
 
-#include <ostream>
 #include <cassert>
 
 
-namespace ad {
-namespace snac {
+namespace ad::renderer {
 
 
 namespace {
@@ -129,6 +130,46 @@ namespace {
     };
 
 
+    Semantic to_semantic(std::string_view aResourceName)
+    {
+        static const std::string delimiter = "_";
+        std::string_view prefix, body, suffix;
+        std::tie(prefix, body) = lsplit(aResourceName, delimiter);
+        std::tie(body, suffix) = lsplit(body, delimiter);
+        return std::string{body};
+    }
+
+
+    BlockSemantic to_blockSemantic(std::string_view aBlockName)
+    {
+        if (aBlockName.ends_with(']'))
+        {
+            //TODO Ad 2023/07/06: support array of blocks.
+            throw std::logic_error{
+                "Unable to map shader block name '" + std::string{aBlockName} + "' to a semantic, arrays of blocks are not supported."};
+        }
+        else if(aBlockName.ends_with("Block"))
+        {
+            aBlockName.remove_suffix(5);
+            return std::string{aBlockName};
+        }
+        else
+        {
+            throw std::logic_error{
+                "Unable to map shader block name '" + std::string{aBlockName} + "' to a semantic."};
+        }
+    } 
+
+    bool is_normalized(std::string_view aResourceName)
+    {
+        //TODO Ad 2023/07/06: This duplicates the logic from to_semantic, and is called in sequence.
+        static const std::string delimiter = "_";
+        std::string_view prefix, body, suffix;
+        std::tie(prefix, body) = lsplit(aResourceName, delimiter);
+        std::tie(body, suffix) = lsplit(body, delimiter);
+        return suffix.starts_with("_normalized");
+    }
+
 } // anonymous
 
 
@@ -155,7 +196,7 @@ std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram & aProgra
 std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::Resource & aResource)
 {
     aOut << aResource.mName 
-         << " (" << to_string(aResource.mSemantic) << ")"
+         << " (" << aResource.mSemantic << ")"
          ;
     
     if (aResource.mLocation != -1)
@@ -175,17 +216,8 @@ std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::UniformB
     aOut << aBlock.mName 
          // TODO add block semantic output
          //<< " (" << to_string(aResource.mSemantic) << ")"
-         << " at binding index " << aBlock.mBindingIndex
-         << " has " << aBlock.mUniforms.size() << " active uniform variable(s):"
+         << " at binding index " << aBlock.mBindingIndex << "."
          ;
-
-    for (const auto & resource : aBlock.mUniforms)
-    {
-        // TODO Address the dirty encoding of two tabs
-        // (because we currently intend to use it under the IntrospectProgram output operator)
-        aOut << "\n\t\t*" << resource;
-    }
-
     return aOut;
 }
 
@@ -205,6 +237,13 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
         };
     };
 
+    auto makeAttribute = [&makeResource](const auto &aAttribute) -> Attribute
+    {
+        Attribute result{makeResource(aAttribute)};
+        result.mIsNormalized = is_normalized(aAttribute.mName);
+        return result;
+    };
+
     // Attributes
     {
         using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE, GL_ARRAY_SIZE>;
@@ -212,7 +251,7 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
             it != Iterator::makeEnd(mProgram, GL_PROGRAM_INPUT);
             ++it)
         {
-            mAttributes.push_back(Attribute{makeResource(*it)});
+            mAttributes.push_back(makeAttribute(*it));
         }
     }
 
@@ -230,6 +269,27 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
                 .mName = it->mName,
             });
         }
+
+        // Note: When uniform blocks are not explicitly assigned a binding index
+        // there tends to be a lot of collisions.
+        // TODO Understand why, unlike for generic vertex attributes, automatic indices
+        // are not working for uniform blocks.
+        
+        [[maybe_unused]] // Otherwise clang complains that this variable is unused in release builds
+        auto checkDuplicateIndex = [](const std::vector<UniformBlock> & aBlocks) -> bool
+        {
+            std::set<graphics::BindingIndex> boundIndices;
+            for(const auto & block : aBlocks)
+            {
+                if (boundIndices.contains(block.mBindingIndex))
+                {
+                    return false;
+                }
+                boundIndices.insert(block.mBindingIndex);
+            }
+            return true;
+        };
+        assert(checkDuplicateIndex(mUniformBlocks));
     }
 
     // All uniforms ("normal" non-block uniforms, as well as within uniform blocks)
@@ -244,7 +304,7 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
             if (blockIndex == -1) // BLOCK_INDEX == -1 means not part of an interface blocks
             {
                 assert((*it)[0] != -1);
-                mUniforms.push_back(Attribute{makeResource(*it)});
+                mUniforms.push_back(makeResource(*it));
             }
             // Part of an inteface block
             else
@@ -281,10 +341,9 @@ graphics::ShaderParameter IntrospectProgram::Attribute::toShaderParameter() cons
         (GLuint)mLocation,
         graphics::getResourceShaderAccess(mType)
     };
-    result.mNormalize = isNormalized(mSemantic);
+    result.mNormalize = mIsNormalized;
     return result;
 }
 
 
-} // namespace snac
-} // namespace ad
+} // namespace ad::renderer

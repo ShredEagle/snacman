@@ -352,13 +352,20 @@ private:
     uint32_t resetDelay   = 0;
     uint32_t numFrames    = 0;
 
+    // Reset to zero at beginFrame()
     uint32_t level       = 0;
+    // Reset to zero at beginFrame(), this keep the Entry index past the last Entry used as a **frame** section.
     uint32_t nextSection = 0;
 
+    // Kept (not convinced it might not miss changes) to the index of the last Entry used as **frame** section + 1.
     uint32_t numLastSections = 0;
+    // Kept to the size of frameSections vector.
+    // Used to detect a change in number of frame sections, triggering a reset.
     uint32_t numLastEntries  = 0;
 
+    // Cleared at beginFrame(), list the indices of Entry used for frame (recurring) timings.
     std::vector<uint32_t> frameSections;
+    // Kept between frames, list the indices of Entry used for singleshot timings.
     std::vector<uint32_t> singleSections;
 
     double     cpuCurrentTime = 0;

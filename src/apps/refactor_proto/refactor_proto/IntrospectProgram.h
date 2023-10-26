@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "Commons.h"
+
 #include <renderer/BufferIndexedBinding.h>
 #include <renderer/ShaderVertexAttribute.h>
 #include <renderer/Shading.h>
@@ -11,11 +13,8 @@
 #include <vector>
 
 
-namespace ad {
-namespace snac {
+namespace ad::renderer {
 
-enum class BlockSemantic;
-enum class Semantic;
 
 struct IntrospectProgram
 {
@@ -51,6 +50,7 @@ struct IntrospectProgram
     struct Attribute : public Resource
     {
         graphics::ShaderParameter toShaderParameter() const;
+        bool mIsNormalized;
     };
 
     struct UniformBlock
@@ -60,7 +60,7 @@ struct IntrospectProgram
         BlockSemantic mSemantic;
         std::string mName;
         // TODO do we want to use another type that does not have a location data member?
-        std::vector<Resource> mUniforms;
+        //std::vector<Resource> mUniforms; // Uniform blocks contain uniform variables
     };
 
     graphics::Program mProgram;
@@ -76,5 +76,4 @@ std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::Resource
 std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::UniformBlock & aBlock);
 
 
-} // namespace snac
-} // namespace ad
+} // namespace ad::renderer

@@ -20,7 +20,8 @@ const IntrospectProgram * findTechnique(
     for(const auto & technique : aMaterial.mEffect->mTechniques)
     {
         if(std::all_of(
-            aTechniqueFilter.begin(), aTechniqueFilter.end(),
+            aTechniqueFilter.begin(),
+            aTechniqueFilter.end(),
             [&](const Technique::Annotation & required)
             {
                 auto found = technique.mAnnotations.find(required.mCategory);
