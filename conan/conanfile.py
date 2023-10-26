@@ -34,6 +34,9 @@ class SnacmanConan(ConanFile):
         ("assimp/5.3.1@adnn/develop"),
         ("spdlog/1.11.0"),
         ("nlohmann_json/3.11.2"),
+
+        # The overrides (who will think about reviewing them?)
+        ("zlib/1.3"),
     )
 
     # Note: It seems conventionnal to add CMake build requirement
