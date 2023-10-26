@@ -1,5 +1,4 @@
 add_subdirectory(libs/snac-renderer/snac-renderer)
-add_subdirectory(libs/scene-renderer/scene-renderer)
 
 #add_subdirectory(apps/snac-viewer/snac-viewer)
 add_subdirectory(apps/snacman/snacman)

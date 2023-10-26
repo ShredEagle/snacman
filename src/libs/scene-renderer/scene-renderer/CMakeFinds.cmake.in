@@ -1,6 +1,0 @@
-#@find_package@(Graphics CONFIG @REQUIRED@ COMPONENTS arte graphics imguiui renderer)
-@find_package@(Graphics CONFIG @REQUIRED@ COMPONENTS renderer)
-#@find_package@(Handy CONFIG @REQUIRED@ COMPONENTS resource)
-@find_package@(Math CONFIG @REQUIRED@ COMPONENTS math)
-
-@find_package@(spdlog CONFIG @REQUIRED@)
