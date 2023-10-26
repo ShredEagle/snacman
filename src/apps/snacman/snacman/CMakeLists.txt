@@ -19,6 +19,7 @@ set(${TARGET_NAME}_HEADERS
     ProfilingGPU.h
     RenderThread.h
     Resources.h
+    SnacArchive.h
     SparseSet.h
     Timing.h
 
@@ -96,6 +97,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/SceneStack.h
 
     detail/Logger.h
+    detail/Serialization.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -150,6 +152,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/SceneStack.cpp
 
     detail/Logger.cpp
+    detail/Serialization.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
