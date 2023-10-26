@@ -107,7 +107,7 @@ namespace {
                 //assert(aMesh->mNumUVComponents[uvIdx] == 2);
                 // TODO Interleave the odd channel with their preceding even channel
                 // (i.e. better usage of the 4 components of each vertex attribute)
-                for(auto vertexIdx = 0; vertexIdx != aMesh->mNumVertices; ++vertexIdx)
+                for(unsigned int vertexIdx = 0; vertexIdx != aMesh->mNumVertices; ++vertexIdx)
                 {
                     mArchive.write(std::span{&(aMesh->mTextureCoords[uvIdx][vertexIdx].x), 2});
                     // Even the assertion below does not hold true for teapot.obj
