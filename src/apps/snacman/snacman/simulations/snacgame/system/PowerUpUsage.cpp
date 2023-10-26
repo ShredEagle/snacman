@@ -1,12 +1,11 @@
 #include "PowerUpUsage.h"
 
 #include "math/Interpolation/ParameterAnimation.h"
-#include "snacman/simulations/snacgame/component/ChangeSize.h"
-#include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 
 #include "../component/AllowedMovement.h"
 #include "../component/Collision.h"
 #include "../component/Controller.h"
+#include "../component/ChangeSize.h"
 #include "../component/Geometry.h"
 #include "../component/GlobalPose.h"
 #include "../component/LevelData.h"
@@ -30,11 +29,14 @@
 #include "../system/Pathfinding.h"
 #include "../typedef.h"
 
+#include "../system/SceneGraphResolver.h"
+
 #include <limits>
 #include <math/Box.h>
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 #include <optional>
+#include <snacman/detail/Easer.h>
 #include <snacman/DebugDrawing.h>
 #include <snacman/EntityUtilities.h>
 #include <snacman/Profiling.h>
@@ -491,8 +493,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                     bombEnt.add(component::ChangeSize{
                         .mCurve = ParameterAnimation<float, math::FullRange,
                                                      math::None,
-                                                     math::ease::Bezier>(
-                            math::ease::Bezier<float>())});
+                                                     snac::detail::Bezier>(
+                            snac::detail::Bezier<float>())});
                 }
                 transferEntity(rootPowerup, aLevel);
                 insertEntityInScene(bombModel, rootPowerup);

@@ -116,7 +116,7 @@ void ChangeSize::drawUi()
         ImPlot::PlotLine("Curve", xValues.data(), yValues.data(), yValues.size());
         END_RECURRING(draw_plot);
 
-        auto knots = mCurve.getKnots();
+        auto knots = mCurve.mEaser.getKnots();
         bool mouseClicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
         bool mouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
         bool plotHovered = ImPlot::IsPlotHovered();
@@ -126,7 +126,7 @@ void ChangeSize::drawUi()
         math::Position<2, float> mousePos = {(float)mouse.x, (float)mouse.y};
         float yValue = mCurve.at(mouse.x);
 
-        constexpr size_t maxOnCurve = math::ease::Bezier<float>::sMaxOnCurve; 
+        constexpr size_t maxOnCurve = snac::detail::Bezier<float>::sMaxOnCurve; 
         constexpr size_t maxOffCurve = (maxOnCurve - 1) * 2; 
         std::array<float, maxOnCurve> xsOn;
         std::array<float, maxOffCurve> ysOn;
@@ -209,19 +209,19 @@ void ChangeSize::drawUi()
             math::Position<2, float> pointOnLine{(float)mouse.x, yValue};
             if ((mousePos - pointOnLine).getNormSquared() < 0.005)
             {
-                selectedIndex = mCurve.addPoint((float)mouse.x);
+                selectedIndex = mCurve.mEaser.addPoint((float)mouse.x);
             }
         }
 
         if (ImGui::IsKeyPressed(ImGuiKey_H) && nearestIndex != -1 && nearestIndex % 3 == 0 && nearestIndex > 1 && nearestIndex < knots.size() - 1)
         {
-            mCurve.changePoint(nearestIndex - 1, {knots.at(nearestIndex - 1).x(), knots.at(nearestIndex).y()});
-            mCurve.changePoint(nearestIndex + 1, {knots.at(nearestIndex + 1).x(), knots.at(nearestIndex).y()});
+            mCurve.mEaser.changePoint(nearestIndex - 1, {knots.at(nearestIndex - 1).x(), knots.at(nearestIndex).y()});
+            mCurve.mEaser.changePoint(nearestIndex + 1, {knots.at(nearestIndex + 1).x(), knots.at(nearestIndex).y()});
         }
 
         if (ImGui::IsKeyPressed(ImGuiKey_X) && nearestIndex != -1 && nearestIndex % 3 == 0 && nearestIndex > 1 && nearestIndex < knots.size() - 1)
         {
-            mCurve.removePoint(nearestIndex);
+            mCurve.mEaser.removePoint(nearestIndex);
         }
 
         if (mouseDown && selectedIndex != -1)
@@ -239,19 +239,19 @@ void ChangeSize::drawUi()
                     {
                         math::Position<2, float> onCurvePos = knots.at(selectedIndex - 1);
                         math::Vec<2, float> displacement = mousePos - onCurvePos;
-                        mCurve.changePoint(selectedIndex - 2, onCurvePos - displacement);
+                        mCurve.mEaser.changePoint(selectedIndex - 2, onCurvePos - displacement);
                         break;
                     }
                     case 2:
                     {
                         math::Position<2, float> onCurvePos = knots.at(selectedIndex + 1);
                         math::Vec<2, float> displacement = mousePos - onCurvePos;
-                        mCurve.changePoint(selectedIndex + 2, onCurvePos - displacement);
+                        mCurve.mEaser.changePoint(selectedIndex + 2, onCurvePos - displacement);
                         break;
                     }
                 }
             }
-            mCurve.changePoint(selectedIndex, mousePos);
+            mCurve.mEaser.changePoint(selectedIndex, mousePos);
         }
 
         ImPlot::SetNextMarkerStyle(ImPlotMarker_Diamond);

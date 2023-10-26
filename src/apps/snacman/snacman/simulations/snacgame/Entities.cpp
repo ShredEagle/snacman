@@ -1,5 +1,6 @@
 #include "Entities.h"
 
+
 #include "component/AllowedMovement.h"
 #include "component/Collision.h"
 #include "component/Controller.h"
@@ -40,6 +41,7 @@
 #include <math/Vector.h>
 #include <optional>
 #include <ostream>
+#include <snacman/detail/Easer.h>
 #include <snacman/EntityUtilities.h>
 #include <snacman/Input.h>
 #include <snacman/QueryManipulation.h>
@@ -458,8 +460,8 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
         model.add(component::ChangeSize{
             .mCurve = ParameterAnimation<float, math::FullRange,
                                          math::None,
-                                         math::ease::Bezier>(
-                math::ease::Bezier<float>())});
+                                         snac::detail::Bezier>(
+                snac::detail::Bezier<float>())});
     }
 
     return playerModelHandle;

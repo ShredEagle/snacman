@@ -1,17 +1,20 @@
 #pragma once
 
 
-#include "math/Interpolation/ParameterAnimation.h"
-
 #include "../GameParameters.h"
 #include "../InputCommandConverter.h"
+
+#include <snacman/detail/Easer.h>
+
+#include <math/Interpolation/ParameterAnimation.h>
+
 namespace ad {
 namespace snacgame {
 namespace component {
 
 struct ChangeSize
 {
-    ParameterAnimation<float, math::FullRange, math::None, math::ease::Bezier> mCurve;
+    ParameterAnimation<float, math::FullRange, math::None, snac::detail::Bezier> mCurve;
 
     void drawUi();
 };
