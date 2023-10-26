@@ -5,15 +5,14 @@
 The question is which level is **Renderer**, is it low level with something like a scene-aware
 renderer building on top?
 
-## Trying to describre the problem
+## Trying to describe the problem
 
 My current view, in essence a renderer is two things:
 * an API allowing clients to render frames of their own composition.
 * an implementation providing the API and rendering with the best speed and quality it can provide.
 
 A lot of tension exists in providing a good API, not exposing too much while allowing clients
-to customize rendering (e.g. custom materials and effects),
-provided by an efficient implementation.
+to customize rendering (e.g. custom materials and effects), provided by an efficient implementation.
 
 ### Frame graphs
 
@@ -68,7 +67,7 @@ client shader code then using those "get_whatever()" function to access the valu
 Also, the open/closed principle would dictate that the client can add custom features without touching the renderer code.
 This implies some dynamic design, where instances can maintain a dynamic collection of features and their data, of unbounded types.
 Yet, if the actual Render Graph is somehow hardcoded into the renderer, it might limit what can be achieved with such features?
-In particular, what if a pass needs to not enable some specific feature, how would that be controlled?
+In particular, what if a given pass needs to not enable some specific feature, how would that be controlled?
 (e.g. a scene where shadows should be of the instance without its animations applied [not a realistic example, I know]).
 Maybe the feature, added by the client, could have some filter on the pass. But what if a material override expect another feature set for the same pass?
 Also, some features data is dynamic and need updating(e.g. computing bones matrix palette, each frame).
@@ -150,6 +149,15 @@ Assimp can compute bounding boxes for meshes (i.e. `Part`), and we can unite all
 A complication arises for Nodes: should they cache their bounding box?
 Nodes can have an `Object`, plus potential children nodes (with transformations).
 The transformations change the bounding boxes, and if they are dynamic it means cached AABB has to be recomputed each time.
+
+#### Open question: How to model material / techniques / effects / passes
+
+This is the big one, I am not sure what they should model (and suspect those names are meaning different things in different designs).
+
+Sometimes one read things such as "A material might have multiple passes."(https://realtimecollisiondetection.net/blog/?p=86).
+Who controls when a pass is executed? Does it mean that a material itself requests the different passes? Or is it a higher level graph that is picking within available passes?
+
+
 
 ## Validation scene
 
