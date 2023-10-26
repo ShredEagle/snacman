@@ -97,6 +97,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/SceneStack.h
 
     detail/Logger.h
+    detail/Easer.h
 )
 
 set(${TARGET_NAME}_SOURCES
