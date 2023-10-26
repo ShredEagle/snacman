@@ -34,12 +34,12 @@ struct Tile
 
 struct PathfindNode
 {
-    float mReducedCost = std::numeric_limits<float>::max();
-    float mCost = std::numeric_limits<float>::max();
-    PathfindNode * mPrev = nullptr;
     size_t mIndex = 0;
     math::Position<2, float> mPos;
     bool mPathable = false;
+    float mReducedCost = std::numeric_limits<float>::max();
+    float mCost = std::numeric_limits<float>::max();
+    PathfindNode * mPrev = nullptr;
     bool mOpened = false;
 };
 

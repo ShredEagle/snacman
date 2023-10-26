@@ -41,10 +41,10 @@ inline component::PathfindNode createStartPathfindNode(const math::Position<2, f
 {
     math::Position<2, float> startPos = getLevelPosition(aSource);
     component::PathfindNode start{
-        .mReducedCost = manhattan(aSource, aTarget),
-        .mCost = 0,
         .mIndex = (size_t) startPos.x() + (size_t) startPos.y() * stride,
         .mPos = aSource,
+        .mReducedCost = manhattan(aSource, aTarget),
+        .mCost = 0,
         .mOpened = true,
     };
 
