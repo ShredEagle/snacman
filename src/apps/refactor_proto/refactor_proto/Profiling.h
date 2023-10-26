@@ -2,7 +2,9 @@
 
 
 #include "Profiler.h"
+#if defined(_WIN32)
 #include "ProfilerSeattle.h"
+#endif
 
 #include <handy/Guard.h>
 

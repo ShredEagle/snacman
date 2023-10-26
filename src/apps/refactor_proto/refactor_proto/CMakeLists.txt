@@ -17,7 +17,6 @@ set(${TARGET_NAME}_HEADERS
     Material.h
     Model.h
     Profiler.h
-    ProfilerSeattle.h
     Profiling.h
     RenderGraph.h
     RendererReimplement.h
@@ -40,7 +39,6 @@ set(${TARGET_NAME}_SOURCES
     Loader.cpp
     Logging.cpp
     Profiler.cpp
-    ProfilerSeattle.cpp
     Profiling.cpp
     RenderGraph.cpp
     SetupDrawing.cpp
@@ -52,10 +50,12 @@ set(${TARGET_NAME}_SOURCES
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     list(APPEND ${TARGET_NAME}_HEADERS
+        ProfilerSeattle.h
         providers/ProviderWindows.h
     )
 
     list(APPEND ${TARGET_NAME}_SOURCES
+        ProfilerSeattle.cpp
         providers/ProviderWindows.cpp
     )
 endif()

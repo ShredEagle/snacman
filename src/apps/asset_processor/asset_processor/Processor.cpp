@@ -27,7 +27,7 @@ namespace ad::renderer {
 
 namespace {
 
-    bool hasTrianglesOnly(aiMesh * aMesh)
+    [[maybe_unused]] bool hasTrianglesOnly(aiMesh * aMesh)
     {
         //TODO Ad 2023/07/21: Understand what is this NGON encoding flag for.
         return (aMesh->mPrimitiveTypes = (aiPrimitiveType_TRIANGLE | aiPrimitiveType_NGONEncodingFlag));
@@ -48,11 +48,6 @@ namespace {
     math::Position<3, float> toPosition(aiVector3D aVec)
     {
         return {aVec.x, aVec.y, aVec.z};
-    }
-
-    math::AffineMatrix<4, float> extractTransformation(const aiNode * aNode)
-    {
-        return math::AffineMatrix<4, float>{extractAffinePart(aNode)};
     }
 
     math::Box<float> extractAabb(const aiMesh * aMesh)
@@ -229,12 +224,9 @@ namespace {
                             FileWriter & aWriter,
                             unsigned int level = 0)
     {
-        math::AffineMatrix<4, float> nodeTransform = extractTransformation(aNode);
-
         std::cout << std::string(2 * level, ' ') << aNode->mName.C_Str() 
                   << ", " << aNode->mNumMeshes << " mesh(es)"
                   << ", " << aNode->mNumChildren << " children"
-                  //<< "\n" << nodeTransform 
                   << "\n"
                   ;
 

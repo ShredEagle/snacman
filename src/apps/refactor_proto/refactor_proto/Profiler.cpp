@@ -176,9 +176,9 @@ struct LogicalSection
 {
     LogicalSection(const Profiler::Entry & aEntry, Profiler::EntryIndex aEntryIndex) :
         mId{aEntry.mId},
+        mEntries{aEntryIndex},
         mValues{aEntry.mMetrics},
-        mActiveMetrics{aEntry.mActiveMetrics},
-        mEntries{aEntryIndex}
+        mActiveMetrics{aEntry.mActiveMetrics}
     {}
 
     void push(const Profiler::Entry & aEntry, Profiler::EntryIndex aEntryIndex)

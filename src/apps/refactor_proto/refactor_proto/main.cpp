@@ -104,7 +104,7 @@ void runApplication(int argc, char * argv[])
         PROFILER_PUSH_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
         imguiUi.newFrame();
         ImGui::Begin("Profiler");
-        ImGui::Text(profilerOut.str().c_str());
+        ImGui::Text("%s", profilerOut.str().c_str());
         ImGui::End();
 
         ImGui::Begin("GL metrics");
@@ -116,7 +116,7 @@ void runApplication(int argc, char * argv[])
             << "\n\tallocated:" << ad::renderer::gl.get().mTextureMemory.mAllocated / 1024 << " kB."
             << "\n\twritten:"   << ad::renderer::gl.get().mTextureMemory.mWritten / 1024 << " kB."
             ;
-        ImGui::Text(metricsOs.str().c_str());
+        ImGui::Text("%s", metricsOs.str().c_str());
         ImGui::End();
         imguiUi.render();
         imguiUi.renderBackend();

@@ -41,8 +41,8 @@ struct DrawInstance
 /// @brief Store state and parameters required to issue a GL draw call.
 struct DrawCall
 {
-    GLenum mPrimitiveMode = NULL;
-    GLenum mIndicesType = NULL;
+    GLenum mPrimitiveMode = 0;
+    GLenum mIndicesType = 0;
 
     const IntrospectProgram * mProgram;
     const graphics::VertexArrayObject * mVao;

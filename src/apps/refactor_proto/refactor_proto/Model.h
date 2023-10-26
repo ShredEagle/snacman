@@ -14,7 +14,9 @@
 #include <math/Vector.h>
 
 // TODO this is a bit of heavy includes for the general Model file.
+#include <list>
 #include <map>
+#include <optional>
 #include <set>
 #include <vector>
 
@@ -163,7 +165,7 @@ struct VertexStream /*: public SemanticBufferViews*/
 {
     SEMANTIC_BUFFER_MEMBERS                 
     BufferView mIndexBufferView;
-    GLenum mIndicesType = NULL;
+    GLenum mIndicesType = 0;/*NULL; for some reason Clang complains about it*/
 };
 
 #undef SEMANTIC_BUFFER_MEMBERS
@@ -180,7 +182,7 @@ struct Part
     // This is a central feature for AZDO, because it allows using a single VAO for different parts 
     // sharing their attributes format (under matching shader inputs).
     Handle<const VertexStream> mVertexStream;
-    GLenum mPrimitiveMode = NULL;
+    GLenum mPrimitiveMode = 0;
     // GLuint because it is the type used in the Draw Indirect buffer
     GLuint mVertexFirst = 0;
     GLuint mVertexCount = 0;

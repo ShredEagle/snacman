@@ -90,7 +90,7 @@ constexpr float gNearZ{-0.1f};
 constexpr float gMinFarZ{-25.f}; // Note: minimum in **absolute** value (i.e. the computed far Z can only be inferior to this).
 
 /// @brief The orbitalcamera is moved away by the largest model dimension times this factor.
-constexpr float gRadialDistancingFactor{1.5f};
+[[maybe_unused]] constexpr float gRadialDistancingFactor{1.5f};
 /// @brief The far plane will be at least at this factor times the model depth.
 constexpr float gDepthFactor{20.f};
 
@@ -151,7 +151,7 @@ namespace {
                     .mAnnotations{
                         {"pass", "forward"},
                     },
-                    .mConfiguredProgram{ &aStorage.mPrograms.back() }
+                    .mConfiguredProgram = &aStorage.mPrograms.back(),
                 }
             )},
         };
@@ -335,9 +335,10 @@ namespace {
     /// @brief Specializes getProgram, returning first program matching provided pass name.
     Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName)
     {
-        const std::array<Technique::Annotation, 1> annotations{
+        const std::array<Technique::Annotation, 2> annotations{/*aggregate init of std::array*/{/*aggregate init of inner C-array*/
             {"pass", aPassName},
-        };
+            {"pass", aPassName},
+        }};
         return getProgram(aEffect, annotations.begin(), annotations.end());
     }
     
@@ -465,8 +466,8 @@ namespace {
         using ProgramId = std::uint16_t;
         assert(aStorage.mPrograms.size() < (1 << gProgramIdBits));
 
-        constexpr unsigned int gPrimitiveModes = 12; // I counted 12 primitive modes
-        unsigned int gPrimitiveModeIdBits = (unsigned int)std::ceil(std::log2(gPrimitiveModes));
+        //constexpr unsigned int gPrimitiveModes = 12; // I counted 12 primitive modes
+        //unsigned int gPrimitiveModeIdBits = (unsigned int)std::ceil(std::log2(gPrimitiveModes));
 
         constexpr unsigned int gVaoBits = 10;
         constexpr std::uint64_t gVaoIdMask = makeMask(gVaoBits);
