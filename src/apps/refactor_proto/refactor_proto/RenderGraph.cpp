@@ -788,6 +788,14 @@ void RenderGraph::loadDrawBuffers(const PartList & aPartList,
 }
 
 
+void RenderGraph::drawUi() const
+{
+    ImGui::Begin("Scene tree");
+    presentTree(mScene);
+    ImGui::End();
+}
+
+
 void RenderGraph::render()
 {
     PROFILER_SCOPE_SECTION("RenderGraph::render()", CpuTime, GpuTime, BufferMemoryWritten);

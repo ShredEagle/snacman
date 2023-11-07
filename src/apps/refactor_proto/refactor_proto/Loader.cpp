@@ -328,6 +328,8 @@ namespace {
                   GLuint & aVertexFirst,
                   GLuint & aIndexFirst)
     {
+        std::string name = aIn.readString();
+
         unsigned int meshesCount, childrenCount;
         aIn.read(meshesCount);
         aIn.read(childrenCount);
@@ -339,6 +341,7 @@ namespace {
             .mInstance{
                 .mObject = (meshesCount > 0) ? addObject(aStorage) : nullptr,
                 .mPose = decompose(math::AffineMatrix<4, GLfloat>{localTransformation}),
+                .mName = std::move(name),
             },
         };
 
@@ -589,6 +592,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
             .mPose = Pose{
                 .mPosition = -positionOffset,
             },
+            .mName = "triangle",
         },
         .mAabb = aabb * math::trans3d::translate(-positionOffset),
     };
@@ -620,6 +624,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
             .mPose = Pose{
                 .mPosition = positionOffset,
             },
+            .mName = "cube",
         },
         .mAabb = aabb * math::trans3d::translate(positionOffset),
     };
@@ -847,6 +852,7 @@ Scene Loader::loadScene(const filesystem::path & aSceneFile,
         Node modelPoser{
             .mInstance = Instance{
                 .mPose = pose,
+                .mName = entry.at("name").get<std::string>(),
             },
             .mChildren = {std::move(model)},
             .mAabb = poserAabb,

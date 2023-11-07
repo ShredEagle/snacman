@@ -41,6 +41,7 @@ set(${TARGET_NAME}_SOURCES
     Profiler.cpp
     Profiling.cpp
     RenderGraph.cpp
+    Scene.cpp
     SetupDrawing.cpp
 
     providers/ProviderGL.cpp

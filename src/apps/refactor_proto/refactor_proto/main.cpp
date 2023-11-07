@@ -118,6 +118,9 @@ void runApplication(int argc, char * argv[])
             ;
         ImGui::Text("%s", metricsOs.str().c_str());
         ImGui::End();
+
+        renderGraph.drawUi();
+
         imguiUi.render();
         imguiUi.renderBackend();
         PROFILER_POP_SECTION;

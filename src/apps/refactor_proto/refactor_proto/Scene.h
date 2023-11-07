@@ -50,4 +50,7 @@ struct Scene
 };
 
 
+void presentTree(const Scene & aScene);
+
+
 } // namespace ad::renderer

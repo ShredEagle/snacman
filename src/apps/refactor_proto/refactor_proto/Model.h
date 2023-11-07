@@ -24,6 +24,11 @@
 namespace ad::renderer {
 
 
+// TODO Ad 2023/10/31: How do we want to handle names of the different entities? 
+// Do we accept to pollute the object model? (The initial approach, as of this writing)
+// I feel maybe there is a more data-oriented design lurking here...
+using Name = std::string;
+
 // TODO Ad 2023/08/04: #handle Define a Handle wrapper which makes sense.
 // Note that a central question will be whether we have a "global" storage 
 // (thus handle can be dereferenced without a storage param / without storing a pointer to storage) or not?
@@ -184,7 +189,7 @@ struct Part
     Handle<const VertexStream> mVertexStream;
     GLenum mPrimitiveMode = 0;
     // GLuint because it is the type used in the Draw Indirect buffer
-    GLuint mVertexFirst = 0;
+    GLuint mVertexFirst = 0; // The offset of this part into the buffer view(s)
     GLuint mVertexCount = 0;
     GLuint mIndexFirst = 0;
     GLuint mIndicesCount = 0;
@@ -226,6 +231,7 @@ struct Instance
     Pose mPose;
     // TODO #matref
     std::optional<Material> mMaterialOverride;
+    Name mName;
 };
 
 

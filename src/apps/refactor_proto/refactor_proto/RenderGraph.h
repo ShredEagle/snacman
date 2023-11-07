@@ -85,6 +85,8 @@ struct RenderGraph
 
     void loadDrawBuffers(const PartList & aPartList, const PassCache & aPassCache);
 
+    void drawUi() const;
+
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
     Scene mScene;

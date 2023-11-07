@@ -74,6 +74,7 @@ namespace {
 
         void write(const aiNode * aNode)
         {
+            mArchive.write(std::string{aNode->mName.C_Str()});
             mArchive.write(aNode->mNumMeshes);
             mArchive.write(aNode->mNumChildren);
             mArchive.write(extractAffinePart(aNode));
@@ -189,6 +190,7 @@ namespace {
     //  vertices count
     //  indices count
     //  Node:
+    //    node.name
     //    node.numMeshes
     //    node.numChildren
     //    node.transformation
@@ -252,7 +254,7 @@ namespace {
             result.mIndicesCount += mesh->mNumFaces * 3;
 
             std::cout << std::string(2 * level, ' ')
-                << "- Mesh " << globalMeshIndex << " with " << mesh->mNumVertices << " vertices, " 
+                << "- Mesh " << globalMeshIndex << " '" << mesh->mName.C_Str() << "'" << " with " << mesh->mNumVertices << " vertices, " 
                 << mesh->mNumFaces << " triangles,"
                 << " AABB " << meshAabb << "."
                 << "\n"
