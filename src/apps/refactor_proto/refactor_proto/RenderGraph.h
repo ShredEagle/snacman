@@ -6,6 +6,7 @@
 #include "Loader.h"
 #include "Repositories.h"
 #include "Scene.h"
+#include "SceneGui.h"
 
 #include <graphics/ApplicationGlfw.h>
 
@@ -85,11 +86,12 @@ struct RenderGraph
 
     void loadDrawBuffers(const PartList & aPartList, const PassCache & aPassCache);
 
-    void drawUi() const;
+    void drawUi();
 
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
     Scene mScene;
+    SceneGui mSceneGui{mStorage};
     GenericStream mInstanceStream;
     Loader mLoader;
     HardcodedUbos mUbos;

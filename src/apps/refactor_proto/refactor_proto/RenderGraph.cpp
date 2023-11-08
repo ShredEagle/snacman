@@ -788,10 +788,10 @@ void RenderGraph::loadDrawBuffers(const PartList & aPartList,
 }
 
 
-void RenderGraph::drawUi() const
+void RenderGraph::drawUi()
 {
     ImGui::Begin("Scene tree");
-    presentTree(mScene);
+    mSceneGui.present(mScene);
     ImGui::ShowDemoWindow();
     ImGui::End();
 }

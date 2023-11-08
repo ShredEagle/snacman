@@ -44,13 +44,10 @@ struct Scene
     /// @param aSceneFile A sew file (json) describing the scene to load.
     Scene LoadFile(const filesystem::path aSceneFile);
 
-    std::vector<Node> mRoot; 
-
     PartList populatePartList() const;
+
+    std::vector<Node> mRoot; 
 };
-
-
-void presentTree(const Scene & aScene);
 
 
 } // namespace ad::renderer
