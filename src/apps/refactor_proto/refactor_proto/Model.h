@@ -118,6 +118,7 @@ struct Technique
 struct Effect
 {
     std::vector<Technique> mTechniques;
+    Name mName;
 };
 
 
@@ -145,7 +146,7 @@ struct Material
     // not each frame)
     Handle<MaterialContext> mContext = gNullHandle;
 
-    Effect * mEffect;
+    Handle<Effect> mEffect = gNullHandle;
 };
 
 
@@ -268,7 +269,7 @@ struct Storage
     std::list<graphics::VertexArrayObject> mVaos;
     std::list<MaterialContext> mMaterialContexts;
     // Used for random access (DOD)
-    std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, the name at index zero can be used when there are no material parameters
+    std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, so the name at index zero can be used when there are no material parameters
 };
 
 
@@ -276,6 +277,13 @@ struct Storage
 inline const Name & getName(const Material & aMaterial, const Storage & aStorage)
 {
     return aStorage.mMaterialNames.at(aMaterial.mNameArrayOffset + aMaterial.mPhongMaterialIdx);
+}
+
+// Providing an abstraction that should also work with a data-oriented redesign of the model
+// (yes, this is actually trying to predict the future)
+inline const Name & getName(Handle<const Effect> aEffect, const Storage & aStorage)
+{
+    return aEffect->mName;
 }
 
 } // namespace ad::renderer

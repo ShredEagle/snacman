@@ -143,7 +143,7 @@ void SceneGui::presentObject(const Object & aObject)
 }
 
 
-void SceneGui::showPartWindow(const Part & aPart) const
+void SceneGui::showPartWindow(const Part & aPart)
 {
     ImGui::Begin("Part");
 
@@ -153,7 +153,7 @@ void SceneGui::showPartWindow(const Part & aPart) const
     // TODO Ad 2023/11/08: Instead of showing indices count, higher level logic showing the currect number and type of primities (dependso on mode)
     ImGui::Text("mode: %s, %i indices", graphics::to_string(aPart.mPrimitiveMode).c_str(), aPart.mIndicesCount);
 
-    // if opened
+    // Vertex
     if(ImGui::TreeNodeEx(&aPart, gBaseFlags, "%i vertices", aPart.mVertexCount))
     {
         const VertexStream & vertexStream = *aPart.mVertexStream;
@@ -184,9 +184,37 @@ void SceneGui::showPartWindow(const Part & aPart) const
         ImGui::TreePop();
     }
 
+    ImGui::NewLine();
+
+    // Material (i.e. PhongMaterial / material properties name)
     ImGui::Text("material: %s", getName(aPart.mMaterial, mStorage).c_str());
 
+    // Effect
+    presentEffect(aPart.mMaterial.mEffect);
+
     ImGui::End();
+}
+
+
+void SceneGui::presentEffect(Handle<const Effect> aEffect)
+{
+    if(ImGui::TreeNodeEx((void*)aEffect, gBaseFlags, "effect: %s", getName(aEffect, mStorage).c_str()))
+    {
+        const Effect & effect = *aEffect;
+        for(const Technique & technique : effect.mTechniques)
+        {
+            const char * programName = technique.mConfiguredProgram->mProgram.mName.c_str();
+            ImGui::BulletText(programName);
+            ImGui::TreePush(programName);
+            for(const auto & [key, value] : technique.mAnnotations)
+            {
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetTreeNodeToLabelSpacing());
+                ImGui::Text("%s: %s", key.c_str(), value.c_str());
+            }
+            ImGui::TreePop();
+        }
+        ImGui::TreePop();
+    }
 }
 
 

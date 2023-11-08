@@ -746,6 +746,7 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
 {
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
+    result.mName = aEffectFile.string();
 
     Json effect = Json::parse(std::ifstream{mFinder.pathFor(aEffectFile)});
     for (const auto & technique : effect.at("techniques"))

@@ -131,7 +131,7 @@ namespace {
     }
 
 
-    Handle<Effect> makeWhiteEffect(Storage & aStorage)
+    Handle<Effect> makeSimpleEffect(Storage & aStorage)
     {
         aStorage.mProgramConfigs.emplace_back();
         aStorage.mPrograms.push_back(ConfiguredProgram{
@@ -154,6 +154,7 @@ namespace {
                     .mConfiguredProgram = &aStorage.mPrograms.back(),
                 }
             )},
+            .mName = "simple-effect",
         };
         aStorage.mEffects.push_back(std::move(effect));
 
@@ -751,7 +752,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     }
 
     // Add basic shapes to the the scene
-    Handle<Effect> whiteEffect = makeWhiteEffect(mStorage);
+    Handle<Effect> whiteEffect = makeSimpleEffect(mStorage);
     auto [triangle, cube] = loadTriangleAndCube(mStorage, whiteEffect, mInstanceStream);
     mScene.addToRoot(triangle);
     mScene.addToRoot(cube);

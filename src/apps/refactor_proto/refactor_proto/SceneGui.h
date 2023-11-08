@@ -22,9 +22,11 @@ public:
 private:
     const Node * presentNodeTree(const Node & aNode, unsigned int & aIndex);
     void presentObject(const Object & aObject);
+    void presentEffect(Handle<const Effect> aEffect);
+
     void presentSelection();
 
-    void showPartWindow(const Part & aPart) const;
+    void showPartWindow(const Part & aPart);
 
     static const int gBaseFlags;
     static const int gLeafFlags;
