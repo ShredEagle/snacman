@@ -181,6 +181,7 @@ struct VertexStream /*: public SemanticBufferViews*/
 
 struct Part
 {
+    Name mName;
     Material mMaterial; // TODO #matref: should probably be a "reference", as it is likely shared
                         // on the other hand, it is currently very lightweight
     // Note: Distinct parts can reference the same VertexStream, and use Vertex/Index|First/Count to index it.

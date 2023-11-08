@@ -82,6 +82,8 @@ namespace {
 
         void write(const aiMesh * aMesh)
         {
+            mArchive.write(std::string{aMesh->mName.C_Str()});
+
             //TODO Ad 2023/07/27: It could be better to dump only the materials actually references by meshes
             // (requires a step to re-index without the unused materials)
             // Material index
@@ -195,6 +197,7 @@ namespace {
     //    node.numChildren
     //    node.transformation
     //    each node.mesh:
+    //      mesh.name
     //      mesh.materialIndex
     //      mesh.numVertices
     //      [mesh.vertices(i.e. positions, 3 floats per vertex)]

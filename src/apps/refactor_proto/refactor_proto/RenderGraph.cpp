@@ -792,6 +792,7 @@ void RenderGraph::drawUi() const
 {
     ImGui::Begin("Scene tree");
     presentTree(mScene);
+    ImGui::ShowDemoWindow();
     ImGui::End();
 }
 

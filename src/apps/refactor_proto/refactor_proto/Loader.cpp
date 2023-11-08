@@ -257,6 +257,8 @@ namespace {
         graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
         graphics::BufferAny & indexBuffer = *(aVertexStream.mIndexBufferView.mGLBuffer);
 
+        const std::string meshName = aIn.readString();
+
         unsigned int materialIndex;
         aIn.read(materialIndex);
 
@@ -296,6 +298,7 @@ namespace {
         // Assign the part material index to the otherwise common material
         aPartsMaterial.mPhongMaterialIdx = materialIndex;
         Part part{
+            .mName = std::move(meshName),
             .mMaterial = aPartsMaterial,
             .mVertexStream = &aVertexStream,
             .mPrimitiveMode = GL_TRIANGLES,
