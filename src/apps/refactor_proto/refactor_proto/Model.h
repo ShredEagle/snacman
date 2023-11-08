@@ -137,6 +137,9 @@ struct Material
     // (The material context is already generic, so complete the job)
     std::size_t mPhongMaterialIdx = (std::size_t)-1;
 
+    // TODO Ad 2023/11/08: #name can we get rid of this index? (maybe a DOD SOA approach in storage)
+    std::size_t mNameArrayOffset = (std::size_t)-1;
+
     // Allow sorting on the Handle, if the MaterialContext are consolidated.
     // (lookup for an existing MaterialContext should be done by consolidation when the material in instantiated,
     // not each frame)
@@ -264,7 +267,15 @@ struct Storage
     std::list<ProgramConfig> mProgramConfigs;
     std::list<graphics::VertexArrayObject> mVaos;
     std::list<MaterialContext> mMaterialContexts;
+    // Used for random access (DOD)
+    std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, the name at index zero can be used when there are no material parameters
 };
 
+
+// TODO change the first argument to an handle if materials are on day stored in an array of Storage.
+inline const Name & getName(const Material & aMaterial, const Storage & aStorage)
+{
+    return aStorage.mMaterialNames.at(aMaterial.mNameArrayOffset + aMaterial.mPhongMaterialIdx);
+}
 
 } // namespace ad::renderer

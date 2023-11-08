@@ -392,16 +392,29 @@ namespace {
     // Review how the effects (the programs) are provided to the parts (currently hardcoded)
     void loadMaterials(BinaryInArchive & aIn,
                        graphics::UniformBufferObject & aDestinationUbo,
-                       graphics::Texture & aDestinationTexture)
+                       graphics::Texture & aDestinationTexture,
+                       std::vector<Name> & aDestinationNames)
     {
-        {
-            unsigned int materialsCount;
-            aIn.read(materialsCount);
+        unsigned int materialsCount;
+        aIn.read(materialsCount);
 
+        {
             std::vector<PhongMaterial> materials{materialsCount};
             aIn.read(std::span{materials});
 
             graphics::load(aDestinationUbo, std::span{materials}, graphics::BufferHint::StaticDraw);
+        }
+
+        { // load material names
+            unsigned int namesCount; // TODO: useless, but this is because the filewritter wrote the number of elements in a vector
+            aIn.read(namesCount);
+            assert(namesCount == materialsCount);
+
+            aDestinationNames.reserve(aDestinationNames.size() + materialsCount);
+            for(unsigned int nameIdx = 0; nameIdx != materialsCount; ++nameIdx)
+            {
+                aDestinationNames.push_back(aIn.readString());
+            }
         }
 
         math::Size<2, int> imageSize;        
@@ -574,6 +587,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
         .mParts = {
             Part{
                 .mMaterial = Material{
+                    .mNameArrayOffset = 1, // With the -1 (no-material) material index, this will index the first element in the common material names array
                     .mEffect = aPartsEffect,
                 },
                 .mVertexStream = triangleStream,
@@ -606,6 +620,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
         .mParts = {
             Part{
                 .mMaterial = Material{
+                    .mNameArrayOffset = 1,
                     .mEffect = aPartsEffect,
                 },
                 .mVertexStream = cubeStream,
@@ -708,6 +723,9 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
         });
     }
     Material partsMaterial{
+        // The material names is a single array for all binaries
+        // the binary-local material index needs to be offset to index into the common name array.
+        .mNameArrayOffset = aStorage.mMaterialNames.size(),
         .mContext = &aStorage.mMaterialContexts.back(),
         .mEffect = aPartsEffect,
     };
@@ -716,7 +734,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
     GLuint indexFirst = 0;
     Node result = loadNode(in, aStorage, partsMaterial, *consolidatedStream, vertexFirst, indexFirst);
 
-    loadMaterials(in, aStorage.mUbos.back(), aStorage.mTextures.back());
+    loadMaterials(in, aStorage.mUbos.back(), aStorage.mTextures.back(), aStorage.mMaterialNames);
 
     return result;
 }
