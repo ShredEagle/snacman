@@ -464,8 +464,8 @@ namespace {
 
 
 std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage, 
-                                            Effect * aPartsEffect,
-                                            const GenericStream & aStream)
+                                          Effect * aPartsEffect,
+                                          const GenericStream & aStream)
 {
     // Hardcoded attributes descriptions
     static const std::array<AttributeDescription, 3> gAttributeStreamsInBinary {
@@ -827,10 +827,7 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
 
     SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());
 
-    return IntrospectProgram{
-            graphics::makeLinkedProgram(shaders.begin(), shaders.end()),
-            aProgFile.filename().string()
-    };
+    return IntrospectProgram{shaders.begin(), shaders.end(), aProgFile.filename().string()};
 }
 
 

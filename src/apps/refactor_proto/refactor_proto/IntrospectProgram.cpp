@@ -222,9 +222,10 @@ std::ostream & operator<<(std::ostream & aOut, const IntrospectProgram::UniformB
 }
 
 
-IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aName) :
+IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aName, std::vector<TypedShaderSource> aSources) :
     mProgram{std::move(aProgram)},
-    mName{std::move(aName)}
+    mName{std::move(aName)},
+    mSources{std::move(aSources)}
 {
     auto makeResource = [](const auto &aAttribute) -> Resource
     {
@@ -247,7 +248,7 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
     // Attributes
     {
         using Iterator = InterfaceIterator<GL_LOCATION, GL_TYPE, GL_ARRAY_SIZE>;
-        for (auto it = Iterator(mProgram, GL_PROGRAM_INPUT);
+        for(auto it = Iterator(mProgram, GL_PROGRAM_INPUT);
             it != Iterator::makeEnd(mProgram, GL_PROGRAM_INPUT);
             ++it)
         {

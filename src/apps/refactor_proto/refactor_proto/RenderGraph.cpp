@@ -134,13 +134,15 @@ namespace {
     Handle<Effect> makeSimpleEffect(Storage & aStorage)
     {
         aStorage.mProgramConfigs.emplace_back();
+        // Compiler error (msvc) workaround, by taking the initializer list out
+        std::initializer_list<IntrospectProgram::TypedShaderSource> il = {
+            {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(std::string{gVertexShader}, "RenderGraph.cpp")},
+            {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(gFragmentShader, "RenderGraph.cpp")},
+        };
         aStorage.mPrograms.push_back(ConfiguredProgram{
             .mProgram = IntrospectProgram{
-                graphics::makeLinkedProgram({
-                    {GL_VERTEX_SHADER, gVertexShader},
-                    {GL_FRAGMENT_SHADER, gFragmentShader},
-                }),
-                "white",
+                il,
+                "inline-RenderGraph.cpp",
             },
             .mConfig = &aStorage.mProgramConfigs.back(),
         });
@@ -752,8 +754,8 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     }
 
     // Add basic shapes to the the scene
-    Handle<Effect> whiteEffect = makeSimpleEffect(mStorage);
-    auto [triangle, cube] = loadTriangleAndCube(mStorage, whiteEffect, mInstanceStream);
+    Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
+    auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mInstanceStream);
     mScene.addToRoot(triangle);
     mScene.addToRoot(cube);
 }
