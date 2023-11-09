@@ -28,27 +28,6 @@ GLuint getInstanceDivisor(const VertexStream & aStream, const AttributeAccessor 
     return divisor;
 }
 
-// Sadly does not work, because the shaders are detached from the program, so they cannot be queried back
-//// TODO Ad 2023/11/08: Move into graphics, and remove include of GL
-//std::vector<std::pair<GLuint/*shader GL name*/, GLenum/*shader type*/>> 
-//queryShaders(const graphics::Program & aProgram)
-//{
-//    GLint shaderCount;
-//    glGetProgramiv(aProgram, GL_ATTACHED_SHADERS, &shaderCount);
-//
-//    std::vector<GLuint> attachedShaders(shaderCount, 0);
-//    glGetAttachedShaders(aProgram, shaderCount, nullptr, attachedShaders.data());
-//
-//    std::vector<std::pair<GLuint, GLenum>> result;
-//    for(GLuint shader : attachedShaders)
-//    {
-//        GLint type;
-//        glGetShaderiv(shader, GL_SHADER_TYPE, &type);
-//        result.emplace_back(shader, type);
-//    }
-//    return result;
-//}
-
 
 } // unnamed namespace
 
@@ -73,7 +52,7 @@ void SceneGui::present(const Scene & aScene)
     unsigned int index = 0;
     for(const Node & topNode : aScene.mRoot)
     {
-        presentNodeTree(topNode, index);
+        presentNodeTree(topNode, index++);
     }
 
     presentSelection();
@@ -82,15 +61,16 @@ void SceneGui::present(const Scene & aScene)
 
 // Note: currently returns the selected Node (but not Part or any heterogeneous type).
 // This is inherited from the time before this was free function, not sure it can be usefull now.
-const Node * SceneGui::presentNodeTree(const Node & aNode, unsigned int & aIndex)
+const Node * SceneGui::presentNodeTree(const Node & aNode, unsigned int aIndex)
 {
     //auto & nodeTree = mSkin.mRig.mScene;
 
     const Node * selected = nullptr;
 
     int flags = (aNode.mChildren.empty() && aNode.mInstance.mObject == nullptr) ? gLeafFlags : gBaseFlags;
-    // TODO Ad 2023/11/07: Address this indexing non-sense
-    const std::string name{"Node_" + std::to_string(aIndex)};
+    // TODO Ad 2023/11/09: #dod Currently, the node index is relative to the parent, not absolute regarding all nodes
+    // If we ever move to a Data-oriented model, we could probably use the absolute index of the node in the data store.
+    const std::string name{"<node_" + std::to_string(aIndex) + ">"};
     bool opened = ImGui::TreeNodeEx(&aNode, flags, "%s",
             // TODO Ad 2023/10/31: We have a discrepencies in our data model between how Assimp models Nodes, and our distiction between Nodes and Objects
             (aNode.mInstance.mName.empty() ? name.c_str() : aNode.mInstance.mName.c_str()));
@@ -109,9 +89,10 @@ const Node * SceneGui::presentNodeTree(const Node & aNode, unsigned int & aIndex
             presentObject(*object);
         }
 
+        unsigned int childIdx = 0;
         for(const Node & child : aNode.mChildren)
         {
-            if(const Node * childSelected = presentNodeTree(child, ++aIndex);
+            if(const Node * childSelected = presentNodeTree(child, childIdx++);
             childSelected != nullptr)
             {
                 selected = childSelected;

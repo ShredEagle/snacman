@@ -20,7 +20,7 @@ public:
     void present(const Scene & aScene);
 
 private:
-    const Node * presentNodeTree(const Node & aNode, unsigned int & aIndex);
+    const Node * presentNodeTree(const Node & aNode, unsigned int aIndex);
     void presentObject(const Object & aObject);
     void presentEffect(Handle<const Effect> aEffect);
     void presentShaders(const IntrospectProgram & aIntrospectProgram);
