@@ -28,6 +28,27 @@ GLuint getInstanceDivisor(const VertexStream & aStream, const AttributeAccessor 
     return divisor;
 }
 
+// Sadly does not work, because the shaders are detached from the program, so they cannot be queried back
+//// TODO Ad 2023/11/08: Move into graphics, and remove include of GL
+//std::vector<std::pair<GLuint/*shader GL name*/, GLenum/*shader type*/>> 
+//queryShaders(const graphics::Program & aProgram)
+//{
+//    GLint shaderCount;
+//    glGetProgramiv(aProgram, GL_ATTACHED_SHADERS, &shaderCount);
+//
+//    std::vector<GLuint> attachedShaders(shaderCount, 0);
+//    glGetAttachedShaders(aProgram, shaderCount, nullptr, attachedShaders.data());
+//
+//    std::vector<std::pair<GLuint, GLenum>> result;
+//    for(GLuint shader : attachedShaders)
+//    {
+//        GLint type;
+//        glGetShaderiv(shader, GL_SHADER_TYPE, &type);
+//        result.emplace_back(shader, type);
+//    }
+//    return result;
+//}
+
 
 } // unnamed namespace
 
@@ -146,6 +167,8 @@ void SceneGui::presentObject(const Object & aObject)
 void SceneGui::showPartWindow(const Part & aPart)
 {
     ImGui::Begin("Part");
+    ImGui::PushID(&aPart);  // Otherwise, the Effect node would be in the same state 
+                            // for distinct parts using the same effect.
 
     // Not sure we want to repeat the name of the part here (we have a complication for unnamed parts)?
     ImGui::Text("%s", aPart.mName.c_str());
@@ -192,6 +215,7 @@ void SceneGui::showPartWindow(const Part & aPart)
     // Effect
     presentEffect(aPart.mMaterial.mEffect);
 
+    ImGui::PopID();
     ImGui::End();
 }
 
@@ -201,28 +225,83 @@ void SceneGui::presentEffect(Handle<const Effect> aEffect)
     if(ImGui::TreeNodeEx((void*)aEffect, gBaseFlags, "effect: %s", getName(aEffect, mStorage).c_str()))
     {
         const Effect & effect = *aEffect;
+        unsigned int techniqueIdx = 0;
         for(const Technique & technique : effect.mTechniques)
         {
-            const char * programName = technique.mConfiguredProgram->mProgram.mName.c_str();
-            ImGui::BulletText(programName);
-            ImGui::TreePush(programName);
-            for(const auto & [key, value] : technique.mAnnotations)
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetTreeNodeToLabelSpacing());
+            ImGui::Text("<technique_%i>", techniqueIdx);
+
             {
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetTreeNodeToLabelSpacing());
-                ImGui::Text("%s: %s", key.c_str(), value.c_str());
+                ImGui::TreePush(&technique);
+
+                ImGui::BulletText("annotations");
+                {
+                    ImGui::TreePush("annotations");
+                    for(const auto & [key, value] : technique.mAnnotations)
+                    {
+                        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetTreeNodeToLabelSpacing());
+                        ImGui::Text("%s: %s", key.c_str(), value.c_str());
+                    }
+                    ImGui::TreePop();
+                }
+
+                const IntrospectProgram & introspect = technique.mConfiguredProgram->mProgram;
+                const char * programName = introspect.mName.c_str();
+
+                if(ImGui::TreeNodeEx(programName, gBaseFlags))
+                {
+                    presentShaders(introspect);
+                    ImGui::TreePop();
+                }
+
+                ImGui::TreePop();
             }
-            ImGui::TreePop();
+
+            ++techniqueIdx;
         }
         ImGui::TreePop();
     }
 }
 
 
+void SceneGui::presentShaders(const renderer::IntrospectProgram & aIntrospectProgram)
+{
+    for(const auto & [type, shader] : aIntrospectProgram.mSources)
+    {
+        const std::string * sourceString = &shader.getSource();
+        ImGuiTreeNodeFlags shaderFlags = 
+            gPartFlags
+            | ((mSelectedShaderSource == sourceString) ? ImGuiTreeNodeFlags_Selected : 0);
+
+        ImGui::TreeNodeEx((void*)sourceString, shaderFlags, "%s", graphics::to_string(type).c_str());
+
+        if (isItemDoubleClicked())
+        {
+            mSelectedShaderSource = sourceString;
+        }
+    }
+}
+
+
+void SceneGui::showSourceWindow(const std::string & aSourceString)
+{
+    ImGui::Begin("Shader source");
+
+    ImGui::Text("%s", aSourceString.c_str());
+
+    ImGui::End();
+}
+
 void SceneGui::presentSelection()
 {
     if (mSelectedPart)
     {
         showPartWindow(*mSelectedPart);
+    }
+
+    if (mSelectedShaderSource)
+    {
+        showSourceWindow(*mSelectedShaderSource);
     }
 }
 
