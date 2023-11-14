@@ -49,7 +49,19 @@ const ImGuiTreeNodeFlags SceneGui::gPartFlags =
 
 void SceneGui::present(Scene & aScene)
 {
+    ImGui::Begin("Scene tree", nullptr, ImGuiWindowFlags_MenuBar);
+    if(ImGui::BeginMenuBar())
+    {
+        if(ImGui::BeginMenu("Options"))
+        {
+            ImGui::MenuItem("Highlight objects", NULL, &mOptions.mHighlightObjects);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
     Node * hovered = presentNodeTree(aScene.mRoot, 0);
+    ImGui::End();
+
     handleHighlight(hovered);
     presentSelection();
 }
@@ -64,7 +76,7 @@ void SceneGui::handleHighlight(Node * aHovered)
             mHighlightedNode->mInstance.mMaterialOverride = std::nullopt;
         }
         
-        if(aHovered)
+        if(aHovered && mOptions.mHighlightObjects)
         {
             aHovered->mInstance.mMaterialOverride = mHighlightMaterial;
         }

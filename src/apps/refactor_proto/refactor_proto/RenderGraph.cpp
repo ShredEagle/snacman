@@ -795,9 +795,7 @@ void RenderGraph::loadDrawBuffers(const PartList & aPartList,
 
 void RenderGraph::drawUi()
 {
-    ImGui::Begin("Scene tree");
     mSceneGui.present(mScene);
-    ImGui::End();
 }
 
 

@@ -41,6 +41,13 @@ private:
     static const int gLeafFlags;
     static const int gPartFlags;
 
+    struct Options
+    {
+        bool mHighlightObjects = false;
+    };
+    
+    Options mOptions;
+
     Handle<const Part> mSelectedPart = gNullHandle;
     // There are no handles on Nodes at the moment
     // The node Pose might be mutated, so it cannot be const
