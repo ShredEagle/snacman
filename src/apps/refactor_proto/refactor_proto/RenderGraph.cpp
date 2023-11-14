@@ -142,7 +142,7 @@ namespace {
         aStorage.mPrograms.push_back(ConfiguredProgram{
             .mProgram = IntrospectProgram{
                 il,
-                "inline-RenderGraph.cpp",
+                "simple-RenderGraph.cpp",
             },
             .mConfig = &aStorage.mProgramConfigs.back(),
         });
@@ -598,17 +598,8 @@ PartList Scene::populatePartList() const
 {
     PROFILER_SCOPE_SECTION("populate_draw_list", CpuTime);
 
-    static constexpr Pose gIdentityPose{
-        .mPosition{0.f, 0.f, 0.f},
-        .mUniformScale = 1,
-    };
-
     PartList partList;
-    for(const Node & topNode : mRoot)
-    {
-        renderer::populatePartList(partList, topNode, gIdentityPose);
-    }
-
+    renderer::populatePartList(partList, mRoot, mRoot.mInstance.mPose);
     return partList;
 }
 
@@ -718,7 +709,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
     mScene = mLoader.loadScene(aSceneFile, "effects/Mesh.sefx", mInstanceStream, mStorage);
-    /*const*/Node & model = mScene.mRoot.front();
+    /*const*/Node & model = mScene.mRoot.mChildren.front();
 
     // TODO Ad 2023/10/03: Sort out this bit of logic: remove hardcoded sections,
     // better handle camera placement / projections scene wide

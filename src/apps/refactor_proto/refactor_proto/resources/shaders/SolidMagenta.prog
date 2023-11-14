@@ -1,0 +1,4 @@
+{
+    "vertex": "PhongLighting.vert",
+    "fragment": "Magenta.frag"
+}

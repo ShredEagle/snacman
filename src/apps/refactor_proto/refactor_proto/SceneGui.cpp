@@ -49,21 +49,37 @@ const ImGuiTreeNodeFlags SceneGui::gPartFlags =
 
 void SceneGui::present(Scene & aScene)
 {
-    unsigned int index = 0;
-    for(Node & topNode : aScene.mRoot)
-    {
-        presentNodeTree(topNode, index++);
-    }
-
+    Node * hovered = presentNodeTree(aScene.mRoot, 0);
+    handleHighlight(hovered);
     presentSelection();
+}
+
+
+void SceneGui::handleHighlight(Node * aHovered)
+{
+    if(mHighlightedNode != aHovered)
+    {
+        if(mHighlightedNode)
+        {
+            mHighlightedNode->mInstance.mMaterialOverride = std::nullopt;
+        }
+        
+        if(aHovered)
+        {
+            aHovered->mInstance.mMaterialOverride = mHighlightMaterial;
+        }
+
+        mHighlightedNode = aHovered;
+    }
 }
 
 
 // Note: currently returns the selected Node (but not Part or any heterogeneous type).
 // This is inherited from the time before this was free function, not sure it can be usefull now.
-void SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
+Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
 {
     //auto & nodeTree = mSkin.mRig.mScene;
+    Node * hovered = nullptr;
 
     int flags = (aNode.mChildren.empty() && aNode.mInstance.mObject == nullptr) ? gLeafFlags : gBaseFlags;
     // TODO Ad 2023/11/09: #dod Currently, the node index is relative to the parent, not absolute regarding all nodes
@@ -74,6 +90,11 @@ void SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
             (aNode.mInstance.mName.empty() ? name.c_str() : aNode.mInstance.mName.c_str()));
 
     ImGui::PushID(&aNode);
+
+    if(ImGui::IsItemHovered())
+    {
+        hovered = &aNode;
+    }
 
     if(ImGui::IsItemClicked(0))
     {
@@ -90,12 +111,19 @@ void SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
         unsigned int childIdx = 0;
         for(Node & child : aNode.mChildren)
         {
-            presentNodeTree(child, childIdx++);
+            if(Node * hoveredChild = presentNodeTree(child, childIdx++);
+               hoveredChild)
+            {
+                hovered = hoveredChild;
+            }
+            
         }
         ImGui::TreePop();
     }
 
     ImGui::PopID();
+
+    return hovered;
 }
 
 

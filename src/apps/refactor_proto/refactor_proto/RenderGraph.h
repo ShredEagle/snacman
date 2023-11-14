@@ -91,9 +91,9 @@ struct RenderGraph
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
     Scene mScene;
-    SceneGui mSceneGui{mStorage};
     GenericStream mInstanceStream;
     Loader mLoader;
+    SceneGui mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage};
     HardcodedUbos mUbos;
     graphics::BufferAny mIndirectBuffer;
 
