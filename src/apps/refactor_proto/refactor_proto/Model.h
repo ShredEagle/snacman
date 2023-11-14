@@ -174,7 +174,7 @@ struct VertexStream /*: public SemanticBufferViews*/
 {
     SEMANTIC_BUFFER_MEMBERS                 
     BufferView mIndexBufferView;
-    GLenum mIndicesType = 0;/*NULL; for some reason Clang complains about it*/
+    GLenum mIndicesType = 0;/*NULL; for some reason Clang complains about NULL*/
 };
 
 #undef SEMANTIC_BUFFER_MEMBERS

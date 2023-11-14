@@ -17,16 +17,17 @@ public:
         mStorage{aStorage}
     {}
 
-    void present(const Scene & aScene);
+    void present(Scene & aScene);
 
 private:
-    const Node * presentNodeTree(const Node & aNode, unsigned int aIndex);
+    void presentNodeTree(Node & aNode, unsigned int aIndex);
     void presentObject(const Object & aObject);
     void presentEffect(Handle<const Effect> aEffect);
     void presentShaders(const IntrospectProgram & aIntrospectProgram);
 
     void presentSelection();
 
+    void showNodeWindow(Node & aNode);
     void showPartWindow(const Part & aPart);
     void showSourceWindow(const std::string & aSourceString);
 
@@ -35,6 +36,9 @@ private:
     static const int gPartFlags;
 
     Handle<const Part> mSelectedPart = gNullHandle;
+    // There are no handles on Nodes at the moment
+    // The node Pose might be mutated, so it cannot be const
+    Node * mSelectedNode = nullptr;
     const std::string * mSelectedShaderSource = nullptr;
 
     const Storage & mStorage;

@@ -47,10 +47,10 @@ const ImGuiTreeNodeFlags SceneGui::gPartFlags =
     | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
 
 
-void SceneGui::present(const Scene & aScene)
+void SceneGui::present(Scene & aScene)
 {
     unsigned int index = 0;
-    for(const Node & topNode : aScene.mRoot)
+    for(Node & topNode : aScene.mRoot)
     {
         presentNodeTree(topNode, index++);
     }
@@ -61,11 +61,9 @@ void SceneGui::present(const Scene & aScene)
 
 // Note: currently returns the selected Node (but not Part or any heterogeneous type).
 // This is inherited from the time before this was free function, not sure it can be usefull now.
-const Node * SceneGui::presentNodeTree(const Node & aNode, unsigned int aIndex)
+void SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
 {
     //auto & nodeTree = mSkin.mRig.mScene;
-
-    const Node * selected = nullptr;
 
     int flags = (aNode.mChildren.empty() && aNode.mInstance.mObject == nullptr) ? gLeafFlags : gBaseFlags;
     // TODO Ad 2023/11/09: #dod Currently, the node index is relative to the parent, not absolute regarding all nodes
@@ -79,7 +77,7 @@ const Node * SceneGui::presentNodeTree(const Node & aNode, unsigned int aIndex)
 
     if(ImGui::IsItemClicked(0))
     {
-        selected = &aNode;
+        mSelectedNode = &aNode;
     }
 
     if(opened)
@@ -90,20 +88,14 @@ const Node * SceneGui::presentNodeTree(const Node & aNode, unsigned int aIndex)
         }
 
         unsigned int childIdx = 0;
-        for(const Node & child : aNode.mChildren)
+        for(Node & child : aNode.mChildren)
         {
-            if(const Node * childSelected = presentNodeTree(child, childIdx++);
-            childSelected != nullptr)
-            {
-                selected = childSelected;
-            }
+            presentNodeTree(child, childIdx++);
         }
         ImGui::TreePop();
     }
 
     ImGui::PopID();
-
-    return selected;
 }
 
 
@@ -142,6 +134,17 @@ void SceneGui::presentObject(const Object & aObject)
 
         ImGui::TreePop();
     }
+}
+
+
+void SceneGui::showNodeWindow(Node & aNode)
+{
+    ImGui::Begin("Node");
+    ImGui::SeparatorText("Pose");
+    Pose & pose = aNode.mInstance.mPose;
+    ImGui::InputFloat3("Position", pose.mPosition.data());
+    ImGui::InputFloat("Uniform scale", &pose.mUniformScale);
+    ImGui::End();
 }
 
 
@@ -275,6 +278,11 @@ void SceneGui::showSourceWindow(const std::string & aSourceString)
 
 void SceneGui::presentSelection()
 {
+    if(mSelectedNode)
+    {
+        showNodeWindow(*mSelectedNode);
+    }
+
     if (mSelectedPart)
     {
         showPartWindow(*mSelectedPart);
