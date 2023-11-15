@@ -236,20 +236,43 @@ private:
     };
 
     /// @brief Returns the next entry, handling resizing of storage when needed.
-    Entry & getNextEntry();
+    /// @warning Does not advance the next entry
+    Entry & fetchNextEntry();
 
     void resize(std::size_t aNewEntriesCount);
 
     ProviderInterface & getProvider(const Metric<GLuint> & aMetric);
     const ProviderInterface & getProvider(const Metric<GLuint> & aMetric) const;
 
-    std::vector<Entry> mEntries; // Initial size handled in constructor
-    EntryIndex mNextEntry{0};
-    unsigned int mCurrentLevel{0};
-    EntryIndex mCurrentParent{Entry::gNoParent};
-    unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
+    /// @brief The intra-frame state (plus the corresponding frame number).
+    struct FrameState
+    {
+        /// @brief Reset the frame state, except the frame number which is advanced.
+        /// @note the current level and parent should already be at the initial value.
+        void advanceFrame()
+        {
+            *this = FrameState{
+                .mFrameNumber = mFrameNumber + 1,
+            };
+        };
 
+        bool areAllSectionsClosed()
+        {
+            return 
+                (mCurrentLevel == 0)
+                && (mCurrentParent == Entry::gNoParent)
+            ;
+        }
+
+        EntryIndex mNextEntry{0};
+        unsigned int mCurrentLevel{0};
+        EntryIndex mCurrentParent{Entry::gNoParent};
+        unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
+    };
+
+    std::vector<Entry> mEntries; // Initial size handled in constructor
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
+    FrameState mFrameState;
 };
 
 

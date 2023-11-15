@@ -37,15 +37,15 @@ Profiler::Profiler()
 }
 
 
-Profiler::Entry & Profiler::getNextEntry()
+Profiler::Entry & Profiler::fetchNextEntry()
 {
-    if(mNextEntry == mEntries.size())
+    if(mFrameState.mNextEntry == mEntries.size())
     {
         auto newSize = mEntries.size() * 2;
         SELOG(debug)("Resizing the profiler to {} entries.", newSize);
         resize(newSize);
     }
-    return mEntries[mNextEntry];
+    return mEntries[mFrameState.mNextEntry];
 }
 
 
@@ -73,27 +73,23 @@ const ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric) 
 
 void Profiler::beginFrame()
 {
-    ++mFrameNumber;
-    mNextEntry = 0;
-    mCurrentLevel = 0; // should already be the case
-    mCurrentParent = Entry::gNoParent; // should already be the case
+    mFrameState.advanceFrame();
 }
 
 void Profiler::endFrame()
 {
-    assert(mCurrentLevel == 0); // sanity check
-    assert(mCurrentParent == Entry::gNoParent); // sanity check
+    assert(mFrameState.areAllSectionsClosed());
 
     // Ensure we have enough entries in the circular buffer (frame count >= gFrameDelay)
-    if((mFrameNumber + 1) < gFrameDelay)
+    if((mFrameState.mFrameNumber + 1) < gFrameDelay)
     {
         return;
     }
 
-    for(EntryIndex i = 0; i != mNextEntry; ++i)
+    for(EntryIndex i = 0; i != mFrameState.mNextEntry; ++i)
     {
         Entry & entry = mEntries[i];
-        std::uint32_t queryFrame = (mFrameNumber + 1) % gFrameDelay;
+        std::uint32_t queryFrame = (mFrameState.mFrameNumber + 1) % gFrameDelay;
 
         GLuint result;
         for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
@@ -120,17 +116,17 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     // There must be a number of provider in [1, maxMetricsPerSection]
     assert(aProviders.size() > 0 && aProviders.size() <= gMaxMetricsPerSection);
     
-    Entry & entry = getNextEntry();
+    Entry & entry = fetchNextEntry();
 
     // Because we do not track identity properly when frame structure change, we hope it always matches
     assert(entry.mId.mName == nullptr || entry.mId.mName == aName);
-    assert(entry.mId.mLevel == Entry::gInvalidLevel || entry.mId.mLevel == mCurrentLevel);
-    assert(entry.mId.mParentIdx == Entry::gInvalidEntry || entry.mId.mParentIdx == mCurrentParent);
+    assert(entry.mId.mLevel == Entry::gInvalidLevel || entry.mId.mLevel == mFrameState.mCurrentLevel);
+    assert(entry.mId.mParentIdx == Entry::gInvalidEntry || entry.mId.mParentIdx == mFrameState.mCurrentParent);
 
     entry.mId.mName = aName;
-    entry.mId.mLevel = mCurrentLevel++;
-    entry.mId.mParentIdx = mCurrentParent;
-    mCurrentParent = mNextEntry; //i.e. this Entry index becomes the current parent
+    entry.mId.mLevel = mFrameState.mCurrentLevel++;
+    entry.mId.mParentIdx = mFrameState.mCurrentParent;
+    mFrameState.mCurrentParent = mFrameState.mNextEntry; //i.e. this Entry index becomes the current parent
 
     if(entry.mActiveMetrics == 0)
     {
@@ -147,10 +143,10 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
 
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).beginSection(mNextEntry, mFrameNumber % gFrameDelay);
+        getProvider(entry.mMetrics[i]).beginSection(mFrameState.mNextEntry, mFrameState.mFrameNumber % gFrameDelay);
     }
 
-    return mNextEntry++;
+    return mFrameState.mNextEntry++;
 }
 
 
@@ -159,16 +155,16 @@ void Profiler::endSection(EntryIndex aIndex)
     Entry & entry = mEntries.at(aIndex);
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).endSection(aIndex, mFrameNumber % gFrameDelay);
+        getProvider(entry.mMetrics[i]).endSection(aIndex, mFrameState.mFrameNumber % gFrameDelay);
     }
-    mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
-    --mCurrentLevel;
+    mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
+    --mFrameState.mCurrentLevel;
 }
 
 
 void Profiler::popCurrentSection()
 {
-    endSection(mCurrentParent);
+    endSection(mFrameState.mCurrentParent);
 }
 
 
@@ -258,7 +254,7 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     // It allows to test whether distinct entry indices correspond to the same logical section, for parent consolidation.
     std::vector<LogicalSectionId> entryIdToLogicalSectionId(mEntries.size(), gInvalidLogicalSection);
 
-    for(EntryIndex entryIdx = 0; entryIdx != mNextEntry; ++entryIdx)
+    for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
     {
         const Entry & entry = mEntries[entryIdx];
 
@@ -347,7 +343,7 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     {
         using std::chrono::microseconds;
         aOut << "(generated from "
-            << mNextEntry << " entries in " 
+            << mFrameState.mNextEntry << " entries in " 
             << getTicks<microseconds>(Clock::now() - beginTime) << " us"
             << ", sort took " << getTicks<microseconds>(sortedTime - beginTime) << " us"
             << ")"
