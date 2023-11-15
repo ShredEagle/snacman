@@ -19,6 +19,34 @@
 namespace ad::renderer {
 
 
+namespace {
+
+    /// @brief Returns true if `aEntry` currently has exactly the same providers as the iterators range, in the same order.
+    template <std::forward_iterator T_iterator>
+    bool matchProviders(const Profiler::Entry & aEntry, T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx)
+    {
+        return std::equal(aEntry.mMetrics.begin(), aEntry.mMetrics.begin() + aEntry.mActiveMetrics,
+                        aFirstProviderIdx, aLastProviderIdx,
+                        [](const Profiler::Metric<GLuint> & aMetric, Profiler::ProviderIndex aProviderIdx)
+                        {
+                            return aMetric.mProviderIndex == aProviderIdx;
+                        }
+                        );
+    }
+
+} // unnamed namespace
+
+
+bool Profiler::Entry::matchIdentity(const char * aName, const FrameState & aFrameState)
+{
+    return 
+        (mId.mName == aName)
+        && (mId.mLevel == aFrameState.mCurrentLevel)
+        && (mId.mParentIdx == aFrameState.mCurrentParent)
+    ;
+}
+
+
 Profiler::Profiler()
 {
 #if defined(_WIN32)
@@ -81,7 +109,7 @@ void Profiler::endFrame()
     assert(mFrameState.areAllSectionsClosed());
 
     // Ensure we have enough entries in the circular buffer (frame count >= gFrameDelay)
-    if((mFrameState.mFrameNumber + 1) < gFrameDelay)
+    if((mFrameState.mFrameNumber + 1) < mLastResetFrame + gFrameDelay)
     {
         return;
     }
@@ -116,37 +144,61 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     // There must be a number of provider in [1, maxMetricsPerSection]
     assert(aProviders.size() > 0 && aProviders.size() <= gMaxMetricsPerSection);
     
-    Entry & entry = fetchNextEntry();
-
-    // Because we do not track identity properly when frame structure change, we hope it always matches
-    assert(entry.mId.mName == nullptr || entry.mId.mName == aName);
-    assert(entry.mId.mLevel == Entry::gInvalidLevel || entry.mId.mLevel == mFrameState.mCurrentLevel);
-    assert(entry.mId.mParentIdx == Entry::gInvalidEntry || entry.mId.mParentIdx == mFrameState.mCurrentParent);
-
-    entry.mId.mName = aName;
-    entry.mId.mLevel = mFrameState.mCurrentLevel++;
-    entry.mId.mParentIdx = mFrameState.mCurrentParent;
-    mFrameState.mCurrentParent = mFrameState.mNextEntry; //i.e. this Entry index becomes the current parent
-
-    if(entry.mActiveMetrics == 0)
+    auto setupNextEntry = [this](const char * aName, auto aProviders) -> std::pair<EntryIndex, bool>
     {
-        // TODO the provider indices must always be sorted (this is notably an assumption in LogicalSection::accountForChildSection)
-        // should we sort, or assert that it is already the case?
-        for(const ProviderIndex providerIndex : aProviders)
-        {
-            entry.mMetrics.at(entry.mActiveMetrics++).mProviderIndex = providerIndex;
-        }
-    }
+        Entry & entry = fetchNextEntry();
+        bool alreadyPresent;
 
-    // Also part of identity, a logical section should always be given the exact same list of providers.
-    assert(entry.mActiveMetrics == aProviders.size());
+        if(alreadyPresent = entry.matchIdentity(aName, mFrameState);
+           alreadyPresent)
+        {
+            // Also part of identity, a logical section should always be given the exact same list of providers.
+            // For the moment, we consider it a logic error if the identity changes only because of a different provider list
+            // (this assumption can be revised)
+            assert(matchProviders(entry, aProviders.begin(), aProviders.end()));
+        }
+        else // Either a newer used entry, or the frame structure changed and the entry was used for another identity
+        {
+            entry.mId.mName = aName;
+            entry.mId.mLevel = mFrameState.mCurrentLevel;
+            entry.mId.mParentIdx = mFrameState.mCurrentParent;
+
+            entry.mActiveMetrics = 0;
+            [[maybe_unused]] ProviderIndex previousProvider = std::numeric_limits<ProviderIndex>::max(); // only used for the sorting assertion
+            for(const ProviderIndex providerIndex : aProviders)
+            {
+                // Provider indices must always be sorted (this is notably an assumption in LogicalSection::accountForChildSection)
+                assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex);
+                previousProvider = providerIndex;
+
+                entry.mMetrics.at(entry.mActiveMetrics++) = Metric<GLuint>{
+                    // TODO we could optimize that without rewritting each individual sample to zero
+                    .mProviderIndex = providerIndex,
+                    .mValues = {}, // Note: No effect line, to make explicit that we reset values.
+                };
+            }
+        }
+
+        ++mFrameState.mCurrentLevel;
+        mFrameState.mCurrentParent = mFrameState.mNextEntry; //i.e. this Entry index becomes the current parent
+        return {mFrameState.mNextEntry++, alreadyPresent};
+    };
+
+    auto [entryIndex, alreadyPresent] = setupNextEntry(aName, aProviders);
+    Entry & entry = mEntries[entryIndex];
+
+    if (!alreadyPresent)
+    {
+        mLastResetFrame = mFrameState.mFrameNumber;
+        SELOG(debug)("Profiler sections structure changed.");
+    }
 
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).beginSection(mFrameState.mNextEntry, mFrameState.mFrameNumber % gFrameDelay);
+        getProvider(entry.mMetrics[i]).beginSection(entryIndex, mFrameState.mFrameNumber % gFrameDelay);
     }
 
-    return mFrameState.mNextEntry++;
+    return entryIndex;
 }
 
 

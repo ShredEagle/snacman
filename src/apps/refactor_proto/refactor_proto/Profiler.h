@@ -210,6 +210,9 @@ private:
         Values<T_value, T_average> mValues;
     };
 
+    // Forward
+    struct FrameState;
+
     /// @brief A distinct Entry is used each time the flow of control reaches beginSection().
     /// (i.e. inside a given _frame_, each call to beginSection returns a distinct Entry.)
     /// @note Consolidation happens on the collection of Entries to group them by LogicalSection.
@@ -229,6 +232,8 @@ private:
 
             bool operator==(const Identity & aRhs) const = default;
         };
+
+        bool matchIdentity(const char * aName, const FrameState & aFrameState);
 
         Identity mId;
         std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
@@ -273,6 +278,7 @@ private:
     std::vector<Entry> mEntries; // Initial size handled in constructor
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
     FrameState mFrameState;
+    unsigned int mLastResetFrame{0};
 };
 
 
