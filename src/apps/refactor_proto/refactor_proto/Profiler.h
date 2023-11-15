@@ -12,29 +12,32 @@
 
 
 // Implementation notes:
-// A profiler is one of those feature that seems trivial, until you try to implement one.
+// A profiler is one of those features that seem trivial, until you try to implement one.
 // The design has several requirements:
 // * The Profiler instance has knowledge of a "frame" or "step", inside which sections can be defined anywhere in client code.
 // * The sections should not require client to provide permanent storage. 
-//   * Sections guards on the stack are okay.
 //   * i.e., the Profiler is hosting all state that must be kept between frames.
+//   * Exception: Sections guards on the stack are okay, because they are a common paradigm and only rely on local variables (not interframe).
 // * Sections can be arbitrarily nested, and must always be balanced (client's responsibility).
 //    * TODO Some metrics are harder to nest, for example OpenGL async Query objects,
 //       where at most one/a few counter(s) for each target can be active at any time.
-// * TODO The number of sections is dynamic, and can grow (within machine limits).
-// * TODO The identity of a section is not a trivial matter
+// * The number of sections is dynamic, and can grow (within machine limits).
+// * TODO The (logical) identity of a section is not a trivial matter.
+//   * All sections matching a common identity are grouped in a LogicalSection to match client's expectations.
 //   * The identity should have implicit defaults (i.e. not client's responsiblity):
-//     * If a section is inside a loop, each iteration should be cumulated.
+//     * If a section is inside a loop, each iteration should be cumulated 
+//       * Only if the stack of parents is identical for each iteration, which should be true within a given loop execution
+//         (but not necessaraly next time the same loop is reached).
 //     * If a lexical section inside a scope is reached via distinct paths (path meaning the "stack of sections"), 
 //       each path should lead to a distinct logical section.
-//   * What happens to identity when a frame composition changes (i.e. not the exact same sequence of sections)
+//   * TODO What happens to identity when a frame composition changes (i.e. not the exact same sequence of sections)
 //     * Number of iterations in a loop can differ very frequently (number of lights, culled objects)
 //     * High level frame structure can differ (new screen effects, scene change (cut scene), ...)
-//   * The client should be able to override default, with ability to overrid identity per section.
-// * TODO Sections should be able to keep distinct metric of heterogenous types (CPU time, GPU time, GPU draw counts, ...)
-//   * The metrics should be user-extensible
+//   * The client should be able to override default, with ability to override identity per section (e.g. ImGui Id-Stack).
+// * Sections should be able to keep distinct metric of heterogenous types (CPU time, GPU time, GPU draw counts, ...)
+//   * TODO The metrics should be user-extensible
 //   * Restriction: a given logical section should list the same exact metrics at each frame.
-//     * What should profiler do if it does not?
+//     * TODO What should profiler do if it does not?
 // * TODO Some section are not recurring each frame, but are considered single shot events.
 //   * They should not be discarded at the end of a frame, but only via explicit user request.
 
@@ -114,6 +117,8 @@ public:
 
 class Profiler
 {
+    /// @brief A logical section is what the clients expects to see as a single line in the profiler output,
+    /// but could be consolidated from several distinct measures (e.g. loop consolidation).
     friend struct LogicalSection; // Implementation detail for grouping entries by logical section.
 
 public:
@@ -135,10 +140,10 @@ public:
     EntryIndex beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders);
     void endSection(EntryIndex aIndex);
 
-    // I am not sure this is a good idea, but it relies on a Profiler global state (mCurrentParent) (which might not be a good idea)
+    // I am not sure this is a good idea, as it relies on a Profiler global state (mCurrentParent), which might not be a good idea.
     // The current assumption is that sections should always be strictly nested, and that they are created on a single thread
     // (or at least that there is an independent copy of the Profiler state per thread).
-    // This helps with ending manual sections.
+    /// This helps with ending manual sections.
     void popCurrentSection();
 
     struct [[nodiscard]] SectionGuard
@@ -207,6 +212,7 @@ private:
 
     /// @brief A distinct Entry is used each time the flow of control reaches beginSection().
     /// (i.e. inside a given _frame_, each call to beginSection returns a distinct Entry.)
+    /// @note Consolidation happens on the collection of Entries to group them by LogicalSection.
     ///
     /// Contains an array of `Metrics` measured for this entry.
     struct Entry
