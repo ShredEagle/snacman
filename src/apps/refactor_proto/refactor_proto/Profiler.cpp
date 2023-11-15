@@ -111,6 +111,22 @@ void Profiler::endFrame()
     // Ensure we have enough entries in the circular buffer (frame count >= gFrameDelay)
     if((mFrameState.mFrameNumber + 1) < mLastResetFrame + gFrameDelay)
     {
+        // TODO Ad 2023/11/15: I do not like this explicit reset of all values at the end of the frame if a reset occurred:
+        // this is wasteful of resources, since all values for entities that changed have already been reset
+        // But this is currently imposed by the prettyPrint, which expects all Entities of a logical section to have the same count of samples...
+        if(mFrameState.mFrameNumber == mLastResetFrame)
+        {
+            // If this is the end of a frame during which a reset occurred, reset all values in all entries
+            for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+            {
+                Entry & entry = mEntries[entryIdx];
+                for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
+                {
+                    entry.mMetrics[metricIdx].mValues = {};
+                }
+            }
+        }
+
         return;
     }
 
