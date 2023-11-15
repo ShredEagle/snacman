@@ -293,11 +293,6 @@ namespace {
                 const Material * material =
                     aMaterialOverride ? aMaterialOverride : &part.mMaterial;
 
-                if(aNode.mInstance.mMaterialOverride)
-                {
-                    SELOG(warn)("Material override for '%s'.", aNode.mInstance.mName);
-                }
-
                 aPartList.mParts.push_back(&part);
                 aPartList.mMaterials.push_back(material);
                 // pushed after
