@@ -21,7 +21,7 @@ struct ProviderCpuRdtsc : public ProviderInterface
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 
     void resize(std::size_t aNewEntriesCount) override
-    { mIntervals.resize(aNewEntriesCount * Profiler::gFrameDelay); }
+    { mIntervals.resize(aNewEntriesCount * Profiler::CountSubframes() ); }
 
     ////// Logically private
     TickCount_t & getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame);
@@ -69,7 +69,7 @@ inline ProviderCpuRdtsc::ProviderCpuRdtsc():
 
 inline ProviderCpuRdtsc::TickCount_t & ProviderCpuRdtsc::getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
-    return mIntervals[aEntryIndex * Profiler::gFrameDelay + aCurrentFrame];
+    return mIntervals[aEntryIndex * Profiler::CountSubframes()  + aCurrentFrame];
 }
 
 

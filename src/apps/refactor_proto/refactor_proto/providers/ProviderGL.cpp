@@ -9,7 +9,7 @@ namespace ad::renderer {
 
 graphics::Query & ProviderGL::getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
-    return mQueriesPool[aEntryIndex * Profiler::gFrameDelay + aCurrentFrame];
+    return mQueriesPool[aEntryIndex * Profiler::CountSubframes()  + aCurrentFrame];
 }
 
 
@@ -58,7 +58,7 @@ bool ProviderGL::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & 
 
 graphics::Query & ProviderGLTime::getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame, Event aEvent)
 {
-    return mQueriesPool[2 * (aEntryIndex * Profiler::gFrameDelay + aCurrentFrame) 
+    return mQueriesPool[2 * (aEntryIndex * Profiler::CountSubframes()  + aCurrentFrame) 
                         + (aEvent == Event::Begin ? 0 : 1)];
 }
 

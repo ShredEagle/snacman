@@ -102,7 +102,7 @@ public:
     virtual void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
 
     // TODO make generic regarding provided type
-    virtual bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) = 0;
+    virtual bool provide(EntryIndex aEntryIndex, std::uint32_t aQueryFrame, GLuint & aSampleResult) = 0;
 
     virtual void resize(std::size_t aNewEntriesCount) = 0;
 
@@ -121,16 +121,20 @@ class Profiler
     /// but could be consolidated from several distinct measures (e.g. loop consolidation).
     friend struct LogicalSection; // Implementation detail for grouping entries by logical section.
 
+    /// @brief Delay before querying metrics.
+    /// This is initially implemented so asynchronous GPU request have a good chance to be ready when queried.
+    inline static constexpr std::uint32_t gFrameDelay{3};
+
 public:
     inline static constexpr std::size_t gInitialEntries{256};
     inline static constexpr std::size_t gMaxSamples{128};
     inline static constexpr std::size_t gMaxMetricsPerSection{16};
-    /// @brief Delay before querying metrics.
-    /// This is initially implemented so asynchronous GPU request have a good chance to be ready when queried.
-    inline static constexpr std::uint32_t gFrameDelay{4};
 
     using EntryIndex = ProviderInterface::EntryIndex;
     using ProviderIndex = std::size_t;
+
+    static std::uint32_t CountSubframes()
+    { return gFrameDelay + 1; };
 
     Profiler();
 
@@ -201,6 +205,12 @@ public:
     };
 
 private:
+    /// @brief The current subframe, which should be provided to profilers beginSection() / endSection().
+    std::uint32_t currentSubframe() const;
+
+    /// @brief The subframe which is to be queried, taking into account the frame delay.
+    std::uint32_t queriedSubframe() const;
+
     /// @brief A reference to a metrics Provider, and a `Value` record of the samples taken by this provider.
     template <class T_value, class T_average = T_value>
     struct Metric

@@ -99,46 +99,59 @@ const ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric) 
 }
 
 
+std::uint32_t Profiler::currentSubframe() const
+{
+    return mFrameState.mFrameNumber % CountSubframes();
+}
+
+
+std::uint32_t Profiler::queriedSubframe() const
+{
+    return (mFrameState.mFrameNumber + 1) % CountSubframes();
+}
+
+
 void Profiler::beginFrame()
 {
     mFrameState.advanceFrame();
 }
 
+
 void Profiler::endFrame()
 {
     assert(mFrameState.areAllSectionsClosed());
 
-    // Ensure we have enough entries in the circular buffer (frame count >= gFrameDelay)
-    if((mFrameState.mFrameNumber + 1) < mLastResetFrame + gFrameDelay)
+    // TODO Ad 2023/11/15: I do not like this explicit reset of all values at the end of the frame if a reset occurred:
+    // this is wasteful of resources, since all values for entities that changed have already been reset
+    // But this is currently imposed by the prettyPrint, which expects all Entities of a logical section to have the same count of samples...
+    if(mFrameState.mFrameNumber == mLastResetFrame)
     {
-        // TODO Ad 2023/11/15: I do not like this explicit reset of all values at the end of the frame if a reset occurred:
-        // this is wasteful of resources, since all values for entities that changed have already been reset
-        // But this is currently imposed by the prettyPrint, which expects all Entities of a logical section to have the same count of samples...
-        if(mFrameState.mFrameNumber == mLastResetFrame)
+        // If a reset occured during this frame, reset all values in all entries
+        for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
         {
-            // If a reset occured during this frame, reset all values in all entries
-            for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+            Entry & entry = mEntries[entryIdx];
+            for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
             {
-                Entry & entry = mEntries[entryIdx];
-                for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
-                {
-                    entry.mMetrics[metricIdx].mValues = {};
-                }
+                entry.mMetrics[metricIdx].mValues = {};
             }
         }
+    }
 
+    // Ensure we have enough entries in the circular buffer before issuing queries (frame count since reset >= gFrameDelay)
+    if(mFrameState.mFrameNumber < (mLastResetFrame + gFrameDelay))
+    {
         return;
     }
 
-    for(EntryIndex i = 0; i != mFrameState.mNextEntry; ++i)
+    for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
     {
-        Entry & entry = mEntries[i];
-        std::uint32_t queryFrame = (mFrameState.mFrameNumber + 1) % gFrameDelay;
+        Entry & entry = mEntries[entryIdx];
+        std::uint32_t queryFrame = queriedSubframe();
 
         GLuint result;
         for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
         {
-            if(getProvider(entry.mMetrics[metricIdx]).provide(i, queryFrame, result))
+            if(getProvider(entry.mMetrics[metricIdx]).provide(entryIdx, queryFrame, result))
             {
                 entry.mMetrics[metricIdx].mValues.record(result);
             }
@@ -211,7 +224,7 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
 
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).beginSection(entryIndex, mFrameState.mFrameNumber % gFrameDelay);
+        getProvider(entry.mMetrics[i]).beginSection(entryIndex, currentSubframe());
     }
 
     return entryIndex;
@@ -223,7 +236,7 @@ void Profiler::endSection(EntryIndex aIndex)
     Entry & entry = mEntries.at(aIndex);
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).endSection(aIndex, mFrameState.mFrameNumber % gFrameDelay);
+        getProvider(entry.mMetrics[i]).endSection(aIndex, currentSubframe());
     }
     mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
     --mFrameState.mCurrentLevel;
