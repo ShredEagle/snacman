@@ -216,7 +216,7 @@ void SceneGui::showPartWindow(const Part & aPart)
             ImGui::TreePush("per vertex");
             for(const std::string * semantic : perDivisor[0])
             {
-                ImGui::BulletText(semantic->c_str());
+                ImGui::BulletText("%s", semantic->c_str());
             }
             ImGui::TreePop();
 
@@ -224,7 +224,7 @@ void SceneGui::showPartWindow(const Part & aPart)
             ImGui::TreePush("per instance");
             for(const std::string * semantic : perDivisor[1])
             {
-                ImGui::BulletText(semantic->c_str());
+                ImGui::BulletText("%s", semantic->c_str());
             }
             ImGui::TreePop();
         }
