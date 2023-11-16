@@ -6,6 +6,7 @@
 #include "Loader.h"
 #include "Repositories.h"
 #include "Scene.h"
+#include "SceneGui.h"
 
 #include <graphics/ApplicationGlfw.h>
 
@@ -85,11 +86,14 @@ struct RenderGraph
 
     void loadDrawBuffers(const PartList & aPartList, const PassCache & aPassCache);
 
+    void drawUi();
+
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
     Scene mScene;
     GenericStream mInstanceStream;
     Loader mLoader;
+    SceneGui mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage};
     HardcodedUbos mUbos;
     graphics::BufferAny mIndirectBuffer;
 

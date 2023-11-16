@@ -24,6 +24,11 @@
 namespace ad::renderer {
 
 
+// TODO Ad 2023/10/31: How do we want to handle names of the different entities? 
+// Do we accept to pollute the object model? (The initial approach, as of this writing)
+// I feel maybe there is a more data-oriented design lurking here...
+using Name = std::string;
+
 // TODO Ad 2023/08/04: #handle Define a Handle wrapper which makes sense.
 // Note that a central question will be whether we have a "global" storage 
 // (thus handle can be dereferenced without a storage param / without storing a pointer to storage) or not?
@@ -113,6 +118,7 @@ struct Technique
 struct Effect
 {
     std::vector<Technique> mTechniques;
+    Name mName;
 };
 
 
@@ -132,12 +138,15 @@ struct Material
     // (The material context is already generic, so complete the job)
     std::size_t mPhongMaterialIdx = (std::size_t)-1;
 
+    // TODO Ad 2023/11/08: #name can we get rid of this index? (maybe a DOD SOA approach in storage)
+    std::size_t mNameArrayOffset = (std::size_t)-1;
+
     // Allow sorting on the Handle, if the MaterialContext are consolidated.
     // (lookup for an existing MaterialContext should be done by consolidation when the material in instantiated,
     // not each frame)
     Handle<MaterialContext> mContext = gNullHandle;
 
-    Effect * mEffect;
+    Handle<Effect> mEffect = gNullHandle;
 };
 
 
@@ -165,7 +174,7 @@ struct VertexStream /*: public SemanticBufferViews*/
 {
     SEMANTIC_BUFFER_MEMBERS                 
     BufferView mIndexBufferView;
-    GLenum mIndicesType = 0;/*NULL; for some reason Clang complains about it*/
+    GLenum mIndicesType = 0;/*NULL; for some reason Clang complains about NULL*/
 };
 
 #undef SEMANTIC_BUFFER_MEMBERS
@@ -176,6 +185,7 @@ struct VertexStream /*: public SemanticBufferViews*/
 
 struct Part
 {
+    Name mName;
     Material mMaterial; // TODO #matref: should probably be a "reference", as it is likely shared
                         // on the other hand, it is currently very lightweight
     // Note: Distinct parts can reference the same VertexStream, and use Vertex/Index|First/Count to index it.
@@ -184,7 +194,7 @@ struct Part
     Handle<const VertexStream> mVertexStream;
     GLenum mPrimitiveMode = 0;
     // GLuint because it is the type used in the Draw Indirect buffer
-    GLuint mVertexFirst = 0;
+    GLuint mVertexFirst = 0; // The offset of this part into the buffer view(s)
     GLuint mVertexCount = 0;
     GLuint mIndexFirst = 0;
     GLuint mIndicesCount = 0;
@@ -226,6 +236,7 @@ struct Instance
     Pose mPose;
     // TODO #matref
     std::optional<Material> mMaterialOverride;
+    Name mName;
 };
 
 
@@ -257,7 +268,22 @@ struct Storage
     std::list<ProgramConfig> mProgramConfigs;
     std::list<graphics::VertexArrayObject> mVaos;
     std::list<MaterialContext> mMaterialContexts;
+    // Used for random access (DOD)
+    std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, so the name at index zero can be used when there are no material parameters
 };
 
+
+// TODO change the first argument to an handle if materials are on day stored in an array of Storage.
+inline const Name & getName(const Material & aMaterial, const Storage & aStorage)
+{
+    return aStorage.mMaterialNames.at(aMaterial.mNameArrayOffset + aMaterial.mPhongMaterialIdx);
+}
+
+// Providing an abstraction that should also work with a data-oriented redesign of the model
+// (yes, this is actually trying to predict the future)
+inline const Name & getName(Handle<const Effect> aEffect, const Storage & aStorage)
+{
+    return aEffect->mName;
+}
 
 } // namespace ad::renderer

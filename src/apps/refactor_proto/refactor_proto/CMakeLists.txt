@@ -22,6 +22,7 @@ set(${TARGET_NAME}_HEADERS
     RendererReimplement.h
     Repositories.h
     Scene.h
+    SceneGui.h
     SetupDrawing.h
     Time.h
 
@@ -41,6 +42,8 @@ set(${TARGET_NAME}_SOURCES
     Profiler.cpp
     Profiling.cpp
     RenderGraph.cpp
+    Scene.cpp
+    SceneGui.cpp
     SetupDrawing.cpp
 
     providers/ProviderGL.cpp

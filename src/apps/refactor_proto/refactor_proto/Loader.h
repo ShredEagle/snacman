@@ -60,7 +60,7 @@ struct Loader
     Effect * loadEffect(const std::filesystem::path & aEffectFile,
                         Storage & aStorage,
                         // TODO Ad 2023/10/03: #shader-system Remove this temporary.
-                        const std::vector<std::string> & aDefines_temp);
+                        const std::vector<std::string> & aDefines_temp = {});
 
     /// @brief Load a `.prog` file as an IntrospectProgram.
     IntrospectProgram loadProgram(const filesystem::path & aProgFile,

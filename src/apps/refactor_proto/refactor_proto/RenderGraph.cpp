@@ -131,16 +131,18 @@ namespace {
     }
 
 
-    Handle<Effect> makeWhiteEffect(Storage & aStorage)
+    Handle<Effect> makeSimpleEffect(Storage & aStorage)
     {
         aStorage.mProgramConfigs.emplace_back();
+        // Compiler error (msvc) workaround, by taking the initializer list out
+        std::initializer_list<IntrospectProgram::TypedShaderSource> il = {
+            {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(std::string{gVertexShader}, "RenderGraph.cpp")},
+            {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(gFragmentShader, "RenderGraph.cpp")},
+        };
         aStorage.mPrograms.push_back(ConfiguredProgram{
             .mProgram = IntrospectProgram{
-                graphics::makeLinkedProgram({
-                    {GL_VERTEX_SHADER, gVertexShader},
-                    {GL_FRAGMENT_SHADER, gFragmentShader},
-                }),
-                "white",
+                il,
+                "simple-RenderGraph.cpp",
             },
             .mConfig = &aStorage.mProgramConfigs.back(),
         });
@@ -154,6 +156,7 @@ namespace {
                     .mConfiguredProgram = &aStorage.mPrograms.back(),
                 }
             )},
+            .mName = "simple-effect",
         };
         aStorage.mEffects.push_back(std::move(effect));
 
@@ -271,22 +274,32 @@ namespace {
         }
     }
 
-    void populatePartList(PartList & aPartList, const Node & aNode, const Pose & aParentPose)
+    void populatePartList(PartList & aPartList, const Node & aNode, const Pose & aParentPose, const Material * aMaterialOverride)
     {
-        const Pose & localPose = aNode.mInstance.mPose;
+        const Instance & instance = aNode.mInstance;
+        const Pose & localPose = instance.mPose;
         Pose absolutePose = aParentPose.transform(localPose);
+
+        if(instance.mMaterialOverride)
+        {
+            aMaterialOverride = &*instance.mMaterialOverride;
+        }
 
         if(Object * object = aNode.mInstance.mObject;
            object != nullptr)
         {
             for(const Part & part: object->mParts)
             {
-                const Material & material =
-                    aNode.mInstance.mMaterialOverride ?
-                    *aNode.mInstance.mMaterialOverride : part.mMaterial;
+                const Material * material =
+                    aMaterialOverride ? aMaterialOverride : &part.mMaterial;
+
+                if(aNode.mInstance.mMaterialOverride)
+                {
+                    SELOG(warn)("Material override for '%s'.", aNode.mInstance.mName);
+                }
 
                 aPartList.mParts.push_back(&part);
-                aPartList.mMaterials.push_back(&material);
+                aPartList.mMaterials.push_back(material);
                 // pushed after
                 aPartList.mTransformIdx.push_back((GLsizei)aPartList.mInstanceTransforms.size());
             }
@@ -298,7 +311,7 @@ namespace {
 
         for(const auto & child : aNode.mChildren)
         {
-            populatePartList(aPartList, child, absolutePose);
+            populatePartList(aPartList, child, absolutePose, aMaterialOverride);
         }
     }
 
@@ -595,17 +608,9 @@ PartList Scene::populatePartList() const
 {
     PROFILER_SCOPE_SECTION("populate_draw_list", CpuTime);
 
-    static constexpr Pose gIdentityPose{
-        .mPosition{0.f, 0.f, 0.f},
-        .mUniformScale = 1,
-    };
-
     PartList partList;
-    for(const Node & topNode : mRoot)
-    {
-        renderer::populatePartList(partList, topNode, gIdentityPose);
-    }
-
+    renderer::populatePartList(partList, mRoot, mRoot.mInstance.mPose, 
+                               mRoot.mInstance.mMaterialOverride ? &*mRoot.mInstance.mMaterialOverride : nullptr);
     return partList;
 }
 
@@ -715,7 +720,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
     mScene = mLoader.loadScene(aSceneFile, "effects/Mesh.sefx", mInstanceStream, mStorage);
-    /*const*/Node & model = mScene.mRoot.front();
+    /*const*/Node & model = mScene.mRoot.mChildren.front();
 
     // TODO Ad 2023/10/03: Sort out this bit of logic: remove hardcoded sections,
     // better handle camera placement / projections scene wide
@@ -751,8 +756,8 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
     }
 
     // Add basic shapes to the the scene
-    Handle<Effect> whiteEffect = makeWhiteEffect(mStorage);
-    auto [triangle, cube] = loadTriangleAndCube(mStorage, whiteEffect, mInstanceStream);
+    Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
+    auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mInstanceStream);
     mScene.addToRoot(triangle);
     mScene.addToRoot(cube);
 }
@@ -785,6 +790,12 @@ void RenderGraph::loadDrawBuffers(const PartList & aPartList,
     proto::load(mIndirectBuffer,
                 std::span{aPassCache.mDrawCommands},
                 graphics::BufferHint::DynamicDraw);
+}
+
+
+void RenderGraph::drawUi()
+{
+    mSceneGui.present(mScene);
 }
 
 

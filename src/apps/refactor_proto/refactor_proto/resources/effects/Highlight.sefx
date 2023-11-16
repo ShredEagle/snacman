@@ -1,0 +1,10 @@
+{
+    "techniques": [
+        {
+            "annotations": {
+                "pass": "forward"
+            },
+            "programfile": "shaders/SolidMagenta.prog"
+        }
+    ]
+}

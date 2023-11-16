@@ -30,23 +30,34 @@ struct Scene
 {
     Scene & addToRoot(Node aNode)
     {
-        mRoot.push_back(std::move(aNode));
+        mRoot.mAabb.uniteAssign(aNode.mAabb);
+        mRoot.mChildren.push_back(std::move(aNode));
         return *this;
     }
 
     Scene & addToRoot(Instance aInstance)
     {
-        mRoot.push_back(Node{.mInstance = std::move(aInstance)});
-        return *this;
+        assert(aInstance.mObject);
+
+        Node node{
+            .mInstance = std::move(aInstance),
+            .mAabb = aInstance.mObject->mAabb,
+        };
+
+        return addToRoot(std::move(node));
     }
 
     /// @brief Loads a scene defined as data by a sew file.
     /// @param aSceneFile A sew file (json) describing the scene to load.
     Scene LoadFile(const filesystem::path aSceneFile);
 
-    std::vector<Node> mRoot; 
-
     PartList populatePartList() const;
+
+    Node mRoot{
+        .mInstance = {
+            .mName = "scene-root",
+        },
+    }; 
 };
 
 

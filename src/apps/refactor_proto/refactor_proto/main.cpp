@@ -9,6 +9,7 @@
 
 #include <graphics/ApplicationGlfw.h>
 #include <imguiui/ImguiUi.h>
+#include <imguiui/Widgets.h>
 
 #include <iostream>
 
@@ -37,6 +38,65 @@ std::filesystem::path handleArguments(int argc, char * argv[])
     }
 
     return inputPath;
+}
+
+
+void showGui(imguiui::ImguiUi & imguiUi, renderer::RenderGraph & renderGraph)
+{
+    // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
+    // would be better to show current frame (but this implies to end the profiler frame earlier)
+    // Used as memory from one call to the next
+    static std::ostringstream profilerOut;
+
+    PROFILER_SCOPE_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
+
+    imguiUi.newFrame();
+
+    ImGui::Begin("Main control");
+    {
+        static bool showProfiler = true;
+        if(imguiui::addCheckbox("Profiler", showProfiler))
+        {
+            ImGui::Begin("Profiler");
+            ImGui::Text("%s", profilerOut.str().c_str());
+            ImGui::End();
+        }
+
+        static bool showGlMetrics = false;
+        if(imguiui::addCheckbox("GL Metrics", showGlMetrics))
+        {
+            ImGui::Begin("GL metrics");
+            std::ostringstream metricsOs;
+            metricsOs << "Buffer memory:" 
+                << "\n\tallocated:" << ad::renderer::gl.get().mBufferMemory.mAllocated / 1024 << " kB."
+                << "\n\twritten:"   << ad::renderer::gl.get().mBufferMemory.mWritten / 1024 << " kB."
+                << "\n\nTexture memory:"
+                << "\n\tallocated:" << ad::renderer::gl.get().mTextureMemory.mAllocated / 1024 << " kB."
+                << "\n\twritten:"   << ad::renderer::gl.get().mTextureMemory.mWritten / 1024 << " kB."
+                ;
+            ImGui::Text("%s", metricsOs.str().c_str());
+            ImGui::End();
+        }
+
+        static bool showSceneTree = true;
+        if(imguiui::addCheckbox("Scene tree", showSceneTree))
+        {
+            renderGraph.drawUi();
+        }
+
+        static bool showDemo = false;
+        if(imguiui::addCheckbox("ImGui demo", showDemo))
+        {
+            ImGui::ShowDemoWindow();
+        }
+    }
+    ImGui::End();
+
+    imguiUi.render();
+    imguiUi.renderBackend();
+
+    profilerOut.str("");
+    PROFILER_PRINT_TO_STREAM(profilerOut);
 }
 
 
@@ -69,8 +129,6 @@ void runApplication(int argc, char * argv[])
     using FrameDurationUnit = std::chrono::microseconds;
     float stepDuration = 0.f;
 
-    std::ostringstream profilerOut;
-
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME;
@@ -101,36 +159,13 @@ void runApplication(int argc, char * argv[])
         renderGraph.update(stepDuration);
         renderGraph.render();
 
-        PROFILER_PUSH_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
-        imguiUi.newFrame();
-        ImGui::Begin("Profiler");
-        ImGui::Text("%s", profilerOut.str().c_str());
-        ImGui::End();
-
-        ImGui::Begin("GL metrics");
-        std::ostringstream metricsOs;
-        metricsOs << "Buffer memory:" 
-            << "\n\tallocated:" << ad::renderer::gl.get().mBufferMemory.mAllocated / 1024 << " kB."
-            << "\n\twritten:"   << ad::renderer::gl.get().mBufferMemory.mWritten / 1024 << " kB."
-            << "\n\nTexture memory:"
-            << "\n\tallocated:" << ad::renderer::gl.get().mTextureMemory.mAllocated / 1024 << " kB."
-            << "\n\twritten:"   << ad::renderer::gl.get().mTextureMemory.mWritten / 1024 << " kB."
-            ;
-        ImGui::Text("%s", metricsOs.str().c_str());
-        ImGui::End();
-        imguiUi.render();
-        imguiUi.renderBackend();
-        PROFILER_POP_SECTION;
+        showGui(imguiUi, renderGraph);
 
         glfwApp.swapBuffers();
 
         PROFILER_POP_SECTION; // frame
         PROFILER_END_FRAME;
 
-        // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
-        // would be better to show current frame (but this implies to end the profiler frame earlier)
-        profilerOut.str(""); // reset to empty string
-        PROFILER_PRINT_TO_STREAM(profilerOut);
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }

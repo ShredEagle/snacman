@@ -74,6 +74,7 @@ namespace {
 
         void write(const aiNode * aNode)
         {
+            mArchive.write(std::string{aNode->mName.C_Str()});
             mArchive.write(aNode->mNumMeshes);
             mArchive.write(aNode->mNumChildren);
             mArchive.write(extractAffinePart(aNode));
@@ -81,6 +82,8 @@ namespace {
 
         void write(const aiMesh * aMesh)
         {
+            mArchive.write(std::string{aMesh->mName.C_Str()});
+
             //TODO Ad 2023/07/27: It could be better to dump only the materials actually references by meshes
             // (requires a step to re-index without the unused materials)
             // Material index
@@ -189,10 +192,12 @@ namespace {
     //  vertices count
     //  indices count
     //  Node:
+    //    node.name
     //    node.numMeshes
     //    node.numChildren
     //    node.transformation
     //    each node.mesh:
+    //      mesh.name
     //      mesh.materialIndex
     //      mesh.numVertices
     //      [mesh.vertices(i.e. positions, 3 floats per vertex)]
@@ -212,6 +217,10 @@ namespace {
     //    node.boundingBox (AABB, as a math::Box<float>) // Note: I dislike having the node bounding box after the children BB, but it is computed form children's...
     //  numMaterials
     //  raw memory dump of span<PhongMaterial>
+    //  numMaterialNames (Note: redundant with num of materials...)
+    //  each materialName: (count == numMaterials)
+    //    string size
+    //    string characters
     //  numTexturePaths
     //  texturesUnifiedDimensions (as math::Size<2, int>)
     //  each texturePath:
@@ -252,7 +261,7 @@ namespace {
             result.mIndicesCount += mesh->mNumFaces * 3;
 
             std::cout << std::string(2 * level, ' ')
-                << "- Mesh " << globalMeshIndex << " with " << mesh->mNumVertices << " vertices, " 
+                << "- Mesh " << globalMeshIndex << " '" << mesh->mName.C_Str() << "'" << " with " << mesh->mNumVertices << " vertices, " 
                 << mesh->mNumFaces << " triangles,"
                 << " AABB " << meshAabb << "."
                 << "\n"
@@ -394,6 +403,7 @@ namespace {
         materials.reserve(aScene->mNumMaterials);
 
         std::vector<std::string> texturePaths;
+        std::vector<std::string> materialNames;
 
         for(std::size_t materialIdx = 0; materialIdx != aScene->mNumMaterials; ++materialIdx)
         {
@@ -401,6 +411,8 @@ namespace {
             PhongMaterial & phongMaterial = materials.back();
 
             aiMaterial * material = aScene->mMaterials[materialIdx];
+
+            materialNames.emplace_back(material->GetName().C_Str());
 
             std::cout << "Material '" << material->GetName().C_Str()
                 << "' Diffuse tex:" << material->GetTextureCount(aiTextureType_DIFFUSE)
@@ -468,6 +480,7 @@ namespace {
         }
 
         aWriter.writeRaw(std::span{materials});
+        aWriter.write(materialNames);
         dumpTextures(texturePaths, aWriter);
     }
 

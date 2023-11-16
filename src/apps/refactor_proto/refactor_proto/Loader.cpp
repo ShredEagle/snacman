@@ -257,6 +257,8 @@ namespace {
         graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
         graphics::BufferAny & indexBuffer = *(aVertexStream.mIndexBufferView.mGLBuffer);
 
+        const std::string meshName = aIn.readString();
+
         unsigned int materialIndex;
         aIn.read(materialIndex);
 
@@ -296,6 +298,7 @@ namespace {
         // Assign the part material index to the otherwise common material
         aPartsMaterial.mPhongMaterialIdx = materialIndex;
         Part part{
+            .mName = std::move(meshName),
             .mMaterial = aPartsMaterial,
             .mVertexStream = &aVertexStream,
             .mPrimitiveMode = GL_TRIANGLES,
@@ -328,6 +331,8 @@ namespace {
                   GLuint & aVertexFirst,
                   GLuint & aIndexFirst)
     {
+        std::string name = aIn.readString();
+
         unsigned int meshesCount, childrenCount;
         aIn.read(meshesCount);
         aIn.read(childrenCount);
@@ -339,6 +344,7 @@ namespace {
             .mInstance{
                 .mObject = (meshesCount > 0) ? addObject(aStorage) : nullptr,
                 .mPose = decompose(math::AffineMatrix<4, GLfloat>{localTransformation}),
+                .mName = std::move(name),
             },
         };
 
@@ -386,16 +392,29 @@ namespace {
     // Review how the effects (the programs) are provided to the parts (currently hardcoded)
     void loadMaterials(BinaryInArchive & aIn,
                        graphics::UniformBufferObject & aDestinationUbo,
-                       graphics::Texture & aDestinationTexture)
+                       graphics::Texture & aDestinationTexture,
+                       std::vector<Name> & aDestinationNames)
     {
-        {
-            unsigned int materialsCount;
-            aIn.read(materialsCount);
+        unsigned int materialsCount;
+        aIn.read(materialsCount);
 
+        {
             std::vector<PhongMaterial> materials{materialsCount};
             aIn.read(std::span{materials});
 
             graphics::load(aDestinationUbo, std::span{materials}, graphics::BufferHint::StaticDraw);
+        }
+
+        { // load material names
+            unsigned int namesCount; // TODO: useless, but this is because the filewritter wrote the number of elements in a vector
+            aIn.read(namesCount);
+            assert(namesCount == materialsCount);
+
+            aDestinationNames.reserve(aDestinationNames.size() + materialsCount);
+            for(unsigned int nameIdx = 0; nameIdx != materialsCount; ++nameIdx)
+            {
+                aDestinationNames.push_back(aIn.readString());
+            }
         }
 
         math::Size<2, int> imageSize;        
@@ -445,8 +464,8 @@ namespace {
 
 
 std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage, 
-                                            Effect * aPartsEffect,
-                                            const GenericStream & aStream)
+                                          Effect * aPartsEffect,
+                                          const GenericStream & aStream)
 {
     // Hardcoded attributes descriptions
     static const std::array<AttributeDescription, 3> gAttributeStreamsInBinary {
@@ -568,6 +587,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
         .mParts = {
             Part{
                 .mMaterial = Material{
+                    .mNameArrayOffset = 1, // With the -1 (no-material) material index, this will index the first element in the common material names array
                     .mEffect = aPartsEffect,
                 },
                 .mVertexStream = triangleStream,
@@ -589,6 +609,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
             .mPose = Pose{
                 .mPosition = -positionOffset,
             },
+            .mName = "triangle",
         },
         .mAabb = aabb * math::trans3d::translate(-positionOffset),
     };
@@ -599,6 +620,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
         .mParts = {
             Part{
                 .mMaterial = Material{
+                    .mNameArrayOffset = 1,
                     .mEffect = aPartsEffect,
                 },
                 .mVertexStream = cubeStream,
@@ -620,6 +642,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
             .mPose = Pose{
                 .mPosition = positionOffset,
             },
+            .mName = "cube",
         },
         .mAabb = aabb * math::trans3d::translate(positionOffset),
     };
@@ -700,6 +723,9 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
         });
     }
     Material partsMaterial{
+        // The material names is a single array for all binaries
+        // the binary-local material index needs to be offset to index into the common name array.
+        .mNameArrayOffset = aStorage.mMaterialNames.size(),
         .mContext = &aStorage.mMaterialContexts.back(),
         .mEffect = aPartsEffect,
     };
@@ -708,7 +734,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
     GLuint indexFirst = 0;
     Node result = loadNode(in, aStorage, partsMaterial, *consolidatedStream, vertexFirst, indexFirst);
 
-    loadMaterials(in, aStorage.mUbos.back(), aStorage.mTextures.back());
+    loadMaterials(in, aStorage.mUbos.back(), aStorage.mTextures.back(), aStorage.mMaterialNames);
 
     return result;
 }
@@ -720,6 +746,7 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
 {
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
+    result.mName = aEffectFile.string();
 
     Json effect = Json::parse(std::ifstream{mFinder.pathFor(aEffectFile)});
     for (const auto & technique : effect.at("techniques"))
@@ -800,10 +827,7 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
 
     SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());
 
-    return IntrospectProgram{
-            graphics::makeLinkedProgram(shaders.begin(), shaders.end()),
-            aProgFile.filename().string()
-    };
+    return IntrospectProgram{shaders.begin(), shaders.end(), aProgFile.filename().string()};
 }
 
 
@@ -847,6 +871,7 @@ Scene Loader::loadScene(const filesystem::path & aSceneFile,
         Node modelPoser{
             .mInstance = Instance{
                 .mPose = pose,
+                .mName = entry.at("name").get<std::string>(),
             },
             .mChildren = {std::move(model)},
             .mAabb = poserAabb,
