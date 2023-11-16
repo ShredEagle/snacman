@@ -37,7 +37,7 @@ namespace {
 } // unnamed namespace
 
 
-bool Profiler::Entry::matchIdentity(const char * aName, const FrameState & aFrameState)
+bool Profiler::Entry::matchIdentity(const char * aName, const FrameState & aFrameState) const
 {
     return 
         (mId.mName == aName)
@@ -116,7 +116,7 @@ void Profiler::endFrame()
         // But this is currently imposed by the prettyPrint, which expects all Entities of a logical section to have the same count of samples...
         if(mFrameState.mFrameNumber == mLastResetFrame)
         {
-            // If this is the end of a frame during which a reset occurred, reset all values in all entries
+            // If a reset occured during this frame, reset all values in all entries
             for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
             {
                 Entry & entry = mEntries[entryIdx];
@@ -301,8 +301,14 @@ struct LogicalSection
 };
 
 
+// Note: It is currently required to happen outside a profiler frame, so endFrame() had reset all entries Values if it was a reset frame.
+// (otherwise, it triggers an assert because Entries of the same LogicalSection might have different number of samples)
 void Profiler::prettyPrint(std::ostream & aOut) const
 {
+    // Not a hard requirement currently, but it seems more sane.
+    // (actually, a better test would be checking this is not called between beginFrame() and endFrame())
+    assert(mFrameState.areAllSectionsClosed());
+
     auto beginTime = Clock::now();
 
     //

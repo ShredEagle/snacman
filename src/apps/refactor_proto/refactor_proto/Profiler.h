@@ -233,7 +233,7 @@ private:
             bool operator==(const Identity & aRhs) const = default;
         };
 
-        bool matchIdentity(const char * aName, const FrameState & aFrameState);
+        bool matchIdentity(const char * aName, const FrameState & aFrameState) const;
 
         Identity mId;
         std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
@@ -261,7 +261,7 @@ private:
             };
         };
 
-        bool areAllSectionsClosed()
+        bool areAllSectionsClosed() const
         {
             return 
                 (mCurrentLevel == 0)
