@@ -15,8 +15,8 @@ struct ProviderCpuRdtsc : public ProviderInterface
 
     ProviderCpuRdtsc();
 
-    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 
@@ -73,13 +73,13 @@ inline ProviderCpuRdtsc::TickCount_t & ProviderCpuRdtsc::getInterval(EntryIndex 
 }
 
 
-inline void ProviderCpuRdtsc::beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+inline void ProviderCpuRdtsc::beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     getInterval(aEntryIndex, aCurrentFrame) = readTsc();
 }
 
 
-inline void ProviderCpuRdtsc::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+inline void ProviderCpuRdtsc::endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     auto & interval = getInterval(aEntryIndex, aCurrentFrame);
     interval = readTsc() - interval ;

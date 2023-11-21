@@ -10,13 +10,13 @@ ProviderCPUTime::TimeInterval & ProviderCPUTime::getInterval(EntryIndex aEntryIn
 }
 
 
-void ProviderCPUTime::beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+void ProviderCPUTime::beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     getInterval(aEntryIndex, aCurrentFrame).mBegin = Clock::now();
 }
 
 
-void ProviderCPUTime::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+void ProviderCPUTime::endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     getInterval(aEntryIndex, aCurrentFrame).mEnd = Clock::now();
 }

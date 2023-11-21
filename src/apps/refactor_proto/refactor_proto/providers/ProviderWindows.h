@@ -14,8 +14,8 @@ struct ProviderCpuPerformanceCounter : public ProviderInterface
 
     ProviderCpuPerformanceCounter();
 
-    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 

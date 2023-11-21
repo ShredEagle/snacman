@@ -13,7 +13,7 @@ graphics::Query & ProviderGL::getQuery(EntryIndex aEntryIndex, std::uint32_t aCu
 }
 
 
-void ProviderGL::beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+void ProviderGL::beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     assert(!mActive);
     mActive = true;
@@ -21,7 +21,7 @@ void ProviderGL::beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFram
 }
 
 
-void ProviderGL::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+void ProviderGL::endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     glEndQueryIndexed(GL_PRIMITIVES_GENERATED, 0);
     mActive = false;
@@ -62,13 +62,13 @@ graphics::Query & ProviderGLTime::getQuery(EntryIndex aEntryIndex, std::uint32_t
                         + (aEvent == Event::Begin ? 0 : 1)];
 }
 
-void ProviderGLTime::beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+void ProviderGLTime::beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     glQueryCounter(getQuery(aEntryIndex, aCurrentFrame, Event::Begin), GL_TIMESTAMP);
 }
 
 
-void ProviderGLTime::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+void ProviderGLTime::endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     glQueryCounter(getQuery(aEntryIndex, aCurrentFrame, Event::End), GL_TIMESTAMP);
 }

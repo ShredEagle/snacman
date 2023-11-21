@@ -46,13 +46,13 @@ ProviderCpuPerformanceCounter::TimeInterval & ProviderCpuPerformanceCounter::get
 }
 
 
-void ProviderCpuPerformanceCounter::beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+void ProviderCpuPerformanceCounter::beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     getInterval(aEntryIndex, aCurrentFrame) = -::getTicks();
 }
 
 
-void ProviderCpuPerformanceCounter::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
+void ProviderCpuPerformanceCounter::endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
     getInterval(aEntryIndex, aCurrentFrame) += ::getTicks();
 }
