@@ -258,6 +258,7 @@ private:
     };
 
     using RecurringEntry = Entry<Values<GLuint>>;
+    using SingleShotEntry = Entry<GLuint>;
 
     /// @brief Returns the next entry, handling resizing of storage when needed.
     /// @warning Does not advance the next entry
@@ -297,6 +298,7 @@ private:
     };
 
     std::vector<RecurringEntry> mRecurringEntries; // Initial size handled in constructor
+    std::vector<SingleShotEntry> mSingleShotEntries;
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
     FrameState mFrameState;
     unsigned int mLastResetFrame{0};
