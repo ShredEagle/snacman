@@ -245,6 +245,10 @@ private:
 
         bool matchIdentity(const char * aName, const FrameState & aFrameState) const;
 
+        /// @brief Returns true if `this` currently has exactly the same providers as the iterators range, in the same order.
+        template <std::forward_iterator T_iterator>
+        bool matchProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx) const;
+
         Identity mId;
         std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
         std::size_t mActiveMetrics = 0;

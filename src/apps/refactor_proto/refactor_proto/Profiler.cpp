@@ -19,24 +19,6 @@
 namespace ad::renderer {
 
 
-namespace {
-
-    /// @brief Returns true if `aEntry` currently has exactly the same providers as the iterators range, in the same order.
-    template <std::forward_iterator T_iterator>
-    bool matchProviders(const Profiler::Entry & aEntry, T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx)
-    {
-        return std::equal(aEntry.mMetrics.begin(), aEntry.mMetrics.begin() + aEntry.mActiveMetrics,
-                        aFirstProviderIdx, aLastProviderIdx,
-                        [](const Profiler::Metric<GLuint> & aMetric, Profiler::ProviderIndex aProviderIdx)
-                        {
-                            return aMetric.mProviderIndex == aProviderIdx;
-                        }
-                        );
-    }
-
-} // unnamed namespace
-
-
 bool Profiler::Entry::matchIdentity(const char * aName, const FrameState & aFrameState) const
 {
     return 
@@ -44,6 +26,18 @@ bool Profiler::Entry::matchIdentity(const char * aName, const FrameState & aFram
         && (mId.mLevel == aFrameState.mCurrentLevel)
         && (mId.mParentIdx == aFrameState.mCurrentParent)
     ;
+}
+
+
+template <std::forward_iterator T_iterator>
+bool Profiler::Entry::matchProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx) const
+{
+    return std::equal(mMetrics.begin(), mMetrics.begin() + mActiveMetrics,
+                      aFirstProviderIdx, aLastProviderIdx,
+                      [](const Profiler::Metric<GLuint> & aMetric, Profiler::ProviderIndex aProviderIdx)
+                      {
+                          return aMetric.mProviderIndex == aProviderIdx;
+                      });
 }
 
 
@@ -184,7 +178,7 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
             // Also part of identity, a logical section should always be given the exact same list of providers.
             // For the moment, we consider it a logic error if the identity changes only because of a different provider list
             // (this assumption can be revised)
-            assert(matchProviders(entry, aProviders.begin(), aProviders.end()));
+            assert(entry.matchProviders(aProviders.begin(), aProviders.end()));
         }
         else // Either a newer used entry, or the frame structure changed and the entry was used for another identity
         {
