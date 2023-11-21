@@ -212,12 +212,12 @@ private:
     std::uint32_t queriedSubframe() const;
 
     /// @brief A reference to a metrics Provider, and a `Value` record of the samples taken by this provider.
-    template <class T_value>
+    template <class T_value, class T_average = T_value>
     struct Metric
     {
         //std::string mName;
         ProviderIndex mProviderIndex;
-        T_value mValues;
+        Values<T_value, T_average> mValues;
     };
 
     // Forward
@@ -228,14 +228,11 @@ private:
     /// @note Consolidation happens on the collection of Entries to group them by LogicalSection.
     ///
     /// Contains an array of `Metrics` measured for this entry.
-    template <class T_value>
     struct Entry
     {
         inline static constexpr unsigned int gInvalidLevel = -1;
         inline static constexpr EntryIndex gInvalidEntry = std::numeric_limits<EntryIndex>::max();
         inline static constexpr EntryIndex gNoParent = gInvalidEntry - 1;
-
-        using Metric_t = Metric<T_value>;
 
         struct Identity
         {
@@ -253,22 +250,18 @@ private:
         bool matchProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx) const;
 
         Identity mId;
-        std::array<Metric_t, gMaxMetricsPerSection> mMetrics;
+        std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
         std::size_t mActiveMetrics = 0;
     };
 
-    using RecurringEntry = Entry<Values<GLuint>>;
-
     /// @brief Returns the next entry, handling resizing of storage when needed.
     /// @warning Does not advance the next entry
-    RecurringEntry & fetchNextEntry();
+    Entry & fetchNextEntry();
 
     void resize(std::size_t aNewEntriesCount);
 
-    template <class T_value>
-    ProviderInterface & getProvider(const Metric<T_value> & aMetric);
-    template <class T_value>
-    const ProviderInterface & getProvider(const Metric<T_value> & aMetric) const;
+    ProviderInterface & getProvider(const Metric<GLuint> & aMetric);
+    const ProviderInterface & getProvider(const Metric<GLuint> & aMetric) const;
 
     /// @brief The intra-frame state (plus the corresponding frame number).
     struct FrameState
@@ -286,17 +279,17 @@ private:
         {
             return 
                 (mCurrentLevel == 0)
-                && (mCurrentParent == RecurringEntry::gNoParent)
+                && (mCurrentParent == Entry::gNoParent)
             ;
         }
 
         EntryIndex mNextEntry{0};
         unsigned int mCurrentLevel{0};
-        EntryIndex mCurrentParent{RecurringEntry::gNoParent};
+        EntryIndex mCurrentParent{Entry::gNoParent};
         unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
     };
 
-    std::vector<RecurringEntry> mRecurringEntries; // Initial size handled in constructor
+    std::vector<Entry> mEntries; // Initial size handled in constructor
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
     FrameState mFrameState;
     unsigned int mLastResetFrame{0};

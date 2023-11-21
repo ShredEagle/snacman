@@ -19,8 +19,7 @@
 namespace ad::renderer {
 
 
-template <class T_value>
-bool Profiler::Entry<T_value>::matchIdentity(const char * aName, const FrameState & aFrameState) const
+bool Profiler::Entry::matchIdentity(const char * aName, const FrameState & aFrameState) const
 {
     return 
         (mId.mName == aName)
@@ -30,13 +29,12 @@ bool Profiler::Entry<T_value>::matchIdentity(const char * aName, const FrameStat
 }
 
 
-template <class T_value>
 template <std::forward_iterator T_iterator>
-bool Profiler::Entry<T_value>::matchProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx) const
+bool Profiler::Entry::matchProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx) const
 {
     return std::equal(mMetrics.begin(), mMetrics.begin() + mActiveMetrics,
                       aFirstProviderIdx, aLastProviderIdx,
-                      [](const Profiler::Metric<T_value> & aMetric, Profiler::ProviderIndex aProviderIdx)
+                      [](const Profiler::Metric<GLuint> & aMetric, Profiler::ProviderIndex aProviderIdx)
                       {
                           return aMetric.mProviderIndex == aProviderIdx;
                       });
@@ -61,21 +59,21 @@ Profiler::Profiler()
 }
 
 
-Profiler::RecurringEntry & Profiler::fetchNextEntry()
+Profiler::Entry & Profiler::fetchNextEntry()
 {
-    if(mFrameState.mNextEntry == mRecurringEntries.size())
+    if(mFrameState.mNextEntry == mEntries.size())
     {
-        auto newSize = mRecurringEntries.size() * 2;
+        auto newSize = mEntries.size() * 2;
         SELOG(debug)("Resizing the profiler to {} entries.", newSize);
         resize(newSize);
     }
-    return mRecurringEntries[mFrameState.mNextEntry];
+    return mEntries[mFrameState.mNextEntry];
 }
 
 
 void Profiler::resize(std::size_t aNewEntriesCount)
 {
-    mRecurringEntries.resize(aNewEntriesCount);
+    mEntries.resize(aNewEntriesCount);
     for(const auto & provider : mMetricProviders)
     {
         provider->resize(aNewEntriesCount);
@@ -83,15 +81,13 @@ void Profiler::resize(std::size_t aNewEntriesCount)
 }
 
 
-template <class T_value>
-ProviderInterface & Profiler::getProvider(const Metric<T_value> & aMetric)
+ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric)
 {
     return *mMetricProviders.at(aMetric.mProviderIndex);
 }
 
 
-template <class T_value>
-const ProviderInterface & Profiler::getProvider(const Metric<T_value> & aMetric) const
+const ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric) const
 {
     return *mMetricProviders.at(aMetric.mProviderIndex);
 }
@@ -127,7 +123,7 @@ void Profiler::endFrame()
         // If a reset occured during this frame, reset all values in all entries
         for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
         {
-            RecurringEntry & entry = mRecurringEntries[entryIdx];
+            Entry & entry = mEntries[entryIdx];
             for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
             {
                 entry.mMetrics[metricIdx].mValues = {};
@@ -143,7 +139,7 @@ void Profiler::endFrame()
 
     for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
     {
-        RecurringEntry & entry = mRecurringEntries[entryIdx];
+        Entry & entry = mEntries[entryIdx];
         std::uint32_t queryFrame = queriedSubframe();
 
         GLuint result;
@@ -173,7 +169,7 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     
     auto setupNextEntry = [this](const char * aName, auto aProviders) -> std::pair<EntryIndex, bool>
     {
-        RecurringEntry & entry = fetchNextEntry();
+        Entry & entry = fetchNextEntry();
         bool alreadyPresent;
 
         if(alreadyPresent = entry.matchIdentity(aName, mFrameState);
@@ -198,7 +194,7 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
                 assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex);
                 previousProvider = providerIndex;
 
-                entry.mMetrics.at(entry.mActiveMetrics++) = RecurringEntry::Metric_t{
+                entry.mMetrics.at(entry.mActiveMetrics++) = Metric<GLuint>{
                     // TODO we could optimize that without rewritting each individual sample to zero
                     .mProviderIndex = providerIndex,
                     .mValues = {}, // Note: No effect line, to make explicit that we reset values.
@@ -212,7 +208,7 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     };
 
     auto [entryIndex, alreadyPresent] = setupNextEntry(aName, aProviders);
-    RecurringEntry & entry = mRecurringEntries[entryIndex];
+    Entry & entry = mEntries[entryIndex];
 
     if (!alreadyPresent)
     {
@@ -231,7 +227,7 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
 
 void Profiler::endSection(EntryIndex aIndex)
 {
-    RecurringEntry & entry = mRecurringEntries.at(aIndex);
+    Entry & entry = mEntries.at(aIndex);
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
         getProvider(entry.mMetrics[i]).endSection(aIndex, currentSubframe());
@@ -249,14 +245,14 @@ void Profiler::popCurrentSection()
 
 struct LogicalSection
 {
-    LogicalSection(const Profiler::RecurringEntry & aEntry, Profiler::EntryIndex aEntryIndex) :
+    LogicalSection(const Profiler::Entry & aEntry, Profiler::EntryIndex aEntryIndex) :
         mId{aEntry.mId},
         mEntries{aEntryIndex},
         mValues{aEntry.mMetrics},
         mActiveMetrics{aEntry.mActiveMetrics}
     {}
 
-    void push(const Profiler::RecurringEntry & aEntry, Profiler::EntryIndex aEntryIndex)
+    void push(const Profiler::Entry & aEntry, Profiler::EntryIndex aEntryIndex)
     {
         assert(mActiveMetrics == aEntry.mActiveMetrics);
         for (std::size_t metricIdx = 0; metricIdx != mActiveMetrics; ++metricIdx)
@@ -294,7 +290,7 @@ struct LogicalSection
     }
 
     /// @brief Identity that determines the belonging of an Entry to this logical Section.
-    Profiler::RecurringEntry::Identity mId;
+    Profiler::Entry::Identity mId;
     // TODO should we use an array? 
     // Is it really useful to keep if we cumulate at push? (might be if we cache the sort result between frames)
     /// @brief Collection of entries beloging to this logical section. 
@@ -303,7 +299,7 @@ struct LogicalSection
     // TODO we actually only need to store Values here (not even sure we should keep the individual samples)
     // (note: we do not accumulate the samples at the moment)
     // If we go this route, we should split Metrics from AOS to SOA so we can copy Values from Entries with memcpy
-    std::array<Profiler::RecurringEntry::Metric_t, Profiler::gMaxMetricsPerSection> mValues;
+    std::array<Profiler::Metric<GLuint>, Profiler::gMaxMetricsPerSection> mValues;
     std::size_t mActiveMetrics = 0;
 
     /// @brief Keep track of the samples accounted for by sub-sections 
@@ -337,11 +333,11 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     static constexpr LogicalSectionId gInvalidLogicalSection = std::numeric_limits<LogicalSectionId>::max();
     // This vector associate each entry index to a logical section index.
     // It allows to test whether distinct entry indices correspond to the same logical section, for parent consolidation.
-    std::vector<LogicalSectionId> entryIdToLogicalSectionId(mRecurringEntries.size(), gInvalidLogicalSection);
+    std::vector<LogicalSectionId> entryIdToLogicalSectionId(mEntries.size(), gInvalidLogicalSection);
 
     for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
     {
-        const RecurringEntry & entry = mRecurringEntries[entryIdx];
+        const Entry & entry = mEntries[entryIdx];
 
         // Important:
         // We cannot simply compare the Entry Identity the Identity of a section to test if the Entry belongs there:
@@ -352,18 +348,18 @@ void Profiler::prettyPrint(std::ostream & aOut) const
         if(auto found = std::find_if(sections.begin(), sections.end(),
                                      [&entry, &lookup = entryIdToLogicalSectionId](const auto & aCandidateSection)
                                      {
-                                        assert(entry.mId.mParentIdx == RecurringEntry::gNoParent 
+                                        assert(entry.mId.mParentIdx == Entry::gNoParent 
                                             || (lookup[entry.mId.mParentIdx] != gInvalidLogicalSection));
 
                                         return aCandidateSection.mId.mName == entry.mId.mName
                                                 // Check if the entry and the candidate section have the same logical parent:
                                                 // * either both have a parent, then we compare the LogicalSectionId of both parents
                                                 // * OR both have no parent
-                                            && (   (   entry.mId.mParentIdx != RecurringEntry::gNoParent 
-                                                    && aCandidateSection.mId.mParentIdx != RecurringEntry::gNoParent 
+                                            && (   (   entry.mId.mParentIdx != Entry::gNoParent 
+                                                    && aCandidateSection.mId.mParentIdx != Entry::gNoParent 
                                                     && lookup[entry.mId.mParentIdx] == lookup[aCandidateSection.mId.mParentIdx])
-                                                || (   entry.mId.mParentIdx == RecurringEntry::gNoParent
-                                                    && aCandidateSection.mId.mParentIdx == RecurringEntry::gNoParent))
+                                                || (   entry.mId.mParentIdx == Entry::gNoParent
+                                                    && aCandidateSection.mId.mParentIdx == Entry::gNoParent))
                                                 // Check if the entry and candidate have the same level
                                                 // Should alway be true then, so we assert
                                             && (assert(aCandidateSection.mId.mLevel == entry.mId.mLevel), true)
@@ -384,7 +380,7 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     // Accumulate the values accounted for by child sections.
     for(LogicalSection & section : sections)
     {
-        if(section.mId.mParentIdx != RecurringEntry::gNoParent)
+        if(section.mId.mParentIdx != Entry::gNoParent)
         {
             LogicalSection & parentSection = sections[entryIdToLogicalSectionId[section.mId.mParentIdx]];
             parentSection.accountChildSection(section);
