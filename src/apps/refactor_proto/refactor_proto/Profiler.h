@@ -40,6 +40,9 @@
 //     * TODO What should profiler do if it does not?
 // * TODO Some section are not recurring each frame, but are considered single shot events.
 //   * They should not be discarded at the end of a frame, but only via explicit user request.
+//   * They can exist outside of beginFrame()/endFrame().
+//   * Should they be able to nest?
+//   * What happen if several single-shot of the same name exist? Overwrite?
 
 namespace ad::renderer {
 
@@ -81,6 +84,13 @@ struct Ratio
 
     GLuint num;
     GLuint den;
+};
+
+
+enum class EntryNature
+{
+    Recurring,
+    SingleShot,
 };
 
 
@@ -211,6 +221,8 @@ private:
     /// @brief The subframe which is to be queried, taking into account the frame delay.
     std::uint32_t queriedSubframe() const;
 
+    std::pair<EntryIndex, bool> setupNextEntryRecurring(const char * aName, auto aProviders);
+
     /// @brief A reference to a metrics Provider, and a `Value` record of the samples taken by this provider.
     template <class T_value, class T_average = T_value>
     struct Metric
@@ -231,17 +243,21 @@ private:
     struct Entry
     {
         inline static constexpr unsigned int gInvalidLevel = -1;
+        inline static constexpr unsigned int gSingleShotLevel = gInvalidLevel-1;
         inline static constexpr EntryIndex gInvalidEntry = std::numeric_limits<EntryIndex>::max();
         inline static constexpr EntryIndex gNoParent = gInvalidEntry - 1;
 
         struct Identity
         {
-            const char * mName;
+            const char * mName = nullptr;
             unsigned int mLevel = gInvalidLevel;
             EntryIndex mParentIdx = gInvalidEntry;
 
             bool operator==(const Identity & aRhs) const = default;
         };
+
+        bool isUnused() const
+        { return mId.mName == nullptr; }
 
         bool matchIdentity(const char * aName, const FrameState & aFrameState) const;
 
@@ -249,14 +265,17 @@ private:
         template <std::forward_iterator T_iterator>
         bool matchProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx) const;
 
+        template <std::forward_iterator T_iterator>
+        void setProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx);
+
         Identity mId;
         std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
         std::size_t mActiveMetrics = 0;
     };
 
     /// @brief Returns the next entry, handling resizing of storage when needed.
-    /// @warning Does not advance the next entry
-    Entry & fetchNextEntry();
+    /// @warning Does not advance the next entry, nor set any value on it (not setting the name)
+    Entry & fetchNextEntry(EntryNature aNature, const char * aName);
 
     void resize(std::size_t aNewEntriesCount);
 
@@ -290,6 +309,7 @@ private:
     };
 
     std::vector<Entry> mEntries; // Initial size handled in constructor
+    std::vector<EntryIndex> mSingleShots;
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
     FrameState mFrameState;
     unsigned int mLastResetFrame{0};
