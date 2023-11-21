@@ -21,12 +21,12 @@ struct ProviderApi : public ProviderInterface
         ProviderInterface{aQuantityName, aUnit}
     {}
 
-    void beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override
+    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override
     {
         getRecord(aEntryIndex, aCurrentFrame) = (gl.get().*F_getter)();
     }
 
-    void endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override
+    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override
     {
         auto & count = getRecord(aEntryIndex, aCurrentFrame);
         count = (gl.get().*F_getter)() - count;

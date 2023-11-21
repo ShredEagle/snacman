@@ -161,7 +161,7 @@ void Profiler::endFrame()
     }
 }
 
-Profiler::EntryIndex Profiler::beginSectionRecurring(const char * aName, std::initializer_list<ProviderIndex> aProviders)
+Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders)
 {
     // TODO Section identity is much more subtle than that
     // It should be robust to changing the structure of sections (loop variance, and logical structure)
@@ -222,19 +222,19 @@ Profiler::EntryIndex Profiler::beginSectionRecurring(const char * aName, std::in
 
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).beginSectionRecurring(entryIndex, currentSubframe());
+        getProvider(entry.mMetrics[i]).beginSection(entryIndex, currentSubframe());
     }
 
     return entryIndex;
 }
 
 
-void Profiler::endSectionRecurring(EntryIndex aIndex)
+void Profiler::endSection(EntryIndex aIndex)
 {
     RecurringEntry & entry = mRecurringEntries.at(aIndex);
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).endSectionRecurring(aIndex, currentSubframe());
+        getProvider(entry.mMetrics[i]).endSection(aIndex, currentSubframe());
     }
     mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
     --mFrameState.mCurrentLevel;
@@ -243,7 +243,7 @@ void Profiler::endSectionRecurring(EntryIndex aIndex)
 
 void Profiler::popCurrentSection()
 {
-    endSectionRecurring(mFrameState.mCurrentParent);
+    endSection(mFrameState.mCurrentParent);
 }
 
 

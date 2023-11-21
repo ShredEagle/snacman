@@ -98,8 +98,8 @@ public:
 
     virtual ~ProviderInterface() = default;
 
-    virtual void beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
-    virtual void endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
+    virtual void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
+    virtual void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
 
     // TODO make generic regarding provided type
     virtual bool provide(EntryIndex aEntryIndex, std::uint32_t aQueryFrame, GLuint & aSampleResult) = 0;
@@ -141,8 +141,8 @@ public:
     void beginFrame();
     void endFrame();
 
-    EntryIndex beginSectionRecurring(const char * aName, std::initializer_list<ProviderIndex> aProviders);
-    void endSectionRecurring(EntryIndex aIndex);
+    EntryIndex beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders);
+    void endSection(EntryIndex aIndex);
 
     // I am not sure this is a good idea, as it relies on a Profiler global state (mCurrentParent), which might not be a good idea.
     // The current assumption is that sections should always be strictly nested, and that they are created on a single thread
@@ -154,7 +154,7 @@ public:
     {
         ~SectionGuard()
         {
-            mProfiler->endSectionRecurring(mEntry);
+            mProfiler->endSection(mEntry);
         }
 
         Profiler * mProfiler;
@@ -165,7 +165,7 @@ public:
     { 
         return {
             .mProfiler = this,
-            .mEntry = beginSectionRecurring(aName, std::move(aProviders))
+            .mEntry = beginSection(aName, std::move(aProviders))
         };
     }
 
@@ -205,7 +205,7 @@ public:
     };
 
 private:
-    /// @brief The current subframe, which should be provided to profilers beginSectionRecurring() / endSectionRecurring().
+    /// @brief The current subframe, which should be provided to profilers beginSection() / endSection().
     std::uint32_t currentSubframe() const;
 
     /// @brief The subframe which is to be queried, taking into account the frame delay.

@@ -15,8 +15,8 @@ struct ProviderGL : public ProviderInterface
         ProviderInterface{"GPU generated", "primitive(s)"}
     {}
 
-    void beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-    void endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 
@@ -44,8 +44,8 @@ struct ProviderGLTime : public ProviderInterface
         ProviderInterface{"GPU time", "us"}
     {}
 
-    void beginSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
-    void endSectionRecurring(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
+    void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 
