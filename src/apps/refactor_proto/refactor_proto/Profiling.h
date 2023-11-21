@@ -47,12 +47,12 @@ enum
 #define PROFILER_END_FRAME ::ad::renderer::getGlobalProfiler().endFrame()
 
 #define PROFILER_PUSH_SECTION(name, ...) \
-    ::ad::renderer::getGlobalProfiler().beginSection(name, {__VA_ARGS__})
+    ::ad::renderer::getGlobalProfiler().beginSection(::ad::renderer::EntryNature::Recurring, name, {__VA_ARGS__})
 
 #define PROFILER_POP_SECTION ::ad::renderer::getGlobalProfiler().popCurrentSection()
 
 #define PROFILER_SCOPE_SECTION(name, ...) \
-    auto profilerScopedSection = ::ad::renderer::getGlobalProfiler().scopeSection(name, {__VA_ARGS__})
+    auto profilerScopedSection = ::ad::renderer::getGlobalProfiler().scopeSection(::ad::renderer::EntryNature::Recurring, name, {__VA_ARGS__})
 
 #define PROFILER_PRINT_TO_STREAM(ostream) \
     ::ad::renderer::getGlobalProfiler().prettyPrint(ostream);

@@ -151,7 +151,7 @@ public:
     void beginFrame();
     void endFrame();
 
-    EntryIndex beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders);
+    EntryIndex beginSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders);
     void endSection(EntryIndex aIndex);
 
     // I am not sure this is a good idea, as it relies on a Profiler global state (mCurrentParent), which might not be a good idea.
@@ -171,11 +171,11 @@ public:
         EntryIndex mEntry;
     };
     
-    SectionGuard scopeSection(const char * aName, std::initializer_list<ProviderIndex> aProviders)
+    SectionGuard scopeSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders)
     { 
         return {
             .mProfiler = this,
-            .mEntry = beginSection(aName, std::move(aProviders))
+            .mEntry = beginSection(aNature, aName, std::move(aProviders))
         };
     }
 
@@ -222,6 +222,7 @@ private:
     std::uint32_t queriedSubframe() const;
 
     std::pair<EntryIndex, bool> setupNextEntryRecurring(const char * aName, auto aProviders);
+    EntryIndex setupNextEntrySingleShot(const char * aName, auto aProviders);
 
     /// @brief A reference to a metrics Provider, and a `Value` record of the samples taken by this provider.
     template <class T_value, class T_average = T_value>
@@ -273,9 +274,9 @@ private:
         std::size_t mActiveMetrics = 0;
     };
 
-    /// @brief Returns the next entry, handling resizing of storage when needed.
-    /// @warning Does not advance the next entry, nor set any value on it (not setting the name)
-    Entry & fetchNextEntry(EntryNature aNature, const char * aName);
+    /// @brief Returns the entry idx to use for the provided parameters, handling resizing of storage when needed.
+    /// @warning Does advance the next entry, but does not set any value on the entry instance itself (not setting the name).
+    EntryIndex fetchNextEntry(EntryNature aNature, const char * aName);
 
     void resize(std::size_t aNewEntriesCount);
 

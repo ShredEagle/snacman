@@ -82,7 +82,7 @@ Profiler::Profiler()
 }
 
 
-Profiler::Entry & Profiler::fetchNextEntry(EntryNature aNature, const char * aName)
+Profiler::EntryIndex Profiler::fetchNextEntry(EntryNature aNature, const char * aName)
 {
     if(aNature == EntryNature::SingleShot)
     {
@@ -97,12 +97,12 @@ Profiler::Entry & Profiler::fetchNextEntry(EntryNature aNature, const char * aNa
             if(entry.isUnused())
             {
                 mSingleShots.push_back(entryIdx);
-                return entry;
+                return entryIdx;
             }
             else if(entry.mId.mLevel == Entry::gSingleShotLevel && entry.mId.mName == aName)
             {
                 // Already in the single shots list
-                return entry;
+                return entryIdx;
             }
         }
     }
@@ -113,7 +113,7 @@ Profiler::Entry & Profiler::fetchNextEntry(EntryNature aNature, const char * aNa
             Entry & entry = mEntries[mFrameState.mNextEntry];
             if(entry.mId.mLevel != Entry::gSingleShotLevel)
             {
-                return entry;
+                return mFrameState.mNextEntry++;
             }
         }
     }
@@ -124,7 +124,7 @@ Profiler::Entry & Profiler::fetchNextEntry(EntryNature aNature, const char * aNa
     SELOG(debug)("Resizing the profiler to {} entries.", newSize);
     resize(newSize);
 
-    return mEntries[oldSize];
+    return oldSize;
 }
 
 
@@ -215,7 +215,7 @@ void Profiler::endFrame()
 }
 
 
-Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders)
+Profiler::EntryIndex Profiler::beginSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders)
 {
     // TODO Section identity is much more subtle than that
     // It should be robust to changing the structure of sections (loop variance, and logical structure)
@@ -225,15 +225,25 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     // There must be a number of provider in [1, maxMetricsPerSection]
     assert(aProviders.size() > 0 && aProviders.size() <= gMaxMetricsPerSection);
     
-    auto [entryIndex, alreadyPresent] = setupNextEntryRecurring(aName, aProviders);
-    Entry & entry = mEntries[entryIndex];
-
-    if (!alreadyPresent)
+    EntryIndex entryIndex = std::numeric_limits<EntryIndex>::max();
+    if(aNature == EntryNature::Recurring)
     {
-        mLastResetFrame = mFrameState.mFrameNumber;
-        SELOG(debug)("Profiler sections structure changed.");
+        bool alreadyPresent;
+        std::tie(entryIndex, alreadyPresent) = setupNextEntryRecurring(aName, aProviders);
+
+        if (!alreadyPresent)
+        {
+            mLastResetFrame = mFrameState.mFrameNumber;
+            SELOG(debug)("Profiler sections structure changed.");
+        }
+    }
+    else
+    {
+        assert(aNature == EntryNature::SingleShot);
+        entryIndex = setupNextEntrySingleShot(aName, aProviders);
     }
 
+    Entry & entry = mEntries[entryIndex];
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
         getProvider(entry.mMetrics[i]).beginSection(entryIndex, currentSubframe());
@@ -263,7 +273,8 @@ void Profiler::popCurrentSection()
 
 std::pair<Profiler::EntryIndex, bool> Profiler::setupNextEntryRecurring(const char * aName, auto aProviders)
 {
-    Entry & entry = fetchNextEntry(EntryNature::Recurring, aName/*unused*/);
+    EntryIndex entryIdx = fetchNextEntry(EntryNature::Recurring, aName/*unused*/);
+    Entry & entry = mEntries[entryIdx];
     bool alreadyPresent;
 
     if(alreadyPresent = entry.matchIdentity(aName, mFrameState);
@@ -284,8 +295,22 @@ std::pair<Profiler::EntryIndex, bool> Profiler::setupNextEntryRecurring(const ch
     }
 
     ++mFrameState.mCurrentLevel;
-    mFrameState.mCurrentParent = mFrameState.mNextEntry; //i.e. this Entry index becomes the current parent
-    return {mFrameState.mNextEntry++, alreadyPresent};
+    mFrameState.mCurrentParent = entryIdx;
+    return {entryIdx, alreadyPresent};
+}
+
+
+Profiler::EntryIndex Profiler::setupNextEntrySingleShot(const char * aName, auto aProviders)
+{
+    EntryIndex entryIdx = fetchNextEntry(EntryNature::SingleShot, aName);
+    Entry & entry = mEntries[entryIdx];
+
+    entry.mId.mName = aName;
+    entry.mId.mLevel = Entry::gSingleShotLevel;
+
+    entry.setProviders(aProviders.begin(), aProviders.end());
+
+    return entryIdx;
 }
 
 
