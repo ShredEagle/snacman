@@ -12,29 +12,32 @@
 
 
 // Implementation notes:
-// A profiler is one of those feature that seems trivial, until you try to implement one.
+// A profiler is one of those features that seem trivial, until you try to implement one.
 // The design has several requirements:
 // * The Profiler instance has knowledge of a "frame" or "step", inside which sections can be defined anywhere in client code.
 // * The sections should not require client to provide permanent storage. 
-//   * Sections guards on the stack are okay.
 //   * i.e., the Profiler is hosting all state that must be kept between frames.
+//   * Exception: Sections guards on the stack are okay, because they are a common paradigm and only rely on local variables (not interframe).
 // * Sections can be arbitrarily nested, and must always be balanced (client's responsibility).
 //    * TODO Some metrics are harder to nest, for example OpenGL async Query objects,
 //       where at most one/a few counter(s) for each target can be active at any time.
-// * TODO The number of sections is dynamic, and can grow (within machine limits).
-// * TODO The identity of a section is not a trivial matter
+// * The number of sections is dynamic, and can grow (within machine limits).
+// * TODO The (logical) identity of a section is not a trivial matter.
+//   * All sections matching a common identity are grouped in a LogicalSection to match client's expectations.
 //   * The identity should have implicit defaults (i.e. not client's responsiblity):
-//     * If a section is inside a loop, each iteration should be cumulated.
+//     * If a section is inside a loop, each iteration should be cumulated 
+//       * Only if the stack of parents is identical for each iteration, which should be true within a given loop execution
+//         (but not necessaraly next time the same loop is reached).
 //     * If a lexical section inside a scope is reached via distinct paths (path meaning the "stack of sections"), 
 //       each path should lead to a distinct logical section.
-//   * What happens to identity when a frame composition changes (i.e. not the exact same sequence of sections)
+//   * TODO What happens to identity when a frame composition changes (i.e. not the exact same sequence of sections)
 //     * Number of iterations in a loop can differ very frequently (number of lights, culled objects)
 //     * High level frame structure can differ (new screen effects, scene change (cut scene), ...)
-//   * The client should be able to override default, with ability to overrid identity per section.
-// * TODO Sections should be able to keep distinct metric of heterogenous types (CPU time, GPU time, GPU draw counts, ...)
-//   * The metrics should be user-extensible
+//   * The client should be able to override default, with ability to override identity per section (e.g. ImGui Id-Stack).
+// * Sections should be able to keep distinct metric of heterogenous types (CPU time, GPU time, GPU draw counts, ...)
+//   * TODO The metrics should be user-extensible
 //   * Restriction: a given logical section should list the same exact metrics at each frame.
-//     * What should profiler do if it does not?
+//     * TODO What should profiler do if it does not?
 // * TODO Some section are not recurring each frame, but are considered single shot events.
 //   * They should not be discarded at the end of a frame, but only via explicit user request.
 
@@ -99,7 +102,7 @@ public:
     virtual void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
 
     // TODO make generic regarding provided type
-    virtual bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) = 0;
+    virtual bool provide(EntryIndex aEntryIndex, std::uint32_t aQueryFrame, GLuint & aSampleResult) = 0;
 
     virtual void resize(std::size_t aNewEntriesCount) = 0;
 
@@ -114,18 +117,24 @@ public:
 
 class Profiler
 {
+    /// @brief A logical section is what the clients expects to see as a single line in the profiler output,
+    /// but could be consolidated from several distinct measures (e.g. loop consolidation).
     friend struct LogicalSection; // Implementation detail for grouping entries by logical section.
+
+    /// @brief Delay before querying metrics.
+    /// This is initially implemented so asynchronous GPU request have a good chance to be ready when queried.
+    inline static constexpr std::uint32_t gFrameDelay{3};
 
 public:
     inline static constexpr std::size_t gInitialEntries{256};
     inline static constexpr std::size_t gMaxSamples{128};
     inline static constexpr std::size_t gMaxMetricsPerSection{16};
-    /// @brief Delay before querying metrics.
-    /// This is initially implemented so asynchronous GPU request have a good chance to be ready when queried.
-    inline static constexpr std::uint32_t gFrameDelay{4};
 
     using EntryIndex = ProviderInterface::EntryIndex;
     using ProviderIndex = std::size_t;
+
+    static std::uint32_t CountSubframes()
+    { return gFrameDelay + 1; };
 
     Profiler();
 
@@ -135,10 +144,10 @@ public:
     EntryIndex beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders);
     void endSection(EntryIndex aIndex);
 
-    // I am not sure this is a good idea, but it relies on a Profiler global state (mCurrentParent) (which might not be a good idea)
+    // I am not sure this is a good idea, as it relies on a Profiler global state (mCurrentParent), which might not be a good idea.
     // The current assumption is that sections should always be strictly nested, and that they are created on a single thread
     // (or at least that there is an independent copy of the Profiler state per thread).
-    // This helps with ending manual sections.
+    /// This helps with ending manual sections.
     void popCurrentSection();
 
     struct [[nodiscard]] SectionGuard
@@ -196,6 +205,12 @@ public:
     };
 
 private:
+    /// @brief The current subframe, which should be provided to profilers beginSection() / endSection().
+    std::uint32_t currentSubframe() const;
+
+    /// @brief The subframe which is to be queried, taking into account the frame delay.
+    std::uint32_t queriedSubframe() const;
+
     /// @brief A reference to a metrics Provider, and a `Value` record of the samples taken by this provider.
     template <class T_value, class T_average = T_value>
     struct Metric
@@ -205,8 +220,12 @@ private:
         Values<T_value, T_average> mValues;
     };
 
+    // Forward
+    struct FrameState;
+
     /// @brief A distinct Entry is used each time the flow of control reaches beginSection().
     /// (i.e. inside a given _frame_, each call to beginSection returns a distinct Entry.)
+    /// @note Consolidation happens on the collection of Entries to group them by LogicalSection.
     ///
     /// Contains an array of `Metrics` measured for this entry.
     struct Entry
@@ -224,26 +243,56 @@ private:
             bool operator==(const Identity & aRhs) const = default;
         };
 
+        bool matchIdentity(const char * aName, const FrameState & aFrameState) const;
+
+        /// @brief Returns true if `this` currently has exactly the same providers as the iterators range, in the same order.
+        template <std::forward_iterator T_iterator>
+        bool matchProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx) const;
+
         Identity mId;
         std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
         std::size_t mActiveMetrics = 0;
     };
 
     /// @brief Returns the next entry, handling resizing of storage when needed.
-    Entry & getNextEntry();
+    /// @warning Does not advance the next entry
+    Entry & fetchNextEntry();
 
     void resize(std::size_t aNewEntriesCount);
 
     ProviderInterface & getProvider(const Metric<GLuint> & aMetric);
     const ProviderInterface & getProvider(const Metric<GLuint> & aMetric) const;
 
-    std::vector<Entry> mEntries; // Initial size handled in constructor
-    EntryIndex mNextEntry{0};
-    unsigned int mCurrentLevel{0};
-    EntryIndex mCurrentParent{Entry::gNoParent};
-    unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
+    /// @brief The intra-frame state (plus the corresponding frame number).
+    struct FrameState
+    {
+        /// @brief Reset the frame state, except the frame number which is advanced.
+        /// @note the current level and parent should already be at the initial value.
+        void advanceFrame()
+        {
+            *this = FrameState{
+                .mFrameNumber = mFrameNumber + 1,
+            };
+        };
 
+        bool areAllSectionsClosed() const
+        {
+            return 
+                (mCurrentLevel == 0)
+                && (mCurrentParent == Entry::gNoParent)
+            ;
+        }
+
+        EntryIndex mNextEntry{0};
+        unsigned int mCurrentLevel{0};
+        EntryIndex mCurrentParent{Entry::gNoParent};
+        unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
+    };
+
+    std::vector<Entry> mEntries; // Initial size handled in constructor
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
+    FrameState mFrameState;
+    unsigned int mLastResetFrame{0};
 };
 
 

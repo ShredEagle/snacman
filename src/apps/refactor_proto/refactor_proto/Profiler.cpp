@@ -19,6 +19,28 @@
 namespace ad::renderer {
 
 
+bool Profiler::Entry::matchIdentity(const char * aName, const FrameState & aFrameState) const
+{
+    return 
+        (mId.mName == aName)
+        && (mId.mLevel == aFrameState.mCurrentLevel)
+        && (mId.mParentIdx == aFrameState.mCurrentParent)
+    ;
+}
+
+
+template <std::forward_iterator T_iterator>
+bool Profiler::Entry::matchProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx) const
+{
+    return std::equal(mMetrics.begin(), mMetrics.begin() + mActiveMetrics,
+                      aFirstProviderIdx, aLastProviderIdx,
+                      [](const Profiler::Metric<GLuint> & aMetric, Profiler::ProviderIndex aProviderIdx)
+                      {
+                          return aMetric.mProviderIndex == aProviderIdx;
+                      });
+}
+
+
 Profiler::Profiler()
 {
 #if defined(_WIN32)
@@ -37,15 +59,15 @@ Profiler::Profiler()
 }
 
 
-Profiler::Entry & Profiler::getNextEntry()
+Profiler::Entry & Profiler::fetchNextEntry()
 {
-    if(mNextEntry == mEntries.size())
+    if(mFrameState.mNextEntry == mEntries.size())
     {
         auto newSize = mEntries.size() * 2;
         SELOG(debug)("Resizing the profiler to {} entries.", newSize);
         resize(newSize);
     }
-    return mEntries[mNextEntry];
+    return mEntries[mFrameState.mNextEntry];
 }
 
 
@@ -71,34 +93,59 @@ const ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric) 
 }
 
 
+std::uint32_t Profiler::currentSubframe() const
+{
+    return mFrameState.mFrameNumber % CountSubframes();
+}
+
+
+std::uint32_t Profiler::queriedSubframe() const
+{
+    return (mFrameState.mFrameNumber + 1) % CountSubframes();
+}
+
+
 void Profiler::beginFrame()
 {
-    ++mFrameNumber;
-    mNextEntry = 0;
-    mCurrentLevel = 0; // should already be the case
-    mCurrentParent = Entry::gNoParent; // should already be the case
+    mFrameState.advanceFrame();
 }
+
 
 void Profiler::endFrame()
 {
-    assert(mCurrentLevel == 0); // sanity check
-    assert(mCurrentParent == Entry::gNoParent); // sanity check
+    assert(mFrameState.areAllSectionsClosed());
 
-    // Ensure we have enough entries in the circular buffer (frame count >= gFrameDelay)
-    if((mFrameNumber + 1) < gFrameDelay)
+    // TODO Ad 2023/11/15: I do not like this explicit reset of all values at the end of the frame if a reset occurred:
+    // this is wasteful of resources, since all values for entities that changed have already been reset
+    // But this is currently imposed by the prettyPrint, which expects all Entities of a logical section to have the same count of samples...
+    if(mFrameState.mFrameNumber == mLastResetFrame)
+    {
+        // If a reset occured during this frame, reset all values in all entries
+        for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+        {
+            Entry & entry = mEntries[entryIdx];
+            for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
+            {
+                entry.mMetrics[metricIdx].mValues = {};
+            }
+        }
+    }
+
+    // Ensure we have enough entries in the circular buffer before issuing queries (frame count since reset >= gFrameDelay)
+    if(mFrameState.mFrameNumber < (mLastResetFrame + gFrameDelay))
     {
         return;
     }
 
-    for(EntryIndex i = 0; i != mNextEntry; ++i)
+    for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
     {
-        Entry & entry = mEntries[i];
-        std::uint32_t queryFrame = (mFrameNumber + 1) % gFrameDelay;
+        Entry & entry = mEntries[entryIdx];
+        std::uint32_t queryFrame = queriedSubframe();
 
         GLuint result;
         for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
         {
-            if(getProvider(entry.mMetrics[metricIdx]).provide(i, queryFrame, result))
+            if(getProvider(entry.mMetrics[metricIdx]).provide(entryIdx, queryFrame, result))
             {
                 entry.mMetrics[metricIdx].mValues.record(result);
             }
@@ -115,42 +162,66 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     // TODO Section identity is much more subtle than that
     // It should be robust to changing the structure of sections (loop variance, and logical structure)
     // and handle change in providers somehow.
-    // For the moment, make a few assertions that will trip the program as soon as it becomes more dynamic.
+    // For the moment, make a few assertions that will trip the program as soon as structure changes.
 
     // There must be a number of provider in [1, maxMetricsPerSection]
     assert(aProviders.size() > 0 && aProviders.size() <= gMaxMetricsPerSection);
     
-    Entry & entry = getNextEntry();
-
-    // Because we do not track identity properly when frame structure change, we hope it always matches
-    assert(entry.mId.mName == nullptr || entry.mId.mName == aName);
-    assert(entry.mId.mLevel == Entry::gInvalidLevel || entry.mId.mLevel == mCurrentLevel);
-    assert(entry.mId.mParentIdx == Entry::gInvalidEntry || entry.mId.mParentIdx == mCurrentParent);
-
-    entry.mId.mName = aName;
-    entry.mId.mLevel = mCurrentLevel++;
-    entry.mId.mParentIdx = mCurrentParent;
-    mCurrentParent = mNextEntry; //i.e. this Entry index becomes the current parent
-
-    if(entry.mActiveMetrics == 0)
+    auto setupNextEntry = [this](const char * aName, auto aProviders) -> std::pair<EntryIndex, bool>
     {
-        // TODO the provider indices must always be sorted (this is notably an assumption in LogicalSection::accountForChildSection)
-        // should we sort, or assert that it is already the case?
-        for(const ProviderIndex providerIndex : aProviders)
-        {
-            entry.mMetrics.at(entry.mActiveMetrics++).mProviderIndex = providerIndex;
-        }
-    }
+        Entry & entry = fetchNextEntry();
+        bool alreadyPresent;
 
-    // Also part of identity, a logical section should always be given the exact same list of providers.
-    assert(entry.mActiveMetrics == aProviders.size());
+        if(alreadyPresent = entry.matchIdentity(aName, mFrameState);
+           alreadyPresent)
+        {
+            // Also part of identity, a logical section should always be given the exact same list of providers.
+            // For the moment, we consider it a logic error if the identity changes only because of a different provider list
+            // (this assumption can be revised)
+            assert(entry.matchProviders(aProviders.begin(), aProviders.end()));
+        }
+        else // Either a newer used entry, or the frame structure changed and the entry was used for another identity
+        {
+            entry.mId.mName = aName;
+            entry.mId.mLevel = mFrameState.mCurrentLevel;
+            entry.mId.mParentIdx = mFrameState.mCurrentParent;
+
+            entry.mActiveMetrics = 0;
+            [[maybe_unused]] ProviderIndex previousProvider = std::numeric_limits<ProviderIndex>::max(); // only used for the sorting assertion
+            for(const ProviderIndex providerIndex : aProviders)
+            {
+                // Provider indices must always be sorted (this is notably an assumption in LogicalSection::accountForChildSection)
+                assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex);
+                previousProvider = providerIndex;
+
+                entry.mMetrics.at(entry.mActiveMetrics++) = Metric<GLuint>{
+                    // TODO we could optimize that without rewritting each individual sample to zero
+                    .mProviderIndex = providerIndex,
+                    .mValues = {}, // Note: No effect line, to make explicit that we reset values.
+                };
+            }
+        }
+
+        ++mFrameState.mCurrentLevel;
+        mFrameState.mCurrentParent = mFrameState.mNextEntry; //i.e. this Entry index becomes the current parent
+        return {mFrameState.mNextEntry++, alreadyPresent};
+    };
+
+    auto [entryIndex, alreadyPresent] = setupNextEntry(aName, aProviders);
+    Entry & entry = mEntries[entryIndex];
+
+    if (!alreadyPresent)
+    {
+        mLastResetFrame = mFrameState.mFrameNumber;
+        SELOG(debug)("Profiler sections structure changed.");
+    }
 
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).beginSection(mNextEntry, mFrameNumber % gFrameDelay);
+        getProvider(entry.mMetrics[i]).beginSection(entryIndex, currentSubframe());
     }
 
-    return mNextEntry++;
+    return entryIndex;
 }
 
 
@@ -159,16 +230,16 @@ void Profiler::endSection(EntryIndex aIndex)
     Entry & entry = mEntries.at(aIndex);
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).endSection(aIndex, mFrameNumber % gFrameDelay);
+        getProvider(entry.mMetrics[i]).endSection(aIndex, currentSubframe());
     }
-    mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
-    --mCurrentLevel;
+    mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
+    --mFrameState.mCurrentLevel;
 }
 
 
 void Profiler::popCurrentSection()
 {
-    endSection(mCurrentParent);
+    endSection(mFrameState.mCurrentParent);
 }
 
 
@@ -237,8 +308,14 @@ struct LogicalSection
 };
 
 
+// Note: It is currently required to happen outside a profiler frame, so endFrame() had reset all entries Values if it was a reset frame.
+// (otherwise, it triggers an assert because Entries of the same LogicalSection might have different number of samples)
 void Profiler::prettyPrint(std::ostream & aOut) const
 {
+    // Not a hard requirement currently, but it seems more sane.
+    // (actually, a better test would be checking this is not called between beginFrame() and endFrame())
+    assert(mFrameState.areAllSectionsClosed());
+
     auto beginTime = Clock::now();
 
     //
@@ -258,7 +335,7 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     // It allows to test whether distinct entry indices correspond to the same logical section, for parent consolidation.
     std::vector<LogicalSectionId> entryIdToLogicalSectionId(mEntries.size(), gInvalidLogicalSection);
 
-    for(EntryIndex entryIdx = 0; entryIdx != mNextEntry; ++entryIdx)
+    for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
     {
         const Entry & entry = mEntries[entryIdx];
 
@@ -347,7 +424,7 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     {
         using std::chrono::microseconds;
         aOut << "(generated from "
-            << mNextEntry << " entries in " 
+            << mFrameState.mNextEntry << " entries in " 
             << getTicks<microseconds>(Clock::now() - beginTime) << " us"
             << ", sort took " << getTicks<microseconds>(sortedTime - beginTime) << " us"
             << ")"

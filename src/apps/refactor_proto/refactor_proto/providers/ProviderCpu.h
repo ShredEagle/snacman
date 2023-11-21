@@ -24,7 +24,7 @@ struct ProviderCPUTime : public ProviderInterface {
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 
     void resize(std::size_t aNewEntriesCount) override
-    { mTimePoints.resize(aNewEntriesCount * Profiler::gFrameDelay); }
+    { mTimePoints.resize(aNewEntriesCount * Profiler::CountSubframes() ); }
 
     //////
     struct TimeInterval

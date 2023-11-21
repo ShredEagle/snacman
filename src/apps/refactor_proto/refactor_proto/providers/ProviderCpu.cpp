@@ -6,7 +6,7 @@ namespace ad::renderer {
 
 ProviderCPUTime::TimeInterval & ProviderCPUTime::getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
 {
-    return mTimePoints[aEntryIndex * Profiler::gFrameDelay + aCurrentFrame];
+    return mTimePoints[aEntryIndex * Profiler::CountSubframes()  + aCurrentFrame];
 }
 
 

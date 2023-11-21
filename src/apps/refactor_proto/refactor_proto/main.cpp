@@ -41,13 +41,10 @@ std::filesystem::path handleArguments(int argc, char * argv[])
 }
 
 
-void showGui(imguiui::ImguiUi & imguiUi, renderer::RenderGraph & renderGraph)
+void showGui(imguiui::ImguiUi & imguiUi,
+             renderer::RenderGraph & renderGraph,
+             const std::string & aProfilerOutput)
 {
-    // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
-    // would be better to show current frame (but this implies to end the profiler frame earlier)
-    // Used as memory from one call to the next
-    static std::ostringstream profilerOut;
-
     PROFILER_SCOPE_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
 
     imguiUi.newFrame();
@@ -58,7 +55,7 @@ void showGui(imguiui::ImguiUi & imguiUi, renderer::RenderGraph & renderGraph)
         if(imguiui::addCheckbox("Profiler", showProfiler))
         {
             ImGui::Begin("Profiler");
-            ImGui::Text("%s", profilerOut.str().c_str());
+            ImGui::Text("%s", aProfilerOutput.c_str());
             ImGui::End();
         }
 
@@ -94,9 +91,6 @@ void showGui(imguiui::ImguiUi & imguiUi, renderer::RenderGraph & renderGraph)
 
     imguiUi.render();
     imguiUi.renderBackend();
-
-    profilerOut.str("");
-    PROFILER_PRINT_TO_STREAM(profilerOut);
 }
 
 
@@ -129,6 +123,9 @@ void runApplication(int argc, char * argv[])
     using FrameDurationUnit = std::chrono::microseconds;
     float stepDuration = 0.f;
 
+    // Used as memory from one call to the next
+    std::ostringstream profilerOut;
+
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME;
@@ -138,6 +135,7 @@ void runApplication(int argc, char * argv[])
             PROFILER_SCOPE_SECTION("fps_counter", renderer::CpuTime);
             {
                 // TODO this could be integrated into the Profiler::beginFrame()
+                // Currently measure the real frame time (not just the time between beginFrame()/endFrame())
                 auto startTime = Clock::now();
                 frameDuration.record(getTicks<FrameDurationUnit>(startTime - previousFrame));
                 stepDuration = (float)asFractionalSeconds(startTime - previousFrame);
@@ -159,13 +157,19 @@ void runApplication(int argc, char * argv[])
         renderGraph.update(stepDuration);
         renderGraph.render();
 
-        showGui(imguiUi, renderGraph);
+        // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
+        // would be better to show current frame 
+        // (but this implies to end the profiler frame earlier, thus not profiling ImGui UI)
+        showGui(imguiUi, renderGraph, profilerOut.str());
 
         glfwApp.swapBuffers();
 
         PROFILER_POP_SECTION; // frame
         PROFILER_END_FRAME;
 
+        // Note: the printing of the profiler content happens out of the frame, so its time is excluded from profiler's frame time
+        profilerOut.str("");
+        PROFILER_PRINT_TO_STREAM(profilerOut);
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }

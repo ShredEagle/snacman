@@ -39,12 +39,12 @@ struct ProviderApi : public ProviderInterface
     }
 
     void resize(std::size_t aNewEntriesCount) override
-    { mCounts.resize(aNewEntriesCount * Profiler::gFrameDelay); }
+    { mCounts.resize(aNewEntriesCount * Profiler::CountSubframes() ); }
 
     /////
     Value_t & getRecord(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
     {
-        return mCounts[aEntryIndex * Profiler::gFrameDelay + aCurrentFrame];
+        return mCounts[aEntryIndex * Profiler::CountSubframes()  + aCurrentFrame];
     }
 
     std::vector<Value_t> mCounts;

@@ -21,7 +21,7 @@ struct ProviderGL : public ProviderInterface
     bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
 
     void resize(std::size_t aNewEntriesCount) override
-    { mQueriesPool.resize(aNewEntriesCount * Profiler::gFrameDelay); }
+    { mQueriesPool.resize(aNewEntriesCount * Profiler::CountSubframes() ); }
 
     //////
 
@@ -52,7 +52,7 @@ struct ProviderGLTime : public ProviderInterface
     // This is currently very conservative, having enough queries to recorded begin/end time for each section
     // in each "frame delay slot".
     void resize(std::size_t aNewEntriesCount) override
-    { mQueriesPool.resize(2 * aNewEntriesCount * Profiler::gFrameDelay); }
+    { mQueriesPool.resize(2 * aNewEntriesCount * Profiler::CountSubframes() ); }
 
     //////
     graphics::Query & getQuery(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame, Event aEvent);
