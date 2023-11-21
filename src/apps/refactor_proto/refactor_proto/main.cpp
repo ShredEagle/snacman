@@ -45,7 +45,7 @@ void showGui(imguiui::ImguiUi & imguiUi,
              renderer::RenderGraph & renderGraph,
              const std::string & aProfilerOutput)
 {
-    PROFILER_SCOPE_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
 
     imguiUi.newFrame();
 
@@ -129,10 +129,10 @@ void runApplication(int argc, char * argv[])
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME;
-        PROFILER_PUSH_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
+        PROFILER_PUSH_RECURRING_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
 
         {
-            PROFILER_SCOPE_SECTION("fps_counter", renderer::CpuTime);
+            PROFILER_SCOPE_RECURRING_SECTION("fps_counter", renderer::CpuTime);
             {
                 // TODO this could be integrated into the Profiler::beginFrame()
                 // Currently measure the real frame time (not just the time between beginFrame()/endFrame())

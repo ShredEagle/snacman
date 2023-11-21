@@ -214,9 +214,9 @@ namespace {
         GLuint firstInstance = 0; 
         for (const DrawCall & aCall : aPassCache.mCalls)
         {
-            PROFILER_SCOPE_SECTION("drawcall_iteration", CpuTime);
+            PROFILER_SCOPE_RECURRING_SECTION("drawcall_iteration", CpuTime);
 
-            PROFILER_PUSH_SECTION("discard_2", CpuTime);
+            PROFILER_PUSH_RECURRING_SECTION("discard_2", CpuTime);
             const IntrospectProgram & selectedProgram = *aCall.mProgram;
             const graphics::VertexArrayObject & vao = *aCall.mVao;
             PROFILER_POP_SECTION;
@@ -225,12 +225,12 @@ namespace {
             // Only change what is necessary, instead of rebiding everything each time.
             // Since we sorted our draw calls, it is very likely that program remain the same, and VAO changes.
             {
-                PROFILER_PUSH_SECTION("bind_VAO", CpuTime);
+                PROFILER_PUSH_RECURRING_SECTION("bind_VAO", CpuTime);
                 graphics::ScopedBind vaoScope{vao};
                 PROFILER_POP_SECTION;
                 
                 {
-                    PROFILER_SCOPE_SECTION("set_buffer_backed_blocks", CpuTime);
+                    PROFILER_SCOPE_RECURRING_SECTION("set_buffer_backed_blocks", CpuTime);
                     // TODO #repos This should be consolidated
                     RepositoryUbo uboRepo{aUboRepository};
                     if(aCall.mCallContext)
@@ -242,7 +242,7 @@ namespace {
                 }
 
                 {
-                    PROFILER_SCOPE_SECTION("set_textures", CpuTime);
+                    PROFILER_SCOPE_RECURRING_SECTION("set_textures", CpuTime);
                     // TODO #repos This should be consolidated
                     RepositoryTexture textureRepo{aTextureRepository};
                     if(aCall.mCallContext)
@@ -253,14 +253,14 @@ namespace {
                     setTextures(selectedProgram, textureRepo);
                 }
 
-                PROFILER_PUSH_SECTION("bind_program", CpuTime);
+                PROFILER_PUSH_RECURRING_SECTION("bind_program", CpuTime);
                 graphics::ScopedBind programScope{selectedProgram};
                 PROFILER_POP_SECTION;
 
                 {
                     // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
                     // Can we have efficient GPU measures?
-                    PROFILER_SCOPE_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
+                    PROFILER_SCOPE_RECURRING_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
                     
                     gl.MultiDrawElementsIndirect(
                         aCall.mPrimitiveMode,
@@ -467,7 +467,7 @@ namespace {
                           const PartList & aPartList,
                           Storage & aStorage)
     {
-        PROFILER_SCOPE_SECTION("prepare_pass", CpuTime);
+        PROFILER_SCOPE_RECURRING_SECTION("prepare_pass", CpuTime);
 
         constexpr unsigned int gProgramIdBits = 16;
         constexpr std::uint64_t gProgramIdMask = makeMask(gProgramIdBits);
@@ -528,7 +528,7 @@ namespace {
         // Sort the entries
         //
         {
-            PROFILER_SCOPE_SECTION("sort_draw_entries", CpuTime);
+            PROFILER_SCOPE_RECURRING_SECTION("sort_draw_entries", CpuTime);
             std::sort(entries.begin(), entries.end());
         }
 
@@ -601,7 +601,7 @@ namespace {
 
 PartList Scene::populatePartList() const
 {
-    PROFILER_SCOPE_SECTION("populate_draw_list", CpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION("populate_draw_list", CpuTime);
 
     PartList partList;
     renderer::populatePartList(partList, mRoot, mRoot.mInstance.mPose, 
@@ -760,7 +760,7 @@ RenderGraph::RenderGraph(const std::shared_ptr<graphics::AppInterface> aGlfwAppI
 
 void RenderGraph::update(float aDeltaTime)
 {
-    PROFILER_SCOPE_SECTION("RenderGraph::update()", CpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION("RenderGraph::update()", CpuTime);
     mFirstPersonControl.update(aDeltaTime);
 }
 
@@ -770,7 +770,7 @@ void RenderGraph::update(float aDeltaTime)
 void RenderGraph::loadDrawBuffers(const PartList & aPartList,
                                   const PassCache & aPassCache)
 {
-    PROFILER_SCOPE_SECTION("load_draw_buffers", CpuTime, BufferMemoryWritten);
+    PROFILER_SCOPE_RECURRING_SECTION("load_draw_buffers", CpuTime, BufferMemoryWritten);
 
     assert(aPassCache.mDrawInstances.size() <= gMaxDrawInstances);
 
@@ -796,7 +796,7 @@ void RenderGraph::drawUi()
 
 void RenderGraph::render()
 {
-    PROFILER_SCOPE_SECTION("RenderGraph::render()", CpuTime, GpuTime, BufferMemoryWritten);
+    PROFILER_SCOPE_RECURRING_SECTION("RenderGraph::render()", CpuTime, GpuTime, BufferMemoryWritten);
     nvtx3::mark("RenderGraph::render()");
     NVTX3_FUNC_RANGE();
 
@@ -831,7 +831,7 @@ void RenderGraph::render()
     mCamera.setPose(mFirstPersonControl.getParentToLocal());
 
     {
-        PROFILER_SCOPE_SECTION("load_dynamic_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
+        PROFILER_SCOPE_RECURRING_SECTION("load_dynamic_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
         loadFrameUbo(*mUbos.mFrameUbo); // TODO Separate, the frame ubo should likely be at the top, once per frame
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, mCamera);
@@ -853,7 +853,7 @@ void RenderGraph::render()
                mGlfwAppInterface->getFramebufferSize().height());
 
     {
-        PROFILER_SCOPE_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
+        PROFILER_SCOPE_RECURRING_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
         draw(passCache, mUbos.mUboRepository, textureRepository);
     }
 }
