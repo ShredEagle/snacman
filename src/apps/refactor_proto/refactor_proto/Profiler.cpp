@@ -4,13 +4,12 @@
 
 
 #include "providers/ProviderApi.h"
-#include "providers/ProviderCpu.h"
 #include "providers/ProviderGL.h"
+#include "providers/ProviderRdtsc.h"
 
 
 #if defined(_WIN32)
-#include "providers/ProviderRdtsc.h"
-#include "providers/ProviderWindows.h"
+//#include "providers/ProviderWindows.h"
 #endif
 
 #include <cassert>
@@ -75,13 +74,11 @@ void Profiler::Entry::resetValues()
 
 Profiler::Profiler()
 {
-#if defined(_WIN32)
+//#if defined(_WIN32)
+//    mMetricProviders.push_back(std::make_unique<ProviderCpuPerformanceCounter>());
+//#else
     mMetricProviders.push_back(std::make_unique<ProviderCpuRdtsc>());
-    //mMetricProviders.push_back(std::make_unique<ProviderCpuPerformanceCounter>());
-#else
-    mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
-#endif
-
+    //mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
     mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
     mMetricProviders.push_back(std::make_unique<ProviderGL>());
     mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::drawCount>>("draw", ""));
