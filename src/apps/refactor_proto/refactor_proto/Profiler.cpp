@@ -217,8 +217,8 @@ void Profiler::endFrame()
     // But this is currently imposed by the prettyPrint, which expects all Entities of a logical section to have the same count of samples...
     if(mFrameState.mFrameNumber == mLastResetFrame)
     {
-        // If a reset occured during this frame, reset all values in all entries
-        for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+        // If a reset occured during this frame, reset all values in all recurring entries
+        for(EntryIndex entryIdx : mFrameState.mRecurrings)
         {
             Entry & entry = mEntries[entryIdx];
             entry.resetValues();
