@@ -18,7 +18,7 @@ struct ProviderCpuRdtsc : public ProviderInterface
     void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
     void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
-    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
+    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult) override;
 
     void resize(std::size_t aNewEntriesCount) override
     { mIntervals.resize(aNewEntriesCount * Profiler::CountSubframes() ); }
@@ -50,12 +50,14 @@ Ratio evluateRtscTickPeriodMicroSeconds()
     std::uint64_t ticksPerMicrosecond =
         tickCount / getTicks<std::chrono::microseconds>(clockDuration);
     SELOG(info)("TSC frequency evaluated to: {} MHz", ticksPerMicrosecond);
+
     // Check it does not overflow
-    assert(ticksPerMicrosecond < std::numeric_limits<GLuint>::max());
+    //assert(ticksPerMicrosecond < std::numeric_limits<Sample_t>::max());
+    static_assert(std::is_same_v<ProviderInterface::Sample_t, std::uint64_t>);
 
     return Ratio{
         .num = 1,
-        .den = (GLuint)(ticksPerMicrosecond),
+        .den = ticksPerMicrosecond,
     };
 }
 
@@ -86,12 +88,10 @@ inline void ProviderCpuRdtsc::endSection(EntryIndex aEntryIndex, std::uint32_t a
 }
 
 
-bool ProviderCpuRdtsc::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
+bool ProviderCpuRdtsc::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult)
 {
     const auto & interval = getInterval(aEntryIndex, aQueryFrame);
-    // TODO this assert should disappear when we have a better solution.
-    assert(interval <= std::numeric_limits<GLuint>::max());
-    aSampleResult = (GLuint)(interval / 1000);
+    aSampleResult = interval;
     return true;
 }
 

@@ -50,7 +50,7 @@ bool getGLQueryResult(const graphics::Query & aQuery, T_result & aResult)
 }
 
 
-bool ProviderGL::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
+bool ProviderGL::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult)
 {
     return getGLQueryResult(getQuery(aEntryIndex, aQueryFrame), aSampleResult);
 }
@@ -74,13 +74,13 @@ void ProviderGLTime::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFr
 }
 
 
-bool ProviderGLTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
+bool ProviderGLTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult)
 {
     GLuint64 beginTime, endTime; 
     bool available = getGLQueryResult(getQuery(aEntryIndex, aQueryFrame, Event::Begin), beginTime);
     available &= getGLQueryResult(getQuery(aEntryIndex, aQueryFrame, Event::End), endTime);
 
-    aSampleResult = static_cast<GLuint>((endTime - beginTime) / 1000);
+    aSampleResult = static_cast<Sample_t>((endTime - beginTime) / 1000);
     return available;
 }
 

@@ -82,8 +82,8 @@ struct Ratio
         den /= gcd;
     }
 
-    GLuint num;
-    GLuint den;
+    std::uint64_t num;
+    std::uint64_t den;
 };
 
 
@@ -98,6 +98,7 @@ enum class EntryNature
 class ProviderInterface
 {
 public:
+    using Sample_t = std::uint64_t;
     using EntryIndex = std::size_t;
 
     ProviderInterface(const char * aQuantityName, const char * aUnit, Ratio aScaleFactor = {.num = 1, .den = 1}) :
@@ -112,11 +113,11 @@ public:
     virtual void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
 
     // TODO make generic regarding provided type
-    virtual bool provide(EntryIndex aEntryIndex, std::uint32_t aQueryFrame, GLuint & aSampleResult) = 0;
+    virtual bool provide(EntryIndex aEntryIndex, std::uint32_t aQueryFrame, Sample_t & aSampleResult) = 0;
 
     virtual void resize(std::size_t aNewEntriesCount) = 0;
 
-    GLuint scale(GLuint aInput) const
+    Sample_t scale(Sample_t aInput) const
     { return aInput * mScaleFactor.num / mScaleFactor.den; }
 
     const char * mQuantityName = "quantity";
@@ -140,6 +141,7 @@ public:
     inline static constexpr std::size_t gMaxSamples{128};
     inline static constexpr std::size_t gMaxMetricsPerSection{16};
 
+    using Sample_t = ProviderInterface::Sample_t;
     using EntryIndex = ProviderInterface::EntryIndex;
     using ProviderIndex = std::size_t;
 
@@ -185,6 +187,7 @@ public:
     /// @brief Keep a record of up to `gMaxSample` samples, as well as special values over this record (TODO e.g. min, max, accumulation).
     /// @tparam T_value The type of value that are recorded when sampling.
     /// @tparam T_average The type of the average, notably usefull to request decimals when averaging integers.
+    // TODO rename T_value to T_sample
     template <class T_value, class T_average = T_value>
     struct Values
     {
@@ -281,7 +284,7 @@ private:
         void setProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx);
 
         Identity mId;
-        std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
+        std::array<Metric<Sample_t>, gMaxMetricsPerSection> mMetrics;
         std::size_t mActiveMetrics = 0;
     };
 
@@ -291,8 +294,8 @@ private:
 
     void resize(std::size_t aNewEntriesCount);
 
-    ProviderInterface & getProvider(const Metric<GLuint> & aMetric);
-    const ProviderInterface & getProvider(const Metric<GLuint> & aMetric) const;
+    ProviderInterface & getProvider(const Metric<Sample_t> & aMetric);
+    const ProviderInterface & getProvider(const Metric<Sample_t> & aMetric) const;
 
     /// @brief The intra-frame state (plus the corresponding frame number).
     struct FrameState

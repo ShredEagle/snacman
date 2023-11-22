@@ -34,7 +34,7 @@ bool Profiler::Entry::matchProviders(T_iterator aFirstProviderIdx, T_iterator aL
 {
     return std::equal(mMetrics.begin(), mMetrics.begin() + mActiveMetrics,
                       aFirstProviderIdx, aLastProviderIdx,
-                      [](const Profiler::Metric<GLuint> & aMetric, Profiler::ProviderIndex aProviderIdx)
+                      [](const Profiler::Metric<Profiler::Sample_t> & aMetric, Profiler::ProviderIndex aProviderIdx)
                       {
                           return aMetric.mProviderIndex == aProviderIdx;
                       });
@@ -54,7 +54,7 @@ void Profiler::Entry::setProviders(T_iterator aFirstProviderIdx, T_iterator aLas
         assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex);
         previousProvider = providerIndex;
 
-        mMetrics.at(mActiveMetrics++) = Metric<GLuint>{
+        mMetrics.at(mActiveMetrics++) = Metric<Sample_t>{
             // TODO we could optimize that without rewritting each individual sample to zero
             // Note: this could be more tricky with the introduction of single shot
             .mProviderIndex = providerIndex,
@@ -132,7 +132,7 @@ Profiler::EntryIndex Profiler::fetchNextEntry(EntryNature aNature, const char * 
 // Note: Would be better as a member function of Entry, but we need the index, which is not stored in the Entry
 void Profiler::queryProviders(EntryIndex aEntryIdx, std::uint32_t aQueryFrame)
 {
-    GLuint result;
+    Sample_t result;
     Entry & entry = mEntries[aEntryIdx];
     for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
     {
@@ -158,13 +158,13 @@ void Profiler::resize(std::size_t aNewEntriesCount)
 }
 
 
-ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric)
+ProviderInterface & Profiler::getProvider(const Metric<Sample_t> & aMetric)
 {
     return *mMetricProviders.at(aMetric.mProviderIndex);
 }
 
 
-const ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric) const
+const ProviderInterface & Profiler::getProvider(const Metric<Sample_t> & aMetric) const
 {
     return *mMetricProviders.at(aMetric.mProviderIndex);
 }
@@ -403,12 +403,12 @@ struct LogicalSection
     // TODO we actually only need to store Values here (not even sure we should keep the individual samples)
     // (note: we do not accumulate the samples at the moment)
     // If we go this route, we should split Metrics from AOS to SOA so we can copy Values from Entries with memcpy
-    std::array<Profiler::Metric<GLuint>, Profiler::gMaxMetricsPerSection> mValues;
+    std::array<Profiler::Metric<Profiler::Sample_t>, Profiler::gMaxMetricsPerSection> mValues;
     std::size_t mActiveMetrics = 0;
 
     /// @brief Keep track of the samples accounted for by sub-sections 
     /// (thus allowing to know what has not been accounted for)
-    std::array<GLuint, Profiler::gMaxMetricsPerSection> mAccountedFor{0}; 
+    std::array<Profiler::Sample_t, Profiler::gMaxMetricsPerSection> mAccountedFor{0}; 
 };
 
 

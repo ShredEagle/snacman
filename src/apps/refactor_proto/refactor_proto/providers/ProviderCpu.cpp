@@ -22,11 +22,11 @@ void ProviderCPUTime::endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentF
 }
 
 
-bool ProviderCPUTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
+bool ProviderCPUTime::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult)
 {
     const auto & interval = getInterval(aEntryIndex, aQueryFrame);
     // TODO address this case (potentially with Values of the correct type)
-    aSampleResult = (GLuint)(interval.mEnd - interval.mBegin).count();
+    aSampleResult = (Sample_t)(interval.mEnd - interval.mBegin).count();
     //if(aSampleResult == 0)
     //{
     //    SELOG(warn)("Read a null sample, resolution of the timer might not be enough for some sections.");

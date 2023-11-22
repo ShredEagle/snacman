@@ -32,9 +32,9 @@ struct ProviderApi : public ProviderInterface
         count = (gl.get().*F_getter)() - count;
     }
 
-    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override
+    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult) override
     {
-        aSampleResult = (GLuint)getRecord(aEntryIndex, aQueryFrame);
+        aSampleResult = (Sample_t)getRecord(aEntryIndex, aQueryFrame);
         return true;
     }
 
