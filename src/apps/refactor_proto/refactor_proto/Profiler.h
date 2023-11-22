@@ -40,6 +40,9 @@
 //     * TODO What should profiler do if it does not?
 // * TODO Some section are not recurring each frame, but are considered single shot events.
 //   * They should not be discarded at the end of a frame, but only via explicit user request.
+//   * They can exist outside of beginFrame()/endFrame().
+//   * Should they be able to nest?
+//   * What happen if several single-shot of the same name exist? Overwrite?
 
 namespace ad::renderer {
 
@@ -79,8 +82,15 @@ struct Ratio
         den /= gcd;
     }
 
-    GLuint num;
-    GLuint den;
+    std::uint64_t num;
+    std::uint64_t den;
+};
+
+
+enum class EntryNature
+{
+    Recurring,
+    SingleShot,
 };
 
 
@@ -88,6 +98,7 @@ struct Ratio
 class ProviderInterface
 {
 public:
+    using Sample_t = std::uint64_t;
     using EntryIndex = std::size_t;
 
     ProviderInterface(const char * aQuantityName, const char * aUnit, Ratio aScaleFactor = {.num = 1, .den = 1}) :
@@ -102,11 +113,11 @@ public:
     virtual void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) = 0;
 
     // TODO make generic regarding provided type
-    virtual bool provide(EntryIndex aEntryIndex, std::uint32_t aQueryFrame, GLuint & aSampleResult) = 0;
+    virtual bool provide(EntryIndex aEntryIndex, std::uint32_t aQueryFrame, Sample_t & aSampleResult) = 0;
 
     virtual void resize(std::size_t aNewEntriesCount) = 0;
 
-    GLuint scale(GLuint aInput) const
+    Sample_t scale(Sample_t aInput) const
     { return aInput * mScaleFactor.num / mScaleFactor.den; }
 
     const char * mQuantityName = "quantity";
@@ -130,10 +141,11 @@ public:
     inline static constexpr std::size_t gMaxSamples{128};
     inline static constexpr std::size_t gMaxMetricsPerSection{16};
 
+    using Sample_t = ProviderInterface::Sample_t;
     using EntryIndex = ProviderInterface::EntryIndex;
     using ProviderIndex = std::size_t;
 
-    static std::uint32_t CountSubframes()
+    static constexpr std::uint32_t CountSubframes()
     { return gFrameDelay + 1; };
 
     Profiler();
@@ -141,7 +153,7 @@ public:
     void beginFrame();
     void endFrame();
 
-    EntryIndex beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders);
+    EntryIndex beginSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders);
     void endSection(EntryIndex aIndex);
 
     // I am not sure this is a good idea, as it relies on a Profiler global state (mCurrentParent), which might not be a good idea.
@@ -161,11 +173,11 @@ public:
         EntryIndex mEntry;
     };
     
-    SectionGuard scopeSection(const char * aName, std::initializer_list<ProviderIndex> aProviders)
+    SectionGuard scopeSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders)
     { 
         return {
             .mProfiler = this,
-            .mEntry = beginSection(aName, std::move(aProviders))
+            .mEntry = beginSection(aNature, aName, std::move(aProviders))
         };
     }
 
@@ -175,6 +187,7 @@ public:
     /// @brief Keep a record of up to `gMaxSample` samples, as well as special values over this record (TODO e.g. min, max, accumulation).
     /// @tparam T_value The type of value that are recorded when sampling.
     /// @tparam T_average The type of the average, notably usefull to request decimals when averaging integers.
+    // TODO rename T_value to T_sample
     template <class T_value, class T_average = T_value>
     struct Values
     {
@@ -206,10 +219,16 @@ public:
 
 private:
     /// @brief The current subframe, which should be provided to profilers beginSection() / endSection().
-    std::uint32_t currentSubframe() const;
+    std::uint32_t currentSubframe(EntryNature aNature) const;
 
-    /// @brief The subframe which is to be queried, taking into account the frame delay.
+    /// @brief The subframe which is to be queried.
     std::uint32_t queriedSubframe() const;
+
+    std::pair<EntryIndex, bool> setupNextEntryRecurring(const char * aName, auto aProviders);
+    EntryIndex setupNextEntrySingleShot(const char * aName, auto aProviders);
+
+    /// @brief Query all providers of the entry at `aEntryIdx`, and update the values.
+    void queryProviders(EntryIndex aEntryIdx, std::uint32_t aQueryFrame);
 
     /// @brief A reference to a metrics Provider, and a `Value` record of the samples taken by this provider.
     template <class T_value, class T_average = T_value>
@@ -231,17 +250,32 @@ private:
     struct Entry
     {
         inline static constexpr unsigned int gInvalidLevel = -1;
+        inline static constexpr unsigned int gSingleShotLevel = gInvalidLevel-1;
+        /// @note The subframe is always the same for single shots at the moment, to avoid storing the subframe in the entry.
+        inline static constexpr unsigned int gSingleShotSubframe = 0;
         inline static constexpr EntryIndex gInvalidEntry = std::numeric_limits<EntryIndex>::max();
         inline static constexpr EntryIndex gNoParent = gInvalidEntry - 1;
 
         struct Identity
         {
-            const char * mName;
+            const char * mName = nullptr;
             unsigned int mLevel = gInvalidLevel;
             EntryIndex mParentIdx = gInvalidEntry;
 
             bool operator==(const Identity & aRhs) const = default;
         };
+
+        bool isUnused() const
+        { return mId.mName == nullptr; }
+
+        EntryNature getNature() const
+        { return mId.mLevel == gSingleShotLevel ? EntryNature::SingleShot : EntryNature::Recurring; }
+
+        bool isSingleShot() const
+        { return getNature() == EntryNature::SingleShot; }
+
+        /// @brief Reset the Values stored in Metrics, nothing else.
+        void resetValues();
 
         bool matchIdentity(const char * aName, const FrameState & aFrameState) const;
 
@@ -249,19 +283,22 @@ private:
         template <std::forward_iterator T_iterator>
         bool matchProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx) const;
 
+        template <std::forward_iterator T_iterator>
+        void setProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx);
+
         Identity mId;
-        std::array<Metric<GLuint>, gMaxMetricsPerSection> mMetrics;
+        std::array<Metric<Sample_t>, gMaxMetricsPerSection> mMetrics;
         std::size_t mActiveMetrics = 0;
     };
 
-    /// @brief Returns the next entry, handling resizing of storage when needed.
-    /// @warning Does not advance the next entry
-    Entry & fetchNextEntry();
+    /// @brief Returns the entry idx to use for the provided parameters, handling resizing of storage when needed.
+    /// @warning Does advance the next entry, but does not set any value on the entry instance itself (not setting the name).
+    EntryIndex fetchNextEntry(EntryNature aNature, const char * aName);
 
     void resize(std::size_t aNewEntriesCount);
 
-    ProviderInterface & getProvider(const Metric<GLuint> & aMetric);
-    const ProviderInterface & getProvider(const Metric<GLuint> & aMetric) const;
+    ProviderInterface & getProvider(const Metric<Sample_t> & aMetric);
+    const ProviderInterface & getProvider(const Metric<Sample_t> & aMetric) const;
 
     /// @brief The intra-frame state (plus the corresponding frame number).
     struct FrameState
@@ -286,10 +323,29 @@ private:
         EntryIndex mNextEntry{0};
         unsigned int mCurrentLevel{0};
         EntryIndex mCurrentParent{Entry::gNoParent};
+        std::vector<EntryIndex> mRecurrings{};
         unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
     };
 
+
+    /// @brief Store the EntryIndex of a single shot entry, alongside the subframe at which it was fetched.
+    /// This allows to query the result after the correct frame delay (by comparing the query subframe when it was fetched)
+    /// as well as marking the result as already queried (by changing the fetchedSubframe to an invalid subframe)
+    struct SingleShotRecord : public std::pair<EntryIndex, std::uint32_t/*subframe when fetched*/>
+    {
+        using Parent_t = std::pair<EntryIndex, std::uint32_t/*subframe when fetched*/>;
+        using Parent_t::Parent_t;
+        
+        /*implicit*/ operator EntryIndex &()
+        { return first; }
+
+        /*implicit*/ operator EntryIndex () const
+        { return first; }
+    };
+
+
     std::vector<Entry> mEntries; // Initial size handled in constructor
+    std::vector<SingleShotRecord> mSingleShots;
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
     FrameState mFrameState;
     unsigned int mLastResetFrame{0};

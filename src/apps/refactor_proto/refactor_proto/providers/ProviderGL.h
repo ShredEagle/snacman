@@ -18,7 +18,7 @@ struct ProviderGL : public ProviderInterface
     void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
     void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
-    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
+    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult) override;
 
     void resize(std::size_t aNewEntriesCount) override
     { mQueriesPool.resize(aNewEntriesCount * Profiler::CountSubframes() ); }
@@ -47,7 +47,7 @@ struct ProviderGLTime : public ProviderInterface
     void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
     void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
-    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
+    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult) override;
 
     // This is currently very conservative, having enough queries to recorded begin/end time for each section
     // in each "frame delay slot".

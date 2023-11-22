@@ -4,13 +4,12 @@
 
 
 #include "providers/ProviderApi.h"
-#include "providers/ProviderCpu.h"
 #include "providers/ProviderGL.h"
+#include "providers/ProviderRdtsc.h"
 
 
 #if defined(_WIN32)
-#include "providers/ProviderRdtsc.h"
-#include "providers/ProviderWindows.h"
+//#include "providers/ProviderWindows.h"
 #endif
 
 #include <cassert>
@@ -34,22 +33,52 @@ bool Profiler::Entry::matchProviders(T_iterator aFirstProviderIdx, T_iterator aL
 {
     return std::equal(mMetrics.begin(), mMetrics.begin() + mActiveMetrics,
                       aFirstProviderIdx, aLastProviderIdx,
-                      [](const Profiler::Metric<GLuint> & aMetric, Profiler::ProviderIndex aProviderIdx)
+                      [](const Profiler::Metric<Profiler::Sample_t> & aMetric, Profiler::ProviderIndex aProviderIdx)
                       {
                           return aMetric.mProviderIndex == aProviderIdx;
                       });
 }
 
 
+template <std::forward_iterator T_iterator>
+void Profiler::Entry::setProviders(T_iterator aFirstProviderIdx, T_iterator aLastProviderIdx)
+{
+    mActiveMetrics = 0;
+    [[maybe_unused]] ProviderIndex previousProvider = std::numeric_limits<ProviderIndex>::max(); // only used for the sorting assertion
+    //for(const ProviderIndex providerIndex : aProviders)
+    for(auto providerIdxIt = aFirstProviderIdx; providerIdxIt != aLastProviderIdx; ++providerIdxIt)
+    {
+        ProviderIndex providerIndex = *providerIdxIt;
+        // Provider indices must always be sorted (this is notably an assumption in LogicalSection::accountForChildSection)
+        assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex);
+        previousProvider = providerIndex;
+
+        mMetrics.at(mActiveMetrics++) = Metric<Sample_t>{
+            // TODO we could optimize that without rewritting each individual sample to zero
+            // Note: this could be more tricky with the introduction of single shot
+            .mProviderIndex = providerIndex,
+            .mValues = {}, // Note: No effect line, to make explicit that we reset values.
+        };
+    }
+}
+
+
+void Profiler::Entry::resetValues()
+{
+    for (std::size_t metricIdx = 0; metricIdx != mActiveMetrics; ++metricIdx)
+    {
+        mMetrics[metricIdx].mValues = {};
+    }
+}
+
+
 Profiler::Profiler()
 {
-#if defined(_WIN32)
+//#if defined(_WIN32)
+//    mMetricProviders.push_back(std::make_unique<ProviderCpuPerformanceCounter>());
+//#else
     mMetricProviders.push_back(std::make_unique<ProviderCpuRdtsc>());
-    //mMetricProviders.push_back(std::make_unique<ProviderCpuPerformanceCounter>());
-#else
-    mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
-#endif
-
+    //mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
     mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
     mMetricProviders.push_back(std::make_unique<ProviderGL>());
     mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::drawCount>>("draw", ""));
@@ -59,15 +88,73 @@ Profiler::Profiler()
 }
 
 
-Profiler::Entry & Profiler::fetchNextEntry()
+Profiler::EntryIndex Profiler::fetchNextEntry(EntryNature aNature, const char * aName)
 {
+    // Need to the actual subframe to fill the "fetchedSubframe" of a single shot.
+    std::uint32_t actualSubframe = currentSubframe(EntryNature::Recurring);
+    if(aNature == EntryNature::SingleShot)
+    {
+        // check if an existing single shot entry with this name is already present
+        for(auto & [existingIdx, fetchedSubframe] : mSingleShots)
+        {
+            Entry & entry = mEntries[existingIdx];
+            // TODO should we compare on the name content, instead of just the name ptr?
+            if(entry.mId.mName == aName)
+            {
+                // Already in the single shots list
+                fetchedSubframe = actualSubframe;
+                return existingIdx;
+            }
+        }
+    }
+
+    //
+    // Common path for any recurring entry as well as a *new* single shot
+    // (an existing single shot would already have returned)
+    //
+    while (mFrameState.mNextEntry != mEntries.size() 
+           && mEntries[mFrameState.mNextEntry].isSingleShot())
+    {
+        ++mFrameState.mNextEntry;
+    }
+
+    // Resize if the selected idx is out of bounds
     if(mFrameState.mNextEntry == mEntries.size())
     {
         auto newSize = mEntries.size() * 2;
         SELOG(debug)("Resizing the profiler to {} entries.", newSize);
         resize(newSize);
     }
-    return mEntries[mFrameState.mNextEntry];
+
+    if(aNature == EntryNature::SingleShot)
+    {
+        mSingleShots.emplace_back(mFrameState.mNextEntry, actualSubframe);
+    }
+    else
+    {
+        mFrameState.mRecurrings.push_back(mFrameState.mNextEntry);
+    }
+
+    return mFrameState.mNextEntry++;
+}
+
+
+// Note: Would be better as a member function of Entry, but we need the index, which is not stored in the Entry
+void Profiler::queryProviders(EntryIndex aEntryIdx, std::uint32_t aQueryFrame)
+{
+    Sample_t result;
+    Entry & entry = mEntries[aEntryIdx];
+    for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
+    {
+        if(getProvider(entry.mMetrics[metricIdx]).provide(aEntryIdx, aQueryFrame, result))
+        {
+            entry.mMetrics[metricIdx].mValues.record(result);
+        }
+        else
+        {
+            SELOG(error)("A provider result was not available when queried, it is discarded.");
+        }
+    }
 }
 
 
@@ -81,21 +168,28 @@ void Profiler::resize(std::size_t aNewEntriesCount)
 }
 
 
-ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric)
+ProviderInterface & Profiler::getProvider(const Metric<Sample_t> & aMetric)
 {
     return *mMetricProviders.at(aMetric.mProviderIndex);
 }
 
 
-const ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric) const
+const ProviderInterface & Profiler::getProvider(const Metric<Sample_t> & aMetric) const
 {
     return *mMetricProviders.at(aMetric.mProviderIndex);
 }
 
 
-std::uint32_t Profiler::currentSubframe() const
+std::uint32_t Profiler::currentSubframe(EntryNature aNature) const
 {
-    return mFrameState.mFrameNumber % CountSubframes();
+    if (aNature == EntryNature::SingleShot)
+    {
+        return Entry::gSingleShotSubframe;
+    }
+    else
+    {
+        return mFrameState.mFrameNumber % CountSubframes();
+    }
 }
 
 
@@ -120,14 +214,25 @@ void Profiler::endFrame()
     // But this is currently imposed by the prettyPrint, which expects all Entities of a logical section to have the same count of samples...
     if(mFrameState.mFrameNumber == mLastResetFrame)
     {
-        // If a reset occured during this frame, reset all values in all entries
-        for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+        // If a reset occured during this frame, reset all values in all recurring entries
+        for(EntryIndex entryIdx : mFrameState.mRecurrings)
         {
             Entry & entry = mEntries[entryIdx];
-            for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
-            {
-                entry.mMetrics[metricIdx].mValues = {};
-            }
+            entry.resetValues();
+        }
+    }
+
+    std::uint32_t subframeToQuery = queriedSubframe();
+
+    for(auto & [entryIdx, fetchedSubframe] : mSingleShots)
+    {
+        if(fetchedSubframe == subframeToQuery)
+        {
+            // There could be previous values if this single shot was reused,
+            // or if it was fetched at an index previously containing a recurring entry.
+            mEntries[entryIdx].resetValues(); // Erase any previous value.
+            queryProviders(entryIdx, Entry::gSingleShotSubframe);
+            fetchedSubframe = -1; // do not query again, this subframe will not occur
         }
     }
 
@@ -137,27 +242,14 @@ void Profiler::endFrame()
         return;
     }
 
-    for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+    for(EntryIndex entryIdx : mFrameState.mRecurrings)
     {
-        Entry & entry = mEntries[entryIdx];
-        std::uint32_t queryFrame = queriedSubframe();
-
-        GLuint result;
-        for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
-        {
-            if(getProvider(entry.mMetrics[metricIdx]).provide(entryIdx, queryFrame, result))
-            {
-                entry.mMetrics[metricIdx].mValues.record(result);
-            }
-            else
-            {
-                SELOG(error)("A provider result was not available when queried, it is discarded.");
-            }
-        }
+        queryProviders(entryIdx, subframeToQuery);
     }
 }
 
-Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer_list<ProviderIndex> aProviders)
+
+Profiler::EntryIndex Profiler::beginSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders)
 {
     // TODO Section identity is much more subtle than that
     // It should be robust to changing the structure of sections (loop variance, and logical structure)
@@ -167,58 +259,29 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
     // There must be a number of provider in [1, maxMetricsPerSection]
     assert(aProviders.size() > 0 && aProviders.size() <= gMaxMetricsPerSection);
     
-    auto setupNextEntry = [this](const char * aName, auto aProviders) -> std::pair<EntryIndex, bool>
+    EntryIndex entryIndex = std::numeric_limits<EntryIndex>::max();
+    if(aNature == EntryNature::Recurring)
     {
-        Entry & entry = fetchNextEntry();
         bool alreadyPresent;
+        std::tie(entryIndex, alreadyPresent) = setupNextEntryRecurring(aName, aProviders);
 
-        if(alreadyPresent = entry.matchIdentity(aName, mFrameState);
-           alreadyPresent)
+        if (!alreadyPresent)
         {
-            // Also part of identity, a logical section should always be given the exact same list of providers.
-            // For the moment, we consider it a logic error if the identity changes only because of a different provider list
-            // (this assumption can be revised)
-            assert(entry.matchProviders(aProviders.begin(), aProviders.end()));
+            mLastResetFrame = mFrameState.mFrameNumber;
+            SELOG(debug)("Profiler sections structure changed.");
         }
-        else // Either a newer used entry, or the frame structure changed and the entry was used for another identity
-        {
-            entry.mId.mName = aName;
-            entry.mId.mLevel = mFrameState.mCurrentLevel;
-            entry.mId.mParentIdx = mFrameState.mCurrentParent;
-
-            entry.mActiveMetrics = 0;
-            [[maybe_unused]] ProviderIndex previousProvider = std::numeric_limits<ProviderIndex>::max(); // only used for the sorting assertion
-            for(const ProviderIndex providerIndex : aProviders)
-            {
-                // Provider indices must always be sorted (this is notably an assumption in LogicalSection::accountForChildSection)
-                assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex);
-                previousProvider = providerIndex;
-
-                entry.mMetrics.at(entry.mActiveMetrics++) = Metric<GLuint>{
-                    // TODO we could optimize that without rewritting each individual sample to zero
-                    .mProviderIndex = providerIndex,
-                    .mValues = {}, // Note: No effect line, to make explicit that we reset values.
-                };
-            }
-        }
-
-        ++mFrameState.mCurrentLevel;
-        mFrameState.mCurrentParent = mFrameState.mNextEntry; //i.e. this Entry index becomes the current parent
-        return {mFrameState.mNextEntry++, alreadyPresent};
-    };
-
-    auto [entryIndex, alreadyPresent] = setupNextEntry(aName, aProviders);
-    Entry & entry = mEntries[entryIndex];
-
-    if (!alreadyPresent)
+    }
+    else
     {
-        mLastResetFrame = mFrameState.mFrameNumber;
-        SELOG(debug)("Profiler sections structure changed.");
+        assert(aNature == EntryNature::SingleShot);
+        entryIndex = setupNextEntrySingleShot(aName, aProviders);
     }
 
+    Entry & entry = mEntries[entryIndex];
+    std::uint32_t subframe = currentSubframe(aNature);
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).beginSection(entryIndex, currentSubframe());
+        getProvider(entry.mMetrics[i]).beginSection(entryIndex, subframe);
     }
 
     return entryIndex;
@@ -228,9 +291,10 @@ Profiler::EntryIndex Profiler::beginSection(const char * aName, std::initializer
 void Profiler::endSection(EntryIndex aIndex)
 {
     Entry & entry = mEntries.at(aIndex);
+    std::uint32_t subframe = currentSubframe(entry.getNature());
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).endSection(aIndex, currentSubframe());
+        getProvider(entry.mMetrics[i]).endSection(aIndex, subframe);
     }
     mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
     --mFrameState.mCurrentLevel;
@@ -240,6 +304,49 @@ void Profiler::endSection(EntryIndex aIndex)
 void Profiler::popCurrentSection()
 {
     endSection(mFrameState.mCurrentParent);
+}
+
+
+std::pair<Profiler::EntryIndex, bool> Profiler::setupNextEntryRecurring(const char * aName, auto aProviders)
+{
+    EntryIndex entryIdx = fetchNextEntry(EntryNature::Recurring, aName/*unused*/);
+    Entry & entry = mEntries[entryIdx];
+    bool alreadyPresent;
+
+    if(alreadyPresent = entry.matchIdentity(aName, mFrameState);
+        alreadyPresent)
+    {
+        // Also part of identity, a logical section should always be given the exact same list of providers.
+        // For the moment, we consider it a logic error if the identity changes only because of a different provider list
+        // (this assumption can be revised)
+        assert(entry.matchProviders(aProviders.begin(), aProviders.end()));
+    }
+    else // Either a newer used entry, or the frame structure changed and the entry was used for another identity
+    {
+        entry.mId.mName = aName;
+        entry.mId.mLevel = mFrameState.mCurrentLevel;
+        entry.mId.mParentIdx = mFrameState.mCurrentParent;
+
+        entry.setProviders(aProviders.begin(), aProviders.end());
+    }
+
+    ++mFrameState.mCurrentLevel;
+    mFrameState.mCurrentParent = entryIdx;
+    return {entryIdx, alreadyPresent};
+}
+
+
+Profiler::EntryIndex Profiler::setupNextEntrySingleShot(const char * aName, auto aProviders)
+{
+    EntryIndex entryIdx = fetchNextEntry(EntryNature::SingleShot, aName);
+    Entry & entry = mEntries[entryIdx];
+
+    entry.mId.mName = aName;
+    entry.mId.mLevel = Entry::gSingleShotLevel;
+
+    entry.setProviders(aProviders.begin(), aProviders.end());
+
+    return entryIdx;
 }
 
 
@@ -299,12 +406,12 @@ struct LogicalSection
     // TODO we actually only need to store Values here (not even sure we should keep the individual samples)
     // (note: we do not accumulate the samples at the moment)
     // If we go this route, we should split Metrics from AOS to SOA so we can copy Values from Entries with memcpy
-    std::array<Profiler::Metric<GLuint>, Profiler::gMaxMetricsPerSection> mValues;
+    std::array<Profiler::Metric<Profiler::Sample_t>, Profiler::gMaxMetricsPerSection> mValues;
     std::size_t mActiveMetrics = 0;
 
     /// @brief Keep track of the samples accounted for by sub-sections 
     /// (thus allowing to know what has not been accounted for)
-    std::array<GLuint, Profiler::gMaxMetricsPerSection> mAccountedFor{0}; 
+    std::array<Profiler::Sample_t, Profiler::gMaxMetricsPerSection> mAccountedFor{0}; 
 };
 
 
@@ -335,7 +442,8 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     // It allows to test whether distinct entry indices correspond to the same logical section, for parent consolidation.
     std::vector<LogicalSectionId> entryIdToLogicalSectionId(mEntries.size(), gInvalidLogicalSection);
 
-    for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+    //for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+    for(EntryIndex entryIdx : mFrameState.mRecurrings)
     {
         const Entry & entry = mEntries[entryIdx];
 
@@ -389,32 +497,53 @@ void Profiler::prettyPrint(std::ostream & aOut) const
 
     auto sortedTime = Clock::now();
 
-    //
-    // Write the aggregated results to output stream
-    //
-    for(const LogicalSection & section : sections)
+    auto printSection = [this](std::ostream & aOut, LogicalSection aSection)
     {
-        aOut << std::string(section.mId.mLevel * 2, ' ') << section.mId.mName << ":" 
+        aOut << std::string(aSection.mId.mLevel * 2, ' ') << aSection.mId.mName << ":" 
             ;
         
-        for (std::size_t valueIdx = 0; valueIdx != section.mActiveMetrics; ++valueIdx)
+        for (std::size_t valueIdx = 0; valueIdx != aSection.mActiveMetrics; ++valueIdx)
         {
-            const auto & metric = section.mValues[valueIdx];
+            const auto & metric = aSection.mValues[valueIdx];
             const ProviderInterface & provider = getProvider(metric);
 
             aOut << " " << provider.mQuantityName << " " 
                 << provider.scale(metric.mValues.average())
                 // Show what has not been accounted for by child sections in between parenthesis
-                << " (" << provider.scale(metric.mValues.average() - section.mAccountedFor[valueIdx]) << ")"
+                << " (" << provider.scale(metric.mValues.average() - aSection.mAccountedFor[valueIdx]) << ")"
                 << " " << provider.mUnit << ","
                 ;
         }
 
-        if(section.mEntries.size() > 1)
+        if(aSection.mEntries.size() > 1)
         {
-            aOut << " (accumulated: " << section.mEntries.size() << ")";
+            aOut << " (accumulated: " << aSection.mEntries.size() << ")";
         }
+    };
 
+    auto printSingleEntry = [this](std::ostream & aOut, Entry aEntry)
+    {
+        aOut << aEntry.mId.mName << ":" 
+            ;
+        
+        for (std::size_t valueIdx = 0; valueIdx != aEntry.mActiveMetrics; ++valueIdx)
+        {
+            const auto & metric = aEntry.mMetrics[valueIdx];
+            const ProviderInterface & provider = getProvider(metric);
+
+            aOut << " " << provider.mQuantityName << " " 
+                << provider.scale(metric.mValues.average())
+                << " " << provider.mUnit << ","
+                ;
+        }
+    };
+
+    //
+    // Write the aggregated results to output stream
+    //
+    for(const LogicalSection & section : sections)
+    {
+        printSection(aOut, section);
         aOut << "\n";
     }
 
@@ -427,8 +556,17 @@ void Profiler::prettyPrint(std::ostream & aOut) const
             << mFrameState.mNextEntry << " entries in " 
             << getTicks<microseconds>(Clock::now() - beginTime) << " us"
             << ", sort took " << getTicks<microseconds>(sortedTime - beginTime) << " us"
-            << ")"
+            << ")\n"
             ;
+    }
+
+    //
+    // Write the single shots to output stream
+    // 
+    aOut << "\n|| Single shots ||\n\n";
+    for(EntryIndex entryIdx : mSingleShots)
+    {
+        printSingleEntry(aOut, mEntries[entryIdx]);
     }
 }
 

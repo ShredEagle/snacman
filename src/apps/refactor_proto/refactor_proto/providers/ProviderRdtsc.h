@@ -4,8 +4,24 @@
 #include "../Profiler.h"
 #include "../Time.h"
 
+#ifdef _WIN32
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+
 
 namespace ad::renderer {
+
+
+inline std::uint64_t readTsc()
+{
+    unsigned int ui;
+    return __rdtscp(&ui);
+}
+
+
+Ratio evluateRtscTickPeriodMicroSeconds();
 
 
 struct ProviderCpuRdtsc : public ProviderInterface
@@ -18,7 +34,7 @@ struct ProviderCpuRdtsc : public ProviderInterface
     void beginSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
     void endSection(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame) override;
 
-    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult) override;
+    bool provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult) override;
 
     void resize(std::size_t aNewEntriesCount) override
     { mIntervals.resize(aNewEntriesCount * Profiler::CountSubframes() ); }
@@ -30,41 +46,12 @@ struct ProviderCpuRdtsc : public ProviderInterface
 };
 
 
-inline std::uint64_t readTsc()
-{
-    unsigned int ui;
-    return __rdtscp(&ui);
-}
-
-
-Ratio evluateRtscTickPeriod()
-{
-    auto clockStart = Clock::now();
-    auto tickCount = readTsc();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds{100});
-
-    auto clockDuration = Clock::now() - clockStart;
-    tickCount = readTsc() - tickCount;
-
-    std::uint64_t ticksPerMicrosecond =
-        tickCount / getTicks<std::chrono::microseconds>(clockDuration);
-    SELOG(info)("TSC frequency evaluated to: {} MHz", ticksPerMicrosecond);
-    // Check it does not overflow
-    assert(ticksPerMicrosecond < std::numeric_limits<GLuint>::max());
-
-    return Ratio{
-        .num = 1,
-        .den = (GLuint)(ticksPerMicrosecond),
-    };
-}
-
 //
 // Implementations
 //
 
 inline ProviderCpuRdtsc::ProviderCpuRdtsc():
-        ProviderInterface{"CPU (tsc)", "us", evluateRtscTickPeriod()}
+        ProviderInterface{"CPU (tsc)", "us", evluateRtscTickPeriodMicroSeconds()}
     {}
 
 inline ProviderCpuRdtsc::TickCount_t & ProviderCpuRdtsc::getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
@@ -86,10 +73,10 @@ inline void ProviderCpuRdtsc::endSection(EntryIndex aEntryIndex, std::uint32_t a
 }
 
 
-bool ProviderCpuRdtsc::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
+inline bool ProviderCpuRdtsc::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult)
 {
     const auto & interval = getInterval(aEntryIndex, aQueryFrame);
-    aSampleResult = (GLuint)(interval);
+    aSampleResult = interval;
     return true;
 }
 

@@ -6,6 +6,8 @@
 #define NOMINMAX
 #include <Windows.h>
 
+#include <cassert>
+
 
 namespace{
 
@@ -18,11 +20,12 @@ namespace{
     }
 
 
-    inline std::int64_t getTickFrequency()
+    inline std::uint64_t getTickFrequency()
     {
         LARGE_INTEGER tmp;
         QueryPerformanceFrequency(&tmp);
-        return tmp.QuadPart;
+        assert(tmp.QuadPart >= 0);
+        return (std::uint64_t)tmp.QuadPart;
     }
 
 
@@ -36,7 +39,7 @@ ProviderCpuPerformanceCounter::ProviderCpuPerformanceCounter() :
     ProviderInterface{
         "CPU (perfc)",
         "us",
-        Ratio::MakeConversion(Ratio{1, (GLuint)getTickFrequency()}, Ratio::MakeRatio<std::micro>())}
+        Ratio::MakeConversion(Ratio{1, getTickFrequency()}, Ratio::MakeRatio<std::micro>())}
 {}
 
 
@@ -58,11 +61,9 @@ void ProviderCpuPerformanceCounter::endSection(EntryIndex aEntryIndex, std::uint
 }
 
 
-bool ProviderCpuPerformanceCounter::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
+bool ProviderCpuPerformanceCounter::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, Sample_t & aSampleResult)
 {
-    const auto & interval = getInterval(aEntryIndex, aQueryFrame);
-    // TODO address this case (potentially with Values of the correct type)
-    aSampleResult = (GLuint)(interval);
+    aSampleResult = getInterval(aEntryIndex, aQueryFrame);
     return true;
 }
 
