@@ -46,8 +46,9 @@ set(${TARGET_NAME}_SOURCES
     SceneGui.cpp
     SetupDrawing.cpp
 
-    providers/ProviderGL.cpp
     providers/ProviderCpu.cpp
+    providers/ProviderGL.cpp
+    providers/ProviderRdtsc.cpp
 )
 
 
