@@ -219,7 +219,7 @@ namespace {
             PROFILER_PUSH_RECURRING_SECTION("discard_2", CpuTime);
             const IntrospectProgram & selectedProgram = *aCall.mProgram;
             const graphics::VertexArrayObject & vao = *aCall.mVao;
-            PROFILER_POP_SECTION;
+            PROFILER_POP_RECURRING_SECTION;
 
             // TODO Ad 2023/10/05: #perf #azdo 
             // Only change what is necessary, instead of rebiding everything each time.
@@ -227,7 +227,7 @@ namespace {
             {
                 PROFILER_PUSH_RECURRING_SECTION("bind_VAO", CpuTime);
                 graphics::ScopedBind vaoScope{vao};
-                PROFILER_POP_SECTION;
+                PROFILER_POP_RECURRING_SECTION;
                 
                 {
                     PROFILER_SCOPE_RECURRING_SECTION("set_buffer_backed_blocks", CpuTime);
@@ -255,7 +255,7 @@ namespace {
 
                 PROFILER_PUSH_RECURRING_SECTION("bind_program", CpuTime);
                 graphics::ScopedBind programScope{selectedProgram};
-                PROFILER_POP_SECTION;
+                PROFILER_POP_RECURRING_SECTION;
 
                 {
                     // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance

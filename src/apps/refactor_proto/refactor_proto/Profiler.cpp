@@ -99,7 +99,7 @@ Profiler::EntryIndex Profiler::fetchNextEntry(EntryNature aNature, const char * 
                 mSingleShots.push_back(entryIdx);
                 return entryIdx;
             }
-            else if(entry.mId.mLevel == Entry::gSingleShotLevel && entry.mId.mName == aName)
+            else if(entry.isSingleShot() && entry.mId.mName == aName)
             {
                 // Already in the single shots list
                 return entryIdx;
@@ -111,8 +111,9 @@ Profiler::EntryIndex Profiler::fetchNextEntry(EntryNature aNature, const char * 
         for(/* no init */; mFrameState.mNextEntry != mEntries.size(); ++mFrameState.mNextEntry)
         {
             Entry & entry = mEntries[mFrameState.mNextEntry];
-            if(entry.mId.mLevel != Entry::gSingleShotLevel)
+            if(!entry.isSingleShot())
             {
+                mFrameState.mRecurrings.push_back(mFrameState.mNextEntry);
                 return mFrameState.mNextEntry++;
             }
         }
@@ -125,6 +126,25 @@ Profiler::EntryIndex Profiler::fetchNextEntry(EntryNature aNature, const char * 
     resize(newSize);
 
     return oldSize;
+}
+
+
+// Note: Would be better as a member function of Entry, but we need the index, which is not stored in the Entry
+void Profiler::queryProviders(EntryIndex aEntryIdx, std::uint32_t aQueryFrame)
+{
+    GLuint result;
+    Entry & entry = mEntries[aEntryIdx];
+    for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
+    {
+        if(getProvider(entry.mMetrics[metricIdx]).provide(aEntryIdx, aQueryFrame, result))
+        {
+            entry.mMetrics[metricIdx].mValues.record(result);
+        }
+        else
+        {
+            SELOG(error)("A provider result was not available when queried, it is discarded.");
+        }
+    }
 }
 
 
@@ -150,15 +170,29 @@ const ProviderInterface & Profiler::getProvider(const Metric<GLuint> & aMetric) 
 }
 
 
-std::uint32_t Profiler::currentSubframe() const
+std::uint32_t Profiler::currentSubframe(EntryNature aNature) const
 {
-    return mFrameState.mFrameNumber % CountSubframes();
+    if (aNature == EntryNature::SingleShot)
+    {
+        return Entry::gSingleShotSubframe;
+    }
+    else
+    {
+        return mFrameState.mFrameNumber % CountSubframes();
+    }
 }
 
 
-std::uint32_t Profiler::queriedSubframe() const
+std::uint32_t Profiler::queriedSubframe(EntryNature aNature) const
 {
-    return (mFrameState.mFrameNumber + 1) % CountSubframes();
+    if (aNature == EntryNature::SingleShot)
+    {
+        return Entry::gSingleShotSubframe;
+    }
+    else
+    {
+        return (mFrameState.mFrameNumber + 1) % CountSubframes();
+    }
 }
 
 
@@ -188,29 +222,26 @@ void Profiler::endFrame()
         }
     }
 
+    for(EntryIndex entryIdx : mSingleShots)
+    {
+        // Note: this is hackish, we are using the first metric to check if the values were written
+        // (it assumes that all values will successfully be queried on the same subframe)
+        // TODO we can use some additional data structure to store which single shots need to be queried at which frame
+        if(mEntries[entryIdx].mMetrics[0].mValues.mSampleCount == 0)
+        {
+            queryProviders(entryIdx, queriedSubframe(EntryNature::SingleShot));
+        }
+    }
+
     // Ensure we have enough entries in the circular buffer before issuing queries (frame count since reset >= gFrameDelay)
     if(mFrameState.mFrameNumber < (mLastResetFrame + gFrameDelay))
     {
         return;
     }
 
-    for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+    for(EntryIndex entryIdx : mFrameState.mRecurrings)
     {
-        Entry & entry = mEntries[entryIdx];
-        std::uint32_t queryFrame = queriedSubframe();
-
-        GLuint result;
-        for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
-        {
-            if(getProvider(entry.mMetrics[metricIdx]).provide(entryIdx, queryFrame, result))
-            {
-                entry.mMetrics[metricIdx].mValues.record(result);
-            }
-            else
-            {
-                SELOG(error)("A provider result was not available when queried, it is discarded.");
-            }
-        }
+        queryProviders(entryIdx, queriedSubframe(EntryNature::Recurring));
     }
 }
 
@@ -244,9 +275,10 @@ Profiler::EntryIndex Profiler::beginSection(EntryNature aNature, const char * aN
     }
 
     Entry & entry = mEntries[entryIndex];
+    std::uint32_t subframe = currentSubframe(aNature);
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).beginSection(entryIndex, currentSubframe());
+        getProvider(entry.mMetrics[i]).beginSection(entryIndex, subframe);
     }
 
     return entryIndex;
@@ -256,9 +288,10 @@ Profiler::EntryIndex Profiler::beginSection(EntryNature aNature, const char * aN
 void Profiler::endSection(EntryIndex aIndex)
 {
     Entry & entry = mEntries.at(aIndex);
+    std::uint32_t subframe = currentSubframe(entry.getNature());
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
-        getProvider(entry.mMetrics[i]).endSection(aIndex, currentSubframe());
+        getProvider(entry.mMetrics[i]).endSection(aIndex, subframe);
     }
     mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
     --mFrameState.mCurrentLevel;
@@ -406,7 +439,8 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     // It allows to test whether distinct entry indices correspond to the same logical section, for parent consolidation.
     std::vector<LogicalSectionId> entryIdToLogicalSectionId(mEntries.size(), gInvalidLogicalSection);
 
-    for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+    //for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
+    for(EntryIndex entryIdx : mFrameState.mRecurrings)
     {
         const Entry & entry = mEntries[entryIdx];
 
@@ -460,32 +494,53 @@ void Profiler::prettyPrint(std::ostream & aOut) const
 
     auto sortedTime = Clock::now();
 
-    //
-    // Write the aggregated results to output stream
-    //
-    for(const LogicalSection & section : sections)
+    auto printSection = [this](std::ostream & aOut, LogicalSection aSection)
     {
-        aOut << std::string(section.mId.mLevel * 2, ' ') << section.mId.mName << ":" 
+        aOut << std::string(aSection.mId.mLevel * 2, ' ') << aSection.mId.mName << ":" 
             ;
         
-        for (std::size_t valueIdx = 0; valueIdx != section.mActiveMetrics; ++valueIdx)
+        for (std::size_t valueIdx = 0; valueIdx != aSection.mActiveMetrics; ++valueIdx)
         {
-            const auto & metric = section.mValues[valueIdx];
+            const auto & metric = aSection.mValues[valueIdx];
             const ProviderInterface & provider = getProvider(metric);
 
             aOut << " " << provider.mQuantityName << " " 
                 << provider.scale(metric.mValues.average())
                 // Show what has not been accounted for by child sections in between parenthesis
-                << " (" << provider.scale(metric.mValues.average() - section.mAccountedFor[valueIdx]) << ")"
+                << " (" << provider.scale(metric.mValues.average() - aSection.mAccountedFor[valueIdx]) << ")"
                 << " " << provider.mUnit << ","
                 ;
         }
 
-        if(section.mEntries.size() > 1)
+        if(aSection.mEntries.size() > 1)
         {
-            aOut << " (accumulated: " << section.mEntries.size() << ")";
+            aOut << " (accumulated: " << aSection.mEntries.size() << ")";
         }
+    };
 
+    auto printSingleEntry = [this](std::ostream & aOut, Entry aEntry)
+    {
+        aOut << aEntry.mId.mName << ":" 
+            ;
+        
+        for (std::size_t valueIdx = 0; valueIdx != aEntry.mActiveMetrics; ++valueIdx)
+        {
+            const auto & metric = aEntry.mMetrics[valueIdx];
+            const ProviderInterface & provider = getProvider(metric);
+
+            aOut << " " << provider.mQuantityName << " " 
+                << provider.scale(metric.mValues.average())
+                << " " << provider.mUnit << ","
+                ;
+        }
+    };
+
+    //
+    // Write the aggregated results to output stream
+    //
+    for(const LogicalSection & section : sections)
+    {
+        printSection(aOut, section);
         aOut << "\n";
     }
 
@@ -498,8 +553,17 @@ void Profiler::prettyPrint(std::ostream & aOut) const
             << mFrameState.mNextEntry << " entries in " 
             << getTicks<microseconds>(Clock::now() - beginTime) << " us"
             << ", sort took " << getTicks<microseconds>(sortedTime - beginTime) << " us"
-            << ")"
+            << ")\n"
             ;
+    }
+
+    //
+    // Write the single shots to output stream
+    // 
+    aOut << "\n|| Single shots ||\n\n";
+    for(EntryIndex entryIdx : mSingleShots)
+    {
+        printSingleEntry(aOut, mEntries[entryIdx]);
     }
 }
 

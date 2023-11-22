@@ -216,13 +216,16 @@ public:
 
 private:
     /// @brief The current subframe, which should be provided to profilers beginSection() / endSection().
-    std::uint32_t currentSubframe() const;
+    std::uint32_t currentSubframe(EntryNature aNature) const;
 
     /// @brief The subframe which is to be queried, taking into account the frame delay.
-    std::uint32_t queriedSubframe() const;
+    std::uint32_t queriedSubframe(EntryNature aNature) const;
 
     std::pair<EntryIndex, bool> setupNextEntryRecurring(const char * aName, auto aProviders);
     EntryIndex setupNextEntrySingleShot(const char * aName, auto aProviders);
+
+    /// @brief Query all providers of the entry at `aEntryIdx`, and update the values.
+    void queryProviders(EntryIndex aEntryIdx, std::uint32_t aQueryFrame);
 
     /// @brief A reference to a metrics Provider, and a `Value` record of the samples taken by this provider.
     template <class T_value, class T_average = T_value>
@@ -245,6 +248,8 @@ private:
     {
         inline static constexpr unsigned int gInvalidLevel = -1;
         inline static constexpr unsigned int gSingleShotLevel = gInvalidLevel-1;
+        /// @note The subframe is always the same for single shots at the moment, to avoid storing the subframe in the entry.
+        inline static constexpr unsigned int gSingleShotSubframe = 0;
         inline static constexpr EntryIndex gInvalidEntry = std::numeric_limits<EntryIndex>::max();
         inline static constexpr EntryIndex gNoParent = gInvalidEntry - 1;
 
@@ -259,6 +264,12 @@ private:
 
         bool isUnused() const
         { return mId.mName == nullptr; }
+
+        EntryNature getNature() const
+        { return mId.mLevel == gSingleShotLevel ? EntryNature::SingleShot : EntryNature::Recurring; }
+
+        bool isSingleShot() const
+        { return getNature() == EntryNature::SingleShot; }
 
         bool matchIdentity(const char * aName, const FrameState & aFrameState) const;
 
@@ -306,6 +317,7 @@ private:
         EntryIndex mNextEntry{0};
         unsigned int mCurrentLevel{0};
         EntryIndex mCurrentParent{Entry::gNoParent};
+        std::vector<EntryIndex> mRecurrings{};
         unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
     };
 
