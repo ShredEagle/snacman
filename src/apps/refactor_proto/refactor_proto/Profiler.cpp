@@ -86,46 +86,47 @@ Profiler::EntryIndex Profiler::fetchNextEntry(EntryNature aNature, const char * 
 {
     if(aNature == EntryNature::SingleShot)
     {
-        //for(Entry & entry : mEntries)
-        // TODO can we start from the index in the frame state? (should work even before first frame / between frames if done correctly)
-        // No, because we want to overwrite if name already exist
-        // We actually might if we first iterate the list of single shots
-        for(EntryIndex entryIdx = 0; entryIdx != mEntries.size(); ++entryIdx)
+        // check if an existing single shot entry with this name is already present
+        for(EntryIndex existingIdx : mSingleShots)
         {
-            Entry & entry = mEntries[entryIdx];
+            Entry & entry = mEntries[existingIdx];
             // TODO should we compare on the name content, instead of just the name ptr?
-            if(entry.isUnused())
-            {
-                mSingleShots.push_back(entryIdx);
-                return entryIdx;
-            }
-            else if(entry.isSingleShot() && entry.mId.mName == aName)
+            if(entry.mId.mName == aName)
             {
                 // Already in the single shots list
-                return entryIdx;
+                return existingIdx;
             }
         }
+    }
+
+    //
+    // Common path for any recurring entry as well as a *new* single shot
+    // (an existing single shot would already have returned)
+    //
+    while (mFrameState.mNextEntry != mEntries.size() 
+           && mEntries[mFrameState.mNextEntry].isSingleShot())
+    {
+        ++mFrameState.mNextEntry;
+    }
+
+    // Resize if the selected idx is out of bounds
+    if(mFrameState.mNextEntry == mEntries.size())
+    {
+        auto newSize = mEntries.size() * 2;
+        SELOG(debug)("Resizing the profiler to {} entries.", newSize);
+        resize(newSize);
+    }
+
+    if(aNature == EntryNature::SingleShot)
+    {
+        mSingleShots.push_back(mFrameState.mNextEntry);
     }
     else
     {
-        for(/* no init */; mFrameState.mNextEntry != mEntries.size(); ++mFrameState.mNextEntry)
-        {
-            Entry & entry = mEntries[mFrameState.mNextEntry];
-            if(!entry.isSingleShot())
-            {
-                mFrameState.mRecurrings.push_back(mFrameState.mNextEntry);
-                return mFrameState.mNextEntry++;
-            }
-        }
+        mFrameState.mRecurrings.push_back(mFrameState.mNextEntry);
     }
 
-    // If it did not return yet, we need to resize entries
-    auto oldSize = mEntries.size();
-    auto newSize = oldSize * 2;
-    SELOG(debug)("Resizing the profiler to {} entries.", newSize);
-    resize(newSize);
-
-    return oldSize;
+    return mFrameState.mNextEntry++;
 }
 
 
