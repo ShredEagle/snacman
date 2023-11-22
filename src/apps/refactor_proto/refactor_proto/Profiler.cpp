@@ -64,6 +64,15 @@ void Profiler::Entry::setProviders(T_iterator aFirstProviderIdx, T_iterator aLas
 }
 
 
+void Profiler::Entry::resetValues()
+{
+    for (std::size_t metricIdx = 0; metricIdx != mActiveMetrics; ++metricIdx)
+    {
+        mMetrics[metricIdx].mValues = {};
+    }
+}
+
+
 Profiler::Profiler()
 {
 #if defined(_WIN32)
@@ -84,16 +93,19 @@ Profiler::Profiler()
 
 Profiler::EntryIndex Profiler::fetchNextEntry(EntryNature aNature, const char * aName)
 {
+    // Need to the actual subframe to fill the "fetchedSubframe" of a single shot.
+    std::uint32_t actualSubframe = currentSubframe(EntryNature::Recurring);
     if(aNature == EntryNature::SingleShot)
     {
         // check if an existing single shot entry with this name is already present
-        for(EntryIndex existingIdx : mSingleShots)
+        for(auto & [existingIdx, fetchedSubframe] : mSingleShots)
         {
             Entry & entry = mEntries[existingIdx];
             // TODO should we compare on the name content, instead of just the name ptr?
             if(entry.mId.mName == aName)
             {
                 // Already in the single shots list
+                fetchedSubframe = actualSubframe;
                 return existingIdx;
             }
         }
@@ -119,7 +131,7 @@ Profiler::EntryIndex Profiler::fetchNextEntry(EntryNature aNature, const char * 
 
     if(aNature == EntryNature::SingleShot)
     {
-        mSingleShots.push_back(mFrameState.mNextEntry);
+        mSingleShots.emplace_back(mFrameState.mNextEntry, actualSubframe);
     }
     else
     {
@@ -184,16 +196,9 @@ std::uint32_t Profiler::currentSubframe(EntryNature aNature) const
 }
 
 
-std::uint32_t Profiler::queriedSubframe(EntryNature aNature) const
+std::uint32_t Profiler::queriedSubframe() const
 {
-    if (aNature == EntryNature::SingleShot)
-    {
-        return Entry::gSingleShotSubframe;
-    }
-    else
-    {
-        return (mFrameState.mFrameNumber + 1) % CountSubframes();
-    }
+    return (mFrameState.mFrameNumber + 1) % CountSubframes();
 }
 
 
@@ -216,21 +221,21 @@ void Profiler::endFrame()
         for(EntryIndex entryIdx = 0; entryIdx != mFrameState.mNextEntry; ++entryIdx)
         {
             Entry & entry = mEntries[entryIdx];
-            for (std::size_t metricIdx = 0; metricIdx != entry.mActiveMetrics; ++metricIdx)
-            {
-                entry.mMetrics[metricIdx].mValues = {};
-            }
+            entry.resetValues();
         }
     }
 
-    for(EntryIndex entryIdx : mSingleShots)
+    std::uint32_t subframeToQuery = queriedSubframe();
+
+    for(auto & [entryIdx, fetchedSubframe] : mSingleShots)
     {
-        // Note: this is hackish, we are using the first metric to check if the values were written
-        // (it assumes that all values will successfully be queried on the same subframe)
-        // TODO we can use some additional data structure to store which single shots need to be queried at which frame
-        if(mEntries[entryIdx].mMetrics[0].mValues.mSampleCount == 0)
+        if(fetchedSubframe == subframeToQuery)
         {
-            queryProviders(entryIdx, queriedSubframe(EntryNature::SingleShot));
+            // There could be previous values if this single shot was reused,
+            // or if it was fetched at an index previously containing a recurring entry.
+            mEntries[entryIdx].resetValues(); // Erase any previous value.
+            queryProviders(entryIdx, Entry::gSingleShotSubframe);
+            fetchedSubframe = -1; // do not query again, this subframe will not occur
         }
     }
 
@@ -242,7 +247,7 @@ void Profiler::endFrame()
 
     for(EntryIndex entryIdx : mFrameState.mRecurrings)
     {
-        queryProviders(entryIdx, queriedSubframe(EntryNature::Recurring));
+        queryProviders(entryIdx, subframeToQuery);
     }
 }
 

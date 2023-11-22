@@ -145,7 +145,7 @@ public:
     using EntryIndex = ProviderInterface::EntryIndex;
     using ProviderIndex = std::size_t;
 
-    static std::uint32_t CountSubframes()
+    static constexpr std::uint32_t CountSubframes()
     { return gFrameDelay + 1; };
 
     Profiler();
@@ -221,8 +221,8 @@ private:
     /// @brief The current subframe, which should be provided to profilers beginSection() / endSection().
     std::uint32_t currentSubframe(EntryNature aNature) const;
 
-    /// @brief The subframe which is to be queried, taking into account the frame delay.
-    std::uint32_t queriedSubframe(EntryNature aNature) const;
+    /// @brief The subframe which is to be queried.
+    std::uint32_t queriedSubframe() const;
 
     std::pair<EntryIndex, bool> setupNextEntryRecurring(const char * aName, auto aProviders);
     EntryIndex setupNextEntrySingleShot(const char * aName, auto aProviders);
@@ -274,6 +274,9 @@ private:
         bool isSingleShot() const
         { return getNature() == EntryNature::SingleShot; }
 
+        /// @brief Reset the Values stored in Metrics, nothing else.
+        void resetValues();
+
         bool matchIdentity(const char * aName, const FrameState & aFrameState) const;
 
         /// @brief Returns true if `this` currently has exactly the same providers as the iterators range, in the same order.
@@ -324,8 +327,25 @@ private:
         unsigned int mFrameNumber{std::numeric_limits<unsigned int>::max()};
     };
 
+
+    /// @brief Store the EntryIndex of a single shot entry, alongside the subframe at which it was fetched.
+    /// This allows to query the result after the correct frame delay (by comparing the query subframe when it was fetched)
+    /// as well as marking the result as already queried (by changing the fetchedSubframe to an invalid subframe)
+    struct SingleShotRecord : public std::pair<EntryIndex, std::uint32_t/*subframe when fetched*/>
+    {
+        using Parent_t = std::pair<EntryIndex, std::uint32_t/*subframe when fetched*/>;
+        using Parent_t::Parent_t;
+        
+        /*implicit*/ operator EntryIndex &()
+        { return first; }
+
+        /*implicit*/ operator EntryIndex () const
+        { return first; }
+    };
+
+
     std::vector<Entry> mEntries; // Initial size handled in constructor
-    std::vector<EntryIndex> mSingleShots;
+    std::vector<SingleShotRecord> mSingleShots;
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
     FrameState mFrameState;
     unsigned int mLastResetFrame{0};
