@@ -37,7 +37,7 @@ inline std::uint64_t readTsc()
 }
 
 
-Ratio evluateRtscTickPeriod()
+Ratio evluateRtscTickPeriodMicroSeconds()
 {
     auto clockStart = Clock::now();
     auto tickCount = readTsc();
@@ -64,7 +64,7 @@ Ratio evluateRtscTickPeriod()
 //
 
 inline ProviderCpuRdtsc::ProviderCpuRdtsc():
-        ProviderInterface{"CPU (tsc)", "us", evluateRtscTickPeriod()}
+        ProviderInterface{"CPU (tsc)", "us", evluateRtscTickPeriodMicroSeconds()}
     {}
 
 inline ProviderCpuRdtsc::TickCount_t & ProviderCpuRdtsc::getInterval(EntryIndex aEntryIndex, std::uint32_t aCurrentFrame)
@@ -89,7 +89,9 @@ inline void ProviderCpuRdtsc::endSection(EntryIndex aEntryIndex, std::uint32_t a
 bool ProviderCpuRdtsc::provide(EntryIndex aEntryIndex, uint32_t aQueryFrame, GLuint & aSampleResult)
 {
     const auto & interval = getInterval(aEntryIndex, aQueryFrame);
-    aSampleResult = (GLuint)(interval);
+    // TODO this assert should disappear when we have a better solution.
+    assert(interval <= std::numeric_limits<GLuint>::max());
+    aSampleResult = (GLuint)(interval / 1000);
     return true;
 }
 
