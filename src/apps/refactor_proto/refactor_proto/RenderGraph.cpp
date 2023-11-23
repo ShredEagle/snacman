@@ -762,6 +762,17 @@ void RenderGraph::update(float aDeltaTime)
 {
     PROFILER_SCOPE_RECURRING_SECTION("RenderGraph::update()", CpuTime);
     mFirstPersonControl.update(aDeltaTime);
+
+    // TODO #camera: handle this when necessary
+    // Update camera to match current values in orbital control.
+    //mCamera.setPose(mCameraControl.mOrbital.getParentToLocal());
+    //if(mCamera.isProjectionOrthographic())
+    //{
+    //    // Note: to allow "zooming" in the orthographic case, we change the viewed height of the ortho projection.
+    //    // An alternative would be to apply a scale factor to the camera Pose transformation.
+    //    changeOrthographicViewportHeight(mCamera, mCameraControl.getViewHeightAtOrbitalCenter());
+    //}
+    mCamera.setPose(mFirstPersonControl.getParentToLocal());
 }
 
 
@@ -778,6 +789,7 @@ void RenderGraph::loadDrawBuffers(const PartList & aPartList,
                 std::span{aPartList.mInstanceTransforms},
                 graphics::BufferHint::DynamicDraw);
 
+    // TODO Ad 2023/11/23: this hardcoded access to first buffer view is ugly
     proto::load(*mInstanceStream.mVertexBufferViews.at(0).mGLBuffer,
                 std::span{aPassCache.mDrawInstances},
                 graphics::BufferHint::DynamicDraw);
@@ -800,61 +812,72 @@ void RenderGraph::render()
     nvtx3::mark("RenderGraph::render()");
     NVTX3_FUNC_RANGE();
 
+    // Empty placeholder for the moment.
+    RepositoryTexture dummyTextureRepository;
+
     // TODO: How to handle material/program selection while generating the part list,
     // if the camera (or pass itself?) might override the materials?
+    // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
     PartList partList = mScene.populatePartList();
 
-    // TODO should be done per pass
-    PassCache passCache = preparePass("forward", partList, mStorage);
+    {
+        PROFILER_SCOPE_RECURRING_SECTION("load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
+        loadFrameUbo(*mUbos.mFrameUbo);
+    }
 
-    // Load the data for the part and pass related UBOs (TODO: SSBOs)
-    loadDrawBuffers(partList, passCache);
+    // Use the same indirect buffer for all drawings
+    // Its content will be rewritten by distinct passes though
+    graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
 
     gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // TODO handle pipeline state with an abstraction
-    //glEnable(GL_CULL_FACE);
-    glEnable(GL_DEPTH_TEST);
-
-    // We implemented alpha testing (cut-out), no blending.
-    glDisable(GL_BLEND);
-
-    // TODO #camera: handle this when necessary
-    // Update camera to match current values in orbital control.
-    //mCamera.setPose(mCameraControl.mOrbital.getParentToLocal());
-    //if(mCamera.isProjectionOrthographic())
-    //{
-    //    // Note: to allow "zooming" in the orthographic case, we change the viewed height of the ortho projection.
-    //    // An alternative would be to apply a scale factor to the camera Pose transformation.
-    //    changeOrthographicViewportHeight(mCamera, mCameraControl.getViewHeightAtOrbitalCenter());
-    //}
-    mCamera.setPose(mFirstPersonControl.getParentToLocal());
-
+    // ----
+    // PASS
+    // ----
     {
-        PROFILER_SCOPE_RECURRING_SECTION("load_dynamic_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
-        loadFrameUbo(*mUbos.mFrameUbo); // TODO Separate, the frame ubo should likely be at the top, once per frame
-        // Note in a more realistic application, several cameras would be used per frame.
-        loadCameraUbo(*mUbos.mViewingUbo, mCamera);
-    }
+        // Can be done once for distinct camera, if there is no culling
+        PassCache passCache = preparePass("forward", partList, mStorage);
 
-    RepositoryTexture textureRepository;
+        // Load the data for the part and pass related UBOs (TODO: SSBOs)
+        loadDrawBuffers(partList, passCache);
 
-    // Use the same indirect buffer for all drawings
-    graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
+        //
+        // Set pipeline state
+        //
+        {
+            PROFILER_SCOPE_RECURRING_SECTION("set_pipeline_state", CpuTime);
+            // TODO handle pipeline state with an abstraction
+            //glEnable(GL_CULL_FACE);
+            glEnable(GL_DEPTH_TEST);
 
-    // Reset texture bindings (to make sure that texturing does not work by "accident")
-    // this could be extended to reset everything in the context.
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+            // We implemented alpha testing (cut-out), no blending.
+            glDisable(GL_BLEND);
+        }
 
-    // TODO should be done once per viewport
-    glViewport(0, 0,
-               mGlfwAppInterface->getFramebufferSize().width(),
-               mGlfwAppInterface->getFramebufferSize().height());
+        // Might loop over cameras, or any other variation
+        //for(whatever dimension)
+        {
+            {
+                PROFILER_SCOPE_RECURRING_SECTION("load_pass_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
+                // Note in a more realistic application, several cameras would be used per frame.
+                loadCameraUbo(*mUbos.mViewingUbo, mCamera);
+            }
 
-    {
-        PROFILER_SCOPE_RECURRING_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
-        draw(passCache, mUbos.mUboRepository, textureRepository);
+            // TODO should be done once per viewport
+            glViewport(0, 0,
+                       mGlfwAppInterface->getFramebufferSize().width(),
+                       mGlfwAppInterface->getFramebufferSize().height());
+
+            // Reset texture bindings (to make sure that texturing does not work by "accident")
+            // this could be extended to reset everything in the context.
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+
+            {
+                PROFILER_SCOPE_RECURRING_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
+                draw(passCache, mUbos.mUboRepository, dummyTextureRepository);
+            }
+        }
     }
 }
 
