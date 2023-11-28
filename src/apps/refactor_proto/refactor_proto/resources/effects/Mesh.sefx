@@ -5,6 +5,12 @@
                 "pass": "forward"
             },
             "programfile": "shaders/ForwardPhongLighting.prog"
+        },
+        {
+            "annotations": {
+                "pass": "depth"
+            },
+            "programfile": "shaders/DepthMapping.prog"
         }
     ]
 }

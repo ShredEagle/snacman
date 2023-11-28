@@ -9,6 +9,7 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Commons.h
     Cube.h
+    DrawQuad.h
     GlApi.h
     IntrospectProgram.h
     Json.h

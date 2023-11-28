@@ -20,6 +20,7 @@
 #include <platform/Path.h>
 
 #include <renderer/BufferLoad.h>
+#include <renderer/FrameBuffer.h>
 #include <renderer/Query.h>
 #include <renderer/ScopeGuards.h>
 
@@ -29,6 +30,8 @@
 #include <array>
 #include <fstream>
 
+// TODO Review that file
+#include "DrawQuad.h"
 
 namespace ad::renderer {
 
@@ -87,7 +90,7 @@ const char * gFragmentShader = R"#(
 
 constexpr math::Degree<float> gInitialVFov{50.f};
 constexpr float gNearZ{-0.1f};
-constexpr float gMinFarZ{-25.f}; // Note: minimum in **absolute** value (i.e. the computed far Z can only be inferior to this).
+constexpr float gMinFarZ{-25.f};
 
 /// @brief The orbitalcamera is moved away by the largest model dimension times this factor.
 [[maybe_unused]] constexpr float gRadialDistancingFactor{1.5f};
@@ -152,6 +155,13 @@ namespace {
                 Technique{
                     .mAnnotations{
                         {"pass", "forward"},
+                    },
+                    .mConfiguredProgram = &aStorage.mPrograms.back(),
+                },
+                // Use the same program at the moment for the depth pass
+                Technique{
+                    .mAnnotations{
+                        {"pass", "depth"},
                     },
                     .mConfiguredProgram = &aStorage.mPrograms.back(),
                 }
@@ -778,6 +788,9 @@ void RenderGraph::update(float aDeltaTime)
 
 // TODO Ad 2023/09/26: Could be splitted between the part list load (which should be valid accross passes)
 // and the pass cache load (which might only be valid for a single pass)
+// TODO Ad 2023/11/26: Even more, since the model transform is to world space (i.e. constant accross viewpoints)
+// and it is fetched from a buffer in the shaders, it could actually be pushed once per frame.
+// (and the pass would only index the transform for the objects it actually draws).
 void RenderGraph::loadDrawBuffers(const PartList & aPartList,
                                   const PassCache & aPassCache)
 {
@@ -827,19 +840,131 @@ void RenderGraph::render()
 
     // Use the same indirect buffer for all drawings
     // Its content will be rewritten by distinct passes though
+    // With the current approach, this binding could be done only once at construction
     graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
 
-    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Hack until we have proper lifetime: give access to the texture outside the scope
+    const graphics::Texture * depthTexture;
 
     // ----
-    // PASS
+    // PASS (depth)
     // ----
     {
+        PROFILER_SCOPE_RECURRING_SECTION("pass_depth", CpuTime, GpuTime);
+
+        // Can be done once for distinct camera, if there is no culling
+        PassCache passCache = preparePass("depth", partList, mStorage);
+
+        // Load the data for the part and pass related UBOs (TODO: SSBOs)
+        loadDrawBuffers(partList, passCache);
+
+        //
+        // Attaching a depth texture to a FBO
+        //
+        const math::Size<2, int> depthMapSize = mGlfwAppInterface->getFramebufferSize();
+        // TODO should be a data member somewhere
+        static graphics::Texture depthMap = [](math::Size<2, int> aTextureSize, GLenum aFiltering)
+        {
+            graphics::Texture depthMap{GL_TEXTURE_2D};
+            graphics::allocateStorage(depthMap, GL_DEPTH_COMPONENT24, aTextureSize);
+            {
+                graphics::ScopedBind boundDepthMap{depthMap};
+                // TODO take sampling and filtering out, it is about reading the texture, not writing it.
+                glTexParameteri(depthMap.mTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+                glTexParameteri(depthMap.mTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+                glTexParameterfv(depthMap.mTarget, 
+                                 GL_TEXTURE_BORDER_COLOR,
+                                 math::hdr::Rgba_f{1.f, 0.f, 0.f, 0.f}.data());
+
+                glTexParameteri(depthMap.mTarget, GL_TEXTURE_MIN_FILTER, aFiltering);
+                glTexParameteri(depthMap.mTarget, GL_TEXTURE_MAG_FILTER, aFiltering);
+            }
+            return depthMap;
+        }(depthMapSize, GL_LINEAR/* seems required to get hardware pcf with sampler2DShadow */);
+
+        depthTexture = &depthMap;
+
+
+        //
+        // Set pipeline state
+        //
+        // Note: Must be set before any drawing operations, including glClear(),
+        // otherwise it becomes real mysterious real quick.
+        {
+            PROFILER_SCOPE_RECURRING_SECTION("set_pipeline_state", CpuTime);
+            glEnable(GL_CULL_FACE);
+            glEnable(GL_DEPTH_TEST);
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);
+
+            // Viewport is coupled to the depth map here
+            glViewport(0, 0, depthMapSize.width(), depthMapSize.height());
+        }
+
+        static graphics::FrameBuffer depthFbo = [](const graphics::Texture & aTexture)
+        {
+            graphics::FrameBuffer depthFbo;
+            graphics::ScopedBind boundFbo{depthFbo};
+            // The attachment is permanent, no need to recreate it each time the FBO is bound
+            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, aTexture.mTarget, aTexture, /*mip map level*/0);
+            return depthFbo;
+        }(depthMap);
+        
+        graphics::ScopedBind boundFbo{depthFbo};
+
+        // Check FBO status before rendering
+        assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+
+        // Clear must appear after the Framebuffer setup!
+        gl.Clear(GL_DEPTH_BUFFER_BIT);
+
+        ///// TODO remove
+        static graphics::Texture colorTex = [](math::Size<2, int> aTextureSize)
+        {
+            graphics::Texture tex{GL_TEXTURE_2D};
+            graphics::allocateStorage(tex, GL_RGBA8, aTextureSize);
+            return tex;
+        }(depthMapSize);
+
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorTex.mTarget, colorTex, /*mip map level*/0);
+        const GLenum buffers[] = {GL_COLOR_ATTACHMENT0};
+        glDrawBuffers(1, buffers);
+
+        assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+
+        gl.Clear(GL_COLOR_BUFFER_BIT);
+        /////
+
+        // Might loop over cameras, or any other variation
+        //for(whatever dimension)
+        {
+            {
+                PROFILER_SCOPE_RECURRING_SECTION("load_pass_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
+                // Note in a more realistic application, several cameras would be used per frame.
+                // TODO do not write it inside the pass if it can be done once above for several passes
+                loadCameraUbo(*mUbos.mViewingUbo, mCamera);
+            }
+
+            {
+                PROFILER_SCOPE_RECURRING_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
+                draw(passCache, mUbos.mUboRepository, dummyTextureRepository);
+            }
+        }
+    }
+
+    // ----
+    // PASS (forward)
+    // ----
+    {
+        PROFILER_SCOPE_RECURRING_SECTION("pass_forward", CpuTime, GpuTime);
         // Can be done once for distinct camera, if there is no culling
         PassCache passCache = preparePass("forward", partList, mStorage);
 
         // Load the data for the part and pass related UBOs (TODO: SSBOs)
         loadDrawBuffers(partList, passCache);
+
+        // FBO (default framebuffer)
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
         //
         // Set pipeline state
@@ -849,10 +974,13 @@ void RenderGraph::render()
             // TODO handle pipeline state with an abstraction
             //glEnable(GL_CULL_FACE);
             glEnable(GL_DEPTH_TEST);
+            glDepthMask(GL_TRUE);
 
             // We implemented alpha testing (cut-out), no blending.
             glDisable(GL_BLEND);
         }
+
+        gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Might loop over cameras, or any other variation
         //for(whatever dimension)
@@ -878,6 +1006,32 @@ void RenderGraph::render()
                 draw(passCache, mUbos.mUboRepository, dummyTextureRepository);
             }
         }
+    }
+
+    //
+    // Debug rendering of the depth texture
+    //
+    {
+        // Note: with stencil, we could draw those rectangles first,
+        // and prevent main rasterization behind them.
+
+        glViewport(0, 0,
+                    mGlfwAppInterface->getFramebufferSize().width() / 4,
+                    mGlfwAppInterface->getFramebufferSize().height() / 4);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(depthTexture->mTarget, *depthTexture);
+
+        // Would require scissor test to clear only part of the screen.
+        //gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        {
+            glDisable(GL_DEPTH_TEST);
+            glDisable(GL_BLEND);
+            glDepthMask(GL_FALSE);
+        }
+
+        drawQuad();
     }
 }
 
