@@ -1,8 +1,5 @@
 #include "RenderGraph.h"
 
-// TODO Ad 2023/10/18: Should get rid of this repeated implementation
-#include "RendererReimplement.h" 
-
 #include "Cube.h"
 #include "GlApi.h"
 #include "Json.h"
@@ -32,8 +29,6 @@
 #include <array>
 #include <fstream>
 
-// TODO Review that file
-#include "DrawQuad.h"
 
 namespace ad::renderer {
 
@@ -171,43 +166,6 @@ namespace {
         aStorage.mEffects.push_back(std::move(effect));
 
         return &aStorage.mEffects.back();
-    }
-
-
-    /// @brief Layout compatible with the shader's `ViewBlock`
-    struct GpuViewBlock
-    {
-        GpuViewBlock(
-            math::AffineMatrix<4, GLfloat> aWorldToCamera,
-            math::Matrix<4, 4, GLfloat> aProjection 
-        ) :
-            mWorldToCamera{aWorldToCamera},
-            mProjection{aProjection},
-            mViewingProjection{aWorldToCamera * aProjection}
-        {}
-
-        GpuViewBlock(const Camera & aCamera) :
-            GpuViewBlock{aCamera.getParentToCamera(), aCamera.getProjection()}
-        {}
-
-        math::AffineMatrix<4, GLfloat> mWorldToCamera; 
-        math::Matrix<4, 4, GLfloat> mProjection; 
-        math::Matrix<4, 4, GLfloat> mViewingProjection;
-    };
-
-
-    void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
-    {
-        GLfloat time =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 1000.f;
-        proto::loadSingle(aUbo, time, graphics::BufferHint::DynamicDraw);
-    }
-
-
-    void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
-    {
-        proto::loadSingle(aUbo, GpuViewBlock{aCamera}, graphics::BufferHint::DynamicDraw);
     }
 
 
@@ -423,116 +381,11 @@ void RenderGraph::render()
     nvtx3::mark("RenderGraph::render()");
     NVTX3_FUNC_RANGE();
 
-    auto & mUbos = mGraph.mUbos;
-    auto & mIndirectBuffer = mGraph.mIndirectBuffer;
-
-    // Empty placeholder for the moment.
-    RepositoryTexture dummyTextureRepository;
-
     // TODO: How to handle material/program selection while generating the part list,
     // if the camera (or pass itself?) might override the materials?
     // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
     PartList partList = mScene.populatePartList();
-
-    {
-        PROFILER_SCOPE_RECURRING_SECTION("load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
-        loadFrameUbo(*mUbos.mFrameUbo);
-        // Note in a more realistic application, several cameras would be used per frame.
-        loadCameraUbo(*mUbos.mViewingUbo, mCamera);
-    }
-
-    // Use the same indirect buffer for all drawings
-    // Its content will be rewritten by distinct passes though
-    // With the current approach, this binding could be done only once at construction
-    graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
-
-    mGraph.passDepth(partList, mStorage);
-
-    // ----
-    // PASS (forward)
-    // ----
-    {
-        PROFILER_SCOPE_RECURRING_SECTION("pass_forward", CpuTime, GpuTime);
-        // Can be done once for distinct camera, if there is no culling
-        PassCache passCache = preparePass("forward", partList, mStorage);
-
-        // Load the data for the part and pass related UBOs (TODO: SSBOs)
-        mGraph.loadDrawBuffers(partList, passCache);
-
-        // FBO (default framebuffer)
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-        //
-        // Set pipeline state
-        //
-        {
-            PROFILER_SCOPE_RECURRING_SECTION("set_pipeline_state", CpuTime);
-            // TODO handle pipeline state with an abstraction
-            //glEnable(GL_CULL_FACE);
-            glEnable(GL_DEPTH_TEST);
-            glDepthMask(GL_TRUE);
-
-            // We implemented alpha testing (cut-out), no blending.
-            glDisable(GL_BLEND);
-        }
-
-        gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // Might loop over cameras, or any other variation
-        //for(whatever dimension)
-        {
-            // TODO should be done once per viewport
-            glViewport(0, 0,
-                       mGlfwAppInterface->getFramebufferSize().width(),
-                       mGlfwAppInterface->getFramebufferSize().height());
-
-            // Reset texture bindings (to make sure that texturing does not work by "accident")
-            // this could be extended to reset everything in the context.
-            glBindTexture(GL_TEXTURE_2D, 0);
-            glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-
-            {
-                PROFILER_SCOPE_RECURRING_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
-                draw(passCache, mUbos.mUboRepository, dummyTextureRepository);
-            }
-        }
-    }
-
-    //
-    // Debug rendering of the depth texture
-    //
-    {
-        // Note: with stencil, we could draw those rectangles first,
-        // and prevent main rasterization behind them.
-
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(mGraph.mDepthMap.mTarget, mGraph.mDepthMap);
-
-        // Would require scissor test to clear only part of the screen.
-        //gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        {
-            glDisable(GL_DEPTH_TEST);
-            glDisable(GL_BLEND);
-            glDepthMask(GL_FALSE);
-        }
-
-        auto [nearZ, farZ] = getNearFarPlanes(mCamera);
-
-        math::Size<2, int> fbSize = mGlfwAppInterface->getFramebufferSize();
-
-        glViewport(0, 0,
-                    fbSize.width() / 4,
-                    fbSize.height() / 4);
-
-        drawQuad({
-            .mSourceChannel = 0,
-            .mLinearization = DrawQuadParameters::DepthMethod1,
-            .mNearDistance = nearZ,
-            .mFarDistance = farZ,
-        });
-    }
+    mGraph.renderFrame(partList, mCamera, mStorage);
 }
 
 

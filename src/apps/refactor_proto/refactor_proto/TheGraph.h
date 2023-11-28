@@ -39,11 +39,17 @@ struct TheGraph
     TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
              Storage & aStorage);
 
-    void loadDrawBuffers(const PartList & aPartList, const PassCache & aPassCache);
+    void renderFrame(const PartList & aPartList, const Camera & aCamera, Storage & aStorage);
 
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
     void passDepth(const PartList & aPartList, Storage & mStorage);
+    void passForward(const PartList & aPartList, Storage & mStorage);
 
+    void loadDrawBuffers(const PartList & aPartList, const PassCache & aPassCache);
+
+    void showDepthTexture(const graphics::Texture & aTexture,
+                          float aNearZ, float aFarZ,
+                          unsigned int aStackPosition = 0);
 // Data members:
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
 

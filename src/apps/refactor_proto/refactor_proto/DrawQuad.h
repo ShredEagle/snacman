@@ -34,7 +34,7 @@ const char * gVertexShaderTex = R"#(
     }
 )#";
 
-// TODO normalize options (e.g. linearize depth buffer, min-max clamping, ...)
+
 const char * gFragmentShaderTex = R"#(
     #version 420
 
