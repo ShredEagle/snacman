@@ -3,6 +3,8 @@
 
 #include "GlApi.h"
 
+#include <span>
+
 
 namespace ad::renderer {
 

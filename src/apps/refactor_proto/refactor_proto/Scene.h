@@ -11,19 +11,7 @@
 namespace ad::renderer {
 
 
-/// @brief A list of parts to be drawn, each associated to a Material and a transformation.
-/// It is intended to be reused accross distinct passes inside a frame (or even accross frame for static parts).
-struct PartList
-{
-    // The individual renderer::Objects transforms. Several parts might index to the same transform.
-    // (Same way several parts might index the same material parameters)
-    std::vector<math::AffineMatrix<4, GLfloat>> mInstanceTransforms;
-
-    // SOA
-    std::vector<const Part *> mParts;
-    std::vector<const Material *> mMaterials;
-    std::vector<GLsizei> mTransformIdx;
-};
+struct PartList;
 
 
 struct Scene
