@@ -1015,9 +1015,6 @@ void RenderGraph::render()
         // Note: with stencil, we could draw those rectangles first,
         // and prevent main rasterization behind them.
 
-        glViewport(0, 0,
-                    mGlfwAppInterface->getFramebufferSize().width() / 4,
-                    mGlfwAppInterface->getFramebufferSize().height() / 4);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(depthTexture->mTarget, *depthTexture);
@@ -1031,7 +1028,31 @@ void RenderGraph::render()
             glDepthMask(GL_FALSE);
         }
 
-        drawQuad();
+        auto [nearZ, farZ] = getNearFarPlanes(mCamera);
+
+        math::Size<2, int> fbSize = mGlfwAppInterface->getFramebufferSize();
+
+        glViewport(0, 0,
+                    fbSize.width() / 4,
+                    fbSize.height() / 4);
+
+        drawQuad({
+            .mSourceChannel = 0,
+            .mLinearization = DrawQuadParameters::DepthMethod1,
+            .mNearDistance = nearZ,
+            .mFarDistance = farZ,
+        });
+        
+        glViewport(0, fbSize.height() / 4,
+                   fbSize.width() / 4,
+                   fbSize.height() / 4);
+
+        drawQuad({
+            .mSourceChannel = 0,
+            .mLinearization = DrawQuadParameters::DepthMethod2,
+            .mNearDistance = nearZ,
+            .mFarDistance = farZ,
+        });
     }
 }
 

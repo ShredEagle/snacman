@@ -86,6 +86,17 @@ void changeOrthographicViewportHeight(Camera & aCamera, float aNewHeight)
 }
 
 
+std::pair<float/*near*/, float/*far*/> getNearFarPlanes(const Camera & aCamera)
+{
+    return std::visit(
+        [](auto aParams) -> std::pair<float, float>
+        {
+            return {aParams.mNearZ, aParams.mFarZ};
+        },
+        aCamera.getProjectionParameters());
+}
+
+
 ////////
 // Orbital
 ////////
