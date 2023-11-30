@@ -1,0 +1,10 @@
+{
+    "techniques": [
+        {
+            "annotations": {
+                "pass": "transparent"
+            },
+            "programfile": "shaders/ForwardPhongLighting_transparent.prog"
+        }
+    ]
+}

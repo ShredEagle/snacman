@@ -831,6 +831,12 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
 }
 
 
+graphics::ShaderSource Loader::loadShader(const filesystem::path & aShaderFile) const
+{
+    return graphics::ShaderSource::Preprocess(mFinder.pathFor(aShaderFile));
+}
+
+
 Scene Loader::loadScene(const filesystem::path & aSceneFile,
                         const GenericStream & aStream,
                         Storage & aStorage)

@@ -8,7 +8,7 @@
         },
         {
             "annotations": {
-                "pass": "depth"
+                "pass": "depth_opaque"
             },
             "programfile": "shaders/DepthMapping.prog"
         }

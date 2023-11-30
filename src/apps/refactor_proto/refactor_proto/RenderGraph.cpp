@@ -156,7 +156,7 @@ namespace {
                 // Use the same program at the moment for the depth pass
                 Technique{
                     .mAnnotations{
-                        {"pass", "depth"},
+                        {"pass", "depth_opaque"},
                     },
                     .mConfiguredProgram = &aStorage.mPrograms.back(),
                 }
@@ -302,7 +302,7 @@ RenderGraph::RenderGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterfa
                    gInitialVFov,
                    Orbital{2/*initial radius*/}
     },
-    mGraph{mGlfwAppInterface, mStorage}
+    mGraph{mGlfwAppInterface, mStorage, mLoader}
 {
     registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close, &aImguiUi);
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);

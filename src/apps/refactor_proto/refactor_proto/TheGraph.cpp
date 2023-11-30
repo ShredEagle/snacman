@@ -12,6 +12,8 @@
 #include "SetupDrawing.h"
 
 
+#include <renderer/Uniforms.h>
+
 
 namespace ad::renderer {
 
@@ -162,15 +164,15 @@ void draw(const PassCache & aPassCache,
 // TheGraph
 //
 TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
-                   Storage & aStorage) :
+                   Storage & aStorage,
+                   const Loader & aLoader) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
     mUbos{aStorage},
-    mInstanceStream{makeInstanceStream(aStorage, gMaxDrawInstances)}
+    mInstanceStream{makeInstanceStream(aStorage, gMaxDrawInstances)},
+    mRenderSize{mGlfwAppInterface->getFramebufferSize()}, // TODO Ad 2023/11/28: Listen to framebuffer resize
+    mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")}
 {
-    // TODO Ad 2023/11/28: Listen to framebuffer resize
-    mDepthMapSize = mGlfwAppInterface->getFramebufferSize();
-
-    graphics::allocateStorage(mDepthMap, GL_DEPTH_COMPONENT24, mDepthMapSize);
+    graphics::allocateStorage(mDepthMap, GL_DEPTH_COMPONENT24, mRenderSize);
     [this](GLenum aFiltering)
     {
         graphics::ScopedBind boundDepthMap{mDepthMap};
@@ -192,6 +194,35 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
         graphics::ScopedBind boundFbo{mDepthFbo};
         // The attachment is permanent, no need to recreate it each time the FBO is bound
         glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, mDepthMap.mTarget, mDepthMap, /*mip map level*/0);
+
+        assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+    }
+
+    //
+    // Blended Order Independent Transparency
+    // see: https://casual-effects.blogspot.com/2015/03/implemented-weighted-blended-order.html
+    //
+    graphics::allocateStorage(mTransparencyAccum, GL_RGBA16F, mRenderSize);
+    graphics::allocateStorage(mTransparencyRevealage, GL_R8, mRenderSize);
+
+    // Setup Framebuffer
+    {
+        graphics::ScopedBind boundFbo{mTransparencyFbo};
+        // Reuse existing opaque depth buffer
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, mDepthMap.mTarget, mDepthMap, /*mip map level*/0);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, mTransparencyAccum.mTarget, mTransparencyAccum, 0);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, mTransparencyRevealage.mTarget, mTransparencyRevealage, 0);
+
+        const GLenum buffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+        glDrawBuffers(2, buffers);
+
+        assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+    }
+
+    // Assign permanent texture units to glsl samplers used for the 2D transparency compositing.
+    {
+        graphics::setUniform(mTransparencyResolver.mProgram, "u_AccumTexture", gAccumTextureUnit);
+        graphics::setUniform(mTransparencyResolver.mProgram, "u_RevealageTexture", gRevealageTextureUnit);
     }
 }
 
@@ -237,14 +268,21 @@ void TheGraph::renderFrame(const PartList & aPartList, const Camera & aCamera, S
     // With the current approach, this binding could be done only once at construction
     graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
 
-    passDepth(aPartList, aStorage);
+    passOpaqueDepth(aPartList, aStorage);
+    // TODO Ad 2023/11/30: #perf Currently, this forward pass does not leverage the already available opaque depth-buffer
+    // We cannot bind our "custom" depth buffer as the default framebuffer depth-buffer, so we will need to study alternatives:
+    // render opaque depth to default FB, and blit to a texture for showing, render forward to a render target then blit to default FB, ...
     passForward(aPartList, aStorage);
+    passTransparencyAccumulation(aPartList, aStorage);
+    passTransparencyResolve(aPartList, aStorage);
 
     //
     // Debug rendering of the depth texture
     //
     auto [nearZ, farZ] = getNearFarPlanes(aCamera);
     showDepthTexture(mDepthMap, nearZ, farZ) ;
+    showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
+    showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
 }
 
 
@@ -303,7 +341,7 @@ void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
     PROFILER_SCOPE_RECURRING_SECTION("pass_depth", CpuTime, GpuTime);
 
     // Can be done once even for distinct cameras, if there is no culling
-    PassCache passCache = preparePass("depth", aPartList, aStorage);
+    PassCache passCache = preparePass("depth_opaque", aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -322,33 +360,13 @@ void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
         glDisable(GL_BLEND);
 
         // Viewport is coupled to the depth map here
-        glViewport(0, 0, mDepthMapSize.width(), mDepthMapSize.height());
+        glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
     }
 
     graphics::ScopedBind boundFbo{mDepthFbo};
 
-    // Check bound FBO status before rendering
-    assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-
     // Clear must appear after the Framebuffer setup!
     gl.Clear(GL_DEPTH_BUFFER_BIT);
-
-    ///// TODO remove when it is used in another pass
-    //static graphics::Texture colorTex = [](math::Size<2, int> aTextureSize)
-    //{
-    //    graphics::Texture tex{GL_TEXTURE_2D};
-    //    graphics::allocateStorage(tex, GL_RGBA8, aTextureSize);
-    //    return tex;
-    //}(depthMapSize);
-
-    //glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorTex.mTarget, colorTex, /*mip map level*/0);
-    //const GLenum buffers[] = {GL_COLOR_ATTACHMENT0};
-    //glDrawBuffers(1, buffers);
-
-    //assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-
-    //gl.Clear(GL_COLOR_BUFFER_BIT);
-    /////
 
     // Might loop over cameras, or any other variation
     //for(whatever dimension)
@@ -371,7 +389,7 @@ void TheGraph::passForward(const PartList & aPartList, Storage & mStorage)
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
 
-    // FBO (default framebuffer)
+    // Default Framebuffer
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
     //
@@ -409,5 +427,108 @@ void TheGraph::passForward(const PartList & aPartList, Storage & mStorage)
         }
     }
 }
+
+
+void TheGraph::passTransparencyAccumulation(const PartList & aPartList, Storage & mStorage)
+{
+    PROFILER_SCOPE_RECURRING_SECTION("pass_transparency_accum", CpuTime, GpuTime);
+
+    //
+    // Clear output resources
+    //
+    {
+        static const std::array<GLhalf, 4> accumClearColor{0, 0, 0, 0};
+        glClearTexImage(mTransparencyAccum, 0, GL_RGBA, GL_HALF_FLOAT, accumClearColor.data());
+    }
+
+    {
+        GLubyte revealageClearColor = std::numeric_limits<GLubyte>::max();
+        glClearTexImage(mTransparencyRevealage, 0, GL_RED, GL_UNSIGNED_BYTE, &revealageClearColor);
+    }
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, mTransparencyFbo);
+
+    //
+    // Set pipeline state
+    //
+    {
+        PROFILER_SCOPE_RECURRING_SECTION("set_pipeline_state", CpuTime);
+        // TODO handle pipeline state with an abstraction
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST); // Discard transparent fragments behind the closest opaque fragment.
+        glDepthMask(GL_FALSE); // Do not update the depth buffer, so we can render transparents in any order.
+
+        // Setup the blending as prescribed
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        // Accum
+        glBlendFunci(0, GL_ONE, GL_ONE);
+        // Revealage
+        glBlendFunci(1, GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+    }
+
+    // Can be done once for distinct camera, if there is no culling
+    PassCache passCache = preparePass("transparent", aPartList, mStorage);
+
+    // Load the data for the part and pass related UBOs (TODO: SSBOs)
+    loadDrawBuffers(aPartList, passCache);
+
+    // Draw
+    {
+        glViewport(0, 0,
+                   mRenderSize.width(), mRenderSize.height());
+
+        {
+            PROFILER_SCOPE_RECURRING_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
+            draw(passCache, mUbos.mUboRepository, mDummyTextureRepository);
+        }
+    }
+}
+
+
+void TheGraph::passTransparencyResolve(const PartList & aPartList, Storage & mStorage)
+{
+    PROFILER_SCOPE_RECURRING_SECTION("pass_transparency_resolve", CpuTime, GpuTime);
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+    //
+    // Set pipeline state
+    //
+    {
+        PROFILER_SCOPE_RECURRING_SECTION("set_pipeline_state", CpuTime);
+        // TODO handle pipeline state with an abstraction
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+
+        // Setup the blending as prescribed
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        // Accum
+        glBlendFunci(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    // Bind textures to textures units
+
+    // This is a manual approach, not aligned with our usual dynamic "IntrospectProgram" appraoch
+    // This has the advantage that it should do less driver work than the dynamic version,
+    // but this decision should be reviewed.
+    glActiveTexture(GL_TEXTURE0 + gAccumTextureUnit);
+    bind(mTransparencyAccum);
+    glActiveTexture(GL_TEXTURE0 + gRevealageTextureUnit);
+    bind(mTransparencyRevealage);
+
+    // Draw
+    {
+        glViewport(0, 0,
+                   mRenderSize.width(), mRenderSize.height());
+
+        {
+            PROFILER_SCOPE_RECURRING_SECTION("draw_quad", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
+            mTransparencyResolver.drawQuad();
+        }
+    }
+}
+
 
 } // namespace ad::renderer

@@ -67,6 +67,8 @@ struct Loader
                                   // TODO Ad 2023/10/03: #shader-system Remove this temporary.
                                   const std::vector<std::string> & aDefines_temp);
 
+    graphics::ShaderSource loadShader(const filesystem::path & aShaderFile) const;
+
     Scene loadScene(const filesystem::path & aSceneFile,
                     const GenericStream & aStream,
                     Storage & aStorage);

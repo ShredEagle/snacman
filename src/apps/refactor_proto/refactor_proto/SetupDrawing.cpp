@@ -162,6 +162,10 @@ void setTextures(const IntrospectProgram & aProgram,
                 // TODO assertions regarding texture-sampler compatibility
                 auto guardImageUnit = graphics::activateTextureUnitGuard(textureImageUnit);
                 bind(*found->second); // should not be unbound when we exit the current scope.
+                // TODO Ad 2023/11/30: Currently, we are assigning texture image units to sampler uniforms of the shader program
+                // and binding the texture to the texture unit each time.
+                // Assuming we will bind the texture to the TU each time, we can set the uniforms only once for the shader program lifetime 
+                // (as long as the texture is bound to the same unit).
                 graphics::setUniform(aProgram, shaderUniform.mLocation, textureImageUnit);
                 ++textureImageUnit;
             }
