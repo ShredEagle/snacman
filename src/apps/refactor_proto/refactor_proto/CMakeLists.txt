@@ -39,6 +39,7 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     Camera.cpp
+    DrawQuad.cpp
     IntrospectProgram.cpp
     Loader.cpp
     Logging.cpp

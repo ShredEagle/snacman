@@ -248,9 +248,9 @@ void TheGraph::renderFrame(const PartList & aPartList, const Camera & aCamera, S
 }
 
 
-void TheGraph::showDepthTexture(const graphics::Texture & aTexture,
-                                float aNearZ, float aFarZ,
-                                unsigned int aStackPosition)
+void TheGraph::showTexture(const graphics::Texture & aTexture,
+                           unsigned int aStackPosition,
+                           DrawQuadParameters aDrawParams)
 {
     assert(aStackPosition < 4);
 
@@ -277,15 +277,28 @@ void TheGraph::showDepthTexture(const graphics::Texture & aTexture,
                fbSize.width() / 4,
                fbSize.height() / 4);
 
-    drawQuad({
-        .mSourceChannel = 0,
-        .mLinearization = DrawQuadParameters::DepthMethod1,
-        .mNearDistance = aNearZ,
-        .mFarDistance = aFarZ,
-    });
+    drawQuad(aDrawParams);
 }
 
-void TheGraph::passDepth(const PartList & aPartList, Storage & aStorage)
+
+// TODO rewrite in terms of above
+void TheGraph::showDepthTexture(const graphics::Texture & aTexture,
+                                float aNearZ, float aFarZ,
+                                unsigned int aStackPosition)
+{
+    showTexture(
+        aTexture, 
+        aStackPosition,
+        {
+            .mSourceChannel = 0,
+            .mOperation = DrawQuadParameters::DepthLinearize1,
+            .mNearDistance = aNearZ,
+            .mFarDistance = aFarZ,
+        });
+}
+
+
+void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION("pass_depth", CpuTime, GpuTime);
 

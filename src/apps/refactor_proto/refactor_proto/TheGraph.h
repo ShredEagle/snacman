@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DrawQuad.h"
 #include "Model.h"
 #include "Repositories.h"
 
@@ -46,6 +47,10 @@ struct TheGraph
     void passForward(const PartList & aPartList, Storage & mStorage);
 
     void loadDrawBuffers(const PartList & aPartList, const PassCache & aPassCache);
+
+    void showTexture(const graphics::Texture & aTexture,
+                     unsigned int aStackPosition,
+                     DrawQuadParameters aDrawParams = {});
 
     void showDepthTexture(const graphics::Texture & aTexture,
                           float aNearZ, float aFarZ,
