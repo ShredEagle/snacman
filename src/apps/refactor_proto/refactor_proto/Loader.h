@@ -68,7 +68,6 @@ struct Loader
                                   const std::vector<std::string> & aDefines_temp);
 
     Scene loadScene(const filesystem::path & aSceneFile,
-                    const filesystem::path & aEffectFile,
                     const GenericStream & aStream,
                     Storage & aStorage);
 

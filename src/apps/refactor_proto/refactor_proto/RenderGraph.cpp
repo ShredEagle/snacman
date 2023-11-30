@@ -307,7 +307,7 @@ RenderGraph::RenderGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterfa
     registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close, &aImguiUi);
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
-    mScene = mLoader.loadScene(aSceneFile, "effects/Mesh.sefx", mGraph.mInstanceStream, mStorage);
+    mScene = mLoader.loadScene(aSceneFile, mGraph.mInstanceStream, mStorage);
     /*const*/Node & model = mScene.mRoot.mChildren.front();
 
     // TODO Ad 2023/10/03: Sort out this bit of logic: remove hardcoded sections,

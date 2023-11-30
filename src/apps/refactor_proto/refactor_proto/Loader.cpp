@@ -832,7 +832,6 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
 
 
 Scene Loader::loadScene(const filesystem::path & aSceneFile,
-                        const filesystem::path & aEffectFile,
                         const GenericStream & aStream,
                         Storage & aStorage)
 {
@@ -849,7 +848,7 @@ Scene Loader::loadScene(const filesystem::path & aSceneFile,
 
         Node model = loadBinary(workingDir / modelFile,
                                 aStorage,
-                                loadEffect(aEffectFile, aStorage, defines),
+                                loadEffect(entry["effect"], aStorage, defines),
                                 aStream);
 
         // TODO store and load names in the binary file format
