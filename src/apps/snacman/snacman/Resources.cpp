@@ -1,13 +1,22 @@
 #include "Resources.h"
 
-#include "RenderThread.h"                   // for RenderThread
-#include "simulations/snacgame/Renderer.h"  // for Renderer
+#include "detail/Serialization.h"
+#include "detail/Reflexion.h"
+#include "detail/Reflexion_impl.h"
 
-#include <resource/ResourceManager.h>               // for ResourceManager
-                                                    //
-#include <algorithm>                                // for copy, max
-#include <future>                                   // for future
-#include <string>                                   // for operator==, string
+#include "RenderThread.h"                  // for RenderThread
+#include "simulations/snacgame/Renderer.h" // for Renderer
+
+#include <entity/Entity.h>
+#include <entity/EntityManager.h>
+
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <resource/ResourceManager.h> // for ResourceManager
+                                      //
+#include <algorithm>                  // for copy, max
+#include <future>                     // for future
+#include <string>                     // for operator==, string
 
 namespace ad {
 namespace snac {
@@ -21,16 +30,16 @@ Resources::~Resources()
     SELOG(debug)("Destructing snacman::Resources instance.");
 }
 
-
-std::shared_ptr<Model> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
+std::shared_ptr<Model> Resources::getModel(filesystem::path aModel,
+                                           filesystem::path aEffect)
 {
     // This is bad design, but lazy to get the result quickly
-    if(aModel.string() == "CUBE")
+    if (aModel.string() == "CUBE")
     {
         if (!mCube)
         {
             mCube = mRenderThread.loadModel(aModel, aEffect, *this)
-                .get(); // synchronize call
+                        .get(); // synchronize call
         }
         return mCube;
     }
@@ -40,58 +49,69 @@ std::shared_ptr<Model> Resources::getModel(filesystem::path aModel, filesystem::
     }
 }
 
-
 std::shared_ptr<Font> Resources::getFont(filesystem::path aFont,
                                          unsigned int aPixelHeight,
                                          filesystem::path aEffect)
 {
-    return mFonts.load(aFont, mFinder, aPixelHeight, aEffect, mRenderThread, *this);
+    return mFonts.load(aFont, mFinder, aPixelHeight, aEffect, mRenderThread,
+                       *this);
 }
-
 
 std::shared_ptr<Effect> Resources::getShaderEffect(filesystem::path aEffect)
 {
     return mEffects.load(aEffect, mFinder, mRenderThread, *this);
 }
 
-
-std::shared_ptr<Effect> Resources::EffectLoader(
-    filesystem::path aEffect, 
-    RenderThread<snacgame::Renderer> & aRenderThread,
-    Resources & aResources)
+std::shared_ptr<Effect>
+Resources::EffectLoader(filesystem::path aEffect,
+                        RenderThread<snacgame::Renderer> & aRenderThread,
+                        Resources & aResources)
 {
     return loadEffect(aEffect, aResources.getTechniqueLoader());
 }
 
-
-std::shared_ptr<Font> Resources::FontLoader(
-    filesystem::path aFont, 
-    unsigned int aPixelHeight,
-    filesystem::path aEffect,
-    RenderThread<snacgame::Renderer> & aRenderThread,
-    Resources & aResources)
+std::shared_ptr<Font>
+Resources::FontLoader(filesystem::path aFont,
+                      unsigned int aPixelHeight,
+                      filesystem::path aEffect,
+                      RenderThread<snacgame::Renderer> & aRenderThread,
+                      Resources & aResources)
 {
-    return aRenderThread.loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aEffect, aResources)
+    return aRenderThread
+        .loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aEffect,
+                  aResources)
         .get(); // synchronize call
 }
 
-
-std::shared_ptr<Model> Resources::ModelLoader(
-    filesystem::path aModel, 
-    filesystem::path aEffect,
-    RenderThread<snacgame::Renderer> & aRenderThread,
-    Resources & aResources)
+std::shared_ptr<Model>
+Resources::ModelLoader(filesystem::path aModel,
+                       filesystem::path aEffect,
+                       RenderThread<snacgame::Renderer> & aRenderThread,
+                       Resources & aResources)
 {
     return aRenderThread.loadModel(aModel, aEffect, aResources)
-            .get(); // synchronize call
+        .get(); // synchronize call
 }
 
+using json = nlohmann::json;
+
+ent::Handle<ent::Entity> Resources::BpLoader(filesystem::path aBpFile,
+                                             ent::EntityManager & aWorld,
+                                             Resources & aResources)
+{
+    std::ifstream bpStream(aBpFile);
+    json data = json::parse(bpStream);
+    ent::Handle<ent::Entity> bp =
+        aWorld.addBlueprint(data["name"].get<std::string>().c_str());
+    bp & data;
+    return bp;
+}
 
 void Resources::recompilePrograms()
 {
     // Note: this is a naive approach, I suspect this could lead to data races
     bool allSuccess = true;
-    for(auto & [_stringId, effect] : mEffects) 
+    for (auto & [_stringId, effect] : mEffects)
     {
         for (auto & technique : effect->mTechniques)
         {
@@ -102,12 +122,11 @@ void Resources::recompilePrograms()
         }
     }
 
-    if(allSuccess)
+    if (allSuccess)
     {
         SELOG(info)("All programs were recompiled successfully.");
     }
 }
-
 
 } // namespace snac
 } // namespace ad

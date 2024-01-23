@@ -1,6 +1,8 @@
 #pragma once
 
 // TODO might become useless once Resources itselfs become the Load<> implementer
+#include "entity/Entity.h"
+#include "entity/HandleKey.h"
 #include <snac-renderer/ResourceLoad.h>
 
 // Note: this is coupling the Resource class to the specifics of snacgame. 
@@ -49,6 +51,7 @@ public:
     std::shared_ptr<Font> getFont(filesystem::path aFont,
                                   unsigned int aPixelHeight = gDefaultPixelHeight,
                                   filesystem::path aEffect = "effects/Text.sefx");
+    std::shared_ptr<Font> getBlueprint(filesystem::path aBpFile);
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
     std::shared_ptr<Effect> getShaderEffect(filesystem::path aEffect);
@@ -83,6 +86,11 @@ private:
         filesystem::path aEffect,
         RenderThread<snacgame::Renderer> & aRenderThread,
         Resources & aResources);
+
+    static ent::Handle<ent::Entity> BpLoader(
+        filesystem::path aBpFile, 
+        ent::EntityManager & aWorld,
+        Resources & aResources);
     
     // There is a smelly circular dependency in this design:
     // Resources knows the RenderThread to request OpenGL related resource loading
@@ -95,6 +103,7 @@ private:
     resource::ResourceManager<std::shared_ptr<Font>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;
     resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;
     resource::ResourceManager<std::shared_ptr<Model>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
+    resource::ResourceManager<ent::HandleKey<ent::Entity>,   resource::ResourceFinder, &Resources::ModelLoader> mBlueprints;
 };
 
 
