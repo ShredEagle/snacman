@@ -14,8 +14,6 @@
 //#include <renderer/GL_Loader.h>
 #include <renderer/MappedGL.h>
 
-#include <spdlog/spdlog.h>
-
 
 
 #define SELOG(level) SELOG_LG(::ad::snac::gGltfLogger, level)
@@ -86,7 +84,7 @@ checkedBufferView(arte::Const_Owned<arte::gltf::Accessor> aAccessor)
     if (!aAccessor->bufferView)
     {
         SELOG(critical)
-             ("Unsupported: Accessor #{} does not have a buffer view associated.", aAccessor.id());
+             ("Unsupported: Accessor #{} does not have a buffer view associated.", fmt::streamed(aAccessor.id()));
         throw std::logic_error{"Accessor was expected to have a buffer view."};
     }
     return aAccessor.get(&arte::gltf::Accessor::bufferView);
@@ -101,7 +99,7 @@ checkImage(arte::Const_Owned<arte::gltf::Texture> aTexture)
         // Note: By the spec, when source is not provided, an extension or other mechanism
         // **should** provide an alternate texture source.
         SELOG(critical)
-             ("Unsupported: Texture #{} does not have a source associated.", aTexture.id());
+             ("Unsupported: Texture #{} does not have a source associated.", fmt::streamed(aTexture.id()));
         throw std::logic_error{"Texute was expected to have a source image."};
     }
     return aTexture.get(&arte::gltf::Texture::source);
@@ -125,7 +123,7 @@ std::vector<std::byte> loadBufferData(arte::Const_Owned<arte::gltf::Buffer> aBuf
     if (!aBuffer->uri)
     {
         SELOG(critical)
-             ("Buffer #{} does not have target defined.", aBuffer.id());
+             ("Buffer #{} does not have target defined.", fmt::streamed(aBuffer.id()));
         throw std::logic_error{"Buffer was expected to have an Uri."};
     }
 
@@ -133,7 +131,7 @@ std::vector<std::byte> loadBufferData(arte::Const_Owned<arte::gltf::Buffer> aBuf
     {
         SELOG(critical)
             ("Attempt to read range [{}, {}] from buffer #{} of length {} bytes.",
-            aByteOffset, aByteLength, aBuffer.id(), aBuffer->byteLength);
+            aByteOffset, aByteLength, fmt::streamed(aBuffer.id()), aBuffer->byteLength);
         throw std::out_of_range{"Loading buffer past the end."};
     }
 
@@ -147,17 +145,17 @@ std::vector<std::byte> loadBufferData(arte::Const_Owned<arte::gltf::Buffer> aBuf
         {
 
             SELOG(critical)
-                 ("Loading a subset of Uri data buffer #{} is not implemented yet.", aBuffer.id());
+                 ("Loading a subset of Uri data buffer #{} is not implemented yet.", fmt::streamed(aBuffer.id()));
         /*     throw std::invalid_argument{"Loading a subset of Uri data buffer."}; */
         }
-        SELOG(trace)("Buffer #{} data is read from a data URI.", aBuffer.id());
+        SELOG(trace)("Buffer #{} data is read from a data URI.", fmt::streamed(aBuffer.id()));
         std::vector<std::byte> data = loadDataUri(uri);
         
         return std::vector<std::byte>(data.begin() + aByteOffset, data.begin() + aByteOffset + aByteLength);
     }
     case arte::gltf::Uri::Type::File:
     {
-        SELOG(trace)("Buffer #{} data is read from file {}.", aBuffer.id(), uri.string);
+        SELOG(trace)("Buffer #{} data is read from file {}.", fmt::streamed(aBuffer.id()), uri.string);
         std::ifstream fileStream{
             handy::decodeUrl(aBuffer.getFilePath(&arte::gltf::Buffer::uri).string()),
             std::ios_base::in | std::ios_base::binary
@@ -286,12 +284,12 @@ arte::Image<T_pixel> loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
         {
         case arte::gltf::Uri::Type::Data:
         {
-            SELOG(trace)("Image #{} data is read from a data URI.", aImage.id());
+            SELOG(trace)("Image #{} data is read from a data URI.", fmt::streamed(aImage.id()));
             // TODO handle this situation by reading the magic numbers
             if (!aImage->mimeType)
             {
                 SELOG(critical)
-                     ("Unsupported: Image #{} has a data URI but no mime type.", aImage.id());
+                     ("Unsupported: Image #{} has a data URI but no mime type.", fmt::streamed(aImage.id()));
                 throw std::logic_error{"Image with data URI but no mime type."};
             }
             auto bytes = loadDataUri(*uri);
@@ -299,7 +297,7 @@ arte::Image<T_pixel> loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
         }
         case arte::gltf::Uri::Type::File:
         {
-            SELOG(trace)("Image #{} data is read from file '{}'.", aImage.id(), uri->string);
+            SELOG(trace)("Image #{} data is read from file '{}'.", fmt::streamed(aImage.id()), uri->string);
             return Image{handy::decodeUrl(aImage.getFilePath(*uri).string()), arte::ImageOrientation::Unchanged};
         }
         default:
@@ -308,14 +306,14 @@ arte::Image<T_pixel> loadImageData(arte::Const_Owned<arte::gltf::Image> aImage)
     }
     else
     {
-        SELOG(trace)("Image #{} data is read from a buffer view.", aImage.id());
+        SELOG(trace)("Image #{} data is read from a buffer view.", fmt::streamed(aImage.id()));
         auto bufferView =
             aImage.get(std::get<arte::gltf::Index<arte::gltf::BufferView>>(aImage->dataSource));
 
         if (!aImage->mimeType)
         {
             SELOG(critical)
-                 ("Invalid file: Image #{} has a buffer view but no mime type.", aImage.id());
+                 ("Invalid file: Image #{} has a buffer view but no mime type.", fmt::streamed(aImage.id()));
             throw std::logic_error{"Image with buffer view but no mime type."};
         }
 
@@ -342,13 +340,13 @@ std::vector<std::byte> loadContiguousData_impl(arte::Const_Owned<arte::gltf::Acc
         {
             SELOG(trace)
                  ("Buffer view #{} has an explicit stride of {}, which matches the element byte size.",
-                  *aAccessor->bufferView, *bufferView->byteStride);
+                  fmt::streamed(*aAccessor->bufferView), *bufferView->byteStride);
         }
         else
         {
             SELOG(critical)
                  ("Buffer view #{} has an non-default stride, not currently supported when loading typed data.",
-                  *aAccessor->bufferView);
+                  fmt::streamed(*aAccessor->bufferView));
             throw std::logic_error{"Buffer view with stride when loading typed data."};
         }
     }

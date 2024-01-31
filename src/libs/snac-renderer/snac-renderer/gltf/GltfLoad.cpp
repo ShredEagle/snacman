@@ -63,7 +63,7 @@ namespace {
             {
                 const GLenum infered = T_buffer::GLTarget_v;
                 SELOG(trace)("Buffer view #{} does not have target defined. Infering {}.",
-                             aBufferView.id(), graphics::to_string(infered));
+                             fmt::streamed(aBufferView.id()), graphics::to_string(infered));
                 return infered;
             }
             else
@@ -119,7 +119,7 @@ namespace {
         {
             SELOG(critical)
                 ("Accessor \"{}\" with semantic {} does not define bounds.",
-                aAccessor.id(), to_string(aSemantic));
+                fmt::streamed(aAccessor.id()), to_string(aSemantic));
             throw std::logic_error{"Accessor MUST have bounds."};
         }
         // By the spec, position MUST be a VEC3 of float.
@@ -216,7 +216,7 @@ namespace {
 
         for(const auto & [gltfSemantic, accessorId] : aPrimitive->attributes)
         {
-            SELOG(debug)("Semantic \"{}\" is associated to accessor #{}", gltfSemantic, accessorId);
+            SELOG(debug)("Semantic \"{}\" is associated to accessor #{}", gltfSemantic, fmt::streamed(accessorId));
 
             Const_Owned<gltf::Accessor> accessor = aPrimitive.get(accessorId);
 
@@ -225,14 +225,15 @@ namespace {
             {
                 SELOG(critical)
                     ("Semantic \"{}\", accessor #{} has a count of {}, while previous accessors where {}.",
-                    gltfSemantic, accessorId, accessor->count, vertexCount);
+                    gltfSemantic, fmt::streamed(accessorId), accessor->count, vertexCount);
                 throw std::runtime_error{"Inconsistent accessors count."};
             }
             vertexCount = (GLsizei)accessor->count;
 
             if(!accessor->bufferView)
             {
-                SELOG(warn)("Skipping semantic \"{}\", associated to accessor #{} which does not have a buffer view.", gltfSemantic, accessorId);
+                SELOG(warn)("Skipping semantic \"{}\", associated to accessor #{} which does not have a buffer view.",
+                            gltfSemantic, fmt::streamed(accessorId));
                 continue;
             }
 
@@ -243,7 +244,7 @@ namespace {
             {
                 SELOG(trace)
                     ("Semantic \"{}\", associated to accessor #{}, reuses mesh buffer view #{}.",
-                    gltfSemantic, accessorId, found->second);
+                    gltfSemantic, fmt::streamed(accessorId), found->second);
                 bufferViewId = found->second;
             }
             else
@@ -270,18 +271,19 @@ namespace {
                     stream.mBoundingBox = getBoundingBox(accessor, *semantic);
                     SELOG(debug)
                         ("Mesh primitive #{} has bounding box {}.",
-                         aPrimitive.id(), fmt::streamed(stream.mBoundingBox));
+                         fmt::streamed(aPrimitive.id()), fmt::streamed(stream.mBoundingBox));
                 }
             }
             else
             {
-                SELOG(warn)("Skipping semantic \"{}\", associated to accessor #{}, which does not have a translation.", gltfSemantic, accessorId);
+                SELOG(warn)("Skipping semantic \"{}\", associated to accessor #{}, which does not have a translation.",
+                            gltfSemantic, fmt::streamed(accessorId));
             }
         }
 
         if(aPrimitive->indices)
         {
-            SELOG(debug)("Primitive #{} defines indexed geometry.", aPrimitive.id());
+            SELOG(debug)("Primitive #{} defines indexed geometry.", fmt::streamed(aPrimitive.id()));
             Const_Owned<gltf::Accessor> indicesAccessor = 
                 aPrimitive.get(&gltf::Primitive::indices);
 
@@ -291,7 +293,7 @@ namespace {
                 // This would be suboptimal, meaning we load two buffers with the same data
                 SELOG(error)
                     ("Primitive #{} indices reuses a buffer view used for vertex attributes.",
-                    aPrimitive.id());
+                     fmt::streamed(aPrimitive.id()));
             }
 
             auto gltfBufferView = checkedBufferView(indicesAccessor);
