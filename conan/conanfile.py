@@ -22,17 +22,17 @@ class SnacmanConan(ConanFile):
     }
 
     requires = (
-        ("entity/e3b28a133b@adnn/develop"),
-        ("graphics/e66adcad71@adnn/develop"),
-        ("handy/ef8f663bb0@adnn/develop"),
+        ("entity/401d8462ac@adnn/develop"),
+        ("graphics/b26cc7e19b@adnn/develop"),
+        ("handy/3658039b72@adnn/develop"),
         ("math/4c3fcbd2f5@adnn/develop"),
-        ("MarkovJunior.cpp/fd8e207bee@adnn/develop"),
+        ("MarkovJunior.cpp/443432fad3@adnn/develop"),
 
         # Waiting for my PR on conan-center for assimp to get merged in
         # see: https://github.com/conan-io/conan-center-index/pull/20185
         # I manually exported the recipe and uploaded it.
         ("assimp/5.3.1@adnn/develop"),
-        ("spdlog/1.11.0@#1e0f4eb6338d05e4bd6fcc6bf4734172"),
+        ("spdlog/1.13.0"),
         ("nlohmann_json/3.11.2"),
 
         # The overrides (who will think about reviewing them?)
