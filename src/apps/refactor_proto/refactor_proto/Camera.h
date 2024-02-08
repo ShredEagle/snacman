@@ -79,6 +79,9 @@ private:
 void changeOrthographicViewportHeight(Camera & aCamera, float aNewHeight);
 
 
+std::pair<float/*near*/, float/*far*/> getNearFarPlanes(const Camera & aCamera);
+
+
 // TODO factorize, this is more general than purely camera movements.
 
 /// @brief `Orbital` represent a position on a spherical orbit around an origin.

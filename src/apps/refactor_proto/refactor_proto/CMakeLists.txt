@@ -9,6 +9,7 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Commons.h
     Cube.h
+    DrawQuad.h
     GlApi.h
     IntrospectProgram.h
     Json.h
@@ -16,6 +17,7 @@ set(${TARGET_NAME}_HEADERS
     Logging.h
     Material.h
     Model.h
+    Pass.h
     Profiler.h
     Profiling.h
     RenderGraph.h
@@ -24,6 +26,7 @@ set(${TARGET_NAME}_HEADERS
     Scene.h
     SceneGui.h
     SetupDrawing.h
+    TheGraph.h
     Time.h
 
     providers/ProviderApi.h
@@ -36,15 +39,18 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     Camera.cpp
+    DrawQuad.cpp
     IntrospectProgram.cpp
     Loader.cpp
     Logging.cpp
+    Pass.cpp
     Profiler.cpp
     Profiling.cpp
     RenderGraph.cpp
     Scene.cpp
     SceneGui.cpp
     SetupDrawing.cpp
+    TheGraph.cpp
 
     providers/ProviderCpu.cpp
     providers/ProviderGL.cpp

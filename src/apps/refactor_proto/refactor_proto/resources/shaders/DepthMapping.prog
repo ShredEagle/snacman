@@ -1,4 +1,4 @@
 {
     "vertex": "PhongLighting.vert",
-    "fragment": "PhongLighting.frag"
+    "fragment": "Depth.frag"
 }

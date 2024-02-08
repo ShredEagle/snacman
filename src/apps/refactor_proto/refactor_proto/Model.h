@@ -45,7 +45,7 @@ static constexpr auto gNullHandle = nullptr;
 // (with a shared stride and instance divisor).
 // If we allow to store distinct logical objects in the same view, we can then use the view (or VertexStream) 
 // as an identifier to match VAOs (while batching).
-// Yet this mean that a Part will need an offset into its buffer views.
+// This implies that a Part will need an offset into its buffer views.
 // This offset in implemented by the Part m*First and m*Count members.
 struct BufferView
 {
