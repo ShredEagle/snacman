@@ -1,4 +1,4 @@
-set(TARGET_NAME snac-renderer)
+set(TARGET_NAME snac-renderer-V1)
 
 set(${TARGET_NAME}_HEADERS
     Camera.h

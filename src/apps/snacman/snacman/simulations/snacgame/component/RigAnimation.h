@@ -4,7 +4,7 @@
 
 #include <math/Interpolation/ParameterAnimation.h>
 
-#include <snac-renderer/Rigging.h>
+#include <snac-renderer-V1/Rigging.h>
 
 
 namespace ad {

@@ -4,7 +4,7 @@
 #include "component/PlayerGameData.h"
 #include "entity/Entity.h"
 #include "snacman/simulations/snacgame/Entities.h"
-#include <snac-renderer/Camera.h>
+#include <snac-renderer-V1/Camera.h>
 
 namespace ad {
 namespace snacgame {

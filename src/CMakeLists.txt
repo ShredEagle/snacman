@@ -1,4 +1,4 @@
-add_subdirectory(libs/snac-renderer/snac-renderer)
+add_subdirectory(libs/snac-renderer-V1/snac-renderer-V1)
 
 #add_subdirectory(apps/snac-viewer/snac-viewer)
 add_subdirectory(apps/snacman/snacman)

@@ -2,7 +2,7 @@
 
 #include "Scene.h"
 
-#include <snac-renderer/Camera.h>
+#include <snac-renderer-V1/Camera.h>
 
 #include <entity/EntityManager.h>
 #include <entity/Query.h>

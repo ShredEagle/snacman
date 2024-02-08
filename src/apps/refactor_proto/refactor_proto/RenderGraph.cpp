@@ -24,7 +24,7 @@
 #include <renderer/ScopeGuards.h>
 
 #define NOMINMAX
-#include "../../../libs/snac-renderer/snac-renderer/3rdparty/nvtx/include/nvtx3/nvtx3.hpp"
+#include "../../../libs/snac-renderer-V1/snac-renderer-V1/3rdparty/nvtx/include/nvtx3/nvtx3.hpp"
 
 #include <array>
 #include <fstream>

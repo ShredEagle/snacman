@@ -16,7 +16,7 @@
 #include <snacman/EntityUtilities.h>
 #include <snacman/Profiling.h>
 
-#include <snac-renderer/Cube.h>
+#include <snac-renderer-V1/Cube.h>
 
 #include <entity/EntityManager.h>
 

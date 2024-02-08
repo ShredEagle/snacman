@@ -1,0 +1,149 @@
+{
+	"folders": [
+		{
+			"name": "ws_snacman_complete_vscode",
+			"path": "../../../ws_snacman_complete_vscode"
+		},
+		{
+			"name": "entity",
+			"path": "../../../entity"
+		},
+		{
+			"name": "graphics",
+			"path": "../../../graphics"
+		},
+		{
+			"name": "handy",
+			"path": "../../../handy"
+		},
+		{
+			"name": "math",
+			"path": "../../../math"
+		},
+		{
+			"name": "snacman",
+			"path": "../.."
+		}
+	],
+	"settings": {
+		"cmake.autoSelectActiveFolder": false,
+		"files.associations": {
+			"*.sefx": "json",
+			"*.prog": "json",
+			"*.sew": "json",
+			"filesystem": "cpp",
+			"algorithm": "cpp",
+			"array": "cpp",
+			"atomic": "cpp",
+			"bit": "cpp",
+			"cctype": "cpp",
+			"charconv": "cpp",
+			"chrono": "cpp",
+			"clocale": "cpp",
+			"cmath": "cpp",
+			"compare": "cpp",
+			"concepts": "cpp",
+			"condition_variable": "cpp",
+			"coroutine": "cpp",
+			"cstdarg": "cpp",
+			"cstddef": "cpp",
+			"cstdint": "cpp",
+			"cstdio": "cpp",
+			"cstdlib": "cpp",
+			"cstring": "cpp",
+			"ctime": "cpp",
+			"cwchar": "cpp",
+			"deque": "cpp",
+			"exception": "cpp",
+			"format": "cpp",
+			"forward_list": "cpp",
+			"fstream": "cpp",
+			"functional": "cpp",
+			"future": "cpp",
+			"initializer_list": "cpp",
+			"iomanip": "cpp",
+			"ios": "cpp",
+			"iosfwd": "cpp",
+			"iostream": "cpp",
+			"istream": "cpp",
+			"iterator": "cpp",
+			"limits": "cpp",
+			"list": "cpp",
+			"locale": "cpp",
+			"map": "cpp",
+			"memory": "cpp",
+			"mutex": "cpp",
+			"new": "cpp",
+			"numeric": "cpp",
+			"optional": "cpp",
+			"ostream": "cpp",
+			"queue": "cpp",
+			"random": "cpp",
+			"ranges": "cpp",
+			"ratio": "cpp",
+			"regex": "cpp",
+			"set": "cpp",
+			"span": "cpp",
+			"sstream": "cpp",
+			"stack": "cpp",
+			"stdexcept": "cpp",
+			"stop_token": "cpp",
+			"streambuf": "cpp",
+			"string": "cpp",
+			"system_error": "cpp",
+			"thread": "cpp",
+			"tuple": "cpp",
+			"type_traits": "cpp",
+			"typeindex": "cpp",
+			"typeinfo": "cpp",
+			"unordered_map": "cpp",
+			"utility": "cpp",
+			"variant": "cpp",
+			"vector": "cpp",
+			"xfacet": "cpp",
+			"xhash": "cpp",
+			"xiosbase": "cpp",
+			"xlocale": "cpp",
+			"xlocbuf": "cpp",
+			"xlocinfo": "cpp",
+			"xlocmes": "cpp",
+			"xlocmon": "cpp",
+			"xlocnum": "cpp",
+			"xloctime": "cpp",
+			"xmemory": "cpp",
+			"xstddef": "cpp",
+			"xstring": "cpp",
+			"xtr1common": "cpp",
+			"xtree": "cpp",
+			"xutility": "cpp",
+			"valarray": "cpp",
+			"any": "cpp",
+			"*.rh": "cpp",
+			"strstream": "cpp",
+			"numbers": "cpp",
+			"resumable": "cpp"
+		},
+		"cmake.buildDirectory": "D:\\projects\\Gamedev\\2\\ws_snacman_complete_vscode",
+		"[cpp]": {
+			"editor.suggest.insertMode": "insert"
+		}
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+			"name": "(msvc) Launch",
+            "type": "cppvsdbg",
+            "request": "launch",
+            // Resolved by CMake Tools:
+            "program": "${command:cmake.launchTargetPath}",
+            "args": ["D:/projects/Gamedev/2/proto-assets/proto_simple.sew"],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+			}
+		]
+	}
+}

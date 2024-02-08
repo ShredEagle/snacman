@@ -2,8 +2,9 @@
 
 #include "Scene.h"
 #include "entity/Query.h"
-#include "snac-renderer/Camera.h"
-#include "snacman/EntityUtilities.h"
+
+#include <snacman/EntityUtilities.h>
+#include <snac-renderer-V1/Camera.h>
 
 #include <string>
 

@@ -11,7 +11,7 @@
 
 #include <resource/ResourceFinder.h>
 
-#include <snac-renderer/Render.h>
+#include <snac-renderer-V1/Render.h>
 
 #include <fstream>
 

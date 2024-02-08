@@ -13,10 +13,10 @@
 
 #include <resource/ResourceFinder.h>
 
-#include <snac-renderer/DebugRenderer.h>
-#include <snac-renderer/LoadInterface.h>
-#include <snac-renderer/Render.h>
-#include <snac-renderer/ResourceLoad.h>
+#include <snac-renderer-V1/DebugRenderer.h>
+#include <snac-renderer-V1/LoadInterface.h>
+#include <snac-renderer-V1/Render.h>
+#include <snac-renderer-V1/ResourceLoad.h>
 
 #include <fstream>
 

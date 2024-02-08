@@ -4,8 +4,8 @@
 
 #include <math/Transformations.h>
 
-#include <snac-renderer/DebugDrawer.h>
-#include <snac-renderer/ResourceLoad.h>
+#include <snac-renderer-V1/DebugDrawer.h>
+#include <snac-renderer-V1/ResourceLoad.h>
 
 
 namespace ad {
