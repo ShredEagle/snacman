@@ -97,7 +97,10 @@ void main()
     vec3 phongColor = albedo.rgb * (lightColor * (diffuse + specular) + lightAmbientColor * ambient);
 
 
-    vec4 reflect = vec4(phongColor, 0.9); // Let's hardcode transparency atm
+    vec4 reflect = vec4(phongColor, 0.5); // Let's hardcode transparency atm
+    // Note: the opaque (or almost opaque) objects are problematic:
+    // They do hide the non-transparent objects as expected, but are still
+    // mutually transparent (because of how weighted accumulation works)
     //vec4 reflect = vec4(phongColor, 1); // Let's hardcode transparency atm
     vec3 transmit = vec3(0); // What is that?
     writePixel(reflect, transmit, 0);
