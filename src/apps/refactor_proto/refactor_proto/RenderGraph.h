@@ -1,12 +1,13 @@
 #pragma once
 
 
-#include "Camera.h"
-#include "Model.h"
-#include "Loader.h"
 #include "Scene.h"
 #include "SceneGui.h"
 #include "TheGraph.h"
+
+#include <snac-renderer-V2/Camera.h>
+#include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/files/Loader.h>
 
 #include <graphics/ApplicationGlfw.h>
 

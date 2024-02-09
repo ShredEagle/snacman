@@ -1,9 +1,5 @@
 #include "Camera.h"
 
-#include <math/Transformations.h>
-
-#include <graphics/CameraUtilities.h>
-
 // TODO Address this dirty include, currently needed to get the GLFW input definitions
 #include <GLFW/glfw3.h>
 
@@ -15,50 +11,17 @@ namespace ad::renderer {
 // Camera
 ////////
 
-// TODO factorize those projection matrix functions
-math::Matrix<4, 4, float> Camera::MakeProjection(OrthographicParameters aParams)
-{
-    assert(aParams.mNearZ > aParams.mFarZ);
-
-    math::Box<GLfloat> viewVolume = 
-        graphics::getViewVolumeRightHanded(aParams.mAspectRatio,
-                                           aParams.mViewHeight,
-                                           aParams.mNearZ,
-                                           aParams.mNearZ - aParams.mFarZ /* both should be negative,
-                                                                             resulting in a positive */
-                                          );
-
-    return
-        math::trans3d::orthographicProjection(viewVolume)
-        * math::trans3d::scale(1.f, 1.f, -1.f) // camera space is right handed, but gl clip space is left handed.
-    ;
-}
-
-
-math::Matrix<4, 4, float> Camera::MakeProjection(PerspectiveParameters aParams)
-{
-    return 
-        math::trans3d::perspective(aParams.mNearZ, aParams.mFarZ)
-        * MakeProjection(OrthographicParameters{
-                .mAspectRatio = aParams.mAspectRatio,
-                .mViewHeight = 2 * tan(aParams.mVerticalFov / 2.f) * std::abs(aParams.mNearZ),
-                .mNearZ = aParams.mNearZ,
-                .mFarZ = aParams.mFarZ,
-            })
-    ;
-}
-
 
 void Camera::setupOrthographicProjection(OrthographicParameters aParams)
 {
-    mProjection = MakeProjection(aParams);
+    mProjection = graphics::makeProjection(aParams);
     mProjectionParameters = aParams;
 }
 
 
 void Camera::setupPerspectiveProjection(PerspectiveParameters aParams)
 {
-    mProjection = MakeProjection(aParams);
+    mProjection = graphics::makeProjection(aParams);
     mProjectionParameters = aParams;
 }
 
@@ -224,9 +187,9 @@ void OrbitalControl::callbackScroll(double xoffset, double yoffset)
 }
 
 
-//
+////////
 // FirstPersonControl
-//
+////////
 
 void FirstPersonControl::callbackMouseButton(int button, int action, int mods, double xpos, double ypos)
 {

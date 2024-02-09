@@ -67,10 +67,10 @@ target_link_libraries(${TARGET_NAME}
     PRIVATE
         ad::arte
         ad::math
+        ad::snac-renderer-V2
 
         assimp::assimp
         spdlog::spdlog
-        #nlohmann_json::nlohmann_json
 )
 
 

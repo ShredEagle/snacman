@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "Model.h"
+#include <snac-renderer-V2/Model.h>
 
 
 namespace ad::renderer {

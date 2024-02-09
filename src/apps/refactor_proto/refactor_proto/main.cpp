@@ -1,5 +1,4 @@
 #include "Logging.h"
-#include "Profiling.h"
 #include "RenderGraph.h"
 #include "Time.h"
 
@@ -9,6 +8,7 @@
 #include <imguiui/ImguiUi.h>
 #include <imguiui/Widgets.h>
 #include <profiler/GlApi.h>
+#include <snac-renderer-V2/Profiling.h>
 #include <utilities/Time.h>
 
 #include <iostream>

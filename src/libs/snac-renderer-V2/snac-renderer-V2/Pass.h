@@ -1,10 +1,9 @@
 #pragma once
 
 
-#include "Model.h"
-
-
 #include <renderer/GL_Loader.h>
+
+#include <snac-renderer-V2/Model.h>
 
 
 namespace ad::renderer {

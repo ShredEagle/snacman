@@ -1,16 +1,18 @@
 #include "TheGraph.h"
 
-// TODO Ad 2023/10/18: Should get rid of this repeated implementation
-#include "RendererReimplement.h" 
 
-#include "Camera.h"
 #include "DrawQuad.h"
-#include "Loader.h" // for semantics
-#include "Pass.h"
-#include "Profiling.h"
 #include "Scene.h"
-#include "SetupDrawing.h"
 
+#include <snac-renderer-V2/Camera.h>
+// TODO Ad 2023/10/18: Should get rid of this repeated implementation
+#include <snac-renderer-V2/RendererReimplement.h>
+#include <snac-renderer-V2/Pass.h>
+#include <snac-renderer-V2/Profiling.h>
+#include <snac-renderer-V2/Semantics.h>
+#include <snac-renderer-V2/SetupDrawing.h>
+
+#include <snac-renderer-V2/files/Loader.h>
 
 #include <renderer/Uniforms.h>
 

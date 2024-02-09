@@ -5,42 +5,23 @@ set(REPO_FOLDER ${PROJECT_SOURCE_DIR})
 configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
-    BinaryArchive.h
-    Camera.h
-    Commons.h
-    Cube.h
     DrawQuad.h
-    IntrospectProgram.h
     Json.h
-    Loader.h
     Logging.h
-    Material.h
-    Model.h
-    Pass.h
-    Profiling.h
     RenderGraph.h
-    RendererReimplement.h
-    Repositories.h
     Scene.h
     SceneGui.h
-    SetupDrawing.h
     TheGraph.h
 )
 
 set(${TARGET_NAME}_SOURCES
     main.cpp
 
-    Camera.cpp
     DrawQuad.cpp
-    IntrospectProgram.cpp
-    Loader.cpp
     Logging.cpp
-    Pass.cpp
-    Profiling.cpp
     RenderGraph.cpp
     Scene.cpp
     SceneGui.cpp
-    SetupDrawing.cpp
     TheGraph.cpp
 )
 
@@ -90,7 +71,7 @@ file(GENERATE
 
 find_package(Graphics CONFIG REQUIRED graphics imguiui renderer)
 find_package(Math CONFIG REQUIRED math)
-find_package(Handy CONFIG REQUIRED handy resource)
+find_package(Handy CONFIG REQUIRED handy)
 
 
 #find_package(nlohmann_json 3.11.2 CONFIG REQUIRED)
@@ -104,7 +85,7 @@ target_link_libraries(${TARGET_NAME}
         ad::math
         ad::profiler
         ad::renderer
-        ad::resource
+        ad::snac-renderer-V2
         ad::utilities
 
         spdlog::spdlog

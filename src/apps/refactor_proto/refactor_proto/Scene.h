@@ -1,16 +1,12 @@
 #pragma once
 
 
-#include "Model.h"
-
-#include <math/Matrix.h>
-
-#include <vector>
+#include <snac-renderer-V2/Model.h>
 
 
 namespace ad::renderer {
 
-
+struct Loader;
 struct PartList;
 
 
@@ -47,6 +43,12 @@ struct Scene
         },
     }; 
 };
+
+
+Scene loadScene(const filesystem::path & aSceneFile,
+                const GenericStream & aStream,
+                Loader & aLoader, 
+                Storage & aStorage);
 
 
 } // namespace ad::renderer

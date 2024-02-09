@@ -1,12 +1,8 @@
 #include "RenderGraph.h"
 
-#include "Cube.h"
-#include "GlApi.h"
 #include "Json.h"
-#include "Loader.h"
 #include "Logging.h"
-#include "Pass.h"
-#include "Profiling.h"
+
 
 #include <handy/vector_utils.h>
 
@@ -18,12 +14,13 @@
 
 #include <platform/Path.h>
 
-#include <renderer/BufferLoad.h>
-#include <renderer/FrameBuffer.h>
-#include <renderer/Query.h>
-#include <renderer/ScopeGuards.h>
+#include <profiler/GlApi.h>
 
-#define NOMINMAX
+#include <snac-renderer-V2/Cube.h>
+#include <snac-renderer-V2/Pass.h>
+#include <snac-renderer-V2/Profiling.h>
+
+// TODO #nvtx This should be handled cleanly by the profiler
 #include "../../../libs/snac-renderer-V1/snac-renderer-V1/3rdparty/nvtx/include/nvtx3/nvtx3.hpp"
 
 #include <array>
@@ -307,7 +304,7 @@ RenderGraph::RenderGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterfa
     registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close, &aImguiUi);
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
-    mScene = mLoader.loadScene(aSceneFile, mGraph.mInstanceStream, mStorage);
+    mScene = loadScene(aSceneFile, mGraph.mInstanceStream, mLoader, mStorage);
     /*const*/Node & model = mScene.mRoot.mChildren.front();
 
     // TODO Ad 2023/10/03: Sort out this bit of logic: remove hardcoded sections,

@@ -1,13 +1,14 @@
 #pragma once
 
 #include "DrawQuad.h"
-#include "Model.h"
-#include "Repositories.h"
 
 #include <graphics/ApplicationGlfw.h>
 
 #include <renderer/FrameBuffer.h>
 #include <renderer/Texture.h>
+
+#include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/Repositories.h>
 
 
 namespace ad::renderer {

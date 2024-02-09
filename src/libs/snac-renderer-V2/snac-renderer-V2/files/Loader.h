@@ -1,8 +1,7 @@
 #pragma once
 
 
-#include "Model.h"
-#include "Scene.h"
+#include "../Model.h"
 
 #include <math/Homogeneous.h>
 
@@ -19,23 +18,6 @@ struct InstanceData
     GLuint mModelTransformIdx = (GLuint)-1;
     GLuint mMaterialIdx = (GLuint)-1;
 };
-
-
-namespace semantic
-{
-    const Semantic gPosition{"Position"};
-    const Semantic gNormal{"Normal"};
-    const Semantic gColor{"Color"};
-    const Semantic gUv{"Uv"};
-    const Semantic gDiffuseTexture{"DiffuseTexture"};
-    const Semantic gModelTransformIdx{"ModelTransformIdx"};
-    const Semantic gMaterialIdx{"MaterialIdx"};
-
-    const BlockSemantic gFrame{"Frame"};
-    const BlockSemantic gView{"View"};
-    const BlockSemantic gMaterials{"Materials"};
-    const BlockSemantic gLocalToWorld{"LocalToWorld"};
-} // namespace semantic
 
 
 // IMPORTANT: for the moment, just load the first vertex stream in the file
@@ -68,10 +50,6 @@ struct Loader
                                   const std::vector<std::string> & aDefines_temp);
 
     graphics::ShaderSource loadShader(const filesystem::path & aShaderFile) const;
-
-    Scene loadScene(const filesystem::path & aSceneFile,
-                    const GenericStream & aStream,
-                    Storage & aStorage);
 
     resource::ResourceFinder mFinder;
 };

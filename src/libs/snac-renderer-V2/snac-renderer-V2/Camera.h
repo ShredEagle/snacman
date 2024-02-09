@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include <graphics/CameraUtilities.h>
+
 #include <math/Angle.h>
 #include <math/EulerAngles.h>
 #include <math/Homogeneous.h>
@@ -18,31 +20,14 @@ namespace ad::renderer {
 class Camera
 {
 public:
+    using OrthographicParameters = graphics::OrthographicParameters;
+    using PerspectiveParameters = graphics::PerspectiveParameters;
+
     //math::Matrix<4, 4, GLfloat> assembleViewMatrix() const
     //{ return mWorldToCamera * mProjection; }
 
     void setPose(math::AffineMatrix<4, float> aParentToCamera)
     { mParentToCamera = aParentToCamera; }
-
-    struct OrthographicParameters
-    {
-        float mAspectRatio;
-        float mViewHeight;
-        float mNearZ; // usually negative: Z coordinate of the near plane in the right handed coordinate system.
-        float mFarZ;  // usually negative: Z coordinate of the far plane in the right handed coordinate system.
-    };
-
-    struct PerspectiveParameters
-    {
-        float mAspectRatio;
-        math::Radian<float> mVerticalFov;
-        float mNearZ; // usually negative: Z coordinate of the near plane in the right handed coordinate system.
-        float mFarZ;  // usually negative: Z coordinate of the far plane in the right handed coordinate system.
-    };
-
-    // TODO Decide whether it should be lifted into a more general library?
-    static math::Matrix<4, 4, float> MakeProjection(OrthographicParameters aParams);
-    static math::Matrix<4, 4, float> MakeProjection(PerspectiveParameters aParams);
 
     void setupOrthographicProjection(OrthographicParameters aParams);
 
@@ -62,7 +47,7 @@ public:
 
 private:
     math::AffineMatrix<4, float> mParentToCamera = math::AffineMatrix<4, float>::Identity(); 
-    math::Matrix<4, 4, float> mProjection = MakeProjection(OrthographicParameters{
+    math::Matrix<4, 4, float> mProjection = graphics::makeProjection(OrthographicParameters{
             .mAspectRatio = 1,
             .mViewHeight = 1,
             .mNearZ = +1,
