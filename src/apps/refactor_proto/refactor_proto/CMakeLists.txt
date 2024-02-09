@@ -79,7 +79,7 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
 file(GENERATE 
      OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
-     CONTENT "{\"prefixes\": [\"${CMAKE_CURRENT_LIST_DIR}/resources/\",
+     CONTENT "{\"prefixes\": [\"${REPO_FOLDER}/src/libs/snac-renderer-V2/snac-renderer-V2/resources/\",
                               \"${REPO_FOLDER}/../snac-assets/\"]}")
 
 
