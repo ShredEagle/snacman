@@ -70,10 +70,11 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 cmc_find_dependencies()
 
 target_link_libraries(${TARGET_NAME}
-    PUBLIC
-        ad::renderer
     PRIVATE
+        ad::renderer
         ad::utilities
+
+        spdlog::spdlog
 )
 
 

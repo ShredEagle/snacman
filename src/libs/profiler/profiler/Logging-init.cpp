@@ -22,5 +22,7 @@ const LoggerInitialization LoggerInitialization::gInitialized;
 
 void ad_profiler_loggerinitialization()
 {
+    // The hack to keep the symbol `LoggerInitialization::gInitialized`
+    // works even though we are not accessing it.
     //std::cout << ::ad::profiler::LoggerInitialization::gInitialized.i;
 }

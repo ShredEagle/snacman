@@ -1,8 +1,6 @@
 #pragma once
 
 
-#include <renderer/GL_Loader.h>
-
 #include <array>
 #include <memory>
 #include <numeric>
