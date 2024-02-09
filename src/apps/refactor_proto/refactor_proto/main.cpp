@@ -8,6 +8,7 @@
 #include <imguiui/ImguiUi.h>
 #include <imguiui/Widgets.h>
 #include <profiler/GlApi.h>
+#include <profiler/Profiler.h> // Internals are used to measure frame duration
 #include <snac-renderer-V2/Profiling.h>
 #include <utilities/Time.h>
 
@@ -111,7 +112,7 @@ void runApplication(int argc, char * argv[])
 
     imguiui::ImguiUi imguiUi{glfwApp};
 
-    auto scopeProfiler = renderer::scopeGlobalProfiler();
+    SCOPE_GLOBAL_PROFILER(scopeProfiler);
 
     PROFILER_PUSH_SINGLESHOT_SECTION(loadingSection, "rendergraph_loading", renderer::CpuTime);
     renderer::RenderGraph renderGraph{

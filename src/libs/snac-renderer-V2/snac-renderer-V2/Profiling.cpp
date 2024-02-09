@@ -6,6 +6,8 @@
 namespace ad::renderer {
 
 
+#ifdef SE_FEATURE_PROFILER
+
 std::unique_ptr<Profiler_t> globalProfiler;
 
 
@@ -28,6 +30,8 @@ Guard scopeGlobalProfiler()
         return Guard{[](){}};
     }
 }
+
+#endif
 
 
 } // namespace ad::renderer

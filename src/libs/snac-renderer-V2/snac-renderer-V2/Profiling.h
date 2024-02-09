@@ -1,6 +1,8 @@
 #pragma once
 
 
+#ifdef SE_FEATURE_PROFILER
+
 #include <profiler/Profiler.h>
 #if defined(_WIN32)
 #include <profiler/ProfilerSeattle.h>
@@ -8,27 +10,10 @@
 
 #include <handy/Guard.h>
 
+#endif
+
 
 namespace ad::renderer {
-
-
-using Profiler_t = Profiler;
-//using Profiler_t = ProfilerSeattle;
-
-
-extern std::unique_ptr<Profiler_t> globalProfiler;
-
-
-// Because some providers within the profiler require to destory GL objects,
-// we ask the client to explicitly scope the global profiler where the GL context is valid.
-Guard scopeGlobalProfiler();
-
-
-inline Profiler_t & getGlobalProfiler()
-{
-    return *globalProfiler;
-}
-
 
 // Note: Hardcoded list of available providers (for the time being),
 // since we know in which order Providers are pushed into the Profiler.
@@ -43,6 +28,22 @@ enum
 
 #ifdef SE_FEATURE_PROFILER
 
+using Profiler_t = Profiler;
+//using Profiler_t = ProfilerSeattle;
+
+extern std::unique_ptr<Profiler_t> globalProfiler;
+
+// Because some providers within the profiler require to destory GL objects,
+// we ask the client to explicitly scope the global profiler where the GL context is valid.
+Guard scopeGlobalProfiler();
+
+inline Profiler_t & getGlobalProfiler()
+{
+    return *globalProfiler;
+}
+
+
+#define SCOPE_GLOBAL_PROFILER(scopeName) auto scopeName = renderer::scopeGlobalProfiler();
 #define PROFILER_BEGIN_FRAME ::ad::renderer::getGlobalProfiler().beginFrame()
 #define PROFILER_END_FRAME ::ad::renderer::getGlobalProfiler().endFrame()
 
@@ -66,6 +67,8 @@ enum
     ::ad::renderer::getGlobalProfiler().prettyPrint(ostream);
 
 #else
+
+#define SCOPE_GLOBAL_PROFILER(scopeName)
 
 #define PROFILER_BEGIN_FRAME
 #define PROFILER_END_FRAME
