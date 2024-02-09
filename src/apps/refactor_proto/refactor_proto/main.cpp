@@ -113,7 +113,7 @@ void runApplication(int argc, char * argv[])
 
     auto scopeProfiler = renderer::scopeGlobalProfiler();
 
-    auto loadingSection = PROFILER_PUSH_SINGLESHOT_SECTION("rendergraph_loading", renderer::CpuTime);
+    PROFILER_PUSH_SINGLESHOT_SECTION(loadingSection, "rendergraph_loading", renderer::CpuTime);
     renderer::RenderGraph renderGraph{
         glfwApp.getAppInterface(),
         handleArguments(argc, argv),

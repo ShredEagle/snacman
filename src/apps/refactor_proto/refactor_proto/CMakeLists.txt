@@ -45,8 +45,6 @@ if(MSVC)
 endif()
 
 
-target_compile_definitions(${TARGET_NAME} PRIVATE "SE_FEATURE_PROFILER")
-
 cmc_target_current_include_directory(${TARGET_NAME} ADD_BINARY_DIR PRIVATE)
 
 set_target_properties(${TARGET_NAME} PROPERTIES

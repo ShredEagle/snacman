@@ -52,6 +52,7 @@ if(MSVC)
 endif()
 
 if(BUILD_SNACMAN_FEATURE_PROFILER)
+    # Public, so it propagates to other targets depending on the profiler.
     target_compile_definitions(${TARGET_NAME} PUBLIC "SE_FEATURE_PROFILER")
 endif()
 
