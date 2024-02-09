@@ -1,6 +1,4 @@
-#include "GlApi.h"
 #include "Logging.h"
-#include "Profiler.h" // For Profiler::Values
 #include "Profiling.h"
 #include "RenderGraph.h"
 #include "Time.h"
@@ -10,8 +8,11 @@
 #include <graphics/ApplicationGlfw.h>
 #include <imguiui/ImguiUi.h>
 #include <imguiui/Widgets.h>
+#include <profiler/GlApi.h>
+#include <utilities/Time.h>
 
 #include <iostream>
+
 
 using namespace ad;
 using namespace se;

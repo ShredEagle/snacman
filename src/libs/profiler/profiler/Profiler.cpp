@@ -7,6 +7,8 @@
 #include "providers/ProviderGL.h"
 #include "providers/ProviderRdtsc.h"
 
+#include <utilities/Time.h>
+
 
 #if defined(_WIN32)
 //#include "providers/ProviderWindows.h"

@@ -18,4 +18,5 @@ void initializeLogging();
 #define SELOG_LG(logger, severity) spdlog::get(logger)->severity
 #define SELOG(severity) spdlog::get(se::gMainLogger)->severity
 
+
 } // namespace se

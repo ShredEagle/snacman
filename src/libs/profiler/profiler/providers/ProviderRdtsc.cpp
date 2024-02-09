@@ -2,6 +2,8 @@
 
 #include "../Logging.h"
 
+#include <utilities/Time.h>
+
 
 namespace ad::renderer {
 

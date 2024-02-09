@@ -10,7 +10,6 @@ set(${TARGET_NAME}_HEADERS
     Commons.h
     Cube.h
     DrawQuad.h
-    GlApi.h
     IntrospectProgram.h
     Json.h
     Loader.h
@@ -18,7 +17,6 @@ set(${TARGET_NAME}_HEADERS
     Material.h
     Model.h
     Pass.h
-    Profiler.h
     Profiling.h
     RenderGraph.h
     RendererReimplement.h
@@ -27,12 +25,6 @@ set(${TARGET_NAME}_HEADERS
     SceneGui.h
     SetupDrawing.h
     TheGraph.h
-    Time.h
-
-    providers/ProviderApi.h
-    providers/ProviderCpu.h
-    providers/ProviderGL.h
-    providers/ProviderRdtsc.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -44,32 +36,13 @@ set(${TARGET_NAME}_SOURCES
     Loader.cpp
     Logging.cpp
     Pass.cpp
-    Profiler.cpp
     Profiling.cpp
     RenderGraph.cpp
     Scene.cpp
     SceneGui.cpp
     SetupDrawing.cpp
     TheGraph.cpp
-
-    providers/ProviderCpu.cpp
-    providers/ProviderGL.cpp
-    providers/ProviderRdtsc.cpp
 )
-
-
-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    list(APPEND ${TARGET_NAME}_HEADERS
-        ProfilerSeattle.h
-        providers/ProviderWindows.h
-    )
-
-    list(APPEND ${TARGET_NAME}_SOURCES
-        ProfilerSeattle.cpp
-        providers/ProviderWindows.cpp
-    )
-endif()
-
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
              FILES ${${TARGET_NAME}_HEADERS} ${${TARGET_NAME}_SOURCES}
@@ -129,8 +102,10 @@ target_link_libraries(${TARGET_NAME}
         ad::handy
         ad::imguiui
         ad::math
+        ad::profiler
         ad::renderer
         ad::resource
+        ad::utilities
 
         spdlog::spdlog
         #nlohmann_json::nlohmann_json

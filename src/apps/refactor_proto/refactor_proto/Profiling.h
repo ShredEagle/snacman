@@ -1,9 +1,9 @@
 #pragma once
 
 
-#include "Profiler.h"
+#include <profiler/Profiler.h>
 #if defined(_WIN32)
-#include "ProfilerSeattle.h"
+#include <profiler/ProfilerSeattle.h>
 #endif
 
 #include <handy/Guard.h>

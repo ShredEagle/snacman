@@ -1,3 +1,5 @@
+add_subdirectory(libs/utilities/utilities)
+add_subdirectory(libs/profiler/profiler)
 add_subdirectory(libs/snac-renderer-V1/snac-renderer-V1)
 
 #add_subdirectory(apps/snac-viewer/snac-viewer)

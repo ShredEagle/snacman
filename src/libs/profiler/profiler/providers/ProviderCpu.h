@@ -2,9 +2,8 @@
 
 
 #include "../Profiler.h"
-#include "../Time.h"
 
-
+#include <chrono>
 #include <cstddef>
 
 
@@ -12,6 +11,8 @@ namespace ad::renderer {
 
 
 struct ProviderCPUTime : public ProviderInterface {
+    using Clock = std::chrono::high_resolution_clock;
+
     ProviderCPUTime() : 
         ProviderInterface{"CPU time",
                           "us",

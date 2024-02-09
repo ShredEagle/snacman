@@ -2,7 +2,6 @@
 
 
 #include "../Profiler.h"
-#include "../Time.h"
 
 #ifdef _WIN32
 #include <intrin.h>
