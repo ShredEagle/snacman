@@ -143,6 +143,7 @@
             "environment": [],
 			// Has a bug with /c...
             //"console": "externalTerminal"
+            "console": "integratedTerminal"
 			}
 		]
 	}
