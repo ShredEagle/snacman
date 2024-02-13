@@ -1,7 +1,7 @@
 #pragma once
 
 // TODO might become useless once Resources itselfs become the Load<> implementer
-#include <snac-renderer/ResourceLoad.h>
+#include <snac-renderer-V1/ResourceLoad.h>
 
 // Note: this is coupling the Resource class to the specifics of snacgame. 
 // But I do not want to template Resource on the renderer...

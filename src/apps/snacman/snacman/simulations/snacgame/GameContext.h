@@ -18,7 +18,7 @@
 
 #include <resource/ResourceFinder.h>
 #include <snacman/Resources.h>
-#include <snac-renderer/Camera.h>
+#include <snac-renderer-V1/Camera.h>
 
 namespace ad {
 

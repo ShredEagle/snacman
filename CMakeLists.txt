@@ -15,6 +15,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Note: also set by conanuser_config.cmake
 option (BUILD_CONF_WarningAsError "Enable warning as error compiler option." False)
 
+option(BUILD_SNACMAN_FEATURE_PROFILER "Enable profiler feature (compile time)." ON)
+
 # Install the top-level package config, allowing to find all sub-components
 include(cmc-install)
 cmc_install_root_component_config(${PROJECT_NAME})

@@ -11,7 +11,7 @@
 
 #include <snacman/Profiling.h>
 
-#include <snac-renderer/Mesh.h>
+#include <snac-renderer-V1/Mesh.h>
 
 #include <entity/EntityManager.h>
 

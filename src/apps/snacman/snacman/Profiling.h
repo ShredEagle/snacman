@@ -1,6 +1,6 @@
 #pragma once
 
-#include <snac-renderer/3rdparty/nvpro/Profiler.hpp>
+#include <snac-renderer-V1/3rdparty/nvpro/Profiler.hpp>
 
 #include <handy/Guard.h>
 

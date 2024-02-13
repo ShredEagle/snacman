@@ -1,0 +1,4 @@
+@find_package@(Snacman CONFIG @REQUIRED@ utilities)
+@find_package@(Graphics CONFIG @REQUIRED@ renderer)
+
+@find_package@(spdlog CONFIG @REQUIRED@)

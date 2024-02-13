@@ -10,9 +10,9 @@
 #include <math/Interpolation/Interpolation.h>
 #include <math/Interpolation/QuaternionInterpolation.h>
 
-#include <snac-renderer/DebugDrawer.h>
-#include <snac-renderer/Rigging.h>
-#include <snac-renderer/text/Text.h>
+#include <snac-renderer-V1/DebugDrawer.h>
+#include <snac-renderer-V1/Rigging.h>
+#include <snac-renderer-V1/text/Text.h>
 
 #include <functional>
 #include <vector>

@@ -6,10 +6,10 @@
 
 #include <resource/ResourceFinder.h>
 
-#include <snac-renderer/Camera.h>
-#include <snac-renderer/DebugRenderer.h>
-#include <snac-renderer/Render.h>
-#include <snac-renderer/Rigging.h>
+#include <snac-renderer-V1/Camera.h>
+#include <snac-renderer-V1/DebugRenderer.h>
+#include <snac-renderer-V1/Render.h>
+#include <snac-renderer-V1/Rigging.h>
 
 
 namespace ad {

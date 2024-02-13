@@ -7,7 +7,7 @@
 #include "../component/PlayerSlot.h"
 
 #include <entity/EntityManager.h>
-#include <snac-renderer/Camera.h>
+#include <snac-renderer-V1/Camera.h>
 
 namespace ad {
 namespace snacgame {

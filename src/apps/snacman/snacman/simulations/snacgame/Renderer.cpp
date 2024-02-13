@@ -13,12 +13,12 @@
 
 #include <renderer/BufferLoad.h>
 
-#include <snac-renderer/text/Text.h>
-#include <snac-renderer/Instances.h>
-#include <snac-renderer/Semantic.h>
-#include <snac-renderer/Render.h>
-#include <snac-renderer/Mesh.h>
-#include <snac-renderer/ResourceLoad.h>
+#include <snac-renderer-V1/text/Text.h>
+#include <snac-renderer-V1/Instances.h>
+#include <snac-renderer-V1/Semantic.h>
+#include <snac-renderer-V1/Render.h>
+#include <snac-renderer-V1/Mesh.h>
+#include <snac-renderer-V1/ResourceLoad.h>
 
 #include <snacman/Profiling.h>
 #include <snacman/ProfilingGPU.h>

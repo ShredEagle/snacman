@@ -2,10 +2,6 @@
 
 #include "Logging.h"
 
-// TODO address that dirty include when the content is moved to a proper library
-#include "../../refactor_proto/refactor_proto/BinaryArchive.h"
-#include "../../refactor_proto/refactor_proto/Material.h"
-
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
@@ -15,6 +11,9 @@
 
 #include <math/Box.h>
 #include <math/Homogeneous.h>
+
+#include <snac-renderer-V2/Material.h>
+#include <snac-renderer-V2/files/BinaryArchive.h>
 
 #include <fmt/ostream.h>
 

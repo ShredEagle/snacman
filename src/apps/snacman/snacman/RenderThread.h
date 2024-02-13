@@ -14,9 +14,9 @@
 
 #include <resource/ResourceFinder.h>
 
-#include <snac-renderer/Camera.h>
-#include <snac-renderer/Mesh.h>
-#include <snac-renderer/text/Text.h>
+#include <snac-renderer-V1/Camera.h>
+#include <snac-renderer-V1/Mesh.h>
+#include <snac-renderer-V1/text/Text.h>
 
 #include <future>
 #include <queue>

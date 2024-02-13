@@ -1,0 +1,4 @@
+@find_package@(Graphics CONFIG @REQUIRED@ renderer)
+@find_package@(Handy CONFIG @REQUIRED@ resource)
+@find_package@(Math CONFIG @REQUIRED@ math)
+@find_package@(Snacman CONFIG @REQUIRED@ profiler)

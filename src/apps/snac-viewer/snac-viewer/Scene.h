@@ -11,10 +11,10 @@
 
 #include <math/Transformations.h>
 
-#include <snac-renderer/Camera.h>
-#include <snac-renderer/Cube.h>
-#include <snac-renderer/ResourceLoad.h>
-#include <snac-renderer/pipelines/ForwardShadows.h> 
+#include <snac-renderer-V1/Camera.h>
+#include <snac-renderer-V1/Cube.h>
+#include <snac-renderer-V1/ResourceLoad.h>
+#include <snac-renderer-V1/pipelines/ForwardShadows.h> 
 
 
 namespace ad {

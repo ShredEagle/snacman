@@ -2,7 +2,7 @@
 
 #include "Profiling.h"
 
-#include <snac-renderer/3rdparty/nvpro/Profiler_gl.hpp>
+#include <snac-renderer-V1/3rdparty/nvpro/Profiler_gl.hpp>
 
 
 namespace ad {

@@ -1,6 +1,6 @@
 #include "Logging.h"
 
-#include <snac-renderer/Logging.h>
+#include <snac-renderer-V1/Logging.h>
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 

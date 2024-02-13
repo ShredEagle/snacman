@@ -13,11 +13,11 @@
 
 #include <renderer/BufferLoad.h>
 
-#include <snac-renderer/DebugDrawer.h>
-#include <snac-renderer/Instances.h>
-#include <snac-renderer/ResourceLoad.h>
+#include <snac-renderer-V1/DebugDrawer.h>
+#include <snac-renderer-V1/Instances.h>
+#include <snac-renderer-V1/ResourceLoad.h>
 
-#include <snac-renderer/gltf/GltfLoad.h>
+#include <snac-renderer-V1/gltf/GltfLoad.h>
 
 
 namespace ad {

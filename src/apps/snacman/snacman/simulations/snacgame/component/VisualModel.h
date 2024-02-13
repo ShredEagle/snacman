@@ -1,6 +1,6 @@
 #pragma once
 
-#include <snac-renderer/Mesh.h>
+#include <snac-renderer-V1/Mesh.h>
 
 namespace ad {
 namespace snacgame {

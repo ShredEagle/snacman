@@ -7,7 +7,7 @@
 
 #include <entity/Query.h>
 #include <math/Constants.h>
-#include <snac-renderer/Camera.h>
+#include <snac-renderer-V1/Camera.h>
 
 namespace ad {
 namespace snacgame {

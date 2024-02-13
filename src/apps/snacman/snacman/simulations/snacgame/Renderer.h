@@ -3,15 +3,15 @@
 
 #include "GraphicState.h"
 
-#include <snac-renderer/Camera.h>
-#include <snac-renderer/DebugRenderer.h>
-#include <snac-renderer/LoadInterface.h>
-#include <snac-renderer/Mesh.h>
-#include <snac-renderer/Render.h>
-#include <snac-renderer/text/TextRenderer.h>
-#include <snac-renderer/UniformParameters.h>
+#include <snac-renderer-V1/Camera.h>
+#include <snac-renderer-V1/DebugRenderer.h>
+#include <snac-renderer-V1/LoadInterface.h>
+#include <snac-renderer-V1/Mesh.h>
+#include <snac-renderer-V1/Render.h>
+#include <snac-renderer-V1/text/TextRenderer.h>
+#include <snac-renderer-V1/UniformParameters.h>
 
-#include <snac-renderer/pipelines/ForwardShadows.h>
+#include <snac-renderer-V1/pipelines/ForwardShadows.h>
 
 #include <filesystem>
 #include <memory>

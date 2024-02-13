@@ -23,7 +23,7 @@
 
 #include <resource/ResourceFinder.h>
 
-#include <snac-renderer/ResourceLoad.h>
+#include <snac-renderer-V1/ResourceLoad.h>
 
 #include <fstream>
 
