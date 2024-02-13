@@ -37,6 +37,7 @@ struct HardcodedUbos
 };
 
 
+/// @brief The specific Render Graph for this viewer application.
 struct TheGraph
 {
     TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
