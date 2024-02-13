@@ -106,21 +106,28 @@ namespace {
 
 void drawQuad(DrawQuadParameters aParameters)
 {
-    static graphics::VertexArrayObject dummyVao;
-    static graphics::Program program = 
-        graphics::makeLinkedProgram({
-            {GL_VERTEX_SHADER, gVertexShaderTex},
-            {GL_FRAGMENT_SHADER, gFragmentShaderTex},
-        });
+    // IMPORTANT: The code is not managing the lifetime of the static GL objects (no RAII wrappers) by design.
+    //  Because static objects are destroyed after the main() stack is unwound, the GL destructors 
+    //  would be called *after* the GL context is destroyed.
+    // i.e., these objects are implicitly destroyed when the GL context is destoyed,
+    // which is almost exactly what we need anyway.
+    // A drawback is that by using naked GLuint instead of our types, we lose our helper functions.
+    static GLuint dummyVao;
+    glGenVertexArrays(1, &dummyVao);
+    static GLuint program = 
+            graphics::makeLinkedProgram({
+                {GL_VERTEX_SHADER, gVertexShaderTex},
+                {GL_FRAGMENT_SHADER, gFragmentShaderTex},
+            }).release();
 
     // Sadly a non zero VAO must be bound for any draw call
-    graphics::ScopedBind boundVao{dummyVao};
-    graphics::ScopedBind boundProgram{program};
+    glBindVertexArray(dummyVao);
+    glUseProgram(program);
 
-    graphics::setUniform(program, "u_SourceChannel", aParameters.mSourceChannel);
-    graphics::setUniform(program, "u_Linearization", aParameters.mOperation);
-    graphics::setUniform(program, "u_NearDistance",  aParameters.mNearDistance);
-    graphics::setUniform(program, "u_FarDistance",   aParameters.mFarDistance);
+    glProgramUniform1i(program, glGetUniformLocation(program, "u_SourceChannel"), aParameters.mSourceChannel);
+    glProgramUniform1ui(program, glGetUniformLocation(program,  "u_Linearization"), aParameters.mOperation);
+    glProgramUniform1f(program, glGetUniformLocation(program, "u_NearDistance"),  aParameters.mNearDistance);
+    glProgramUniform1f(program, glGetUniformLocation(program, "u_FarDistance"),   aParameters.mFarDistance);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
@@ -136,9 +143,8 @@ QuadDrawer::QuadDrawer(graphics::ShaderSourceView aFragmentCode) :
 
 void QuadDrawer::drawQuad() const
 {
-    static graphics::VertexArrayObject dummyVao;
-    // Sadly a non zero VAO must be bound for any draw call
-    graphics::ScopedBind boundVao{dummyVao};
+    // A non zero VAO must be bound for any draw call
+    graphics::ScopedBind boundVao{mDummyVao};
     graphics::ScopedBind boundProgram{mProgram};
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

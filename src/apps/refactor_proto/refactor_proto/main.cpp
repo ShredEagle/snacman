@@ -110,6 +110,10 @@ void runApplication(int argc, char * argv[])
     };
     glfwSwapInterval(0); // Disable V-sync
 
+    // Ensures the messages are sent synchronously with the event triggering them
+    // This makes debug stepping much more feasible.
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+
     imguiui::ImguiUi imguiUi{glfwApp};
 
     SCOPE_GLOBAL_PROFILER(scopeProfiler);

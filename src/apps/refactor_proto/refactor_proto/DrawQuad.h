@@ -2,7 +2,9 @@
 
 
 #include <renderer/GL_Loader.h>
+
 #include <renderer/Shading.h>
+#include <renderer/VertexSpecification.h>
 
 
 namespace ad::renderer {
@@ -38,6 +40,9 @@ struct QuadDrawer
     // Should it be an introspect program?
     // It should be accounted for by the storage, for statistics
     graphics::Program mProgram;
+    // Sadly a non zero VAO must be bound for any draw call
+    // Initialy, this dummy VAO was a static in drawQuad, but it meant it was destroyed after the GL context.
+    graphics::VertexArrayObject mDummyVao;
 };
 
 
