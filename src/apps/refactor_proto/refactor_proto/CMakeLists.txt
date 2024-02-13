@@ -8,10 +8,10 @@ set(${TARGET_NAME}_HEADERS
     DrawQuad.h
     Json.h
     Logging.h
-    RenderGraph.h
     Scene.h
     SceneGui.h
     TheGraph.h
+    ViewerApplication.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -19,10 +19,10 @@ set(${TARGET_NAME}_SOURCES
 
     DrawQuad.cpp
     Logging.cpp
-    RenderGraph.cpp
     Scene.cpp
     SceneGui.cpp
     TheGraph.cpp
+    ViewerApplication.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

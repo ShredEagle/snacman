@@ -23,9 +23,9 @@ namespace ad::renderer {
 struct PassCache;
 
 
-struct RenderGraph
+struct ViewerApplication
 {
-    RenderGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+    ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
                 const std::filesystem::path & aSceneFile,
                 const imguiui::ImguiUi & aImguiUi);
 

@@ -1,4 +1,4 @@
-#include "RenderGraph.h"
+#include "ViewerApplication.h"
 
 #include "Json.h"
 #include "Logging.h"
@@ -132,13 +132,13 @@ namespace {
         aStorage.mProgramConfigs.emplace_back();
         // Compiler error (msvc) workaround, by taking the initializer list out
         std::initializer_list<IntrospectProgram::TypedShaderSource> il = {
-            {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(std::string{gVertexShader}, "RenderGraph.cpp")},
-            {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(gFragmentShader, "RenderGraph.cpp")},
+            {GL_VERTEX_SHADER, graphics::ShaderSource::Preprocess(std::string{gVertexShader}, "ViewerApplication.cpp")},
+            {GL_FRAGMENT_SHADER, graphics::ShaderSource::Preprocess(gFragmentShader, "ViewerApplication.cpp")},
         };
         aStorage.mPrograms.push_back(ConfiguredProgram{
             .mProgram = IntrospectProgram{
                 il,
-                "simple-RenderGraph.cpp",
+                "simple-ViewerApplication.cpp",
             },
             .mConfig = &aStorage.mProgramConfigs.back(),
         });
@@ -289,7 +289,7 @@ void registerGlfwCallbacks(graphics::AppInterface & aAppInterface,
 }
 
 
-RenderGraph::RenderGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
                          const std::filesystem::path & aSceneFile,
                          const imguiui::ImguiUi & aImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
@@ -349,9 +349,9 @@ RenderGraph::RenderGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterfa
 }
 
 
-void RenderGraph::update(float aDeltaTime)
+void ViewerApplication::update(float aDeltaTime)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("RenderGraph::update()", CpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION("ViewerApplication::update()", CpuTime);
     mFirstPersonControl.update(aDeltaTime);
 
     // TODO #camera: handle this when necessary
@@ -367,16 +367,16 @@ void RenderGraph::update(float aDeltaTime)
 }
 
 
-void RenderGraph::drawUi()
+void ViewerApplication::drawUi()
 {
     mSceneGui.present(mScene);
 }
 
 
-void RenderGraph::render()
+void ViewerApplication::render()
 {
-    PROFILER_SCOPE_RECURRING_SECTION("RenderGraph::render()", CpuTime, GpuTime, BufferMemoryWritten);
-    nvtx3::mark("RenderGraph::render()");
+    PROFILER_SCOPE_RECURRING_SECTION("ViewerApplication::render()", CpuTime, GpuTime, BufferMemoryWritten);
+    nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
     // TODO: How to handle material/program selection while generating the part list,
