@@ -33,15 +33,14 @@ namespace component {
 struct LevelSetupData;
 } // namespace component
 
-class Renderer;
 
 struct GameContext
 {
-    GameContext(snac::Resources aResources, snac::RenderThread<Renderer> & aRenderThread);
+    GameContext(snac::Resources aResources, snac::RenderThread<Renderer_t> & aRenderThread);
 
     snac::Resources mResources;
     ent::EntityManager mWorld;
-    snac::RenderThread<Renderer> & mRenderThread;
+    snac::RenderThread<Renderer_t> & mRenderThread;
     SimulationControl mSimulationControl;
 
     ent::Wrap<system::SceneStack> mSceneStack;

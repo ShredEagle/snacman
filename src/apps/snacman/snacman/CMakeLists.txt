@@ -34,6 +34,8 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/ModelInfos.h
     simulations/snacgame/PlayerSlotManager.h
     simulations/snacgame/Renderer.h
+    simulations/snacgame/Renderer_V1.h
+    simulations/snacgame/Renderer_V2.h
     simulations/snacgame/SceneGraph.h
     simulations/snacgame/SnacGame.h
     simulations/snacgame/SimulationControl.h
@@ -110,7 +112,8 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/GameContext.cpp
     simulations/snacgame/ImguiSceneEditor.cpp
     simulations/snacgame/PlayerSlotManager.cpp
-    simulations/snacgame/Renderer.cpp
+    simulations/snacgame/Renderer_V1.cpp
+    simulations/snacgame/Renderer_V2.cpp
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SimulationControl.cpp
     simulations/snacgame/SceneGraph.cpp

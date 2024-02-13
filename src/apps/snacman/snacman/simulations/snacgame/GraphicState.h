@@ -37,7 +37,7 @@ struct Entity
     struct SkeletalAnimation
     {
         //TODO #anim (a48c8) this is **not** const because animation writes to the underlying scene,
-        // but this is very smelly (and an invitatin to race conditions)
+        // but this is very smelly (and an invitation to race conditions)
         snac::Rig *mRig = nullptr;
         const snac::NodeAnimation * mAnimation = nullptr;
         double mParameterValue = 0.;

@@ -54,6 +54,7 @@ class EntryBuffer
 
 public:
     static constexpr std::size_t BufferDepth = 2;
+    static_assert(BufferDepth == 2, "Current implementation is limited to double buffering.");
 
     /// \brief Construct the buffer, block until it could initialize all its
     /// entries.
@@ -272,6 +273,7 @@ public:
 
     void checkRethrow()
     {
+        // Should check from another thread, not the render thread.
         assert(std::this_thread::get_id() != mThread.get_id());
 
         if (mThrew)
@@ -313,7 +315,7 @@ private:
             }
             catch(...)
             {
-                SELOG(critical)("Render thread main loop stopping due to non-exception.");
+                SELOG(critical)("Render thread main loop stopping after throwing a non-std::exception.");
             }
             mThreadException = std::current_exception();
             mThrew = true;
@@ -352,6 +354,7 @@ private:
     {
         SELOG(info)("Render thread started");
 
+// TODO Ad 2024/02/13: Abstract thread naming for all platforms in platform lib.
 #if defined(_WIN32)
         HRESULT r;
         r = SetThreadDescription(GetCurrentThread(), L"Render Thread");
@@ -500,8 +503,8 @@ private:
     // Yet, it was limiting, so we could either:
     // * forward variadic ctor args
     // * forward a factory function
-    // * move a fully constructed Renderer here (constructed in main thread,
-    // before releasing GL context) We currently use the 3rd approach.
+    // * move an already constructed Renderer (constructed in main thread, before it releases GL context)
+    // We currently use the 3rd approach.
     // Important: It was moved into a **local copy** scoped to run_impl, so dtor is called on the
     // render thread, where GL context is active.
     // This ensured that even in the case of exception cleaning occured on the RenderThread.

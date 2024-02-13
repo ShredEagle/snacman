@@ -10,6 +10,7 @@
 #include <build_info.h>
 
 #include "simulations/snacgame/SnacGame.h"
+#include "simulations/snacgame/Renderer.h"
 
 // TODO we should not include something from detail.
 // So either move it out of detail, either use nholmann directly
@@ -131,7 +132,7 @@ void runApplication()
     // TODO we provide a Load<Technique> so the shadow pipeline can use it to load the effects for its cube.
     // this complicates the interface a lot, and since it does not use the ResourceManager those effects are not hot-recompilable.
     snac::TechniqueLoader techniqueLoader{finder};
-    snacgame::Renderer renderer{
+    snacgame::Renderer_t renderer{
         *glfwApp.getAppInterface(),
          techniqueLoader,
          freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))
@@ -141,7 +142,7 @@ void runApplication()
     // the render thread.
     glfwApp.removeCurrentContext();
 
-    GraphicStateFifo<snacgame::Renderer> graphicStates;
+    GraphicStateFifo<snacgame::Renderer_t> graphicStates;
     RenderThread renderingThread{
         glfwApp,
         graphicStates,

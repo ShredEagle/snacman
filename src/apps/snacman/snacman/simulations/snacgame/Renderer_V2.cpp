@@ -1,4 +1,4 @@
-#include "Renderer.h"
+#include "Renderer_V2.h"
 
 #include "renderer/ScopeGuards.h"
 
@@ -37,7 +37,7 @@ namespace snacgame {
 
 
 
-Renderer::Renderer(graphics::AppInterface & aAppInterface,
+Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
                    snac::Load<snac::Technique> & aTechniqueAccess,
                    arte::FontFace aDebugFontFace) :
     mAppInterface{aAppInterface},
@@ -57,7 +57,7 @@ Renderer::Renderer(graphics::AppInterface & aAppInterface,
 //    mCamera.resetProjection(aAspectRatio, aParameters);
 //}
 
-std::shared_ptr<snac::Model> Renderer::LoadModel(filesystem::path aModel,
+std::shared_ptr<snac::Model> Renderer_V2::LoadModel(filesystem::path aModel,
                                                  filesystem::path aEffect, 
                                                  snac::Resources & aResources)
 {
@@ -74,7 +74,7 @@ std::shared_ptr<snac::Model> Renderer::LoadModel(filesystem::path aModel,
     }
 }
 
-std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
+std::shared_ptr<snac::Font> Renderer_V2::loadFont(arte::FontFace aFontFace,
                                                unsigned int aPixelHeight,
                                                filesystem::path aEffect,
                                                snac::Resources & aResources)
@@ -87,7 +87,7 @@ std::shared_ptr<snac::Font> Renderer::loadFont(arte::FontFace aFontFace,
 }
 
 
-void Renderer::continueGui()
+void Renderer_V2::continueGui()
 {
     using namespace imguiui;
 
@@ -104,7 +104,7 @@ void Renderer::continueGui()
 
 
 template <class T_range>
-void Renderer::renderText(const T_range & aTexts, snac::ProgramSetup & aProgramSetup)
+void Renderer_V2::renderText(const T_range & aTexts, snac::ProgramSetup & aProgramSetup)
 {
     // Note: this is pessimised code.
     // Most of these expensive operations should be taken out and the results
@@ -132,7 +132,7 @@ void Renderer::renderText(const T_range & aTexts, snac::ProgramSetup & aProgramS
 }
 
 
-void Renderer::render(const visu::GraphicState & aState)
+void Renderer_V2::render(const visu::GraphicState & aState)
 {
     TIME_RECURRING_GL("Render");
 

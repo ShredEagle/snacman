@@ -2,7 +2,7 @@
 
 #include "EntityWrap.h"
 #include "GameContext.h"
-#include "Renderer.h"
+#include "Renderer_V2.h"
 #include "ImguiSceneEditor.h"
 
 #include "component/PlayerSlot.h"
@@ -114,7 +114,7 @@ private:
 class SnacGame
 {
 public:
-    using Renderer_t = Renderer;
+    using Renderer_t = Renderer_V2;
 
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface,

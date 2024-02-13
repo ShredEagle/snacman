@@ -1,5 +1,7 @@
 #pragma once
 
+#include "simulations/snacgame/Renderer.h"  // for Renderer
+
 // TODO might become useless once Resources itselfs become the Load<> implementer
 #include <snac-renderer-V1/ResourceLoad.h>
 
@@ -16,7 +18,6 @@
 
 namespace ad {
 
-namespace snacgame { class Renderer; }
 
 namespace snac {
 
@@ -32,7 +33,7 @@ class Resources
 public:
     Resources(resource::ResourceFinder aFinder,
               arte::Freetype & aFreetype,
-              RenderThread<snacgame::Renderer> & aRenderThread) :
+              RenderThread<snacgame::Renderer_t> & aRenderThread) :
         mFinder{std::move(aFinder)},
         mFreetype{aFreetype},
         mRenderThread{aRenderThread}
@@ -70,18 +71,18 @@ private:
         filesystem::path aFont, 
         unsigned int aPixelHeight,
         filesystem::path aEffect,
-        RenderThread<snacgame::Renderer> & aRenderThread,
+        RenderThread<snacgame::Renderer_t> & aRenderThread,
         Resources & aResources);
 
     static std::shared_ptr<Effect> EffectLoader(
         filesystem::path aProgram, 
-        RenderThread<snacgame::Renderer> & aRenderThread,
+        RenderThread<snacgame::Renderer_t> & aRenderThread,
         Resources & aResources);
 
     static std::shared_ptr<Model> ModelLoader(
         filesystem::path aModel, 
         filesystem::path aEffect,
-        RenderThread<snacgame::Renderer> & aRenderThread,
+        RenderThread<snacgame::Renderer_t> & aRenderThread,
         Resources & aResources);
     
     // There is a smelly circular dependency in this design:
@@ -89,7 +90,7 @@ private:
     // and the RenderThread uses Resources to load dependent resources (e.g. loading the texture from a model)
     resource::ResourceFinder mFinder;
     arte::Freetype & mFreetype;
-    RenderThread<snacgame::Renderer> & mRenderThread;
+    RenderThread<snacgame::Renderer_t> & mRenderThread;
     
     std::shared_ptr<Model> mCube = nullptr;
     resource::ResourceManager<std::shared_ptr<Font>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;

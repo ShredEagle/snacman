@@ -9,7 +9,7 @@
 namespace ad {
 namespace snacgame {
 
-GameContext::GameContext(snac::Resources aResources, snac::RenderThread<Renderer> & aRenderThread) :
+GameContext::GameContext(snac::Resources aResources, snac::RenderThread<Renderer_t> & aRenderThread) :
     mResources{aResources},
     mRenderThread{aRenderThread},
     mSceneStack{mWorld},

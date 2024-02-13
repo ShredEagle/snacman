@@ -1,7 +1,6 @@
 #include "Resources.h"
 
 #include "RenderThread.h"                   // for RenderThread
-#include "simulations/snacgame/Renderer.h"  // for Renderer
 
 #include <resource/ResourceManager.h>               // for ResourceManager
                                                     //
@@ -57,7 +56,7 @@ std::shared_ptr<Effect> Resources::getShaderEffect(filesystem::path aEffect)
 
 std::shared_ptr<Effect> Resources::EffectLoader(
     filesystem::path aEffect, 
-    RenderThread<snacgame::Renderer> & aRenderThread,
+    RenderThread<snacgame::Renderer_t> & aRenderThread,
     Resources & aResources)
 {
     return loadEffect(aEffect, aResources.getTechniqueLoader());
@@ -68,7 +67,7 @@ std::shared_ptr<Font> Resources::FontLoader(
     filesystem::path aFont, 
     unsigned int aPixelHeight,
     filesystem::path aEffect,
-    RenderThread<snacgame::Renderer> & aRenderThread,
+    RenderThread<snacgame::Renderer_t> & aRenderThread,
     Resources & aResources)
 {
     return aRenderThread.loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aEffect, aResources)
@@ -79,7 +78,7 @@ std::shared_ptr<Font> Resources::FontLoader(
 std::shared_ptr<Model> Resources::ModelLoader(
     filesystem::path aModel, 
     filesystem::path aEffect,
-    RenderThread<snacgame::Renderer> & aRenderThread,
+    RenderThread<snacgame::Renderer_t> & aRenderThread,
     Resources & aResources)
 {
     return aRenderThread.loadModel(aModel, aEffect, aResources)
