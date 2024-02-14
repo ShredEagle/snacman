@@ -2,7 +2,9 @@
 
 
 #include "GraphicState.h"
+#include "Handle_V2.h"
 
+// TODO Ad 2024/02/13: #RV2 Remove all V1 stuff
 #include <snac-renderer-V1/Camera.h>
 #include <snac-renderer-V1/DebugRenderer.h>
 #include <snac-renderer-V1/LoadInterface.h>
@@ -10,8 +12,11 @@
 #include <snac-renderer-V1/Render.h>
 #include <snac-renderer-V1/text/TextRenderer.h>
 #include <snac-renderer-V1/UniformParameters.h>
-
 #include <snac-renderer-V1/pipelines/ForwardShadows.h>
+
+// V2: the good stuff
+#include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/files/Loader.h>
 
 #include <filesystem>
 #include <memory>
@@ -30,6 +35,29 @@ namespace snac {
 namespace snacgame {
 
 
+// The Render Graph for snacman
+struct SnacGraph
+{
+    // List and describes the buffer views used for per-instance vertex attributes
+    renderer::GenericStream mInstanceStream;
+};
+
+using Resources_V2 = renderer::Loader;
+
+// TODO Ad 2024/02/13: #RV2 Let it organically emerge, then move that type to a dedicated file
+struct Impl_V2
+{
+    // TODO Ad 2024/02/14: We need a better approach:
+    // * Dynamic buffer size?
+    // * Something clever?
+    static constexpr std::size_t gMaxInstances = 1024;
+
+    renderer::Storage mStorage;
+    SnacGraph mRenderGraph{
+        .mInstanceStream = renderer::makeInstanceStream(mStorage, gMaxInstances),
+    };
+};
+
 class Renderer_V2
 {
     friend struct TextRenderer;
@@ -47,15 +75,22 @@ class Renderer_V2
 public:
     using GraphicState_t = visu::GraphicState;
 
+    using Resources_t = Resources_V2;
+
+    // This is smelly, ideally we should not Handle alias a second time.
+    // But is currently used by RenderThread to derive the handle type from the renderer type.
+    template <class T_resource>
+    using Handle_t = snacgame::Handle<T_resource>;
+
     Renderer_V2(graphics::AppInterface & aAppInterface,
                 snac::Load<snac::Technique> & aTechniqueAccess,
                 arte::FontFace aDebugFontFace);
 
     //void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
-    static std::shared_ptr<snac::Model> LoadModel(filesystem::path aModel,
-                                                  filesystem::path aEffect,
-                                                  snac::Resources & aResources);
+    Handle<renderer::Node> loadModel(filesystem::path aModel,
+                                     filesystem::path aEffect,
+                                     Resources_t & aResources);
 
     std::shared_ptr<snac::Font> loadFont(arte::FontFace aFontFace,
                                          unsigned int aPixelHeight,
@@ -68,7 +103,7 @@ public:
 
     /// \brief Forwards the request to reset repositories down to the generic renderer.
     void resetRepositories()
-    { mRenderer.resetRepositories(); }
+    { mRendererToDecomission.resetRepositories(); }
 
 private:
     template <class T_range>
@@ -76,7 +111,8 @@ private:
 
     Control mControl;
     graphics::AppInterface & mAppInterface;
-    snac::Renderer mRenderer;
+    snac::Renderer mRendererToDecomission; // TODO #RV2 Remove this data member
+    Impl_V2 mRendererToKeep;
     // TODO Is it the correct place to host the pipeline instance?
     // This notably force to instantiate it with the Renderer (before the Resources manager is available).
     snac::ForwardShadows mPipelineShadows;

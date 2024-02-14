@@ -137,7 +137,7 @@ void Renderer::render(const visu::GraphicState & aState)
     TIME_RECURRING_GL("Render");
 
     // Stream the instance buffer data
-    std::map<snac::Model *, std::vector<snac::PoseColorSkeleton>> sortedModels;
+    std::map<renderer::Node *, std::vector<snac::PoseColorSkeleton>> sortedModels;
 
     BEGIN_RECURRING_GL("Sort_meshes", sortModelProfile);
     GLuint jointMatricesCount = 0;
@@ -206,37 +206,39 @@ void Renderer::render(const visu::GraphicState & aState)
         }
     };
 
-    if (mControl.mRenderModels)
-    {
-        static snac::Camera shadowLightViewPoint{1, 
-            {
-                .vFov = math::Degree<float>(95.f),
-                .zNear = -1.f,
-                .zFar = -50.f,
-            }};
-        shadowLightViewPoint.setPose(worldToLight);
+    // TODO #RV2 Remove this segment, when we have a V2 Render Graph
+    // In the process of being decommissioned
+    //if (mControl.mRenderModels)
+    //{
+    //    static snac::Camera shadowLightViewPoint{1, 
+    //        {
+    //            .vFov = math::Degree<float>(95.f),
+    //            .zNear = -1.f,
+    //            .zFar = -50.f,
+    //        }};
+    //    shadowLightViewPoint.setPose(worldToLight);
 
-        TIME_RECURRING_GL("Draw_meshes");
-        // Poor man's pool
-        static std::list<snac::InstanceStream> instanceStreams;
-        while(instanceStreams.size() < sortedModels.size())
-        {
-            instanceStreams.push_back(snac::initializeInstanceStream<snac::PoseColorSkeleton>());
-        }
+    //    TIME_RECURRING_GL("Draw_meshes");
+    //    // Poor man's pool
+    //    static std::list<snac::InstanceStream> instanceStreams;
+    //    while(instanceStreams.size() < sortedModels.size())
+    //    {
+    //        instanceStreams.push_back(snac::initializeInstanceStream<snac::PoseColorSkeleton>());
+    //    }
 
-        auto streamIt = instanceStreams.begin();
-        std::vector<snac::Pass::Visual> visuals;
-        for (const auto & [model, instances] : sortedModels)
-        {
-            streamIt->respecifyData(std::span{instances});
-            for (const auto & mesh : model->mParts)
-            {
-                visuals.push_back({&mesh, &*streamIt});
-            }
-            ++streamIt;
-        }
-        mPipelineShadows.execute(visuals, shadowLightViewPoint, mRenderer, programSetup);
-    }
+    //    auto streamIt = instanceStreams.begin();
+    //    std::vector<snac::Pass::Visual> visuals;
+    //    for (const auto & [model, instances] : sortedModels)
+    //    {
+    //        streamIt->respecifyData(std::span{instances});
+    //        for (const auto & mesh : model->mParts)
+    //        {
+    //            visuals.push_back({&mesh, &*streamIt});
+    //        }
+    //        ++streamIt;
+    //    }
+    //    mPipelineShadows.execute(visuals, shadowLightViewPoint, mRenderer, programSetup);
+    //}
 
     //
     // Text

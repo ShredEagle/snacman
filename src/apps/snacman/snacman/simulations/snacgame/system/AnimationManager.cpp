@@ -34,18 +34,19 @@ void AnimationManager::update()
             animSpeed = 1.3f;
         }
 
-        component::RigAnimation & playerAnim = aRoundData.mModel.get(animPhase)->get<component::RigAnimation>();
+        // TODO #RV2 animation
+        //component::RigAnimation & playerAnim = aRoundData.mModel.get(animPhase)->get<component::RigAnimation>();
 
-        if (newAnimName != playerAnim.mAnimName)
-        {
-            playerAnim.mAnimation = &playerAnim.mAnimationMap->at(newAnimName);
-            playerAnim.mAnimName = newAnimName;
-            playerAnim.mStartTime = snac::Clock::now();
-            playerAnim.mParameter = decltype(component::RigAnimation::mParameter){
-                playerAnim.mAnimation->mEndTime,
-                animSpeed
-            };
-        }
+        //if (newAnimName != playerAnim.mAnimName)
+        //{
+        //    playerAnim.mAnimation = &playerAnim.mAnimationMap->at(newAnimName);
+        //    playerAnim.mAnimName = newAnimName;
+        //    playerAnim.mStartTime = snac::Clock::now();
+        //    playerAnim.mParameter = decltype(component::RigAnimation::mParameter){
+        //        playerAnim.mAnimation->mEndTime,
+        //        animSpeed
+        //    };
+        //}
     });
 }
 } // namespace system

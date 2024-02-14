@@ -21,21 +21,18 @@ Resources::~Resources()
 }
 
 
-std::shared_ptr<Model> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
+snacgame::Handle<renderer::Node> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
 {
     // This is bad design, but lazy to get the result quickly
     if(aModel.string() == "CUBE")
     {
-        if (!mCube)
-        {
-            mCube = mRenderThread.loadModel(aModel, aEffect, *this)
-                .get(); // synchronize call
-        }
-        return mCube;
+        throw std::invalid_argument("'CUBE' hardcoded model is now deprecated.");
     }
     else
     {
-        return mModels.load(aModel, mFinder, aEffect, mRenderThread, *this);
+        //return mModels.load(aModel, mFinder, aEffect, mRenderThread, mResources_V2);
+        // TODO Ad 2024/02/14: #RV2 Restore actual models name
+        return mModels.load("models/donut/donut.seum", mFinder, aEffect, mRenderThread, mResources_V2);
     }
 }
 
@@ -75,11 +72,11 @@ std::shared_ptr<Font> Resources::FontLoader(
 }
 
 
-std::shared_ptr<Model> Resources::ModelLoader(
+snacgame::Handle<renderer::Node> Resources::ModelLoader(
     filesystem::path aModel, 
     filesystem::path aEffect,
     RenderThread<snacgame::Renderer_t> & aRenderThread,
-    Resources & aResources)
+    snacgame::Resources_V2 & aResources)
 {
     return aRenderThread.loadModel(aModel, aEffect, aResources)
             .get(); // synchronize call

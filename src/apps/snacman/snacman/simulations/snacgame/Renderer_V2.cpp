@@ -57,21 +57,27 @@ Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
 //    mCamera.resetProjection(aAspectRatio, aParameters);
 //}
 
-std::shared_ptr<snac::Model> Renderer_V2::LoadModel(filesystem::path aModel,
-                                                 filesystem::path aEffect, 
-                                                 snac::Resources & aResources)
+Handle<renderer::Node> Renderer_V2::loadModel(filesystem::path aModel,
+                                                           filesystem::path aEffect, 
+                                                           Resources_t & aResources)
 {
-    if (aModel.string() == "CUBE")
-    {
-        auto model = std::make_shared<snac::Model>();
-        model->mParts.push_back({snac::loadCube(aResources.getShaderEffect(aEffect))});
-        return model;
-    }
-    else
-    {
-        return std::make_shared<snac::Model>(
-            loadModel(aModel, aResources.getShaderEffect(aEffect)));
-    }
+    //if (aModel.string() == "CUBE")
+    //{
+    //    auto model = std::make_shared<snac::Model>();
+    //    model->mParts.push_back({snac::loadCube(aResources.getShaderEffect(aEffect))});
+    //    return model;
+    //}
+    //else
+    //{
+    //    return std::make_shared<snac::Model>(
+    //        loadModel(aModel, aResources.getShaderEffect(aEffect)));
+    //}
+    
+    return std::make_shared<renderer::Node>(
+        loadBinary(aModel, 
+                   mRendererToKeep.mStorage,
+                   aResources.loadEffect(aEffect, mRendererToKeep.mStorage),
+                   mRendererToKeep.mRenderGraph.mInstanceStream));
 }
 
 std::shared_ptr<snac::Font> Renderer_V2::loadFont(arte::FontFace aFontFace,
@@ -126,7 +132,7 @@ void Renderer_V2::renderText(const T_range & aTexts, snac::ProgramSetup & aProgr
         // font.
         mDynamicStrings.respecifyData(std::span{textBufferData});
         BEGIN_RECURRING_GL("Draw string", drawStringProfile);
-        mTextRenderer.render(mDynamicStrings, *text.mFont, mRenderer, aProgramSetup);
+        mTextRenderer.render(mDynamicStrings, *text.mFont, mRendererToDecomission, aProgramSetup);
         END_RECURRING_GL(drawStringProfile);
     }
 }
@@ -137,7 +143,7 @@ void Renderer_V2::render(const visu::GraphicState & aState)
     TIME_RECURRING_GL("Render");
 
     // Stream the instance buffer data
-    std::map<snac::Model *, std::vector<snac::PoseColorSkeleton>> sortedModels;
+    std::map<renderer::Node *, std::vector<snac::PoseColorSkeleton>> sortedModels;
 
     BEGIN_RECURRING_GL("Sort_meshes", sortModelProfile);
     GLuint jointMatricesCount = 0;
@@ -208,34 +214,35 @@ void Renderer_V2::render(const visu::GraphicState & aState)
 
     if (mControl.mRenderModels)
     {
-        static snac::Camera shadowLightViewPoint{1, 
-            {
-                .vFov = math::Degree<float>(95.f),
-                .zNear = -1.f,
-                .zFar = -50.f,
-            }};
-        shadowLightViewPoint.setPose(worldToLight);
+        // TODO #RV2 render
+        //static snac::Camera shadowLightViewPoint{1, 
+        //    {
+        //        .vFov = math::Degree<float>(95.f),
+        //        .zNear = -1.f,
+        //        .zFar = -50.f,
+        //    }};
+        //shadowLightViewPoint.setPose(worldToLight);
 
-        TIME_RECURRING_GL("Draw_meshes");
-        // Poor man's pool
-        static std::list<snac::InstanceStream> instanceStreams;
-        while(instanceStreams.size() < sortedModels.size())
-        {
-            instanceStreams.push_back(snac::initializeInstanceStream<snac::PoseColorSkeleton>());
-        }
+        //TIME_RECURRING_GL("Draw_meshes");
+        //// Poor man's pool
+        //static std::list<snac::InstanceStream> instanceStreams;
+        //while(instanceStreams.size() < sortedModels.size())
+        //{
+        //    instanceStreams.push_back(snac::initializeInstanceStream<snac::PoseColorSkeleton>());
+        //}
 
-        auto streamIt = instanceStreams.begin();
-        std::vector<snac::Pass::Visual> visuals;
-        for (const auto & [model, instances] : sortedModels)
-        {
-            streamIt->respecifyData(std::span{instances});
-            for (const auto & mesh : model->mParts)
-            {
-                visuals.push_back({&mesh, &*streamIt});
-            }
-            ++streamIt;
-        }
-        mPipelineShadows.execute(visuals, shadowLightViewPoint, mRenderer, programSetup);
+        //auto streamIt = instanceStreams.begin();
+        //std::vector<snac::Pass::Visual> visuals;
+        //for (const auto & [model, instances] : sortedModels)
+        //{
+        //    streamIt->respecifyData(std::span{instances});
+        //    for (const auto & mesh : model->mParts)
+        //    {
+        //        visuals.push_back({&mesh, &*streamIt});
+        //    }
+        //    ++streamIt;
+        //}
+        //mPipelineShadows.execute(visuals, shadowLightViewPoint, mRendererToDecomission, programSetup);
     }
 
     //
@@ -275,7 +282,7 @@ void Renderer_V2::render(const visu::GraphicState & aState)
     if (mControl.mRenderDebug)
     {
         TIME_RECURRING_GL("Draw_debug");
-        mDebugRenderer.render(aState.mDebugDrawList, mRenderer, programSetup);
+        mDebugRenderer.render(aState.mDebugDrawList, mRendererToDecomission, programSetup);
     }
 }
 

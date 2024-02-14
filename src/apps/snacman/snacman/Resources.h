@@ -28,6 +28,11 @@ template <class T_renderer> class RenderThread;
 
 constexpr unsigned int gDefaultPixelHeight = 64;
 
+// TODO Ad 2024/02/14: This class should at least be split in 2:
+// * The high level client-facing API, to request (async?) loads on the RenderThread
+// * And underlying synchronous loader, which does not need to know about RenderThread,
+//   but that RenderThread uses.
+// Overall, the whole resource system needs a massive redesign
 class Resources
 {
 public:
@@ -36,7 +41,8 @@ public:
               RenderThread<snacgame::Renderer_t> & aRenderThread) :
         mFinder{std::move(aFinder)},
         mFreetype{aFreetype},
-        mRenderThread{aRenderThread}
+        mRenderThread{aRenderThread},
+        mResources_V2{mFinder}
     {}
 
     // Just to log it
@@ -45,7 +51,7 @@ public:
     /// @warning It is an error to load the same model with distinct effects.
     /// At the moment, the effect path is not considered when looking up in the map,
     /// so the model will always have the effect it was loaded with the first time.
-    std::shared_ptr<Model> getModel(filesystem::path aModel, filesystem::path aEffect);
+    snacgame::Handle<renderer::Node> getModel(filesystem::path aModel, filesystem::path aEffect);
 
     std::shared_ptr<Font> getFont(filesystem::path aFont,
                                   unsigned int aPixelHeight = gDefaultPixelHeight,
@@ -79,11 +85,11 @@ private:
         RenderThread<snacgame::Renderer_t> & aRenderThread,
         Resources & aResources);
 
-    static std::shared_ptr<Model> ModelLoader(
+    static snacgame::Handle<renderer::Node> ModelLoader(
         filesystem::path aModel, 
         filesystem::path aEffect,
         RenderThread<snacgame::Renderer_t> & aRenderThread,
-        Resources & aResources);
+        snacgame::Resources_V2 & aResources);
     
     // There is a smelly circular dependency in this design:
     // Resources knows the RenderThread to request OpenGL related resource loading
@@ -91,11 +97,13 @@ private:
     resource::ResourceFinder mFinder;
     arte::Freetype & mFreetype;
     RenderThread<snacgame::Renderer_t> & mRenderThread;
+
+    snacgame::Resources_V2 mResources_V2;
     
     std::shared_ptr<Model> mCube = nullptr;
     resource::ResourceManager<std::shared_ptr<Font>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;
     resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;
-    resource::ResourceManager<std::shared_ptr<Model>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
+    resource::ResourceManager<snacgame::Handle<renderer::Node>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
 };
 
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameParameters.h"
+#include "Handle_V2.h"
 #include "component/PowerUp.h"
 
 #include <snacman/Timing.h>
@@ -10,6 +11,9 @@
 #include <math/Color.h>
 #include <math/Quaternion.h>
 #include <math/Vector.h>
+
+#include <snac-renderer-V2/Model.h>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -48,7 +52,8 @@ void addGeoNode(
     math::Size<3, float> aInstanceScale = {1.f, 1.f, 1.f},
     math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
     math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
-std::shared_ptr<snac::Model> addMeshGeoNode(
+
+snacgame::Handle<renderer::Node> addMeshGeoNode(
     GameContext & aContext,
     ent::Entity & aEnt,
     const char * aModelPath,

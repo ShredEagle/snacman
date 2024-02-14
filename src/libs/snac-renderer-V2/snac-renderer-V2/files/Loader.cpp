@@ -775,7 +775,7 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
 
 
 IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
-                                      const std::vector<std::string> & aDefines_temp)
+                                      std::vector<std::string> aDefines_temp)
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 
@@ -800,9 +800,14 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
     for (auto [shaderStage, shaderFile] : program.items())
     {
         GLenum stageEnumerator;
-        if(shaderStage == "features")
+        if(shaderStage == "defines")
         {
             // Special case, not a shader stage
+            for (std::string macro : shaderFile)
+            {
+                aDefines_temp.push_back(std::move(macro));
+            }
+            SELOG(warn)("'{}' program has 'defines', which are not recommended with V2.", aProgFile.string());
             continue;
         }
         else if(shaderStage == "vertex")

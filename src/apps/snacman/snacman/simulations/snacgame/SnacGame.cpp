@@ -434,13 +434,14 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         visu::Entity::SkeletalAnimation skeletal;
         if (auto entity = *aHandle.get(); entity.has<component::RigAnimation>())
         {
-            const auto & rigAnimation =
-                aHandle.get()->get<component::RigAnimation>();
-            skeletal = visu::Entity::SkeletalAnimation{
-                .mRig = &aVisualModel.mModel->mRig,
-                .mAnimation = rigAnimation.mAnimation,
-                .mParameterValue = rigAnimation.mParameterValue,
-            };
+            // TODO #RV2 animation
+            //const auto & rigAnimation =
+            //    aHandle.get()->get<component::RigAnimation>();
+            //skeletal = visu::Entity::SkeletalAnimation{
+            //    .mRig = &aVisualModel.mModel->mRig,
+            //    .mAnimation = rigAnimation.mAnimation,
+            //    .mParameterValue = rigAnimation.mParameterValue,
+            //};
         }
         state->mEntities.insert(
             aHandle.id(),

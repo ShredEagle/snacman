@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "Handle_V2.h"
 #include "../../SparseSet.h"
 
 #include <math/Angle.h>
@@ -29,7 +30,7 @@ struct Entity
     math::Size<3, float> mScaling; // TODO were is it used?
     math::Quaternion<float> mOrientation;
     math::hdr::Rgba_f mColor;
-    std::shared_ptr<snac::Model> mModel;
+    Handle<renderer::Node> mModel;
 
     // TODO #anim would be better to interpolate the animation time (Parameter)
     // between each GPU frame, instead of providing fixed parameter value

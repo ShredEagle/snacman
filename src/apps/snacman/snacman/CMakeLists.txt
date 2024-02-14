@@ -212,7 +212,8 @@ find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
-        ad::snac-renderer-V1
+        ad::snac-renderer-V1 # TODO #RV2 remove
+        ad::snac-renderer-V2
 
         ad::arte
         ad::entity

@@ -14,9 +14,12 @@
 
 #include <resource/ResourceFinder.h>
 
+// TODO Ad 2024/02/14: #RV2 Remove V1 includes
 #include <snac-renderer-V1/Camera.h>
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/text/Text.h>
+
+#include <snac-renderer-V2/Model.h>
 
 #include <future>
 #include <queue>
@@ -175,9 +178,10 @@ public:
     //    });
     //}
 
-    std::future<std::shared_ptr<snac::Model>> loadModel(filesystem::path aModel, 
-                                                        filesystem::path aEffect, 
-                                                        Resources & aResources)
+    std::future<typename T_renderer::template Handle_t<renderer::Node>> 
+    loadModel(filesystem::path aModel, 
+              filesystem::path aEffect, 
+              typename T_renderer::Resources_t & aResources)
     {
         // Almost certainly a programming error:
         // There is a risk the calling code will block on the future completion
@@ -186,14 +190,15 @@ public:
 
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
-        auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Model>>>();
-        std::future<std::shared_ptr<snac::Model>> future = promise->get_future();
+        using Handle_t = typename T_renderer::template Handle_t<renderer::Node>;
+        auto promise = std::make_shared<std::promise<Handle_t>>();
+        std::future<Handle_t> future = promise->get_future();
         push([promise = std::move(promise), shape = std::move(aModel), effect = std::move(aEffect), &aResources]
              (T_renderer & aRenderer) 
              {
                 try
                 {
-                    promise->set_value(aRenderer.LoadModel(shape, effect, aResources));
+                    promise->set_value(aRenderer.loadModel(shape, effect, aResources));
                 }
                 catch(...)
                 {

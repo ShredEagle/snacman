@@ -114,8 +114,6 @@ private:
 class SnacGame
 {
 public:
-    using Renderer_t = Renderer_V2;
-
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface,
              snac::RenderThread<Renderer_t> & aRenderThread,

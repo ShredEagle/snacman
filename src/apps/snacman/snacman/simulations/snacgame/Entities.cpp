@@ -71,15 +71,16 @@ void addGeoNode(GameContext & aContext,
         .add(component::GlobalPose{});
 }
 
-std::shared_ptr<snac::Model> addMeshGeoNode(GameContext & aContext,
-                                            Entity & aEnt,
-                                            const char * aModelPath,
-                                            const char * aEffectPath,
-                                            Pos3 aPos,
-                                            float aScale,
-                                            Size3 aInstanceScale,
-                                            Quat_f aOrientation,
-                                            HdrColor_f aColor)
+snacgame::Handle<renderer::Node> addMeshGeoNode(
+    GameContext & aContext,
+    Entity & aEnt,
+    const char * aModelPath,
+    const char * aEffectPath,
+    Pos3 aPos,
+    float aScale,
+    Size3 aInstanceScale,
+    Quat_f aOrientation,
+    HdrColor_f aColor)
 {
     auto model = aContext.mResources.getModel(aModelPath, aEffectPath);
     aEnt.add(component::Geometry{.mPosition = aPos,
@@ -145,20 +146,21 @@ createAnimatedTest(GameContext & aContext,
 {
     auto handle = aContext.mWorld.addEntity();
     Entity entity = *handle.get(aPhase);
-    std::shared_ptr<snac::Model> model = addMeshGeoNode(
+    auto model = addMeshGeoNode(
         aContext, entity, "models/anim/anim.gltf", "effects/MeshRigging.sefx",
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gLevelHeight},
         0.45f, lLevelElementScaling,
         math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 math::Turn<float>{0.25f}});
-    const snac::NodeAnimation & animation = model->mAnimations.begin()->second;
-    entity.add(component::RigAnimation{
-        .mAnimation = &animation,
-        .mStartTime = aStartTime,
-        .mParameter =
-            decltype(component::RigAnimation::mParameter){animation.mEndTime},
-    });
+    // TODO #RV2 animation
+    //const snac::NodeAnimation & animation = model->mAnimations.begin()->second;
+    //entity.add(component::RigAnimation{
+    //    .mAnimation = &animation,
+    //    .mStartTime = aStartTime,
+    //    .mParameter =
+    //        decltype(component::RigAnimation::mParameter){animation.mEndTime},
+    //});
     entity.add(component::GameTransient{});
 
     return handle;
@@ -437,24 +439,25 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
         Phase createModel;
         Entity model = *playerModelHandle.get(createModel);
 
-        std::shared_ptr<snac::Model> modelData = addMeshGeoNode(
+        auto modelData = addMeshGeoNode(
             aContext, model, "models/donut/donut.gltf",
             "effects/MeshRiggingTextures.sefx", Pos3::Zero(), 1.f,
             gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation,
             gSlotColors.at(slot.mSlotIndex));
 
-        std::string animName = "idle";
-        const snac::NodeAnimation & animation =
-            modelData->mAnimations.at(animName);
-        model.add(component::RigAnimation{
-            .mAnimName = animName,
-            .mAnimation = &animation,
-            .mAnimationMap = &modelData->mAnimations,
-            .mStartTime = snac::Clock::now(),
-            .mParameter =
-                decltype(component::RigAnimation::mParameter){
-                    animation.mEndTime},
-        });
+        // TODO #RV2 animation
+        //std::string animName = "idle";
+        //const snac::NodeAnimation & animation =
+        //    modelData->mAnimations.at(animName);
+        //model.add(component::RigAnimation{
+        //    .mAnimName = animName,
+        //    .mAnimation = &animation,
+        //    .mAnimationMap = &modelData->mAnimations,
+        //    .mStartTime = snac::Clock::now(),
+        //    .mParameter =
+        //        decltype(component::RigAnimation::mParameter){
+        //            animation.mEndTime},
+        //});
     }
 
     return playerModelHandle;
@@ -466,7 +469,7 @@ ent::Handle<ent::Entity> createCrown(GameContext & aContext)
     EntHandle crownHandle = aContext.mWorld.addEntity();
     Entity crown = *crownHandle.get(createCrown);
 
-    std::shared_ptr<snac::Model> crownData = addMeshGeoNode(
+    addMeshGeoNode(
         aContext, crown, "models/crown/crown.gltf",
         "effects/MeshTextures.sefx", gBaseCrownPosition, 1.f,
         gBaseCrownInstanceScaling, gBaseCrownOrientation);
