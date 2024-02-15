@@ -167,7 +167,7 @@ namespace {
         std::string_view prefix, body, suffix;
         std::tie(prefix, body) = lsplit(aResourceName, delimiter);
         std::tie(body, suffix) = lsplit(body, delimiter);
-        return suffix.starts_with("_normalized");
+        return suffix.starts_with("normalized");
     }
 
 } // anonymous
