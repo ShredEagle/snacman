@@ -70,9 +70,21 @@ struct PassCache
 };
 
 
+// 
+// High level API
+//
 PassCache preparePass(StringKey aPass,
                       const PartList & aPartList,
                       Storage & aStorage);
 
+
+//
+// Low level API
+//
+Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName);
+
+Handle<graphics::VertexArrayObject> getVao(const ConfiguredProgram & aProgram,
+                                           const Part & aPart,
+                                           Storage & aStorage);
 
 } // namespace ad::renderer

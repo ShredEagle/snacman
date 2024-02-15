@@ -13,12 +13,18 @@
 
 #include <renderer/BufferLoad.h>
 
+// TODO #RV2 Remove V1 includes
 #include <snac-renderer-V1/text/Text.h>
 #include <snac-renderer-V1/Instances.h>
 #include <snac-renderer-V1/Semantic.h>
 #include <snac-renderer-V1/Render.h>
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/ResourceLoad.h>
+
+#include <profiler/GlApi.h>
+
+#include <snac-renderer-V2/Pass.h>
+#include <snac-renderer-V2/SetupDrawing.h>
 
 #include <snacman/Profiling.h>
 #include <snacman/ProfilingGPU.h>
@@ -51,28 +57,11 @@ Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
     mPipelineShadows.getControls().mShadowBias = 0.0005f;
 }
 
-//void Renderer::resetProjection(float aAspectRatio,
-//                               snac::Camera::Parameters aParameters)
-//{
-//    mCamera.resetProjection(aAspectRatio, aParameters);
-//}
 
 Handle<renderer::Node> Renderer_V2::loadModel(filesystem::path aModel,
                                                            filesystem::path aEffect, 
                                                            Resources_t & aResources)
 {
-    //if (aModel.string() == "CUBE")
-    //{
-    //    auto model = std::make_shared<snac::Model>();
-    //    model->mParts.push_back({snac::loadCube(aResources.getShaderEffect(aEffect))});
-    //    return model;
-    //}
-    //else
-    //{
-    //    return std::make_shared<snac::Model>(
-    //        loadModel(aModel, aResources.getShaderEffect(aEffect)));
-    //}
-    
     return std::make_shared<renderer::Node>(
         loadBinary(aModel, 
                    mRendererToKeep.mStorage,
@@ -146,6 +135,7 @@ void Renderer_V2::render(const visu::GraphicState & aState)
     std::map<renderer::Node *, std::vector<snac::PoseColorSkeleton>> sortedModels;
 
     BEGIN_RECURRING_GL("Sort_meshes", sortModelProfile);
+    // running total of joints for iterated entities
     GLuint jointMatricesCount = 0;
     for (const visu::Entity & entity : aState.mEntities)
     {
@@ -243,6 +233,56 @@ void Renderer_V2::render(const visu::GraphicState & aState)
         //    ++streamIt;
         //}
         //mPipelineShadows.execute(visuals, shadowLightViewPoint, mRendererToDecomission, programSetup);
+
+
+        static const renderer::StringKey pass = "forward";
+
+        std::function<void(const renderer::Node &)> recurseNodes;
+        recurseNodes = [this, &recurseNodes](const renderer::Node & aNode)
+        {
+            using renderer::gl;
+
+            const renderer::Instance & instance = aNode.mInstance;
+
+            if(renderer::Object * object = instance.mObject)
+            {
+                for(const renderer::Part & part : object->mParts)
+                {
+                    if(renderer::Handle<renderer::ConfiguredProgram> configuredProgram = 
+                            renderer::getProgramForPass(*part.mMaterial.mEffect, pass))
+                    {
+                        // Data is uploaded above, in the previous code
+                        //proto::loadSingle(mCameraBuffer.mViewing, , graphics::BufferHint::DynamicDraw);
+                        renderer::RepositoryUbo repositoryUbo{
+                            {"Viewing", &mCameraBuffer.mViewing},
+                        };
+                        renderer::setBufferBackedBlocks(configuredProgram->mProgram, repositoryUbo);
+
+                        renderer::Handle<graphics::VertexArrayObject> vao =
+                            renderer::getVao(*configuredProgram, part, mRendererToKeep.mStorage);
+
+                        graphics::ScopedBind vaoScope{*vao};
+                        graphics::ScopedBind programScope{configuredProgram->mProgram.mProgram};
+
+                        gl.DrawElements(part.mPrimitiveMode,
+                                        part.mIndicesCount,
+                                        part.mVertexStream->mIndicesType,
+                                        (void*)((size_t)part.mIndexFirst * graphics::getByteSize(part.mVertexStream->mIndicesType)));
+                    }
+                }
+            }
+
+            for(const auto & child : aNode.mChildren)
+            {
+                recurseNodes(child);
+            }
+        };
+
+        TIME_RECURRING_GL("Draw_meshes");
+        for (const auto & [model, instances] : sortedModels)
+        {
+            recurseNodes(*model);
+        }
     }
 
     //

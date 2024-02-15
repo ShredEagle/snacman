@@ -39,6 +39,7 @@ public:
     void BufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
     void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
     void Clear(GLbitfield mask);
+    void DrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices);
     void MultiDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect, GLsizei drawcount, GLsizei stride);
     void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
     void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
@@ -104,6 +105,15 @@ inline void GlApi::BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size
 inline void GlApi::Clear(GLbitfield mask)
 {
     glClear(mask);
+}
+
+
+inline void GlApi::DrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawElements(mode, count, type, indices);
 }
 
 

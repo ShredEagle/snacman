@@ -54,8 +54,9 @@ out vec4 ex_Position_lightClip;
 
 void main(void)
 {
-    mat4 localToWorld = 
-        in_LocalToWorld
+    mat4 localToWorld =
+        mat4(1.0)
+        //in_LocalToWorld
 #ifdef RIGGING
         * assembleSkinningMatrix()
 #endif

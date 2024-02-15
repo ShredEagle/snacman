@@ -19,43 +19,6 @@ namespace {
     }
 
 
-    /// @brief Returns the VAO matching the given program and part.
-    /// Under the hood, the VAO is cached.
-    Handle<graphics::VertexArrayObject> getVao(const ConfiguredProgram & aProgram,
-                                               const Part & aPart,
-                                               Storage & aStorage)
-    {
-        // This is a common mistake, it would be nice to find a safer way
-        assert(aProgram.mConfig);
-
-        // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
-        return
-            [&, &entries = aProgram.mConfig->mEntries]() 
-            -> graphics::VertexArrayObject *
-            {
-                if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
-                                                [&aPart](const auto & aEntry)
-                                                {
-                                                    return aEntry.mVertexStream == aPart.mVertexStream;
-                                                });
-                    foundConfig != entries.end())
-                {
-                    return foundConfig->mVao;
-                }
-                else
-                {
-                    aStorage.mVaos.push_back(prepareVAO(aProgram.mProgram, *aPart.mVertexStream));
-                    entries.push_back(
-                        ProgramConfig::Entry{
-                            .mVertexStream = aPart.mVertexStream,
-                            .mVao = &aStorage.mVaos.back(),
-                        });
-                    return entries.back().mVao;
-                }
-            }();
-    }
-
-
     /// @brief Find the program satisfying all annotations.
     /// @return The first program in aEffect for which all annotations are matching (i.e. present and same value),
     /// or a null handle otherwise.
@@ -84,17 +47,6 @@ namespace {
         return nullptr;
     }
 
-
-    /// @brief Specializes getProgram, returning first program matching provided pass name.
-    Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName)
-    {
-        const std::array<Technique::Annotation, 2> annotations{/*aggregate init of std::array*/{/*aggregate init of inner C-array*/
-            {"pass", aPassName},
-            {"pass", aPassName},
-        }};
-        return getProgram(aEffect, annotations.begin(), annotations.end());
-    }
-    
 
     // TODO Ad 2023/10/05: for OpenGL resource, maybe we should directly use the GL name?
     // or do we want to reimplement Handle<> in term of index in storage containers?
@@ -166,6 +118,53 @@ namespace {
 
 } // unnamed namespace
 
+
+/// @brief Specializes getProgram, returning first program matching provided pass name.
+Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName)
+{
+    const std::array<Technique::Annotation, 2> annotations{/*aggregate init of std::array*/{/*aggregate init of inner C-array*/
+        {"pass", aPassName},
+        {"pass", aPassName},
+    }};
+    return getProgram(aEffect, annotations.begin(), annotations.end());
+}
+
+
+/// @brief Returns the VAO matching the given program and part.
+/// Under the hood, the VAO is cached.
+Handle<graphics::VertexArrayObject> getVao(const ConfiguredProgram & aProgram,
+                                           const Part & aPart,
+                                           Storage & aStorage)
+{
+    // This is a common mistake, it would be nice to find a safer way
+    assert(aProgram.mConfig);
+
+    // Note: the config is via "handle", hosted by in cache that is mutable, so loosing the constness is correct.
+    return
+        [&, &entries = aProgram.mConfig->mEntries]() 
+        -> graphics::VertexArrayObject *
+        {
+            if(auto foundConfig = std::find_if(entries.begin(), entries.end(),
+                                            [&aPart](const auto & aEntry)
+                                            {
+                                                return aEntry.mVertexStream == aPart.mVertexStream;
+                                            });
+                foundConfig != entries.end())
+            {
+                return foundConfig->mVao;
+            }
+            else
+            {
+                aStorage.mVaos.push_back(prepareVAO(aProgram.mProgram, *aPart.mVertexStream));
+                entries.push_back(
+                    ProgramConfig::Entry{
+                        .mVertexStream = aPart.mVertexStream,
+                        .mVao = &aStorage.mVaos.back(),
+                    });
+                return entries.back().mVao;
+            }
+        }();
+}
 
 
 PassCache preparePass(StringKey aPass,
