@@ -12,6 +12,7 @@
 #include <platform/Filesystem.h>
 
 #include <renderer/BufferLoad.h>
+#include <renderer/Uniforms.h>
 
 // TODO #RV2 Remove V1 includes
 #include <snac-renderer-V1/text/Text.h>
@@ -24,6 +25,7 @@
 #include <profiler/GlApi.h>
 
 #include <snac-renderer-V2/Pass.h>
+#include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/SetupDrawing.h>
 
 #include <snacman/Profiling.h>
@@ -162,6 +164,7 @@ void Renderer_V2::render(const visu::GraphicState & aState)
                     * entity.mOrientation.toRotationMatrix()
                     * math::trans3d::translate(
                         entity.mPosition_world.as<math::Vec>()),
+            // TODO #RV2: No need to go to SDR, we can directly stream hdr floats
             .albedo = to_sdr(entity.mColor),
             .matrixPaletteOffset = matrixPaletteOffset,
         });
@@ -238,7 +241,7 @@ void Renderer_V2::render(const visu::GraphicState & aState)
         static const renderer::StringKey pass = "forward";
 
         std::function<void(const renderer::Node &)> recurseNodes;
-        recurseNodes = [this, &recurseNodes](const renderer::Node & aNode)
+        recurseNodes = [&, this/*, &recurseNodes*/](const renderer::Node & aNode)
         {
             using renderer::gl;
 
@@ -254,9 +257,14 @@ void Renderer_V2::render(const visu::GraphicState & aState)
                         // Data is uploaded above, in the previous code
                         //proto::loadSingle(mCameraBuffer.mViewing, , graphics::BufferHint::DynamicDraw);
                         renderer::RepositoryUbo repositoryUbo{
-                            {"Viewing", &mCameraBuffer.mViewing},
+                            {semantic::gViewProjection, &mCameraBuffer.mViewing},
                         };
                         renderer::setBufferBackedBlocks(configuredProgram->mProgram, repositoryUbo);
+            
+                        // TODO #RV2 make a block for lights
+                        graphics::setUniform(configuredProgram->mProgram.mProgram, "u_LightColor", lightColor);
+                        graphics::setUniform(configuredProgram->mProgram.mProgram, "u_LightPosition", lightPosition_cam);
+                        graphics::setUniform(configuredProgram->mProgram.mProgram, "u_AmbientColor", ambientColor);
 
                         renderer::Handle<graphics::VertexArrayObject> vao =
                             renderer::getVao(*configuredProgram, part, mRendererToKeep.mStorage);
@@ -264,10 +272,19 @@ void Renderer_V2::render(const visu::GraphicState & aState)
                         graphics::ScopedBind vaoScope{*vao};
                         graphics::ScopedBind programScope{configuredProgram->mProgram.mProgram};
 
-                        gl.DrawElements(part.mPrimitiveMode,
-                                        part.mIndicesCount,
-                                        part.mVertexStream->mIndicesType,
-                                        (void*)((size_t)part.mIndexFirst * graphics::getByteSize(part.mVertexStream->mIndicesType)));
+                        // TODO to be handled by Render Graph passes
+                        glEnable(GL_CULL_FACE);
+                        glEnable(GL_DEPTH_TEST);
+                        glDepthMask(GL_TRUE);
+
+                        gl.DrawElementsInstancedBaseVertex(
+                            part.mPrimitiveMode,
+                            part.mIndicesCount,
+                            part.mVertexStream->mIndicesType,
+                            (void*)((size_t)part.mIndexFirst * graphics::getByteSize(part.mVertexStream->mIndicesType)),
+                            1, // instance count
+                            part.mVertexFirst
+                        );
                     }
                 }
             }
@@ -281,7 +298,19 @@ void Renderer_V2::render(const visu::GraphicState & aState)
         TIME_RECURRING_GL("Draw_meshes");
         for (const auto & [model, instances] : sortedModels)
         {
-            recurseNodes(*model);
+            for (const auto & instance : instances)
+            {
+                SnacGraph::InstanceData instanceData{
+                    instance.pose,
+                    instance.albedo,
+                };
+                renderer::proto::loadSingle(*mRendererToKeep.mRenderGraph.getBufferView(semantic::gLocalToWorld).mGLBuffer,
+                                            instanceData,          
+                                            // TODO change to DynamicDraw when properly handling AZDO
+                                            graphics::BufferHint::StreamDraw);
+
+                recurseNodes(*model);
+            }
         }
     }
 

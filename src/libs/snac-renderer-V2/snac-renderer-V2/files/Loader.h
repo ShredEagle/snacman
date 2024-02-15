@@ -54,7 +54,17 @@ struct Loader
     resource::ResourceFinder mFinder;
 };
 
+// TODO Ad 2024/02/15: Those free functins should be relocated
+// (not even sure we want the library to propose an instance stream format at all)
 GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount);
+
+/// @brief Create a GL buffer of specified size (without loading data into it).
+/// @return Buffer view to the buffer.
+BufferView createBuffer(GLsizei aElementSize,
+                        GLsizeiptr aElementCount,
+                        GLuint aInstanceDivisor,
+                        GLenum aHint,
+                        Storage & aStorage);
 
 
 } // namespace ad::renderer

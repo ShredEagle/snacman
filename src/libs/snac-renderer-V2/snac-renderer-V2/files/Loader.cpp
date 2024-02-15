@@ -63,39 +63,6 @@ namespace {
     }
 
 
-    /// @brief Create a GL buffer of specified size (without loading data into it).
-    /// @return Buffer view to the buffer.
-    BufferView createBuffer(GLsizei aElementSize,
-                            GLsizeiptr aElementCount,
-                            GLuint aInstanceDivisor,
-                            GLenum aHint,
-                            Storage & aStorage)
-    {
-        graphics::BufferAny glBuffer; // glGenBuffers()
-        // Note: Using a random target, the underlying buffer objects are all identical.
-        constexpr auto target = graphics::BufferType::Array;
-        graphics::ScopedBind boundBuffer{glBuffer, target}; // glBind()
-
-        const GLsizeiptr bufferSize = aElementSize * aElementCount;
-
-        gl.BufferData(
-            static_cast<GLenum>(target),
-            bufferSize,
-            nullptr,
-            aHint);
-
-        aStorage.mBuffers.push_back(std::move(glBuffer));
-        graphics::BufferAny * buffer = &aStorage.mBuffers.back();
-
-        return BufferView{
-            .mGLBuffer = buffer,
-            .mStride = aElementSize,
-            .mInstanceDivisor = aInstanceDivisor,
-            .mOffset = 0,
-            .mSize = bufferSize, // The view has access to the whole buffer ATM
-        };
-    };
-
     BufferView makeBufferView(graphics::BufferAny * aBuffer,
                               GLsizei aElementSize,
                               GLsizeiptr aElementCount,
@@ -463,6 +430,38 @@ namespace {
 } // unnamed namespace
 
 
+BufferView createBuffer(GLsizei aElementSize,
+                        GLsizeiptr aElementCount,
+                        GLuint aInstanceDivisor,
+                        GLenum aHint,
+                        Storage & aStorage)
+{
+    graphics::BufferAny glBuffer; // glGenBuffers()
+    // Note: Using a random target, the underlying buffer objects are all identical.
+    constexpr auto target = graphics::BufferType::Array;
+    graphics::ScopedBind boundBuffer{glBuffer, target}; // glBind()
+
+    const GLsizeiptr bufferSize = aElementSize * aElementCount;
+
+    gl.BufferData(
+        static_cast<GLenum>(target),
+        bufferSize,
+        nullptr,
+        aHint);
+
+    aStorage.mBuffers.push_back(std::move(glBuffer));
+    graphics::BufferAny * buffer = &aStorage.mBuffers.back();
+
+    return BufferView{
+        .mGLBuffer = buffer,
+        .mStride = aElementSize,
+        .mInstanceDivisor = aInstanceDivisor,
+        .mOffset = 0,
+        .mSize = bufferSize, // The view has access to the whole buffer ATM
+    };
+};
+
+
 std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage, 
                                           Effect * aPartsEffect,
                                           const GenericStream & aStream)
@@ -807,7 +806,8 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
             {
                 aDefines_temp.push_back(std::move(macro));
             }
-            SELOG(warn)("'{}' program has 'defines', which are not recommended with V2.", aProgFile.string());
+            // TODO Ad 2024/02/15: #RV2 raise level to warning
+            SELOG(info)("'{}' program has 'defines', which are not recommended with V2.", aProgFile.string());
             continue;
         }
         else if(shaderStage == "vertex")

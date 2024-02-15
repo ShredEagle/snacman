@@ -35,9 +35,75 @@ namespace snac {
 namespace snacgame {
 
 
+namespace semantic {
+    #define SEM(s) const renderer::Semantic g ## s{#s}
+    #define BLOCK_SEM(s) const renderer::BlockSemantic g ## s{#s}
+
+    SEM(LocalToWorld);
+    SEM(Albedo);
+
+    BLOCK_SEM(ViewProjection);
+
+    #undef SEMANTIC
+} // namespace semantic
+
+
 // The Render Graph for snacman
 struct SnacGraph
 {
+    struct InstanceData
+    {
+        math::AffineMatrix<4, GLfloat> mModelTransform;
+        math::sdr::Rgba mAlbedo;
+    };
+
+    static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage, std::size_t aInstanceCount)
+    {
+        renderer::BufferView vboView = renderer::createBuffer(sizeof(InstanceData),
+                                                              aInstanceCount,
+                                                              1, // intance divisor
+                                                              GL_STREAM_DRAW,
+                                                              aStorage);
+
+        return renderer::GenericStream{
+            .mVertexBufferViews = { vboView, },
+            .mSemanticToAttribute{
+                {
+                    semantic::gLocalToWorld,
+                    renderer::AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = {4, 4},
+                            .mOffset = offsetof(InstanceData, mModelTransform),
+                            .mComponentType = GL_FLOAT,
+                        },
+                    }
+                },
+                {
+                    semantic::gAlbedo,
+                    renderer::AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 4,
+                            .mOffset = offsetof(InstanceData, mAlbedo),
+                            .mComponentType = GL_UNSIGNED_BYTE,
+                        },
+                    }
+                },
+            }
+        };
+    }
+
+    // TODO This should be handled by the Renderer library
+    const renderer::BufferView & getBufferView(renderer::Semantic aSemantic) const
+    {
+        return mInstanceStream.mVertexBufferViews[
+            mInstanceStream.mSemanticToAttribute.at(aSemantic).mBufferViewIndex];
+    }
+
+    // TODO #RV2: It should be implementing the frame rendering of models, instead of 
+    // having it inline in Renderer_V2::render()
+    //void renderFrame()
     // List and describes the buffer views used for per-instance vertex attributes
     renderer::GenericStream mInstanceStream;
 };
@@ -54,9 +120,11 @@ struct Impl_V2
 
     renderer::Storage mStorage;
     SnacGraph mRenderGraph{
-        .mInstanceStream = renderer::makeInstanceStream(mStorage, gMaxInstances),
+        .mInstanceStream = SnacGraph::makeInstanceStream(mStorage, gMaxInstances),
     };
+
 };
+
 
 class Renderer_V2
 {

@@ -12,7 +12,7 @@ in vec2 ve_TextureCoords1;
 // We need a default value of [1, 1, 1, 1], not [0, 0, 0, 1]
 // Could be addressed via: https://www.khronos.org/opengl/wiki/Vertex_Specification#Non-array_attribute_values
 // At the moment, export our models with a white albedo on vertices by default.
-in vec4 in_Albedo;
+in vec4 in_Albedo_normalized;
 
 #ifdef RIGGING
 #include "Rigging.glsl"
@@ -24,7 +24,7 @@ in mat4 in_LocalToWorld;
 
 // WARNING: for some reason, the GLSL compiler assigns the same implicit binding
 // index to both uniform blocks if we do not set it explicitly.
-layout(std140, binding = 0) uniform ViewingBlock
+layout(std140, binding = 0) uniform ViewProjectionBlock
 {
     mat4 u_WorldToCamera;
     mat4 u_Projection;
@@ -55,8 +55,7 @@ out vec4 ex_Position_lightClip;
 void main(void)
 {
     mat4 localToWorld =
-        mat4(1.0)
-        //in_LocalToWorld
+        in_LocalToWorld
 #ifdef RIGGING
         * assembleSkinningMatrix()
 #endif
@@ -76,7 +75,7 @@ void main(void)
 #ifdef TEXTURES
     ex_TextureCoords = vec2[](ve_TextureCoords0, ve_TextureCoords1);
 #endif
-    ex_Albedo = in_Albedo;
+    ex_Albedo = in_Albedo_normalized;
 
 #ifdef SHADOW
     ex_Position_lightClip = u_LightViewingMatrix * localToWorld * vec4(ve_Position_l, 1.f);
