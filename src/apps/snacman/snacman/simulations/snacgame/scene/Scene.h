@@ -1,10 +1,12 @@
 #pragma once
 
-#include "entity/Query.h"
+#include "../OrbitalControlInput.h"
+
 #include "../component/SceneNode.h"
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
+#include <entity/Query.h>
 #include <entity/Wrap.h>
 
 #include <map>
@@ -107,7 +109,7 @@ protected:
     ent::Handle<ent::Entity> mSystems;
     std::vector<ent::Handle<ent::Entity>> mOwnedEntities;
     ent::Wrap<component::MappingContext> & mMappingContext;
-    ent::Query<snac::Orbital> mCameraQuery;
+    ent::Query<OrbitalControlInput> mCameraQuery;
 };
 
 } // namespace scene

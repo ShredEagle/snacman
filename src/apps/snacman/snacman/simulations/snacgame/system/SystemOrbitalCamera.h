@@ -2,6 +2,7 @@
 
 #include "../EntityWrap.h"
 #include "../GraphicState.h"
+#include "../OrbitalControlInput.h"
 
 #include <snacman/Input.h>
 
@@ -28,11 +29,7 @@ public:
     visu::Camera getCamera() const;
 
 private:
-    static constexpr math::Vec<2, GLfloat> gMouseControlFactor{1 / 500.f,
-                                                               1 / 500.f};
-    static constexpr float gScrollFactor = 0.05f;
-
-    EntityWrap<snac::Orbital> mCamera;
+    EntityWrap<OrbitalControlInput> mControl;
 };
 
 } // namespace system

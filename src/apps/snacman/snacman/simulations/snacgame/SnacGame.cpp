@@ -1,5 +1,7 @@
 #include "SnacGame.h"
 
+#include "ImguiInhibiter.h"
+
 #include "component/AllowedMovement.h"
 #include "component/Context.h"
 #include "component/Controller.h"

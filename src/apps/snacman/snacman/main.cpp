@@ -9,6 +9,9 @@
 
 #include <build_info.h>
 
+#include "simulations/sandbox/ModelLoader.h"
+
+#include "simulations/snacgame/ImguiInhibiter.h"
 #include "simulations/snacgame/SnacGame.h"
 #include "simulations/snacgame/Renderer.h"
 
@@ -34,6 +37,10 @@ using namespace ad::snac;
 
 // TODO find a better place than global
 constexpr bool gWaitByBusyLoop = true;
+
+
+//using Simulation_t = snacgame::SnacGame;
+using Simulation_t = snacgame::ModelLoader;
 
 
 resource::ResourceFinder makeResourceFinder()
@@ -161,7 +168,7 @@ void runApplication()
     //
     // Initialize scene
     //
-    snacgame::SnacGame simulation{
+    Simulation_t simulation{
         *glfwApp.getAppInterface(),
         renderingThread,
         imguiUi,

@@ -74,7 +74,8 @@ std::pair<float/*near*/, float/*far*/> getNearFarPlanes(const Camera & aCamera);
 /// and looking toward the orbit origin.
 struct Orbital
 {
-    Orbital(float aRadius, math::Radian<float> aPolar = math::Degree<float>{90.f},
+    Orbital(float aRadius,
+            math::Radian<float> aPolar = math::Degree<float>{90.f},
             math::Radian<float> aAzimuthal = math::Radian<float>{0.f},
             math::Position<3, float> aPosition = {0.f, 0.f, 0.f}) :
         mSpherical{aRadius, aPolar, aAzimuthal}
@@ -100,6 +101,9 @@ struct Orbital
 //TODO Ad 2023/07/27: 
 // This should be abstracted away from being used purely for rendering cameras, removing
 // knowledge of window size and vertical FOV. Yet this cause au complication for _panning_ movements.
+
+// TODO Ad 2024/02/16:
+// OrbitalControl should be renamed and become a glfw-callback wrapper around some "OrbitalControl_raw".
 
 /// @brief Controls an Orbital position with mouse movements (movements of an usual orbital camera).
 struct OrbitalControl

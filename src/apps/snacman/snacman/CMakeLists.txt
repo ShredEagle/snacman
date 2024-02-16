@@ -14,24 +14,28 @@ set(${TARGET_NAME}_HEADERS
     Input.h
     Logging.h
     LoopSettings.h
-    QueryManipulation.h
     Profiling.h
     ProfilingGPU.h
+    QueryManipulation.h
     RenderThread.h
     Resources.h
     SparseSet.h
     Timing.h
+
+    simulations/sandbox/ModelLoader.h
 
     simulations/snacgame/EntityWrap.h
     simulations/snacgame/Entities.h
     simulations/snacgame/GameContext.h
     simulations/snacgame/GameParameters.h
     simulations/snacgame/GraphicState.h
+    simulations/snacgame/ImguiInhibiter.h
     simulations/snacgame/ImguiSceneEditor.h
     simulations/snacgame/InputConstants.h
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/LevelHelper.h
     simulations/snacgame/ModelInfos.h
+    simulations/snacgame/OrbitalControlInput.h
     simulations/snacgame/PlayerSlotManager.h
     simulations/snacgame/Renderer.h
     simulations/snacgame/Renderer_V1.h
@@ -108,9 +112,12 @@ set(${TARGET_NAME}_SOURCES
     RenderThread.cpp
     Resources.cpp
 
+    simulations/sandbox/ModelLoader.cpp
+
     simulations/snacgame/Entities.cpp
     simulations/snacgame/GameContext.cpp
     simulations/snacgame/ImguiSceneEditor.cpp
+    simulations/snacgame/OrbitalControlInput.cpp
     simulations/snacgame/PlayerSlotManager.cpp
     simulations/snacgame/Renderer_V1.cpp
     simulations/snacgame/Renderer_V2.cpp
