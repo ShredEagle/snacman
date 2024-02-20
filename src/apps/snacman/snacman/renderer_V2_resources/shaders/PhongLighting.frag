@@ -5,18 +5,27 @@
 in vec3 ex_Position_c;
 in vec3 ex_Normal_c;
 in vec4 ex_Tangent_c;
-in vec4 ex_ColorFactor;
+in vec4 ex_BaseColorFactor;
+
+in flat uint ex_MaterialIdx;
+
 #ifdef TEXTURES
 in vec2[2] ex_TextureCoords;
 #endif
-in vec4 ex_Albedo;
+
+in vec4 ex_Color;
+
 #ifdef SHADOW
 in vec4 ex_Position_lightClip;
 #endif
 
-uniform vec3 u_LightPosition_c;
-uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8);
+// Traditionnally, a single term accounting for all lights in the scene
 uniform vec3 u_AmbientColor = vec3(0.2, 0.0, 0.2);
+
+// Per-light data
+uniform vec3 u_LightPosition_c;
+uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8); // could be split between diffuse and specular itensities
+
 #ifdef TEXTURES
 uniform uint u_BaseColorUVIndex;
 uniform uint u_NormalUVIndex;
@@ -43,24 +52,49 @@ float getShadowAttenuation(vec4 fragPosition_lightClip, float bias)
 }
 #endif
 
+struct PhongMaterial
+{
+    // Notes: here, the 3 colors of the Phong material are really used as reflection factors.
+    vec4 ambientFactor;
+    vec4 diffuseFactor;
+    vec4 specularFactor;
+    uint textureIndex;
+    uint diffuseUvChannel;
+    float specularExponent;
+};
+
+layout(std140, binding = 2) uniform MaterialsBlock
+{
+    PhongMaterial ub_Phong[128];
+};
+
 out vec4 out_Color;
 
 
 void main(void)
 {
+    // Material
+    PhongMaterial material = ub_Phong[ex_MaterialIdx];
+
     // Everything in camera space
+    const vec3 view_c = vec3(0., 0., 1.);
     vec3 light_c = normalize(u_LightPosition_c - ex_Position_c);
-    vec3 view_c = vec3(0., 0., 1.);
     vec3 h_c = normalize(view_c + light_c);
     
-    float specularExponent = 32;
-
-    vec4 color = 
-        ex_ColorFactor 
+    vec4 albedo = 
+        ex_Color
+        * ex_BaseColorFactor // Note: should probably go away
 #ifdef TEXTURES
         * texture(u_BaseColorTexture, ex_TextureCoords[u_BaseColorUVIndex])
 #endif
-        * ex_Albedo;
+        ;
+
+    // TODO: enable alpha testing (atm)
+    // Implement "cut-out" transparency: everything below 50% opacity is discarded (i.e. no depth write).
+    //if(albedo.a < 0.5)
+    //{
+    //    discard;
+    //}
     
     //
     // Compute the fragment normal
@@ -91,23 +125,25 @@ void main(void)
     // Phong illumination
     //
     vec3 ambient = 
-        u_AmbientColor;
+        u_AmbientColor * material.ambientFactor.xyz;
     vec3 diffuse =
-        u_LightColor * max(0.f, dot(normal_c, light_c));
+        u_LightColor * max(0.f, dot(normal_c, light_c))
+        * material.diffuseFactor.xyz;
     vec3 specular = 
-        u_LightColor * pow(max(0.f, dot(normal_c, h_c)), specularExponent);
+        u_LightColor * pow(max(0.f, dot(normal_c, h_c)), material.specularExponent)
+        * material.specularFactor.xyz;
 
 #ifdef SHADOW
         float bias = max(8 * (1 - dot(normalize(ex_Normal_c), light_c)), 1) * u_ShadowBias;
     vec3 phongColor = 
-        (ambient + (diffuse + specular) * getShadowAttenuation(ex_Position_lightClip, bias)) * color.xyz;
+        (ambient + (diffuse + specular) * getShadowAttenuation(ex_Position_lightClip, bias)) * albedo.rgb;
 #else
     vec3 phongColor = 
-        (ambient + diffuse + specular) * color.xyz;
+        (ambient + diffuse + specular) * albedo.rgb;
 #endif
 
     //
     // Gamma correction
     //
-    out_Color = correctGamma(vec4(phongColor, color.w));
+    out_Color = correctGamma(vec4(phongColor, albedo.a));
 }

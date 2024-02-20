@@ -1,0 +1,5 @@
+{
+    "defines": ["MODEL_MATRIX"],
+    "vertex": "SimplePositionTransform.vert",
+    "fragment": "Depth.frag"
+}

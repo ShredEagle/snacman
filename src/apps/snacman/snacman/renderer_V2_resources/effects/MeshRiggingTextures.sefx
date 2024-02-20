@@ -1,13 +1,16 @@
 {
     "techniques": [
         {
-            "programfile": "shaders/PhongLightingVertexColorRigging.prog"
+            "annotations": {
+                "pass": "forward"
+            },
+            "programfile": "shaders/PhongLightingVertexColorRiggingTextures.prog"
         },
         {
             "annotations": {
                 "pass": "forward_shadow"
             },
-            "programfile": "shaders/PhongLightingVertexColorShadowRigging.prog"
+            "programfile": "shaders/PhongLightingVertexColorShadowRiggingTextures.prog"
         },
         {
             "annotations": {

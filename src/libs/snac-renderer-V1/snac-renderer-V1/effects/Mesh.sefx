@@ -1,9 +1,6 @@
 {
     "techniques": [
         {
-            "annotations": {
-                "pass": "forward"
-            },
             "programfile": "shaders/PhongLightingVertexColor.prog"
         },
         {

@@ -200,7 +200,8 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
 file(GENERATE 
      OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
-     CONTENT "{\"prefixes\": [\"${REPO_FOLDER}/src/libs/snac-renderer-V1/snac-renderer-V1/\",
+     # Uses dedicated shaders and effects, designed for renderer V2
+     CONTENT "{\"prefixes\": [\"${CMAKE_CURRENT_LIST_DIR}/renderer_V2_resources/\",
                               \"${REPO_FOLDER}/../snac-assets/\"]}")
 
 
