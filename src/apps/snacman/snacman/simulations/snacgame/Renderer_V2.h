@@ -41,8 +41,10 @@ namespace semantic {
 
     SEM(LocalToWorld);
     SEM(Albedo);
+    SEM(MaterialIdx);
 
     BLOCK_SEM(ViewProjection);
+    BLOCK_SEM(Materials);
 
     #undef SEMANTIC
 } // namespace semantic
@@ -55,6 +57,7 @@ struct SnacGraph
     {
         math::AffineMatrix<4, GLfloat> mModelTransform;
         math::sdr::Rgba mAlbedo;
+        GLuint mMaterialIdx;
     };
 
     static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage, std::size_t aInstanceCount)
@@ -87,6 +90,17 @@ struct SnacGraph
                             .mDimension = 4,
                             .mOffset = offsetof(InstanceData, mAlbedo),
                             .mComponentType = GL_UNSIGNED_BYTE,
+                        },
+                    }
+                },
+                {
+                    semantic::gMaterialIdx,
+                    renderer::AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 1,
+                            .mOffset = offsetof(InstanceData, mMaterialIdx),
+                            .mComponentType = GL_UNSIGNED_INT,
                         },
                     }
                 },

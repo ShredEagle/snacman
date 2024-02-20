@@ -6,10 +6,15 @@ in vec3 ex_Position_c;
 in vec3 ex_Normal_c;
 in vec4 ex_Tangent_c;
 in vec4 ex_ColorFactor;
+
+in flat uint ex_MaterialIdx;
+
 #ifdef TEXTURES
 in vec2[2] ex_TextureCoords;
 #endif
+
 in vec4 ex_Albedo;
+
 #ifdef SHADOW
 in vec4 ex_Position_lightClip;
 #endif
@@ -43,11 +48,29 @@ float getShadowAttenuation(vec4 fragPosition_lightClip, float bias)
 }
 #endif
 
+struct PhongMaterial
+{
+    vec4 ambientColor;
+    vec4 diffuseColor;
+    vec4 specularColor;
+    uint textureIndex;
+    uint diffuseUvChannel;
+    float specularExponent;
+};
+
+layout(std140, binding = 2) uniform MaterialsBlock
+{
+    PhongMaterial ub_Phong[128];
+};
+
 out vec4 out_Color;
 
 
 void main(void)
 {
+    // Material
+    PhongMaterial material = ub_Phong[ex_MaterialIdx];
+
     // Everything in camera space
     vec3 light_c = normalize(u_LightPosition_c - ex_Position_c);
     vec3 view_c = vec3(0., 0., 1.);
@@ -60,7 +83,9 @@ void main(void)
 #ifdef TEXTURES
         * texture(u_BaseColorTexture, ex_TextureCoords[u_BaseColorUVIndex])
 #endif
-        * ex_Albedo;
+        * ex_Albedo
+        // TODO #RV2 Actually port the whole material model
+        * material.diffuseColor;
     
     //
     // Compute the fragment normal

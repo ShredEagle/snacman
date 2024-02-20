@@ -240,8 +240,8 @@ void Renderer_V2::render(const visu::GraphicState & aState)
 
         static const renderer::StringKey pass = "forward";
 
-        std::function<void(const renderer::Node &)> recurseNodes;
-        recurseNodes = [&, this/*, &recurseNodes*/](const renderer::Node & aNode)
+        std::function<void(const renderer::Node &, const snac::PoseColorSkeleton & aEntity)> recurseNodes;
+        recurseNodes = [&, this/*, &recurseNodes*/](const renderer::Node & aNode, const snac::PoseColorSkeleton & aEntity)
         {
             using renderer::gl;
 
@@ -251,20 +251,34 @@ void Renderer_V2::render(const visu::GraphicState & aState)
             {
                 for(const renderer::Part & part : object->mParts)
                 {
+                    // TODO Ad 2024/02/20: #perf #azdo pre-upload the buffer with all poses and albedos(or distinct buffer for albedos?)
+                    // And only upload an index per instance (actually, all the instance data has to be pre-uploaded for azdo)
+                    SnacGraph::InstanceData instanceData{
+                        aEntity.pose,
+                        aEntity.albedo,
+                        (GLuint)part.mMaterial.mPhongMaterialIdx,
+                    };
+                    renderer::proto::loadSingle(*mRendererToKeep.mRenderGraph.getBufferView(semantic::gLocalToWorld).mGLBuffer,
+                                                instanceData,          
+                                                // TODO #azdo change to DynamicDraw when properly handling AZDO
+                                                graphics::BufferHint::StreamDraw);
+
                     if(renderer::Handle<renderer::ConfiguredProgram> configuredProgram = 
                             renderer::getProgramForPass(*part.mMaterial.mEffect, pass))
                     {
-                        // Data is uploaded above, in the previous code
-                        //proto::loadSingle(mCameraBuffer.mViewing, , graphics::BufferHint::DynamicDraw);
-                        renderer::RepositoryUbo repositoryUbo{
-                            {semantic::gViewProjection, &mCameraBuffer.mViewing},
-                        };
+                        // Materials are uploaded to the UBO by loadBinary()
+                        // ViewProjection data is uploaded above, in the V1 code
+                        
+                        // Make a copy of the materials ubo, and append to it.
+                        renderer::RepositoryUbo repositoryUbo = part.mMaterial.mContext->mUboRepo;
+                        repositoryUbo[semantic::gViewProjection] = &mCameraBuffer.mViewing;
+
                         renderer::setBufferBackedBlocks(configuredProgram->mProgram, repositoryUbo);
             
                         // TODO #RV2 make a block for lights
-                        graphics::setUniform(configuredProgram->mProgram.mProgram, "u_LightColor", lightColor);
-                        graphics::setUniform(configuredProgram->mProgram.mProgram, "u_LightPosition", lightPosition_cam);
-                        graphics::setUniform(configuredProgram->mProgram.mProgram, "u_AmbientColor", ambientColor);
+                        graphics::setUniform(configuredProgram->mProgram, "u_LightColor", lightColor);
+                        graphics::setUniform(configuredProgram->mProgram, "u_LightPosition", lightPosition_cam);
+                        graphics::setUniform(configuredProgram->mProgram, "u_AmbientColor", ambientColor);
 
                         renderer::Handle<graphics::VertexArrayObject> vao =
                             renderer::getVao(*configuredProgram, part, mRendererToKeep.mStorage);
@@ -291,25 +305,16 @@ void Renderer_V2::render(const visu::GraphicState & aState)
 
             for(const auto & child : aNode.mChildren)
             {
-                recurseNodes(child);
+                recurseNodes(child, aEntity);
             }
         };
 
         TIME_RECURRING_GL("Draw_meshes");
         for (const auto & [model, instances] : sortedModels)
         {
-            for (const auto & instance : instances)
+            for (const auto & entity : instances)
             {
-                SnacGraph::InstanceData instanceData{
-                    instance.pose,
-                    instance.albedo,
-                };
-                renderer::proto::loadSingle(*mRendererToKeep.mRenderGraph.getBufferView(semantic::gLocalToWorld).mGLBuffer,
-                                            instanceData,          
-                                            // TODO change to DynamicDraw when properly handling AZDO
-                                            graphics::BufferHint::StreamDraw);
-
-                recurseNodes(*model);
+                recurseNodes(*model, entity);
             }
         }
     }
