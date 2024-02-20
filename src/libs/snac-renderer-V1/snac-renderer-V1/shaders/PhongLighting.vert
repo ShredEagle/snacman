@@ -12,6 +12,7 @@ in vec2 ve_TextureCoords1;
 // We need a default value of [1, 1, 1, 1], not [0, 0, 0, 1]
 // Could be addressed via: https://www.khronos.org/opengl/wiki/Vertex_Specification#Non-array_attribute_values
 // At the moment, export our models with a white albedo on vertices by default.
+// Note: It could either be a vertex color, or an instance color (ve_ or in_).
 in vec4 a_Color_normalized;
 
 #ifdef RIGGING
@@ -35,7 +36,7 @@ layout(std140, binding = 0) uniform ViewProjectionBlock
 uniform mat4 u_LightViewingMatrix;
 #endif
 
-// TODO #RV2 remove I guess?
+// TODO #RV2 remove I guess? This is inherited from the times of gltf PBR material
 // How do we handle per player color variations?
 uniform vec4 u_BaseColorFactor = vec4(1., 1., 1., 1.);
 
@@ -43,14 +44,14 @@ uniform vec4 u_BaseColorFactor = vec4(1., 1., 1., 1.);
 out vec3 ex_Position_c;
 out vec3 ex_Normal_c;
 out vec4 ex_Tangent_c;
-out vec4 ex_ColorFactor;
+out vec4 ex_BaseColorFactor;
 out flat uint ex_MaterialIdx;
 
 #ifdef TEXTURES
 out vec2[2] ex_TextureCoords;
 #endif
 
-out vec4 ex_Albedo;
+out vec4 ex_Color;
 
 #ifdef SHADOW
 out vec4 ex_Position_lightClip;
@@ -75,11 +76,11 @@ void main(void)
     // see: https://www.pbr-book.org/3ed-2018/Geometry_and_Transformations/Applying_Transformations
     ex_Tangent_c = vec4(mat3(localToCamera) * ve_Tangent_l.xyz, ve_Tangent_l.w);
 
-    ex_ColorFactor  = u_BaseColorFactor /* TODO multiply by vertex color, when enabled */;
+    ex_BaseColorFactor  = u_BaseColorFactor /* TODO multiply by vertex color, when enabled */;
 #ifdef TEXTURES
     ex_TextureCoords = vec2[](ve_TextureCoords0, ve_TextureCoords1);
 #endif
-    ex_Albedo = a_Color_normalized;
+    ex_Color = a_Color_normalized;
     ex_MaterialIdx = in_MaterialIdx;
 
 #ifdef SHADOW

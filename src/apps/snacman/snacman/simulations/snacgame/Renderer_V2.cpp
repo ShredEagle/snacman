@@ -275,10 +275,10 @@ void Renderer_V2::render(const visu::GraphicState & aState)
 
                         renderer::setBufferBackedBlocks(configuredProgram->mProgram, repositoryUbo);
             
-                        // TODO #RV2 make a block for lights
+                        // TODO #RV2 make a block for lighting (with an array of lights)
+                        graphics::setUniform(configuredProgram->mProgram, "u_AmbientColor", ambientColor); // single contribution for all lights
                         graphics::setUniform(configuredProgram->mProgram, "u_LightColor", lightColor);
                         graphics::setUniform(configuredProgram->mProgram, "u_LightPosition", lightPosition_cam);
-                        graphics::setUniform(configuredProgram->mProgram, "u_AmbientColor", ambientColor);
 
                         renderer::Handle<graphics::VertexArrayObject> vao =
                             renderer::getVao(*configuredProgram, part, mRendererToKeep.mStorage);
