@@ -30,9 +30,7 @@ snacgame::Handle<renderer::Node> Resources::getModel(filesystem::path aModel, fi
     }
     else
     {
-        //return mModels.load(aModel, mFinder, aEffect, mRenderThread, mResources_V2);
-        // TODO Ad 2024/02/14: #RV2 Restore actual models name
-        return mModels.load("models/donut/donut.seum", mFinder, aEffect, mRenderThread, mResources_V2);
+        return mModels.load(aModel, mFinder, aEffect, mRenderThread, mResources_V2);
     }
 }
 

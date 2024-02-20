@@ -274,6 +274,8 @@ void Renderer_V2::render(const visu::GraphicState & aState)
                         repositoryUbo[semantic::gViewProjection] = &mCameraBuffer.mViewing;
 
                         renderer::setBufferBackedBlocks(configuredProgram->mProgram, repositoryUbo);
+
+                        renderer::setTextures(configuredProgram->mProgram, part.mMaterial.mContext->mTextureRepo);
             
                         // TODO #RV2 make a block for lighting (with an array of lights)
                         graphics::setUniform(configuredProgram->mProgram, "u_AmbientColor", ambientColor); // single contribution for all lights

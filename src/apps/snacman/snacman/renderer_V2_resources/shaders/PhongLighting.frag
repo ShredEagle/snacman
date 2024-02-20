@@ -10,7 +10,7 @@ in vec4 ex_BaseColorFactor;
 in flat uint ex_MaterialIdx;
 
 #ifdef TEXTURES
-in vec2[2] ex_TextureCoords;
+in vec2[4] ex_Uvs;
 #endif
 
 in vec4 ex_Color;
@@ -27,12 +27,13 @@ uniform vec3 u_LightPosition_c;
 uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8); // could be split between diffuse and specular itensities
 
 #ifdef TEXTURES
-uniform uint u_BaseColorUVIndex;
-uniform uint u_NormalUVIndex;
-uniform float u_NormalMapScale;
+uniform sampler2DArray u_DiffuseTexture;
 
-uniform sampler2D u_BaseColorTexture;
-uniform sampler2D u_NormalTexture;
+// TODO: #RV2 port to V2
+// (i.e. UV channel indices should be part of the material, textures are in arrays)
+//uniform uint u_NormalUVIndex;
+//uniform float u_NormalMapScale;
+//uniform sampler2D u_NormalTexture;
 #endif
 
 #ifdef SHADOW
@@ -58,7 +59,7 @@ struct PhongMaterial
     vec4 ambientFactor;
     vec4 diffuseFactor;
     vec4 specularFactor;
-    uint textureIndex;
+    uint diffuseTextureIndex;
     uint diffuseUvChannel;
     float specularExponent;
 };
@@ -81,11 +82,11 @@ void main(void)
     vec3 light_c = normalize(u_LightPosition_c - ex_Position_c);
     vec3 h_c = normalize(view_c + light_c);
     
-    vec4 albedo = 
+    vec4 albedo =
         ex_Color
         * ex_BaseColorFactor // Note: should probably go away
 #ifdef TEXTURES
-        * texture(u_BaseColorTexture, ex_TextureCoords[u_BaseColorUVIndex])
+        * texture(u_DiffuseTexture, vec3(ex_Uvs[material.diffuseUvChannel], material.diffuseTextureIndex))
 #endif
         ;
 
@@ -99,11 +100,13 @@ void main(void)
     //
     // Compute the fragment normal
     //
-#ifdef TEXTURES
+    // TODO #RV2 restore normal mapping
+#ifdef TEXTURES_DISABLED_NORMALMAP
     // The normal in tangent space
     vec3 normal_tbn = normalize(
         // Mapping from [0.0, 1.0] to [-1.0, 1.0]
-        (texture(u_NormalTexture, ex_TextureCoords[u_NormalUVIndex]).xyz * 2.0 - vec3(1.0))
+        // TODO get the normal UV channel index
+        (texture(u_NormalTexture, ex_Uvs[u_NormalUVIndex]).xyz * 2.0 - vec3(1.0))
         * vec3(u_NormalMapScale, u_NormalMapScale, 1.0));
 
     // MikkT see: http://www.mikktspace.com/

@@ -5,15 +5,19 @@ layout(location=1) in vec3 ve_Normal_l;
 layout(location=2) in vec4 ve_Tangent_l;
 
 #ifdef TEXTURES
-in vec2 ve_TextureCoords0;
-in vec2 ve_TextureCoords1;
+// The asset processor only handles 1 UV channel ATM (i.e. until we have a need for more)
+in vec2 ve_Uv;
 #endif
 
 // We need a default value of [1, 1, 1, 1], not [0, 0, 0, 1]
 // Could be addressed via: https://www.khronos.org/opengl/wiki/Vertex_Specification#Non-array_attribute_values
-// At the moment, export our models with a white albedo on vertices by default.
-// Note: It could either be a vertex color, or an instance color (ve_ or in_).
-in vec4 a_Color_normalized;
+// In V1, we exported our models with a white albedo on vertices by default.
+// In V2, we try with a shader variation
+#ifdef BASECOLOR
+in vec4 a_Color_normalized; // Note: could either be per vertex or per instance (ve_ or in_).
+#else
+const vec4 a_Color_normalized = vec4(1.0);
+#endif
 
 #ifdef RIGGING
 #include "Rigging.glsl"
@@ -48,7 +52,7 @@ out vec4 ex_BaseColorFactor;
 out flat uint ex_MaterialIdx;
 
 #ifdef TEXTURES
-out vec2[2] ex_TextureCoords;
+out vec2[4] ex_Uvs; // Lay the ground-work for up to 4 UV channels (only 1 UV vertex attribute atm)
 #endif
 
 out vec4 ex_Color;
@@ -78,7 +82,7 @@ void main(void)
 
     ex_BaseColorFactor  = u_BaseColorFactor /* TODO multiply by vertex color, when enabled */;
 #ifdef TEXTURES
-    ex_TextureCoords = vec2[](ve_TextureCoords0, ve_TextureCoords1);
+    ex_Uvs[0] = ve_Uv;
 #endif
     ex_Color = a_Color_normalized;
     ex_MaterialIdx = in_MaterialIdx;
