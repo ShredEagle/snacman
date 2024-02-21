@@ -1,6 +1,7 @@
 #include "Loader.h"
 
 #include "BinaryArchive.h" 
+#include "Flags.h" 
 
 #include "../Cube.h"
 #include "../Json.h"
@@ -103,6 +104,7 @@ namespace {
     // TODO Ad 2023/10/11: #loader Get rid of those hardcoded types when the binary streams are dynamic.
     constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
     constexpr auto gNormalSize = gPositionSize;
+    constexpr auto gTangentSize = gPositionSize;
     constexpr auto gUvSize = 2 * sizeof(float);
     constexpr auto gColorSize = 4 * sizeof(float);
     constexpr auto gIndexSize = sizeof(unsigned int);
@@ -218,8 +220,9 @@ namespace {
             };
 
         // TODO #loader Those hardcoded indices are smelly, hard-coupled to the attribute streams structure in the binary.
-        graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
-        graphics::BufferAny & normalBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
+        graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 5)->mGLBuffer;
+        graphics::BufferAny & normalBuffer   = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
+        graphics::BufferAny & tangentBuffer  = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
         graphics::BufferAny & colorBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
         graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
         graphics::BufferAny & indexBuffer = *(aVertexStream.mIndexBufferView.mGLBuffer);
@@ -229,6 +232,11 @@ namespace {
         unsigned int materialIndex;
         aIn.read(materialIndex);
 
+        unsigned int vertexAttributesFlags;
+        aIn.read(vertexAttributesFlags);
+        assert(has(vertexAttributesFlags, gVertexPosition));
+        assert(has(vertexAttributesFlags, gVertexNormal));
+
         unsigned int verticesCount;
         aIn.read(verticesCount);
         
@@ -236,6 +244,14 @@ namespace {
         loadBufferFromArchive(positionBuffer, aVertexFirst, gPositionSize, verticesCount);
         // load normals
         loadBufferFromArchive(normalBuffer, aVertexFirst, gNormalSize, verticesCount);
+        // load tangents, if present
+        // #assetprocessor This assert should go away if we start supporting dynamic list of attributes
+        assert(has(vertexAttributesFlags, gVertexTangent));
+        // Has to be true atm
+        if(has(vertexAttributesFlags, gVertexTangent)) 
+        {
+            loadBufferFromArchive(tangentBuffer, aVertexFirst, gTangentSize, verticesCount);
+        }
 
         unsigned int colorChannelsCount;
         aIn.read(colorChannelsCount);
@@ -430,7 +446,7 @@ namespace {
         // IMPORTANT: This sequence is in the exact order of texture types in a binary.
         static const Semantic semanticSequence[] = {
             semantic::gDiffuseTexture,
-            semantic::gNormalsTexture,
+            semantic::gNormalTexture,
         };
         RepositoryTexture textureRepo;
         for (const Semantic texSemantic : semanticSequence)
@@ -697,7 +713,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
 
     // Binary attributes descriptions
     // TODO Ad 2023/10/11: #loader Support dynamic set of attributes in the binary
-    static const std::array<AttributeDescription, 4> gAttributeStreamsInBinary {
+    static const std::array<AttributeDescription, 5> gAttributeStreamsInBinary {
         AttributeDescription{
             .mSemantic = semantic::gPosition,
             .mDimension = 3,
@@ -705,6 +721,11 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
         },
         AttributeDescription{
             .mSemantic = semantic::gNormal,
+            .mDimension = 3,
+            .mComponentType = GL_FLOAT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gTangent,
             .mDimension = 3,
             .mComponentType = GL_FLOAT,
         },

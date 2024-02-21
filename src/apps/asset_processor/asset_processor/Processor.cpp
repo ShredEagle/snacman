@@ -14,6 +14,7 @@
 
 #include <snac-renderer-V2/Material.h>
 #include <snac-renderer-V2/files/BinaryArchive.h>
+#include <snac-renderer-V2/files/Flags.h>
 
 #include <fmt/ostream.h>
 
@@ -88,12 +89,28 @@ namespace {
             // Material index
             mArchive.write(aMesh->mMaterialIndex);
 
+            aiVector3D * tangents = aMesh->mTangents;
+            // positions and normals are always required
+            unsigned int vertexAttributesFlags = gVertexPosition | gVertexNormal;
+            // Note: For the moment, since the structure of the loader if too rigid
+            // the tangents are mandatory (the vertexAttributesFlags is an illusion)
+            // TODO Ad 2024/02/21: #assetprocessor Can we handle "dynamic" list of vertex attributes?
+            // (e.g., making tangents optional)
+            assert(tangents);
+            if(tangents) vertexAttributesFlags |= gVertexTangent;
+            mArchive.write(vertexAttributesFlags);
+
             // Vertices
             mArchive.write(aMesh->mNumVertices);
             mArchive.write(std::span{aMesh->mVertices, aMesh->mNumVertices});
 
             assert(aMesh->mNormals != nullptr);
             mArchive.write(std::span{aMesh->mNormals, aMesh->mNumVertices});
+
+            if(tangents)
+            {
+                mArchive.write(std::span{tangents, aMesh->mNumVertices});
+            }
 
             mArchive.write(aMesh->GetNumColorChannels());
             for (unsigned int colorIdx = 0; colorIdx != aMesh->GetNumColorChannels(); ++colorIdx)
@@ -198,9 +215,11 @@ namespace {
     //    each node.mesh:
     //      mesh.name
     //      mesh.materialIndex
+    //      mesh.vertexAttributesFlags
     //      mesh.numVertices
     //      [mesh.vertices(i.e. positions, 3 floats per vertex)]
     //      [mesh.normals(3 floats per vertex)]
+    //      <if mesh.hasTangents>: [mesh.tangents(3 floats per vertex)]
     //      mesh.numColorChannels
     //      each mesh.ColorChannel:
     //        [ColorChannel.color(4 floats per vertex)]

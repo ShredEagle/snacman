@@ -17,6 +17,7 @@ set(${TARGET_NAME}_HEADERS
     Semantics.h
     SetupDrawing.h
 
+    files/Flags.h
     files/BinaryArchive.h
     files/Loader.h
 )

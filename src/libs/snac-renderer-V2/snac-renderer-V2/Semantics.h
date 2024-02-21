@@ -8,10 +8,11 @@ namespace semantic
 {
     const Semantic gPosition{"Position"};
     const Semantic gNormal{"Normal"};
+    const Semantic gTangent{"Tangent"};
     const Semantic gColor{"Color"};
     const Semantic gUv{"Uv"};
     const Semantic gDiffuseTexture{"DiffuseTexture"};
-    const Semantic gNormalsTexture{"NormalsTexture"};
+    const Semantic gNormalTexture{"NormalTexture"};
     const Semantic gModelTransformIdx{"ModelTransformIdx"};
     const Semantic gMaterialIdx{"MaterialIdx"};
 

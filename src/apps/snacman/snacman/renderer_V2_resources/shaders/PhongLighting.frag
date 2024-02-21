@@ -29,7 +29,7 @@ uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8); // could be split between diffu
 #ifdef TEXTURES
 uniform sampler2DArray u_DiffuseTexture;
 
-uniform sampler2DArray u_NormalsTexture;
+uniform sampler2DArray u_NormalTexture;
 uniform float u_NormalMapScale = 1.0;
 #endif
 
@@ -58,8 +58,8 @@ struct PhongMaterial
     vec4 specularFactor;
     uint diffuseTextureIndex;
     uint diffuseUvChannel;
-    uint normalsTextureIndex;
-    uint normalsUvChannel;
+    uint normalTextureIndex;
+    uint normalUvChannel;
     float specularExponent;
 };
 
@@ -85,8 +85,7 @@ void main(void)
         ex_Color
         * ex_BaseColorFactor // Note: should probably go away
 #ifdef TEXTURES
-        //* texture(u_DiffuseTexture, vec3(ex_Uvs[material.diffuseUvChannel], material.diffuseTextureIndex))
-        * texture(u_NormalsTexture, vec3(ex_Uvs[material.normalsUvChannel], material.normalsTextureIndex))
+        * texture(u_DiffuseTexture, vec3(ex_Uvs[material.diffuseUvChannel], material.diffuseTextureIndex))
 #endif
         ;
 
@@ -100,25 +99,33 @@ void main(void)
     //
     // Compute the fragment normal
     //
-    // TODO #RV2 restore normal mapping
-#ifdef TEXTURES_DISABLED_NORMALMAP
-    // The normal in tangent space
-    vec3 normal_tbn = normalize(
-        // Mapping from [0.0, 1.0] to [-1.0, 1.0]
-        // TODO get the normal UV channel index
-        (texture(u_NormalTexture, ex_Uvs[u_NormalUVIndex]).xyz * 2.0 - vec3(1.0))
-        * vec3(u_NormalMapScale, u_NormalMapScale, 1.0));
+#ifdef TEXTURES
+    vec3 normal_c;
+    // For the moment, let's go with branching to enable (or not) tangents
+    if(material.normalUvChannel == 0)
+    {
+        // The normal in tangent space
+        vec3 normal_tbn = normalize(
+            // Mapping from [0.0, 1.0] to [-1.0, 1.0]
+            // TODO get the normal UV channel index
+            (texture(u_NormalTexture, vec3(ex_Uvs[material.normalUvChannel], material.normalTextureIndex)).xyz * 2.0 - vec3(1.0))
+            * vec3(u_NormalMapScale, u_NormalMapScale, 1.0));
 
-    // MikkT see: http://www.mikktspace.com/
-    // Yet, if the tangent and normal were not normalized (as seems to be proposed in mikkt)
-    // the result would be abherent with sample gltf assets (e.g. avocado) 
-    vec3 normalBase_c = normalize(ex_Normal_c);
-    vec3 tangent_c = normalize(ex_Tangent_c.xyz);
-    // TODO should it also be normalized? Should the base be "orthogonalized"?
-    vec3 bitangent_c = cross(normalBase_c, tangent_c) * ex_Tangent_c.w;
-    vec3 normal_c = normalize(normal_tbn.x * tangent_c
-        + normal_tbn.y * bitangent_c
-        + normal_tbn.z * normalBase_c);
+        // MikkT see: http://www.mikktspace.com/
+        // Yet, if the tangent and normal were not normalized (as seems to be proposed in mikkt)
+        // the result would be abherent with sample gltf assets (e.g. avocado) 
+        vec3 normalBase_c = normalize(ex_Normal_c);
+        vec3 tangent_c = normalize(ex_Tangent_c.xyz);
+        // TODO should it also be normalized? Should the base be "orthogonalized"?
+        vec3 bitangent_c = cross(normalBase_c, tangent_c) * ex_Tangent_c.w;
+        normal_c = normalize(normal_tbn.x * tangent_c
+            + normal_tbn.y * bitangent_c
+            + normal_tbn.z * normalBase_c);
+    }
+    else
+    {
+        normal_c = normalize(ex_Normal_c);
+    }
 #else
     // cannot normalize in vertex shader, as interpolation changes length.
     vec3 normal_c = normalize(ex_Normal_c);
