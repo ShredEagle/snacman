@@ -375,10 +375,10 @@ namespace {
             filesystem::path upsampledDirAbsolute = baseDirAbsolute / upsampledDir;
             if(is_directory(upsampledDirAbsolute))
             {
+                bool foundUpsampledImage = false;
                 // Fixup paths for resampled images
                 for(auto & texture : aTexturePaths)
                 {
-                    bool foundUpsampledImage = false;
                     auto textureFilename = filesystem::path{texture}.filename();
                     auto upsampledTextureAbsolute = upsampledDirAbsolute / textureFilename;
                     // Why is it prepending, relative is actually not relative...
@@ -395,6 +395,12 @@ namespace {
                         // Replace the base texture relative path with the upsampled relative path
                         texture = (upsampledDir / textureFilename).string();
                     }
+                }
+
+                if(!foundUpsampledImage)
+                {
+                    SELOG(critical)("'{}' directory did not contain any expected texture.", upsampledDir.string());
+                    throw std::runtime_error("Upsampling directory cannot be left empty, please remove it.");
                 }
             }
             else
