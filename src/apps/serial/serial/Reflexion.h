@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Serialization.h"
+
 #include <entity/Entity.h>
 #include <handy/StringId.h>
 #include <memory>
@@ -17,14 +19,6 @@ class TypedErasedConstructor;
 template <class T_type>
 inline std::shared_ptr<TypedErasedConstructor>
 addConstructor(ad::handy::StringId aId);
-
-inline std::vector<std::pair<ad::ent::Handle<ad::ent::Entity> *, std::string>> &
-handleRequestsInstance()
-{
-    static std::vector<std::pair<ad::ent::Handle<ad::ent::Entity> *, std::string>>
-        handleRequestsStore = {};
-    return handleRequestsStore;
-}
 
 inline std::unordered_map<std::type_index,
                           std::shared_ptr<TypedErasedConstructor>> &
