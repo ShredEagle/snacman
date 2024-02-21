@@ -491,6 +491,13 @@ namespace {
 
             if(material->Get(AI_MATKEY_SHININESS, phongMaterial.mSpecularExponent) == AI_SUCCESS)
             {
+                // Correct the specular exponent if needed
+                if(phongMaterial.mSpecularExponent < 1)
+                {
+                    SELOG(warn)("Specular exponent value '{}' is too low, setting it to '1'.",
+                                phongMaterial.mSpecularExponent);
+                    phongMaterial.mSpecularExponent = 1;
+                }
                 std::cout << "  specular exponent: " << phongMaterial.mSpecularExponent << "\n";
             }
 
