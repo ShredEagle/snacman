@@ -1,3 +1,5 @@
+#include "Serialization.h"
+#include "entity/Entity.h"
 #include "handy/StringId.h"
 #include "Reflexion.h"
 #include "Reflexion_impl.h"
@@ -9,50 +11,54 @@ using json = nlohmann::json;
 
 void from_json(ad::ent::EntityManager & aWorld, const json & aData)
 {
-    std::unordered_map<std::string,
-                          ad::ent::Handle<ad::ent::Entity>> nameHandleMap;
+    std::unordered_map<std::string, ad::ent::Handle<ad::ent::Entity>>
+        nameHandleMap;
 
-    if (aData.type() == json::value_t::array)
+    for (auto & [name, ent] : aData.items())
     {
-        return;
-    }
-
-    for (auto & ent : aData)
-    {
-        std::string name =ent["name"].get<std::string>();
-        ad::ent::Handle<ad::ent::Entity> handle = aWorld.addEntity(name.c_str());
+        ad::ent::Handle<ad::ent::Entity> handle =
+            aWorld.addEntity(name.c_str());
         from_json(handle, ent);
         nameHandleMap.insert_or_assign(name, handle);
     }
 
-    for (auto & pair : reflexion::handleRequestsInstance())
+    for (auto & pair : handleRequestsInstance())
     {
         auto [handle, nameRequested] = pair;
         *handle = nameHandleMap.at(nameRequested);
     }
+    handleRequestsInstance().clear();
 }
 
-void from_json(ad::ent::Handle<ad::ent::Entity> & aHandle,
-                                     const json & aData)
+void from_json(ad::ent::Handle<ad::ent::Entity> & aHandle, const json & aData)
 {
     json components = aData["components"];
 
-    for (auto & comp : components)
+    for (auto & [name, comp] : components.items())
     {
-        std::string compName = comp["name"].get<std::string>();
-        std::type_index index = reflexion::nameTypeIndexInstance().at(compName.c_str());
-        reflexion::indexedTypedConstrutorInstance().at(index)->construct(aHandle, comp);
+        std::type_index index =
+            reflexion::nameTypeIndexInstance().at(name.c_str());
+        reflexion::indexedTypedConstrutorInstance().at(index)->construct(
+            aHandle, comp);
     }
 }
 
-using json = nlohmann::json;
-void to_json(ad::ent::Handle<ad::ent::Entity> & aHandle,
-                                     json & aData)
+void to_json(ad::ent::EntityManager & aWorld, json & aData)
+{
+    std::unordered_map<ad::ent::Handle<ad::ent::Entity>, std::string> handleNameMap;
+
+    aWorld.forEachHandle([&aData](ad::ent::Handle<ad::ent::Entity> aHandle, const char * aName){
+        to_json(aHandle, aData[aName]);
+    });
+}
+
+void to_json(ad::ent::Handle<ad::ent::Entity> & aHandle, json & aData)
 {
     json & components = aData["components"];
 
     for (std::type_index type : aHandle.getComponentsInfo())
     {
-        reflexion::indexedTypedConstrutorInstance().at(type)->serialize(components, aHandle);
+        reflexion::indexedTypedConstrutorInstance().at(type)->serialize(
+            components, aHandle);
     }
 }

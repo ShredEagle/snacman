@@ -14,10 +14,12 @@ using json = nlohmann::json;
 template<class T_type>
 void TypedConstructor<T_type>::construct(ad::ent::Handle<ad::ent::Entity> aHandle, const json & aData)
 {
-    ad::ent::Phase phase;
-    T_type t;
-    aData & t;
-    aHandle.get(phase)->add(t);
+    {
+        ad::ent::Phase phase;
+        T_type t;
+        aHandle.get(phase)->add(t);
+    }
+    aData & aHandle.get()->get<T_type>();
 }
 
 template<class T_type>
