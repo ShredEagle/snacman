@@ -203,7 +203,7 @@ namespace {
                   // TODO #inout replace this inout by something more sane
                   GLuint & aVertexFirst,
                   GLuint & aIndexFirst,
-                  Material aPartsMaterial)
+                  Material aPartsMaterial /*makes a copy, to edit for this specific part*/)
     {
         // Load data into an existing buffer, with offset aElementFirst.
         auto loadBufferFromArchive = 
@@ -292,7 +292,7 @@ namespace {
 
     Node loadNode(BinaryInArchive & aIn,
                   Storage & aStorage,
-                  const Material aDefaultMaterial,
+                  const Material & aBaseMaterial, // Common values are set, not the specific phong material index (it is set by each part)
                   const VertexStream & aVertexStream,
                   // TODO #inout replace this inout by something more sane
                   GLuint & aVertexFirst,
@@ -318,7 +318,7 @@ namespace {
         for(std::size_t meshIdx = 0; meshIdx != meshesCount; ++meshIdx)
         {
             node.mInstance.mObject->mParts.push_back(
-                loadMesh(aIn, aVertexStream, aVertexFirst, aIndexFirst, aDefaultMaterial)
+                loadMesh(aIn, aVertexStream, aVertexFirst, aIndexFirst, aBaseMaterial)
             );
         }
         
@@ -331,7 +331,7 @@ namespace {
 
         for(std::size_t childIdx = 0; childIdx != childrenCount; ++childIdx)
         {
-            node.mChildren.push_back(loadNode(aIn, aStorage, aDefaultMaterial, aVertexStream, aVertexFirst, aIndexFirst));
+            node.mChildren.push_back(loadNode(aIn, aStorage, aBaseMaterial, aVertexStream, aVertexFirst, aIndexFirst));
         }
 
         aIn.read(node.mAabb);
@@ -357,19 +357,17 @@ namespace {
 
     // TODO Ad 2023/08/01: 
     // Review how the effects (the programs) are provided to the parts (currently hardcoded)
-    void loadMaterials(BinaryInArchive & aIn,
-                       graphics::UniformBufferObject & aDestinationUbo,
-                       graphics::Texture & aDestinationTexture,
-                       std::vector<Name> & aDestinationNames)
+    MaterialContext loadMaterials(BinaryInArchive & aIn, Storage & aStorage)
     {
         unsigned int materialsCount;
         aIn.read(materialsCount);
 
+        graphics::UniformBufferObject & ubo = aStorage.mUbos.emplace_back();
         {
             std::vector<PhongMaterial> materials{materialsCount};
             aIn.read(std::span{materials});
 
-            graphics::load(aDestinationUbo, std::span{materials}, graphics::BufferHint::StaticDraw);
+            graphics::load(ubo, std::span{materials}, graphics::BufferHint::StaticDraw);
         }
 
         { // load material names
@@ -377,53 +375,76 @@ namespace {
             aIn.read(namesCount);
             assert(namesCount == materialsCount);
 
-            aDestinationNames.reserve(aDestinationNames.size() + materialsCount);
+            auto & materialNames = aStorage.mMaterialNames;
+            materialNames.reserve(materialNames.size() + materialsCount);
             for(unsigned int nameIdx = 0; nameIdx != materialsCount; ++nameIdx)
             {
-                aDestinationNames.push_back(aIn.readString());
+                materialNames.push_back(aIn.readString());
             }
         }
 
-        math::Size<2, int> imageSize;        
-        aIn.read(imageSize);
-
-        unsigned int pathsCount;
-        aIn.read(pathsCount);
-
-        if(pathsCount > 0)
+        auto loadTextures = [&aIn, &aStorage]() -> graphics::Texture *
         {
-            assert(imageSize.width() > 0 && imageSize.height() > 1);
+            math::Size<2, int> imageSize;        
+            aIn.read(imageSize);
 
-            graphics::Texture textureArray{GL_TEXTURE_2D_ARRAY};
-            graphics::ScopedBind boundTextureArray{textureArray};
-            gl.TexStorage3D(textureArray.mTarget, 
-                            graphics::countCompleteMipmaps(imageSize),
-                            graphics::MappedSizedPixel_v<math::sdr::Rgba>,
-                            imageSize.width(), imageSize.height(), pathsCount);
-            { // scoping `isSuccess`
-                GLint isSuccess;
-                glGetTexParameteriv(textureArray.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);
-                if(!isSuccess)
-                {
-                    SELOG(error)("Cannot create immutable storage for textures array.");
-                    throw std::runtime_error{"Error creating immutable storage for textures."};
-                }
-            }
+            unsigned int pathsCount;
+            aIn.read(pathsCount);
 
-            for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
+            if(pathsCount > 0)
             {
-                std::string path = aIn.readString();
-                loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize);
+                assert(imageSize.width() > 0 && imageSize.height() > 1);
+
+                graphics::Texture & textureArray = aStorage.mTextures.emplace_back(GL_TEXTURE_2D_ARRAY);
+                graphics::ScopedBind boundTextureArray{textureArray};
+                gl.TexStorage3D(textureArray.mTarget, 
+                                graphics::countCompleteMipmaps(imageSize),
+                                graphics::MappedSizedPixel_v<math::sdr::Rgba>,
+                                imageSize.width(), imageSize.height(), pathsCount);
+                { // scoping `isSuccess`
+                    GLint isSuccess;
+                    glGetTexParameteriv(textureArray.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);
+                    if(!isSuccess)
+                    {
+                        SELOG(error)("Cannot create immutable storage for textures array.");
+                        throw std::runtime_error{"Error creating immutable storage for textures."};
+                    }
+                }
+
+                for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
+                {
+                    std::string path = aIn.readString();
+                    loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize);
+                }
+
+                glGenerateMipmap(textureArray.mTarget);
+
+                return &textureArray;
             }
+            else
+            {
+                return nullptr;
+            }
+        };
 
-            glGenerateMipmap(textureArray.mTarget);
-
-            aDestinationTexture = std::move(textureArray);
-        }
-        else
+        // IMPORTANT: This sequence is in the exact order of texture types in a binary.
+        static const Semantic semanticSequence[] = {
+            semantic::gDiffuseTexture,
+            semantic::gNormalsTexture,
+        };
+        RepositoryTexture textureRepo;
+        for (const Semantic texSemantic : semanticSequence)
         {
-            aDestinationTexture = graphics::Texture{GL_TEXTURE_2D_ARRAY, graphics::Texture::NullTag{}};
+            if(graphics::Texture * texture = loadTextures())
+            {
+                textureRepo.emplace(texSemantic, texture);
+            }
         }
+
+        return MaterialContext{
+            .mUboRepo = {{semantic::gMaterials, &ubo}},
+            .mTextureRepo = std::move(textureRepo),
+        };
     }
 
 
@@ -651,7 +672,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
 }
 
 
-// TODO should not take a default material, but have a way to get the actual effect to use 
+// TODO should not take a default effect, but have a way to get the actual effect to use 
 // (maybe directly from the binary file)
 Node loadBinary(const std::filesystem::path & aBinaryFile,
                 Storage & aStorage,
@@ -708,32 +729,27 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
         aStream);
 
     // Prepare a MaterialContext for the whole binary, 
-    // I.e. in a scene, each entry (each binary) gets its own material UBO and its own Texture array.
+    // I.e. in a scene, each entry (each distinct binary) gets its own material UBO and its own Texture array.
     // TODO #azdo #perf we could load textures and materials in a single buffer for a whole scene to further consolidate
-    // TODO #assetprocessor If materials were loaded first, then loadMaterials could directly create the UBO and Texture
-    //    * no need to add a texture if the model does not use them.
-    {
-        aStorage.mUbos.emplace_back();
-        aStorage.mTextures.emplace_back(GL_TEXTURE_2D_ARRAY); // Will be overwritten anyway
-
-        aStorage.mMaterialContexts.push_back(MaterialContext{
-            .mUboRepo = {{semantic::gMaterials, &aStorage.mUbos.back()}},
-            .mTextureRepo = {{semantic::gDiffuseTexture, &aStorage.mTextures.back()}},
-        });
-    }
-    Material partsMaterial{
+    MaterialContext & aCommonMaterialContext = aStorage.mMaterialContexts.emplace_back();
+    
+    // Set the common values shared by all parts in this binary.
+    // (The actual phong material index will be set later, by each part)
+    Material baseMaterial{
         // The material names is a single array for all binaries
         // the binary-local material index needs to be offset to index into the common name array.
         .mNameArrayOffset = aStorage.mMaterialNames.size(),
-        .mContext = &aStorage.mMaterialContexts.back(),
+        .mContext = &aCommonMaterialContext,
         .mEffect = aPartsEffect,
     };
 
     GLuint vertexFirst = 0;
     GLuint indexFirst = 0;
-    Node result = loadNode(in, aStorage, partsMaterial, *consolidatedStream, vertexFirst, indexFirst);
+    Node result = loadNode(in, aStorage, baseMaterial, *consolidatedStream, vertexFirst, indexFirst);
 
-    loadMaterials(in, aStorage.mUbos.back(), aStorage.mTextures.back(), aStorage.mMaterialNames);
+    // TODO #assetprocessor If materials were loaded first, then the empty context 
+    // Then we could directly instantiate the MaterialContext with this value.
+    aCommonMaterialContext = loadMaterials(in, aStorage);
 
     return result;
 }

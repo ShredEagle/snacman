@@ -11,6 +11,7 @@ namespace semantic
     const Semantic gColor{"Color"};
     const Semantic gUv{"Uv"};
     const Semantic gDiffuseTexture{"DiffuseTexture"};
+    const Semantic gNormalsTexture{"NormalsTexture"};
     const Semantic gModelTransformIdx{"ModelTransformIdx"};
     const Semantic gMaterialIdx{"MaterialIdx"};
 

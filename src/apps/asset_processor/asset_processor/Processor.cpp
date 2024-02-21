@@ -220,9 +220,14 @@ namespace {
     //  each materialName: (count == numMaterials)
     //    string size
     //    string characters
-    //  numTexturePaths
-    //  texturesUnifiedDimensions (as math::Size<2, int>)
-    //  each texturePath:
+    //  diffuse numTexturePaths
+    //  diffuse texturesUnifiedDimensions (as math::Size<2, int>) //Note: even if there are no textures
+    //  each diffuse texturePath:
+    //    string size
+    //    string characters
+    //  normalmap numTexturePaths
+    //  normalmap texturesUnifiedDimensions (as math::Size<2, int>) //Note: even if there are no textures
+    //  each normalmap texturePath:
     //    string size
     //    string characters
 
@@ -420,6 +425,9 @@ namespace {
                                        aiTextureType aTextureType,
                                        std::vector<std::string> & aTexturePaths)
     {
+        // TODO: handle several textures in the stacks?
+        assert(aAiMaterial->GetTextureCount(aTextureType) <= 1);
+
         TextureInput result;
 
         // Consistent with max 1 texture in the stack
@@ -459,6 +467,7 @@ namespace {
         materials.reserve(aScene->mNumMaterials);
 
         std::vector<std::string> diffuseTexturePaths;
+        std::vector<std::string> normalTexturePaths;
         std::vector<std::string> materialNames;
 
         for(std::size_t materialIdx = 0; materialIdx != aScene->mNumMaterials; ++materialIdx)
@@ -478,9 +487,6 @@ namespace {
                 << std::endl;
 
             // TODO Handle specular and ambient textures
-            // (also handle several textures in the stacks?)
-            assert(material->GetTextureCount(aiTextureType_DIFFUSE) <= 1);
-
             if(material->GetTextureCount(aiTextureType_SPECULAR) != 0)
             {
                 SELOG(warn)("Material '{}' has {} specular textures, but exporter does not handle them yet.",
@@ -500,6 +506,7 @@ namespace {
             setColor(phongMaterial.mSpecularColor, material, AI_MATKEY_COLOR_SPECULAR);
 
             phongMaterial.mDiffuseMap = readTextureParameters(material, aiTextureType_DIFFUSE, diffuseTexturePaths);
+            phongMaterial.mNormalMap  = readTextureParameters(material, aiTextureType_NORMALS, normalTexturePaths);
 
             if(material->Get(AI_MATKEY_SHININESS, phongMaterial.mSpecularExponent) == AI_SUCCESS)
             {
@@ -529,6 +536,7 @@ namespace {
         aWriter.writeRaw(std::span{materials});
         aWriter.write(materialNames);
         dumpTextures(diffuseTexturePaths, aWriter);
+        dumpTextures(normalTexturePaths, aWriter);
     }
 
 } // unnamed namespace

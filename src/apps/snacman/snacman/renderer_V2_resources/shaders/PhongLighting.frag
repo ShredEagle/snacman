@@ -29,11 +29,8 @@ uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8); // could be split between diffu
 #ifdef TEXTURES
 uniform sampler2DArray u_DiffuseTexture;
 
-// TODO: #RV2 port to V2
-// (i.e. UV channel indices should be part of the material, textures are in arrays)
-//uniform uint u_NormalUVIndex;
-//uniform float u_NormalMapScale;
-//uniform sampler2D u_NormalTexture;
+uniform sampler2DArray u_NormalsTexture;
+uniform float u_NormalMapScale = 1.0;
 #endif
 
 #ifdef SHADOW
@@ -61,6 +58,8 @@ struct PhongMaterial
     vec4 specularFactor;
     uint diffuseTextureIndex;
     uint diffuseUvChannel;
+    uint normalsTextureIndex;
+    uint normalsUvChannel;
     float specularExponent;
 };
 
@@ -86,7 +85,8 @@ void main(void)
         ex_Color
         * ex_BaseColorFactor // Note: should probably go away
 #ifdef TEXTURES
-        * texture(u_DiffuseTexture, vec3(ex_Uvs[material.diffuseUvChannel], material.diffuseTextureIndex))
+        //* texture(u_DiffuseTexture, vec3(ex_Uvs[material.diffuseUvChannel], material.diffuseTextureIndex))
+        * texture(u_NormalsTexture, vec3(ex_Uvs[material.normalsUvChannel], material.normalsTextureIndex))
 #endif
         ;
 

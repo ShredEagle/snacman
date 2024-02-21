@@ -81,8 +81,8 @@ struct ProgramConfig
         // TODO: When moving to VAB (separate format), reuse the VAO for distinct buffers
         // all buffer sets with the same format (attribute size, component type, relative offset) can share a VAO.
         // (and the buffer would be bound to the VAO)
-        Handle<const VertexStream> mVertexStream;
-        Handle<graphics::VertexArrayObject> mVao;
+        Handle<const VertexStream> mVertexStream; // The lookup key
+        Handle<graphics::VertexArrayObject> mVao; // The cached VAO
     };
     // Note: The cache is implemented as a vector, lookup is made by visiting elements and comparing VertexStream handles.
     std::vector<Entry> mEntries;
@@ -125,6 +125,9 @@ struct Effect
 struct MaterialContext
 {
     RepositoryUbo mUboRepo;
+
+    // Probably would become useless if we went down the bindless-textures route.
+    // (i.e. the variance in MaterialContext would get lower, which means less context changes == better at AZDO)
     RepositoryTexture mTextureRepo;
 };
 

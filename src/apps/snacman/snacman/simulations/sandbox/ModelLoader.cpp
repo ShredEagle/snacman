@@ -38,7 +38,7 @@ ModelLoader::ModelLoader(graphics::AppInterface & aAppInterface,
 
     mModel ={
         .mIndex = 0,
-        .mNode = resources.getModel("models/stage/stage.seum", "effects/MeshTextures.sefx"),
+        .mNode = resources.getModel("models/square_biscuit/square_biscuit.seum", "effects/MeshTextures.sefx"),
     };
 }
 
