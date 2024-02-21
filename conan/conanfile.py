@@ -36,7 +36,8 @@ class SnacmanConan(ConanFile):
         # see: https://github.com/conan-io/conan-center-index/pull/20185
         # I manually exported the recipe and uploaded it.
         ("assimp/5.3.1@adnn/develop"),
-        ("spdlog/1.13.0"),
+        # ("spdlog/1.13.0"),
+        ("spdlog/1.13.0@#1e0f4eb6338d05e4bd6fcc6bf4734172"),
         ("nlohmann_json/3.11.2"),
 
         # The overrides (who will think about reviewing them?)
