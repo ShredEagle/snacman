@@ -366,29 +366,38 @@ namespace {
         math::Size<2, int> commonDimensions;
         if(!aTexturePaths.empty())
         {
-            filesystem::path path =  basePath / aTexturePaths.front();
-            filesystem::path upsampledDir = path.parent_path() / "upsampled";
-            if(is_directory(upsampledDir))
+            filesystem::path baseDirAbsolute =  (basePath / aTexturePaths.front()).parent_path();
+            filesystem::path upsampledDir = "upsampled";
+            filesystem::path upsampledDirAbsolute = baseDirAbsolute / upsampledDir;
+            if(is_directory(upsampledDirAbsolute))
             {
-                commonDimensions = Image{upsampledDir / path.filename()}.dimensions();
-                SELOG(info)("Upsampled images already found, with dimensions {}.",
-                            fmt::streamed(commonDimensions));
-
                 // Fixup paths for resampled images
-                for(auto & imagePath : aTexturePaths)
+                for(auto & texture : aTexturePaths)
                 {
-                    filesystem::path path{imagePath};
-                    auto upsampledRelativePath = path.parent_path() / "upsampled" / path.filename();
-                    if(is_regular_file(basePath / upsampledRelativePath))
+                    bool foundUpsampledImage = false;
+                    auto textureFilename = filesystem::path{texture}.filename();
+                    auto upsampledTextureAbsolute = upsampledDirAbsolute / textureFilename;
+                    // Why is it prepending, relative is actually not relative...
+                    // Actually, we should make it relative
+                    if(is_regular_file(upsampledTextureAbsolute))
                     {
-                        imagePath = upsampledRelativePath.string();
+                        if(!foundUpsampledImage)
+                        {
+                            commonDimensions = Image{upsampledTextureAbsolute}.dimensions();
+                            SELOG(info)("Upsampled images already found, with dimensions {}.",
+                                        fmt::streamed(commonDimensions));
+                            foundUpsampledImage = true;
+                        }
+                        // Replace the base texture relative path with the upsampled relative path
+                        texture = (upsampledDir / textureFilename).string();
                     }
                 }
             }
             else
             {
-                create_directory(upsampledDir);
+                create_directory(upsampledDirAbsolute);
                 commonDimensions = resampleImages(aTexturePaths, basePath);
+                filesystem::remove(upsampledDirAbsolute); // this function only removes empty directories
             }
         }
 
@@ -417,10 +426,11 @@ namespace {
                 << "' Diffuse tex:" << material->GetTextureCount(aiTextureType_DIFFUSE)
                 << " Specular tex:" << material->GetTextureCount(aiTextureType_SPECULAR)
                 << " Ambient tex:" << material->GetTextureCount(aiTextureType_AMBIENT)
+                << " Normal map:" << material->GetTextureCount(aiTextureType_NORMALS)
                 << std::endl;
 
-            // TODO Handle other textures than diffuse.
-            // (and handle several textures in the stacks?)
+            // TODO Handle specular and ambient textures
+            // (also handle several textures in the stacks?)
             assert(material->GetTextureCount(aiTextureType_DIFFUSE) <= 1);
 
             if(material->GetTextureCount(aiTextureType_SPECULAR) != 0)
