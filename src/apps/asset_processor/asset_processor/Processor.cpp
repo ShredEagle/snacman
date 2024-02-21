@@ -415,12 +415,50 @@ namespace {
         aWriter.write(aTexturePaths);
     }
 
+
+    TextureInput readTextureParameters(const aiMaterial * aAiMaterial, 
+                                       aiTextureType aTextureType,
+                                       std::vector<std::string> & aTexturePaths)
+    {
+        TextureInput result;
+
+        // Consistent with max 1 texture in the stack
+        constexpr unsigned int indexInStack = 0;
+        aiString texPath;
+        if(aAiMaterial->Get(_AI_MATKEY_TEXTURE_BASE, aTextureType, indexInStack, texPath) == AI_SUCCESS)
+        {
+            std::cout << "  " << aiTextureTypeToString(aTextureType) << " texture: path '" << texPath.C_Str() << "'";
+
+            result = {
+                .mTextureIndex = (TextureInput::Index)aTexturePaths.size(),
+                .mUVAttributeIndex = 0, // a default,
+                                        // see: https://assimp-docs.readthedocs.io/en/latest/usage/use_the_lib.html#how-to-map-uv-channels-to-textures-matkey-uvwsrc
+            };
+            aTexturePaths.push_back(texPath.C_Str());
+
+            unsigned int aiIndex;
+            if(aAiMaterial->Get(_AI_MATKEY_UVWSRC_BASE, aTextureType, indexInStack, aiIndex) == AI_SUCCESS)
+            {
+                result.mUVAttributeIndex = aiIndex;
+                std::cout << ", explicit UV channel " << aiIndex;
+            }
+            else
+            {
+                std::cout << ", implicit UV channel " << result.mUVAttributeIndex;
+            }
+
+            std::cout << "\n"; // Terminate the output which started entering this scope
+        }
+        return result;
+    }
+
+
     void dumpMaterials(const aiScene * aScene, FileWriter & aWriter)
     {
         std::vector<PhongMaterial> materials;
         materials.reserve(aScene->mNumMaterials);
 
-        std::vector<std::string> texturePaths;
+        std::vector<std::string> diffuseTexturePaths;
         std::vector<std::string> materialNames;
 
         for(std::size_t materialIdx = 0; materialIdx != aScene->mNumMaterials; ++materialIdx)
@@ -461,33 +499,7 @@ namespace {
             setColor(phongMaterial.mAmbientColor,  material, AI_MATKEY_COLOR_AMBIENT);
             setColor(phongMaterial.mSpecularColor, material, AI_MATKEY_COLOR_SPECULAR);
 
-            // Consistent with max 1 diffuse texture
-            constexpr unsigned int indexInStack = 0;
-            aiString texPath;
-            if(material->Get(AI_MATKEY_TEXTURE_DIFFUSE(indexInStack), texPath) == AI_SUCCESS)
-            {
-                    std::cout << "  diffuse texture path: '" << texPath.C_Str() << "'";
-
-                phongMaterial.mDiffuseMap = {
-                    .mTextureIndex = (TextureInput::Index)texturePaths.size(),
-                    .mUVAttributeIndex = 0, // a default,
-                                            // see: https://assimp-docs.readthedocs.io/en/latest/usage/use_the_lib.html#how-to-map-uv-channels-to-textures-matkey-uvwsrc
-                };
-                texturePaths.push_back(texPath.C_Str());
-
-                unsigned int aiIndex;
-                if(material->Get(AI_MATKEY_UVWSRC_DIFFUSE(indexInStack), aiIndex) == AI_SUCCESS)
-                {
-                    phongMaterial.mDiffuseMap.mUVAttributeIndex = aiIndex;
-                    std::cout << ", explicit UV channel: " << aiIndex;
-                }
-                else
-                {
-                    std::cout << ", implicit UV channel: " << phongMaterial.mDiffuseMap.mUVAttributeIndex;
-                }
-
-                std::cout << "\n";
-            }
+            phongMaterial.mDiffuseMap = readTextureParameters(material, aiTextureType_DIFFUSE, diffuseTexturePaths);
 
             if(material->Get(AI_MATKEY_SHININESS, phongMaterial.mSpecularExponent) == AI_SUCCESS)
             {
@@ -516,7 +528,7 @@ namespace {
 
         aWriter.writeRaw(std::span{materials});
         aWriter.write(materialNames);
-        dumpTextures(texturePaths, aWriter);
+        dumpTextures(diffuseTexturePaths, aWriter);
     }
 
 } // unnamed namespace
