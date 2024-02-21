@@ -503,7 +503,7 @@ namespace {
 
         aWriter.writeRaw(std::span{materials});
         aWriter.write(materialNames);
-        dumpTextures(texturePaths, aWriter);
+        dumpTextures(diffuseTexturePaths, aWriter);
     }
 
 } // unnamed namespace
