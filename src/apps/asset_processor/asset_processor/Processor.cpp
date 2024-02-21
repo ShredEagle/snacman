@@ -232,9 +232,9 @@ namespace {
                             FileWriter & aWriter,
                             unsigned int level = 0)
     {
-        std::cout << std::string(2 * level, ' ') << aNode->mName.C_Str() 
+        std::cout << std::string(2 * level, ' ') << "'" << aNode->mName.C_Str() << "'"
                   << ", " << aNode->mNumMeshes << " mesh(es)"
-                  << ", " << aNode->mNumChildren << " children"
+                  << ", " << aNode->mNumChildren << " child(ren)"
                   << "\n"
                   ;
 
@@ -261,8 +261,12 @@ namespace {
 
             std::cout << std::string(2 * level, ' ')
                 << "- Mesh " << globalMeshIndex << " '" << mesh->mName.C_Str() << "'" << " with " << mesh->mNumVertices << " vertices, " 
-                << mesh->mNumFaces << " triangles,"
-                << " AABB " << meshAabb << "."
+                << mesh->mNumFaces << " triangles."
+                << "\n"
+                << std::string(2 * level + 2, ' ') << "- " << mesh->GetNumColorChannels() << " color channel(s), "
+                    << mesh->GetNumUVChannels() << " UV channel(s)."
+                << "\n"
+                << std::string(2 * level + 2, ' ') << "- AABB " << meshAabb << "."
                 << "\n"
                 ;
 
@@ -451,23 +455,32 @@ namespace {
             setColor(phongMaterial.mAmbientColor,  material, AI_MATKEY_COLOR_AMBIENT);
             setColor(phongMaterial.mSpecularColor, material, AI_MATKEY_COLOR_SPECULAR);
 
+            // Consistent with max 1 diffuse texture
             constexpr unsigned int indexInStack = 0;
             aiString texPath;
             if(material->Get(AI_MATKEY_TEXTURE_DIFFUSE(indexInStack), texPath) == AI_SUCCESS)
             {
-                std::cout << "  diffuse texture path: '" << texPath.C_Str() << "'\n";
+                    std::cout << "  diffuse texture path: '" << texPath.C_Str() << "'";
+
                 phongMaterial.mDiffuseMap = {
                     .mTextureIndex = (TextureInput::Index)texturePaths.size(),
                     .mUVAttributeIndex = 0, // a default,
                                             // see: https://assimp-docs.readthedocs.io/en/latest/usage/use_the_lib.html#how-to-map-uv-channels-to-textures-matkey-uvwsrc
                 };
                 texturePaths.push_back(texPath.C_Str());
-            }
 
-            unsigned int aiIndex;
-            if(material->Get(AI_MATKEY_UVWSRC_DIFFUSE(indexInStack), aiIndex) == AI_SUCCESS)
-            {
-                phongMaterial.mDiffuseMap.mUVAttributeIndex = aiIndex;
+                unsigned int aiIndex;
+                if(material->Get(AI_MATKEY_UVWSRC_DIFFUSE(indexInStack), aiIndex) == AI_SUCCESS)
+                {
+                    phongMaterial.mDiffuseMap.mUVAttributeIndex = aiIndex;
+                    std::cout << ", explicit UV channel: " << aiIndex;
+                }
+                else
+                {
+                    std::cout << ", implicit UV channel: " << phongMaterial.mDiffuseMap.mUVAttributeIndex;
+                }
+
+                std::cout << "\n";
             }
 
             if(material->Get(AI_MATKEY_SHININESS, phongMaterial.mSpecularExponent) == AI_SUCCESS)
