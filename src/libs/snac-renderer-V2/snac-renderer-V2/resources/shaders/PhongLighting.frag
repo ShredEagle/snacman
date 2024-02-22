@@ -22,8 +22,10 @@ struct PhongMaterial
     vec4 ambientColor;
     vec4 diffuseColor;
     vec4 specularColor;
-    uint textureIndex;
+    uint diffuseTextureIndex;
     uint diffuseUvChannel;
+    uint normalTextureIndex;
+    uint normalUvChannel;
     float specularExponent;
 };
 
