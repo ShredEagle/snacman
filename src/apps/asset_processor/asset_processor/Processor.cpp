@@ -18,6 +18,8 @@
 
 #include <fmt/ostream.h>
 
+#include <assimp/DefaultLogger.hpp>
+
 #include <fstream>
 #include <iostream>
 #include <span>
