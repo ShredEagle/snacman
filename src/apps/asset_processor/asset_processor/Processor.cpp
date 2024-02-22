@@ -349,7 +349,7 @@ namespace {
     }
 
 
-    math::Size<2, int> resampleImages(std::vector<std::string> & aTexturePaths, filesystem::path aParentPath)
+    math::Size<2, int> resampleImages(std::vector<std::string> & aTexturePaths, filesystem::path aParentPath, filesystem::path aUpsampledDir)
     {
         using Image = arte::Image<math::sdr::Rgba>;
 
@@ -378,7 +378,7 @@ namespace {
             {
                 SELOG(info)("Resampling image {} to {}.", *imagePath, fmt::streamed(commonDimensions));
 
-                path = path.parent_path() / "upsampled" / path.filename();
+                path = path.parent_path() / aUpsampledDir / path.filename();
                 resampleImage(image, commonDimensions).saveFile(aParentPath / path);
                 *imagePath = path.string();
             }
@@ -387,6 +387,13 @@ namespace {
     }
 
 
+    // TODO Ad 2024/02/22: Rewrite this overly complex function.
+    //      Actually, the caching system might be easier to write directly in "resampleImages"
+    // This function resample all texture to a common (square) dimension,
+    // upsampling images that require it to an "upsampled" subfolder, and directly patching
+    // the path of upsampled images in `aTexturePaths`.
+    // The complexity got out of hand with the implementation of a cache mechanism,
+    // not resampling images that already were.
     void dumpTextures(std::vector<std::string> & aTexturePaths, FileWriter & aWriter)
     {
         using Image = arte::Image<math::sdr::Rgba>;
@@ -394,8 +401,12 @@ namespace {
         filesystem::path basePath = aWriter.mArchive.mParentPath;
 
         math::Size<2, int> commonDimensions;
+        std::optional<math::Size<2, int>> upsampledDimensions;
+
         if(!aTexturePaths.empty())
         {
+            std::vector<std::string> notAlreadyUpsampled;
+
             filesystem::path baseDirAbsolute =  (basePath / aTexturePaths.front()).parent_path();
             filesystem::path upsampledDir = "upsampled";
             filesystem::path upsampledDirAbsolute = baseDirAbsolute / upsampledDir;
@@ -413,27 +424,41 @@ namespace {
                     {
                         if(!foundUpsampledImage)
                         {
-                            commonDimensions = Image{upsampledTextureAbsolute}.dimensions();
+                            upsampledDimensions = Image{upsampledTextureAbsolute}.dimensions();
                             SELOG(info)("Upsampled images already found, with dimensions {}.",
-                                        fmt::streamed(commonDimensions));
+                                        fmt::streamed(*upsampledDimensions));
                             foundUpsampledImage = true;
+                        }
+                        else
+                        {
+                            assert(Image{upsampledTextureAbsolute}.dimensions() == *upsampledDimensions);
                         }
                         // Replace the base texture relative path with the upsampled relative path
                         texture = (upsampledDir / textureFilename).string();
                     }
+                    else
+                    {
+                        notAlreadyUpsampled.push_back(texture);
+                    }
                 }
+            }
+            else // If there is no upsampled directory, no texture has been upsampled
+            {
+                notAlreadyUpsampled = aTexturePaths;
+            }
 
-                if(!foundUpsampledImage)
-                {
-                    SELOG(critical)("'{}' directory did not contain any expected texture.", upsampledDir.string());
-                    throw std::runtime_error("Upsampling directory cannot be left empty, please remove it.");
-                }
+            if(!notAlreadyUpsampled.empty())
+            {
+                create_directory(upsampledDirAbsolute); // Does nothing if the dir already exists
+                commonDimensions = resampleImages(notAlreadyUpsampled, basePath, upsampledDir);
+                assert(!upsampledDimensions || commonDimensions == *upsampledDimensions);
+                std::error_code ec;
+                filesystem::remove(upsampledDirAbsolute, ec); // this function only removes empty directories
             }
             else
             {
-                create_directory(upsampledDirAbsolute);
-                commonDimensions = resampleImages(aTexturePaths, basePath);
-                filesystem::remove(upsampledDirAbsolute); // this function only removes empty directories
+                assert(upsampledDimensions);
+                commonDimensions = *upsampledDimensions;
             }
         }
 
