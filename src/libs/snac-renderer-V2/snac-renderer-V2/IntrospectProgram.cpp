@@ -275,6 +275,9 @@ IntrospectProgram::IntrospectProgram(graphics::Program aProgram, std::string aNa
         // there tends to be a lot of collisions.
         // TODO Understand why, unlike for generic vertex attributes, automatic indices
         // are not working for uniform blocks.
+        // TODO Ad 2024/02/22: Anyway, it seems what we might do is algorithmically
+        // assign distinct indices to the blocks, instead of hardcoding values.
+        // (and by being clever, we could minimize the need to change the buffer binding indices client side)
         
         [[maybe_unused]] // Otherwise clang complains that this variable is unused in release builds
         auto checkDuplicateIndex = [](const std::vector<UniformBlock> & aBlocks) -> bool
