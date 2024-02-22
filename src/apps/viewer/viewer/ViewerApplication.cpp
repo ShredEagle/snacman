@@ -290,8 +290,8 @@ void registerGlfwCallbacks(graphics::AppInterface & aAppInterface,
 
 
 ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
-                         const std::filesystem::path & aSceneFile,
-                         const imguiui::ImguiUi & aImguiUi) :
+                                     const std::filesystem::path & aSceneFile,
+                                     const imguiui::ImguiUi & aImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
@@ -305,7 +305,15 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close, &aImguiUi);
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
-    mScene = loadScene(aSceneFile, mGraph.mInstanceStream, mLoader, mStorage);
+    if(aSceneFile.extension() == ".sew")
+    {
+        mScene = loadScene(aSceneFile, mGraph.mInstanceStream, mLoader, mStorage);
+    }
+    else
+    {
+        throw std::invalid_argument{"Unsupported filetype: " + aSceneFile.extension().string()};
+    }
+
     /*const*/Node & model = mScene.mRoot.mChildren.front();
 
     // TODO Ad 2023/10/03: Sort out this bit of logic: remove hardcoded sections,
@@ -342,10 +350,10 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     }
 
     // Add basic shapes to the the scene
-    Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
-    auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mGraph.mInstanceStream);
-    mScene.addToRoot(triangle);
-    mScene.addToRoot(cube);
+    //Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
+    //auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mGraph.mInstanceStream);
+    //mScene.addToRoot(triangle);
+    //mScene.addToRoot(cube);
 }
 
 
