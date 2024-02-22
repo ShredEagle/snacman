@@ -441,7 +441,10 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
 
         auto modelData = addMeshGeoNode(
             aContext, model, "models/donut/donut.gltf",
-            "effects/MeshRiggingTextures.sefx", Pos3::Zero(), 1.f,
+            // TODO #RV2 animation Change back to the rigging effect!
+            //"effects/MeshRiggingTextures.sefx",
+            "effects/Mesh.sefx",
+            Pos3::Zero(), 1.f,
             gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation,
             gSlotColors.at(slot.mSlotIndex));
 
@@ -703,8 +706,9 @@ EntHandle createPortalImage(GameContext & aContext,
         Phase addPortalImage;
         component::Geometry modelGeo =
             aPlayerData.mModel.get()->get<component::Geometry>();
-        component::RigAnimation animation =
-            aPlayerData.mModel.get()->get<component::RigAnimation>();
+        // TODO #RV2 animation
+        //component::RigAnimation animation =
+        //    aPlayerData.mModel.get()->get<component::RigAnimation>();
         Entity portal = *newPortalImage.get(addPortalImage);
         Vec2 relativePos =
             aPortal.mMirrorSpawnPosition.xy() - aPlayerData.mCurrentPortalPos;
@@ -714,14 +718,16 @@ EntHandle createPortalImage(GameContext & aContext,
                        modelGeo.mScaling, modelGeo.mInstanceScaling,
                        modelGeo.mOrientation, modelGeo.mColor);
         portal.add(component::Collision{component::gPlayerHitbox})
-            .add(component::RigAnimation{
-                .mAnimName = animation.mAnimName,
-                .mAnimation = animation.mAnimation,
-                .mStartTime = animation.mStartTime,
-                .mParameter =
-                    decltype(component::RigAnimation::mParameter){
-                        animation.mAnimation->mEndTime},
-            });
+            // TODO #RV2 animation
+            //.add(component::RigAnimation{
+            //    .mAnimName = animation.mAnimName,
+            //    .mAnimation = animation.mAnimation,
+            //    .mStartTime = animation.mStartTime,
+            //    .mParameter =
+            //        decltype(component::RigAnimation::mParameter){
+            //            animation.mAnimation->mEndTime},
+            //})
+            ;
         aPlayerData.mPortalImage = newPortalImage;
     }
 

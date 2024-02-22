@@ -519,9 +519,6 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
             });
         });
 
-    auto font =
-        mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf", 120);
-
     state->mCamera = mSystemOrbitalCamera->getCamera();
 
     state->mDebugDrawList = snac::DebugDrawer::EndFrame();

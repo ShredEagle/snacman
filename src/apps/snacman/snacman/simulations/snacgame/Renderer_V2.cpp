@@ -292,6 +292,7 @@ void Renderer_V2::render(const visu::GraphicState & aState)
                         glEnable(GL_CULL_FACE);
                         glEnable(GL_DEPTH_TEST);
                         glDepthMask(GL_TRUE);
+                        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
                         gl.DrawElementsInstancedBaseVertex(
                             part.mPrimitiveMode,

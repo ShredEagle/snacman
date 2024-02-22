@@ -39,8 +39,8 @@ using namespace ad::snac;
 constexpr bool gWaitByBusyLoop = true;
 
 
-//using Simulation_t = snacgame::SnacGame;
-using Simulation_t = snacgame::ModelLoader;
+using Simulation_t = snacgame::SnacGame;
+//using Simulation_t = snacgame::ModelLoader;
 
 
 resource::ResourceFinder makeResourceFinder()

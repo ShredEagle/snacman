@@ -52,13 +52,10 @@ namespace {
             rows[2].getNorm(),
         };
 
-        // TODO we will need to introduce some tolerance here
-        assert(isWithinTolerance(scale[0], 1.f, 1E-6f));
-        assert(isWithinTolerance(scale[1], 1.f, 1E-6f));
-        assert(isWithinTolerance(scale[2], 1.f, 1E-6f));
-        result.mUniformScale = 1;
+        assert(isWithinTolerance(scale[1], scale[0], 1E-6f));
+        assert(isWithinTolerance(scale[2], scale[0], 1E-6f));
         //assert(scale[0] == scale[1] && scale[0] == scale[2]);
-        //result.mUniformScale = scale[0];
+        result.mUniformScale = scale[0];
 
         return result;
     }

@@ -30,6 +30,11 @@ snacgame::Handle<renderer::Node> Resources::getModel(filesystem::path aModel, fi
     }
     else
     {
+        if(aModel.extension() == ".gltf")
+        {
+            aModel.replace_extension(".seum");
+            SELOG(warn)("Live patching extension of '{}'.", aModel.string());
+        }
         return mModels.load(aModel, mFinder, aEffect, mRenderThread, mResources_V2);
     }
 }
