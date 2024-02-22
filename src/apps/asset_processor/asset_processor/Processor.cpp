@@ -563,9 +563,16 @@ namespace {
 
 void processModel(const std::filesystem::path & aFile)
 {
+    // Comment out to get verbose output from the importer, to stdout.
+    Assimp::DefaultLogger::create("", Assimp::Logger::VERBOSE, aiDefaultLogStream_STDOUT);
+
     // Create an instance of the Importer class
     Assimp::Importer importer;
-    // And have it read the given file with some example postprocessing
+
+    // This is really extra verbose, usually the default logger verbository
+    //importer.SetExtraVerbose(true); 
+
+    // Have the importer read the given file with some example postprocessing
     // Usually - if speed is not the most important aspect for you - you'll 
     // propably to request more postprocessing than we do in this example.
     const aiScene* scene = importer.ReadFile(
@@ -579,6 +586,9 @@ void processModel(const std::filesystem::path & aFile)
         aiProcess_GenSmoothNormals          |
         aiProcess_ValidateDataStructure     |
         aiProcess_FindDegenerates           |
+        // Note: Will remove "invalid" channels (e.g. all zero normals / tangents)
+        // This will causes issues when the UV / Tangent are not valid: it removes them
+        // which trips the `Processor` atm.
         aiProcess_FindInvalidData           |
         // Generate bouding boxes, see: https://stackoverflow.com/a/74331859/1027706
         aiProcess_GenBoundingBoxes          |
@@ -607,9 +617,9 @@ void processModel(const std::filesystem::path & aFile)
 
     std::cout << "\nResult: Dumped model with "
               << topResult.mVerticesCount << " vertices and " 
-              << topResult.mIndicesCount << " indices, bounding box: " 
-              << topResult.mAabb << ", " 
+              << topResult.mIndicesCount << " indices, "
               << scene->mNumMaterials << " materials."
+              << "\n  " << "bounding box: " << topResult.mAabb
               << "\n";
 
     // We're done. Everything will be cleaned up by the importer destructor
