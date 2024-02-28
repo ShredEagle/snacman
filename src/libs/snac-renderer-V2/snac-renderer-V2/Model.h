@@ -138,6 +138,9 @@ struct Material
     // later on, it should allow for different types of parameters (that will have to match the different shader program expectations)
     // TODO Ad 2023/10/12: Review how this index is passed: we should make that generic so materials can index into
     // user defined buffers easily, not hardcoding Phong model. 
+    //   Note: The MaterialContext could be used to point to the "SurfaceProperties" array (UBO) applied to this material
+    //         (each array might be of a different type of SurfaceProperty)
+    //          Then the index would index into this array.
     // (The material context is already generic, so complete the job)
     std::size_t mPhongMaterialIdx = (std::size_t)-1;
 
@@ -243,6 +246,11 @@ struct Instance
 };
 
 
+// Note: (#flaw_593) A complication with this design is in the presence of a Node which has geometry 
+//       (i.e. non null Object*) and also children.
+//       If clients are expected to provide a list of Instances, it means they need to 
+//       visit the hierarchy to provide the distinct Instances-with-Object in the sub-tree.
+//       It also potentially means that distinct "nested" objects could use the same rig / animation state.
 struct Node
 {
     Instance mInstance;

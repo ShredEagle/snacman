@@ -1,6 +1,8 @@
 #include "Processor.h"
 
+#include "AssimpUtils.h"
 #include "Logging.h"
+#include "ProcessAnimation.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -29,39 +31,7 @@ namespace ad::renderer {
 
 namespace {
 
-    [[maybe_unused]] bool hasTrianglesOnly(aiMesh * aMesh)
-    {
-        //TODO Ad 2023/07/21: Understand what is this NGON encoding flag for.
-        return (aMesh->mPrimitiveTypes = (aiPrimitiveType_TRIANGLE | aiPrimitiveType_NGONEncodingFlag));
-    }
 
-    math::Matrix<4, 3, float> extractAffinePart(const aiNode * aNode)
-    {
-        auto m = aNode->mTransformation;
-        assert(m.d1 == 0 && m.d2 == 0 && m.d3 == 0 && m.d4 == 1);
-        return math::Matrix<4, 3, float>{
-            m.a1, m.b1, m.c1,
-            m.a2, m.b2, m.c2,
-            m.a3, m.b3, m.c3,
-            m.a4, m.b4, m.c4,
-        };
-    }
-
-    math::Position<3, float> toPosition(aiVector3D aVec)
-    {
-        return {aVec.x, aVec.y, aVec.z};
-    }
-
-    math::Box<float> extractAabb(const aiMesh * aMesh)
-    {
-        aiAABB aiBox = aMesh->mAABB;
-        return{
-            .mPosition = toPosition(aiBox.mMin),
-            .mDimension = (toPosition(aiBox.mMax) - toPosition(aiBox.mMin)).as<math::Size>(),
-        };
-    }
-
-    
     struct FileWriter
     {
         FileWriter(std::filesystem::path aDestinationFile) :
@@ -230,6 +200,11 @@ namespace {
     //        [UVChannel.coordinates(2 floats per vertex)]
     //      mesh.numFaces
     //      [mesh.faces(i.e. 3 unsigned int per face)]
+    //      mesh.numBones
+    //      <if mesh.hasBones>:
+    //          // TODO IF WE COULD INTERLEAVE ATTRIBUTES: [mesh.jointData (i.e 4 bone indices (unsigned int) then 4 bone weights (float), per vertex)]
+    //          [mesh.boneIndices (i.e 4 unsigned int per vertex)]
+    //          [mesh.boneWeights (i.e 4 floats per vertex)]
     //      mesh.boundingBox (AABB, as a math::Box<float>)
     //    bounding box union of all meshes (AABB, as a math::Box<float>, even if there are no meshes)
     //    each node.child:
@@ -273,6 +248,12 @@ namespace {
             result.mAabb = extractAabb(aScene->mMeshes[0]);
         }
 
+        // NOTE Ad 2024/02/28: This is not a hard requirement (code should work without it)
+        //   but this situation would exacerbate a design flaw (see note #flaw_593)
+        //   I mostly wanted to see if it ever happens (the assertion can be comment-out).
+        assert(aNode->mNumMeshes == 0 || aNode->mNumChildren == 0);
+
+        aiNode * nodeCommonArmature = nullptr;
         for(std::size_t meshIdx = 0; meshIdx != aNode->mNumMeshes; ++meshIdx)
         {
             unsigned int globalMeshIndex = aNode->mMeshes[meshIdx];
@@ -286,17 +267,38 @@ namespace {
             result.mIndicesCount += mesh->mNumFaces * 3;
 
             std::cout << std::string(2 * level, ' ')
-                << "- Mesh " << globalMeshIndex << " '" << mesh->mName.C_Str() << "'" << " with " << mesh->mNumVertices << " vertices, " 
-                << mesh->mNumFaces << " triangles."
+                << "- Mesh " << globalMeshIndex << " '" << mesh->mName.C_Str() << "'" 
+                    << " with " << mesh->mNumVertices << " vertices, " << mesh->mNumFaces << " triangles"
+                    << ", material '" << aScene->mMaterials[mesh->mMaterialIndex]->GetName().C_Str() 
+                    << "'."
                 << "\n"
                 << std::string(2 * level + 2, ' ') << "- " << mesh->GetNumColorChannels() << " color channel(s), "
                     << mesh->GetNumUVChannels() << " UV channel(s)."
+                << "\n" << std::string(2 * level + 2, ' ') << "- "
+                    << mesh->mNumBones << " bones."
                 << "\n"
                 << std::string(2 * level + 2, ' ') << "- AABB " << meshAabb << "."
                 << "\n"
                 ;
 
             aWriter.write(mesh);
+
+            //
+            // Skeletal animation data
+            //
+            aWriter.forward(mesh->mNumBones);
+            if(mesh->mNumBones != 0)
+            {
+                Rig rig;
+                VertexJointData jointData;
+                std::tie(rig, jointData) = loadRig(mesh);
+
+                aWriter.forward(std::span{jointData.mBoneIndices});
+                aWriter.forward(std::span{jointData.mBoneWeights});
+                //std::cout << "Armature '" << rig.mArmatureName << "':\n"
+                //    << rig.mJointTree;
+            }
+
             aWriter.forward(meshAabb);
         }
 
@@ -619,6 +621,12 @@ void processModel(const std::filesystem::path & aFile)
         aiProcess_FindInvalidData           |
         // Generate bouding boxes, see: https://stackoverflow.com/a/74331859/1027706
         aiProcess_GenBoundingBoxes          |
+        // Populate the mNode member of aiBone, so we do not have to manually
+        // match up on node names
+        aiProcess_PopulateArmatureData      |
+        // Limit the maximum number of bones affecting a single vertex
+        // (default limit is 4)
+        aiProcess_LimitBoneWeights          |
         /* to allow final | */0
     );
     

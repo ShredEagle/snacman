@@ -5,7 +5,9 @@ set(REPO_FOLDER ${PROJECT_SOURCE_DIR})
 configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
+    AssimpUtils.h
     Logging.h
+    ProcessAnimation.h
     Processor.h
 )
 
@@ -13,6 +15,7 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     Logging.cpp
+    ProcessAnimation.cpp
     Processor.cpp
 )
 

@@ -7,6 +7,7 @@
 #include "../Json.h"
 #include "../Logging.h"
 #include "../RendererReimplement.h"
+#include "../Rigging.h"
 #include "../Semantics.h"
 
 #include <arte/Image.h>
@@ -105,6 +106,8 @@ namespace {
     constexpr auto gUvSize = 2 * sizeof(float);
     constexpr auto gColorSize = 4 * sizeof(float);
     constexpr auto gIndexSize = sizeof(unsigned int);
+    constexpr auto gBoneIndicesSize = VertexJointData::gMaxBones * sizeof(unsigned int);
+    constexpr auto gBoneWeightsSize = VertexJointData::gMaxBones * sizeof(float);
 
     struct AttributeDescription
     {
@@ -176,6 +179,7 @@ namespace {
                 }
             }();
 
+            // TODO allow interleaving of vertex attributes
             vertexStream.mSemanticToAttribute.emplace(
                 attribute.mSemantic,
                 AttributeAccessor{
@@ -217,11 +221,13 @@ namespace {
             };
 
         // TODO #loader Those hardcoded indices are smelly, hard-coupled to the attribute streams structure in the binary.
-        graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 5)->mGLBuffer;
-        graphics::BufferAny & normalBuffer   = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
-        graphics::BufferAny & tangentBuffer  = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
-        graphics::BufferAny & colorBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
-        graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
+        graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 7)->mGLBuffer;
+        graphics::BufferAny & normalBuffer   = *(aVertexStream.mVertexBufferViews.end() - 6)->mGLBuffer;
+        graphics::BufferAny & tangentBuffer  = *(aVertexStream.mVertexBufferViews.end() - 5)->mGLBuffer;
+        graphics::BufferAny & colorBuffer = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
+        graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
+        graphics::BufferAny & boneIndicesBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
+        graphics::BufferAny & boneWeightsBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
         graphics::BufferAny & indexBuffer = *(aVertexStream.mIndexBufferView.mGLBuffer);
 
         const std::string meshName = aIn.readString();
@@ -274,6 +280,17 @@ namespace {
         aIn.read(primitiveCount);
         const unsigned int indicesCount = 3 * primitiveCount;
         loadBufferFromArchive(indexBuffer, aIndexFirst, gIndexSize, indicesCount);
+
+        {
+            unsigned int bonesCount;
+            aIn.read(bonesCount);
+
+            if(bonesCount != 0)
+            {
+                loadBufferFromArchive(boneIndicesBuffer, aVertexFirst, gBoneIndicesSize, verticesCount);
+                loadBufferFromArchive(boneWeightsBuffer, aVertexFirst, gBoneWeightsSize, verticesCount);
+            }
+        }
 
         // Assign the part material index to the otherwise common material
         aPartsMaterial.mPhongMaterialIdx = materialIndex;
@@ -710,7 +727,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
 
     // Binary attributes descriptions
     // TODO Ad 2023/10/11: #loader Support dynamic set of attributes in the binary
-    static const std::array<AttributeDescription, 5> gAttributeStreamsInBinary {
+    static const std::array<AttributeDescription, 7> gAttributeStreamsInBinary {
         AttributeDescription{
             .mSemantic = semantic::gPosition,
             .mDimension = 3,
@@ -734,6 +751,16 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
         AttributeDescription{
             .mSemantic = semantic::gUv,
             .mDimension = 2,
+            .mComponentType = GL_FLOAT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gJoints0,
+            .mDimension = VertexJointData::gMaxBones,
+            .mComponentType = GL_UNSIGNED_INT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gWeights0,
+            .mDimension = VertexJointData::gMaxBones,
             .mComponentType = GL_FLOAT,
         },
     };
