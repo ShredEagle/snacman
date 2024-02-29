@@ -15,8 +15,6 @@ using NodeIndex = NodeTree<Rig::Pose>::Node::Index;
 
 namespace {
 
-    using NodePointerMap = std::unordered_map<const aiNode *, NodeTree<Rig::Pose>::Node::Index>;
-
     NodeIndex recurseAssimpNode(const aiNode * aNode,
                                 NodeIndex aParentIndex,
                                 NodeTree<Rig::Pose> & aOutTree,
@@ -89,14 +87,10 @@ namespace {
 } // unnamed namespace
 
 
-std::pair<Rig, VertexJointData> loadRig(const aiMesh * aMesh)
+std::pair<Rig, NodePointerMap> loadRig(const aiNode * aArmature)
 {
-    assert(aMesh->mNumBones > 0);
-
-    aiNode * armature = aMesh->mBones[0]->mArmature;
-    assert(armature);
     Rig result{
-        .mArmatureName = armature->mName.C_Str(),
+        .mArmatureName = aArmature->mName.C_Str(),
     };
     NodePointerMap aiNodeToTreeNode;
 
@@ -105,15 +99,27 @@ std::pair<Rig, VertexJointData> loadRig(const aiMesh * aMesh)
     //
 
     // TODO Ad 2024/02/22: Is it correct to start from the armature?
-    std::tie(result.mJointTree, aiNodeToTreeNode) = loadJoints(armature);
+    std::tie(result.mJointTree, aiNodeToTreeNode) = loadJoints(aArmature);
     // I expect this to always be the case, the assert is here to catch if it becomes wrong.
     assert(result.mJointTree.mFirstRoot == 0);
 
-    //
-    // Iterate over all bones:
-    // * Populate the list of joints and their inverse bind matrices
-    // * Populate the joint data vertex attributes (array of VertexJointData)
-    //
+    //auto maxVal = 
+    //    *std::max_element(jointData.mVertexJointNumber.begin(), jointData.mVertexJointNumber.end());
+    //std::cout << "Maximum number of bones influencing a single vertex: " << val << std::endl;
+
+    return {result, aiNodeToTreeNode}; 
+}
+
+//
+// Iterate over all bones:
+// * Populate the list of joints and their inverse bind matrices
+// * Populate the joint data vertex attributes (array of VertexJointData)
+//
+VertexJointData populateJointData(Rig::JointData & aOutJointData,
+                                  const aiMesh * aMesh,
+                                  const NodePointerMap & aAiNodeToTreeNode,
+                                  const aiNode * aExpectedArmature)
+{
     JointDataManager jointData{aMesh->mNumVertices};
 
     for(unsigned int boneIdx = 0; boneIdx != aMesh->mNumBones; ++boneIdx)
@@ -121,23 +127,22 @@ std::pair<Rig, VertexJointData> loadRig(const aiMesh * aMesh)
         const aiBone & bone  = *aMesh->mBones[boneIdx];
         // I am making the assumption that the armature is a common root node of a skeleton
         // and thus it must be equal for all the bones.
-        assert(bone.mArmature == armature);
-        result.mInverseBindMatrices.push_back(
+        assert(bone.mArmature == aExpectedArmature);
+        // Assert that the joint index fits in the destination type.
+        assert(aOutJointData.mIndices.size() < std::numeric_limits<VertexJointData::BoneIndex_t>::max());
+        const VertexJointData::BoneIndex_t jointIndex = (VertexJointData::BoneIndex_t)aOutJointData.mIndices.size();
+        aOutJointData.mInverseBindMatrices.push_back(
             math::AffineMatrix<4, float>{extractAffinePart(bone.mOffsetMatrix)});
-        result.mJoints.push_back(aiNodeToTreeNode.at(bone.mNode));
+        aOutJointData.mIndices.push_back(aAiNodeToTreeNode.at(bone.mNode));
 
         for(unsigned int weightIdx = 0; weightIdx != bone.mNumWeights; ++weightIdx)
         {
             const aiVertexWeight & weight = bone.mWeights[weightIdx];
-            jointData.addJoint(weight.mVertexId, boneIdx, weight.mWeight);
+            jointData.addJoint(weight.mVertexId, jointIndex, weight.mWeight);
         }
     }
 
-    //auto maxVal = 
-    //    *std::max_element(jointData.mVertexJointNumber.begin(), jointData.mVertexJointNumber.end());
-    //std::cout << "Maximum number of bones influencing a single vertex: " << val << std::endl;
-
-    return {result, jointData.mVertexJointData};
+    return jointData.mVertexJointData;
 }
 
 

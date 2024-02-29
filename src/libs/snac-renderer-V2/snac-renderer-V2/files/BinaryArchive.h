@@ -68,6 +68,18 @@ struct BinaryOutArchive
         return write(std::span{aString});
     }
 
+    template <class T_key, class T_value>
+    BinaryOutArchive & write(const std::unordered_map<T_key, T_value> & aMap)
+    {
+        write((unsigned int)aMap.size());
+        for(const auto & [key, value] : aMap)
+        {
+            write(key);
+            write(value);
+        }
+        return *this;
+    }
+
     std::ofstream mOut;
     std::filesystem::path mParentPath;
 };
@@ -96,6 +108,12 @@ struct BinaryInArchive
         std::string buffer(stringSize, '\0');
         mIn.read(buffer.data(), stringSize);
         return buffer;
+    }
+
+    BinaryInArchive & read(std::string & aString)
+    {
+        aString = readString();
+        return *this;
     }
 
     template <class T>
@@ -129,6 +147,21 @@ struct BinaryInArchive
         return *this;
     }
 
+    template <class T_key, class T_value>
+    BinaryInArchive & read(std::unordered_map<T_key, T_value> & aMap)
+    {
+        unsigned int mapSize;
+        read(mapSize);
+        T_key key;
+        T_value value;
+        for(unsigned int i = 0; i != mapSize; ++i)
+        {
+            read(key);
+            read(value);
+            aMap.emplace(key, value);
+        }
+        return *this;
+    }
 
     std::ifstream mIn;
     std::filesystem::path mParentPath;

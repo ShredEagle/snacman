@@ -28,6 +28,8 @@ private:
     void presentObject(const Object & aObject);
     void presentEffect(Handle<const Effect> aEffect);
     void presentShaders(const IntrospectProgram & aIntrospectProgram);
+    static void presentJointTree(const NodeTree<Rig::Pose> & aTree,
+                                 NodeTree<Rig::Pose>::Node::Index aNodeIdx);
 
     void presentSelection();
 

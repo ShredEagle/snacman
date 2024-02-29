@@ -11,22 +11,22 @@ namespace ad::renderer {
 namespace {
 
 
-// see: https://github.com/ocornut/imgui/issues/1872
-bool isItemDoubleClicked(ImGuiMouseButton mouse_button = 0)
-{
-    return
-        ImGui::IsMouseDoubleClicked(mouse_button) 
-        && ImGui::IsItemHovered();
-}
+    // see: https://github.com/ocornut/imgui/issues/1872
+    bool isItemDoubleClicked(ImGuiMouseButton mouse_button = 0)
+    {
+        return
+            ImGui::IsMouseDoubleClicked(mouse_button) 
+            && ImGui::IsItemHovered();
+    }
 
 
-GLuint getInstanceDivisor(const VertexStream & aStream, const AttributeAccessor & aAccessor)
-{
-    GLuint divisor = aStream.mVertexBufferViews.at(aAccessor.mBufferViewIndex).mInstanceDivisor;
-    // Note: As of this writting, I do not think we have use for divisors other than 0 or 1.
-    assert(divisor <= 1);
-    return divisor;
-}
+    GLuint getInstanceDivisor(const VertexStream & aStream, const AttributeAccessor & aAccessor)
+    {
+        GLuint divisor = aStream.mVertexBufferViews.at(aAccessor.mBufferViewIndex).mInstanceDivisor;
+        // Note: As of this writting, I do not think we have use for divisors other than 0 or 1.
+        assert(divisor <= 1);
+        return divisor;
+    }
 
 
 } // unnamed namespace
@@ -139,6 +139,40 @@ Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
 }
 
 
+// When the main scene graph in our Model becomes a DOD NodeTree, this should be 
+// factorized with main traversal in presentNodeTree()
+void SceneGui::presentJointTree(const NodeTree<Rig::Pose> & aTree,
+                                NodeTree<Rig::Pose>::Node::Index aNodeIdx)
+{
+    using Node = NodeTree<Rig::Pose>::Node;
+
+    int flags = (aTree.hasChild(aNodeIdx)) ? gBaseFlags : gLeafFlags;
+
+    std::string name = "<Bone #" + std::to_string(aNodeIdx) + ">";
+    if(auto nameIt = aTree.mNodeNames.find(aNodeIdx); nameIt != aTree.mNodeNames.end())
+    {
+        name = nameIt->second;
+    }
+
+    const Node & node = aTree.mHierarchy[aNodeIdx];
+    bool opened = ImGui::TreeNodeEx(&node, flags, "%s", name.c_str());
+
+    if(opened)
+    {
+        if(aTree.hasChild(aNodeIdx))
+        {
+            presentJointTree(aTree, node.mFirstChild);
+        }
+        ImGui::TreePop();
+    }
+
+    if(node.mNextSibling != Node::gInvalidIndex)
+    {
+        presentJointTree(aTree, node.mNextSibling);
+    }
+};
+
+
 void SceneGui::presentObject(const Object & aObject)
 {
     assert(!aObject.mParts.empty());
@@ -171,8 +205,16 @@ void SceneGui::presentObject(const Object & aObject)
 
             ++partIdx;
         }
-
         ImGui::TreePop();
+    }
+
+    if(aObject.mRigTree != gNullHandle)
+    {
+        if(ImGui::TreeNodeEx("[Rig]", gBaseFlags))
+        {
+            presentJointTree(*aObject.mRigTree, aObject.mRigTree->mFirstRoot) ;
+            ImGui::TreePop();
+        }
     }
 }
 

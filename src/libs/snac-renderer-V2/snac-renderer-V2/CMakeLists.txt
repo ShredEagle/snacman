@@ -14,6 +14,7 @@ set(${TARGET_NAME}_HEADERS
     Profiling.h
     RendererReimplement.h
     Repositories.h
+    Rigging.h
     Semantics.h
     SetupDrawing.h
 
@@ -28,6 +29,7 @@ set(${TARGET_NAME}_SOURCES
     Logging-init.cpp
     Pass.cpp
     Profiling.cpp
+    Rigging.cpp
     SetupDrawing.cpp
 
     files/Loader.cpp

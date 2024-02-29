@@ -61,6 +61,23 @@ namespace {
         return result;
     }
 
+    template <class T_value>
+    T_value readAs(BinaryInArchive & aIn)
+    {
+        T_value v;
+        aIn.read(v);
+        return v;
+    }
+
+    template <class T_element>
+    std::vector<T_element> readAsVector(BinaryInArchive & aIn,
+                                        std::size_t aElementCount,
+                                        T_element aDefaultValue = {})
+    {
+        std::vector<T_element> result(aElementCount, aDefaultValue);
+        aIn.read(std::span{result});
+        return result;
+    }
 
     BufferView makeBufferView(graphics::BufferAny * aBuffer,
                               GLsizei aElementSize,
@@ -352,6 +369,31 @@ namespace {
             );
         }
         
+        // Rig of the Node
+        unsigned int rigCount;
+        aIn.read(rigCount);
+        // Only one rig at most for the moment
+        assert(rigCount <= 1);
+        if(rigCount == 1)
+        {
+            // A Rig is assigned to an Object
+            assert(node.mInstance.mObject != nullptr);
+
+            unsigned int treeEntries;
+            aIn.read(treeEntries);
+
+            aStorage.mRigs.push_back(NodeTree<Rig::Pose>{
+                .mHierarchy  = readAsVector<NodeTree<Rig::Pose>::Node>(aIn, treeEntries),
+                .mFirstRoot  = readAs<NodeTree<Rig::Pose>::Node::Index>(aIn),
+                .mLocalPose  = readAsVector<Rig::Pose>(aIn, treeEntries, Rig::Pose::Identity()),
+                .mGlobalPose = readAsVector<Rig::Pose>(aIn, treeEntries, Rig::Pose::Identity()),
+                .mNodeNames  = readAs<decltype(NodeTree<Rig::Pose>::mNodeNames)>(aIn),
+            });
+
+            node.mInstance.mObject->mRigTree = &aStorage.mRigs.back();
+        }
+
+
         math::Box<float> objectAabb;
         aIn.read(objectAabb);
         if(node.mInstance.mObject != nullptr)

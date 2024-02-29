@@ -131,7 +131,7 @@ namespace {
             mArchive.write(aData);
         }
 
-        // TODO this feels out of place, this file writer being inteded to be high level
+        // TODO this feels out of place, this file writer being intended to be high level
         template <class T_data>
         void forward(const T_data & aData)
         {
@@ -253,7 +253,14 @@ namespace {
         //   I mostly wanted to see if it ever happens (the assertion can be comment-out).
         assert(aNode->mNumMeshes == 0 || aNode->mNumChildren == 0);
 
-        aiNode * nodeCommonArmature = nullptr;
+        struct NodeRig
+        {
+            aiNode * mCommonArmature;
+            Rig mRig;
+            NodePointerMap mAiNodeToTreeNode;
+        };
+        std::optional<NodeRig> nodeRig;
+
         for(std::size_t meshIdx = 0; meshIdx != aNode->mNumMeshes; ++meshIdx)
         {
             unsigned int globalMeshIndex = aNode->mMeshes[meshIdx];
@@ -289,19 +296,74 @@ namespace {
             aWriter.forward(mesh->mNumBones);
             if(mesh->mNumBones != 0)
             {
-                Rig rig;
-                VertexJointData jointData;
-                std::tie(rig, jointData) = loadRig(mesh);
+                aiNode * meshArmature = mesh->mBones[0]->mArmature;
+                assert(meshArmature);
+                if(!nodeRig) 
+                {
+                    nodeRig = NodeRig{
+                        .mCommonArmature = meshArmature,
+                    };
+                    std::tie(nodeRig->mRig, nodeRig->mAiNodeToTreeNode) = loadRig(meshArmature);
+                }
+                // The code is written assuming all (rigged) meshes of the same node have the same armature.
+                // If this assertion fails, code needs reviewing.
+                // (in particular the fact that a single rig can be assigned to a Node)
+                assert(meshArmature == nodeRig->mCommonArmature);
+
+                VertexJointData jointData = populateJointData(nodeRig->mRig.mJoints,
+                                                              mesh,
+                                                              nodeRig->mAiNodeToTreeNode,
+                                                              nodeRig->mCommonArmature);
 
                 aWriter.forward(std::span{jointData.mBoneIndices});
                 aWriter.forward(std::span{jointData.mBoneWeights});
-                //std::cout << "Armature '" << rig.mArmatureName << "':\n"
-                //    << rig.mJointTree;
             }
 
             aWriter.forward(meshAabb);
         }
 
+        // Rig of the Node
+        {
+            // Node rig count (can only have one at the moment)
+            unsigned int rigCount = nodeRig ? 1 : 0;
+            aWriter.forward(rigCount);
+            if(nodeRig)
+            {
+
+// Run some more sanity checks on the Rig
+#if not defined(NDEBUG)
+                // Let's ensure that all bones, from the different meshes,
+                // point to distinct Nodes in the hierarchy.
+                const auto & indices = nodeRig->mRig.mJoints.mIndices;
+                std::vector<NodeTree<Rig::Pose>::Node::Index> sortedIndices(indices.size(), 0);
+                std::partial_sort_copy(indices.begin(), indices.end(),
+                                       sortedIndices.begin(), sortedIndices.end());
+                
+                // If this trips, it means several bones pointed to the same aiNode 
+                // (and thus to the same Joint in the JointTree)
+                // The logic might still work, but this indicated some unpleasant duplication.
+                // Note: I suppose it could happen because of the Assimp model design:
+                // The Bones are stored in the meshes.
+                // So, if several meshes are influenced by the same bone in a logical skeleton,
+                // each meach probably stores a bone to reference to the same node.
+                // (Then, the question is, do they have the same inverse bind matrix, so we could merge)
+                // TODO Ad 2024/02/29: #deduplicate_bones This trips in the donut, we have to address it
+                // A potential complication is the IBM, we have to make sure it is equal on both sides.
+                //assert(std::adjacent_find(sortedIndices.begin(), sortedIndices.end()) == sortedIndices.end()
+                //    && "Duplicate bones found in the rig");
+#endif
+                const NodeTree<Rig::Pose> & jointTree = nodeRig->mRig.mJointTree;
+                // Writes the number of elements first
+                aWriter.writeRaw(std::span{jointTree.mHierarchy});
+                aWriter.forward(jointTree.mFirstRoot);
+                // Does not write number of elements (will be the same)
+                aWriter.forward(std::span{jointTree.mLocalPose});
+                aWriter.forward(std::span{jointTree.mGlobalPose});
+                aWriter.forward(jointTree.mNodeNames);
+            }
+        }
+
+        // AABB of the Node
         aWriter.forward(result.mAabb); // this is the AABB of all direct parts, without children nodes. (i.e the `Object`).
 
         // TODO do we really want to compute the node's AABB? This is tricky, because there might be transformations

@@ -72,15 +72,18 @@ struct Rig
 
     NodeTree<Pose> mJointTree;
 
-    // Maps a bone index in aiMesh.mBones[] (the index into mJoints array) 
-    // to a Node index in mJointTree (the value)
-    // TODO #anim Ideally, mJointsTree nodes would be "bones" only,
-    // indexed in the same order as bone indices provided as a vertex attribute,
-    // so this member could be removed (getting rid of one indirection)
-    std::vector<NodeTree<Pose>::Node::Index> mJoints;
+    struct JointData
+    {
+        // Maps a bone index in aiMesh.mBones[] (the index into mJoints array) 
+        // to a Node index in mJointTree (the value)
+        // TODO #anim Ideally, mJointsTree nodes would be "bones" only,
+        // indexed in the same order as bone indices provided as a vertex attribute,
+        // so this member could be removed (getting rid of one indirection)
+        std::vector<NodeTree<Pose>::Node::Index> mIndices;
 
-    // Directly given in the order of bones in aiMesh.mBones.
-    std::vector<math::AffineMatrix<4, float>> mInverseBindMatrices;
+        // Directly given in the order of bones in aiMesh.mBones.
+        std::vector<math::AffineMatrix<4, float>> mInverseBindMatrices;
+    } mJoints;
 
     // With Assimp, I do not know any better name for the rig as a whole than its armature
     std::string mArmatureName;
@@ -91,12 +94,13 @@ struct Rig
 struct VertexJointData
 {
     static constexpr std::size_t gMaxBones = 4;
+    using BoneIndex_t = unsigned int; // TODO #perf use a more compact type than uint
 
     // Would require attribute interleaving, and VertexJointData would be per-vertex 
     // (instead of containing all vertices)
     //math::Vec<gMaxBones, unsigned int> mBoneIndices{math::Vec<gMaxBones, unsigned int>::Zero()};
     //math::Vec<gMaxBones, float> mBoneWeights{math::Vec<gMaxBones, float>::Zero()};
-    std::vector<math::Vec<gMaxBones, unsigned int>> mBoneIndices; // TODO use a more compact type than uint
+    std::vector<math::Vec<gMaxBones, BoneIndex_t>> mBoneIndices; 
     std::vector<math::Vec<gMaxBones, float>> mBoneWeights;
 };
 

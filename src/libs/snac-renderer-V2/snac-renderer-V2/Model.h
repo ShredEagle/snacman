@@ -5,6 +5,7 @@
 #include "IntrospectProgram.h" 
 #include "Material.h"
 #include "Repositories.h"
+#include "Rigging.h"
 
 #include <renderer/Texture.h>
 #include <renderer/UniformBuffer.h>
@@ -213,6 +214,9 @@ struct Object
 {
     std::vector<Part> mParts;
     math::Box<GLfloat> mAabb;
+    // TODO #RV2 animation should actually store rigs
+    //Handle<Rig> mRig = gNullHandle;
+    Handle<NodeTree<Rig::Pose>> mRigTree = gNullHandle;
 };
 
 
@@ -281,6 +285,8 @@ struct Storage
     std::list<MaterialContext> mMaterialContexts;
     // Used for random access (DOD)
     std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, so the name at index zero can be used when there are no material parameters
+    // TODO #RV2 animation should actually store rigs
+    std::list<NodeTree<Rig::Pose>> mRigs;
 };
 
 
