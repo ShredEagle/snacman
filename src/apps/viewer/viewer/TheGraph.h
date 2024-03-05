@@ -9,6 +9,7 @@
 
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Repositories.h>
+#include <snac-renderer-V2/debug/DebugRenderer.h>
 
 
 namespace ad::renderer {
@@ -45,6 +46,8 @@ struct TheGraph
              const Loader & aLoader);
 
     void renderFrame(const PartList & aPartList, const Camera & aCamera, Storage & aStorage);
+
+    void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
     void passOpaqueDepth(const PartList & aPartList, Storage & mStorage);
@@ -84,6 +87,9 @@ struct TheGraph
     QuadDrawer mTransparencyResolver;
     static const GLint gAccumTextureUnit{0};
     static const GLint gRevealageTextureUnit{1};
+
+    // Debug rendering
+    DebugRenderer mDebugRenderer;
 };
 
 

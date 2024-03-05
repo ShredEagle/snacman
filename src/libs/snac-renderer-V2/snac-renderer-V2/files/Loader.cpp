@@ -126,96 +126,6 @@ namespace {
     constexpr auto gBoneIndicesSize = VertexJointData::gMaxBones * sizeof(unsigned int);
     constexpr auto gBoneWeightsSize = VertexJointData::gMaxBones * sizeof(float);
 
-    struct AttributeDescription
-    {
-        Semantic mSemantic;
-        // To replace wih graphics::ClientAttribute if we support interleaved buffers (i.e. with offset)
-        graphics::AttributeDimension mDimension;
-        GLenum mComponentType;   // data individual components' type.
-    };
-
-    /// @note Provide a distinct buffer for each attribute stream at the moment (i.e. no interleaving).
-    /// @param aVertexStream If not nullptr, create views into this vertex stream buffers instead of creating
-    /// new buffers.
-    Handle<VertexStream> makeVertexStream(unsigned int aVerticesCount,
-                                          unsigned int aIndicesCount,
-                                          std::span<const AttributeDescription> aBufferedStreams,
-                                          Storage & aStorage,
-                                          const GenericStream & aStream,
-                                          // This is probably only useful to create debug data buffers
-                                          // (as there is little sense to not reuse the existing views)
-                                          const VertexStream * aVertexStream = nullptr)
-    {
-        // TODO Ad 2023/10/11: Should we support smaller index types.
-        using Index_t = GLuint;
-        BufferView iboView = [&]()
-        {
-            if(aVertexStream)
-            {
-                const BufferView & previousIndexBufferView = aVertexStream->mIndexBufferView;
-                GLintptr indexOffset = previousIndexBufferView.mSize;
-                graphics::BufferAny * existingBuffer = aVertexStream->mIndexBufferView.mGLBuffer;
-                return makeBufferView(existingBuffer, sizeof(Index_t), aIndicesCount, 0, indexOffset);
-            }
-            else
-            {
-                return createBuffer(sizeof(Index_t), aIndicesCount, 0, GL_STATIC_DRAW, aStorage);
-            }
-        }();
-
-        // The consolidated vertex stream
-        aStorage.mVertexStreams.push_back({
-            .mVertexBufferViews{aStream.mVertexBufferViews},
-            .mSemanticToAttribute{aStream.mSemanticToAttribute},
-            .mIndexBufferView = iboView,
-            .mIndicesType = graphics::MappedGL_v<Index_t>,
-        });
-
-        VertexStream & vertexStream = aStorage.mVertexStreams.back();
-
-        for(const auto & attribute : aBufferedStreams)
-        {
-            const GLsizei attributeSize = 
-                attribute.mDimension.countComponents() * graphics::getByteSize(attribute.mComponentType);
-
-            BufferView attributeView = [&]()
-            {
-                if(aVertexStream)
-                {
-                    // Will throw if there is no buffer for the attribute's semantic in the source VertexStream.
-                    const BufferView & previousBufferView = 
-                        aVertexStream->mVertexBufferViews.at(
-                            aVertexStream->mSemanticToAttribute.at(attribute.mSemantic).mBufferViewIndex);
-                    graphics::BufferAny * attributeBuffer = previousBufferView.mGLBuffer;
-
-                    return makeBufferView(attributeBuffer, attributeSize, aVerticesCount, 0, previousBufferView.mSize);
-                }
-                else
-                {
-                    return createBuffer(attributeSize, aVerticesCount, 0, GL_STATIC_DRAW, aStorage);
-                }
-            }();
-
-            // TODO allow interleaving of vertex attributes
-            vertexStream.mSemanticToAttribute.emplace(
-                attribute.mSemantic,
-                AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size(), // view is added next
-                    .mClientDataFormat{
-                        .mDimension = attribute.mDimension,
-                        .mOffset = 0,
-                        .mComponentType = attribute.mComponentType,
-                    },
-                }
-            );
-
-            vertexStream.mVertexBufferViews.push_back(attributeView);
-        }
-
-        return &vertexStream;
-    }
-
-
     // TODO Do we want attribute interleaving, or are we content with one distinct buffer per attribute ?
     // (the attribute interleaving should then be done on the exporter side).
     Part loadMesh(BinaryInArchive & aIn, 
@@ -379,18 +289,35 @@ namespace {
             // A Rig is assigned to an Object
             assert(node.mInstance.mObject != nullptr);
 
+            // Joint tree
             unsigned int treeEntries;
             aIn.read(treeEntries);
 
-            aStorage.mRigs.push_back(NodeTree<Rig::Pose>{
-                .mHierarchy  = readAsVector<NodeTree<Rig::Pose>::Node>(aIn, treeEntries),
-                .mFirstRoot  = readAs<NodeTree<Rig::Pose>::Node::Index>(aIn),
-                .mLocalPose  = readAsVector<Rig::Pose>(aIn, treeEntries, Rig::Pose::Identity()),
-                .mGlobalPose = readAsVector<Rig::Pose>(aIn, treeEntries, Rig::Pose::Identity()),
-                .mNodeNames  = readAs<decltype(NodeTree<Rig::Pose>::mNodeNames)>(aIn),
-            });
+            Rig rig{
+                .mJointTree = NodeTree<Rig::Pose>{
+                    .mHierarchy  = readAsVector<NodeTree<Rig::Pose>::Node>(aIn, treeEntries),
+                    .mFirstRoot  = readAs<NodeTree<Rig::Pose>::Node::Index>(aIn),
+                    .mLocalPose  = readAsVector<Rig::Pose>(aIn, treeEntries, Rig::Pose::Identity()),
+                    .mGlobalPose = readAsVector<Rig::Pose>(aIn, treeEntries, Rig::Pose::Identity()),
+                    .mNodeNames  = readAs<decltype(NodeTree<Rig::Pose>::mNodeNames)>(aIn),
+                }
+            };
 
-            node.mInstance.mObject->mRigTree = &aStorage.mRigs.back();
+            // Joint data
+            {
+                unsigned int jointCount;
+                aIn.read(jointCount);
+                rig.mJoints = Rig::JointData{
+                    .mIndices = readAsVector<NodeTree<Rig::Pose>::Node::Index>(aIn, jointCount),
+                    .mInverseBindMatrices = readAsVector<Rig::Ibm>(aIn, jointCount, Rig::Ibm::Identity()),
+                };
+            }
+
+            // Name
+            rig.mArmatureName = aIn.readString();
+
+            aStorage.mRigs.push_back(std::move(rig));
+            node.mInstance.mObject->mRig = &aStorage.mRigs.back();
         }
 
 
@@ -521,6 +448,85 @@ namespace {
 
 
 } // unnamed namespace
+
+
+Handle<VertexStream> makeVertexStream(unsigned int aVerticesCount,
+                                        unsigned int aIndicesCount,
+                                        std::span<const AttributeDescription> aBufferedStreams,
+                                        Storage & aStorage,
+                                        const GenericStream & aStream,
+                                        // This is probably only useful to create debug data buffers
+                                        // (as there is little sense to not reuse the existing views)
+                                        const VertexStream * aVertexStream)
+{
+    // TODO Ad 2023/10/11: Should we support smaller index types.
+    using Index_t = GLuint;
+    BufferView iboView = [&]()
+    {
+        if(aVertexStream)
+        {
+            const BufferView & previousIndexBufferView = aVertexStream->mIndexBufferView;
+            GLintptr indexOffset = previousIndexBufferView.mSize;
+            graphics::BufferAny * existingBuffer = aVertexStream->mIndexBufferView.mGLBuffer;
+            return makeBufferView(existingBuffer, sizeof(Index_t), aIndicesCount, 0, indexOffset);
+        }
+        else
+        {
+            return createBuffer(sizeof(Index_t), aIndicesCount, 0, GL_STATIC_DRAW, aStorage);
+        }
+    }();
+
+    // The consolidated vertex stream
+    aStorage.mVertexStreams.push_back({
+        .mVertexBufferViews{aStream.mVertexBufferViews},
+        .mSemanticToAttribute{aStream.mSemanticToAttribute},
+        .mIndexBufferView = iboView,
+        .mIndicesType = graphics::MappedGL_v<Index_t>,
+    });
+
+    VertexStream & vertexStream = aStorage.mVertexStreams.back();
+
+    for(const auto & attribute : aBufferedStreams)
+    {
+        const GLsizei attributeSize = 
+            attribute.mDimension.countComponents() * graphics::getByteSize(attribute.mComponentType);
+
+        BufferView attributeView = [&]()
+        {
+            if(aVertexStream)
+            {
+                // Will throw if there is no buffer for the attribute's semantic in the source VertexStream.
+                const BufferView & previousBufferView = 
+                    aVertexStream->mVertexBufferViews.at(
+                        aVertexStream->mSemanticToAttribute.at(attribute.mSemantic).mBufferViewIndex);
+                graphics::BufferAny * attributeBuffer = previousBufferView.mGLBuffer;
+
+                return makeBufferView(attributeBuffer, attributeSize, aVerticesCount, 0, previousBufferView.mSize);
+            }
+            else
+            {
+                return createBuffer(attributeSize, aVerticesCount, 0, GL_STATIC_DRAW, aStorage);
+            }
+        }();
+
+        // TODO allow interleaving of vertex attributes
+        vertexStream.mSemanticToAttribute.emplace(
+            attribute.mSemantic,
+            AttributeAccessor{
+                .mBufferViewIndex = vertexStream.mVertexBufferViews.size(), // view is added next
+                .mClientDataFormat{
+                    .mDimension = attribute.mDimension,
+                    .mOffset = 0, // No interleaving is hardcoded at the moment
+                    .mComponentType = attribute.mComponentType,
+                },
+            }
+        );
+
+        vertexStream.mVertexBufferViews.push_back(attributeView);
+    }
+
+    return &vertexStream;
+}
 
 
 BufferView createBuffer(GLsizei aElementSize,
@@ -842,9 +848,21 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
 }
 
 
+Handle<ConfiguredProgram> storeConfiguredProgram(IntrospectProgram aProgram, Storage & aStorage)
+{
+    aStorage.mPrograms.push_back(ConfiguredProgram{
+        .mProgram = std::move(aProgram),
+        // TODO Share Configs between programs that are compatibles (i.e., same input semantic and type at same attribute index)
+        // (For simplicity, we create one Config per program at the moment).
+        .mConfig = (aStorage.mProgramConfigs.emplace_back(), &aStorage.mProgramConfigs.back()),
+    });
+    return &aStorage.mPrograms.back();
+}
+
+
 Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
                             Storage & aStorage,
-                            const std::vector<std::string> & aDefines_temp)
+                            const std::vector<std::string> & aDefines_temp) const
 {
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
@@ -853,14 +871,9 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
     Json effect = Json::parse(std::ifstream{mFinder.pathFor(aEffectFile)});
     for (const auto & technique : effect.at("techniques"))
     {
-        aStorage.mPrograms.push_back(ConfiguredProgram{
-            .mProgram = loadProgram(technique.at("programfile"), aDefines_temp),
-            // TODO Share Configs between programs that are compatibles (i.e., same input semantic and type at same attribute index)
-            // (For simplicity, we create one Config per program at the moment).
-            .mConfig = (aStorage.mProgramConfigs.emplace_back(), &aStorage.mProgramConfigs.back()),
-        });
         result.mTechniques.push_back(Technique{
-            .mConfiguredProgram = &aStorage.mPrograms.back(),
+            .mConfiguredProgram =
+                storeConfiguredProgram(loadProgram(technique.at("programfile"), aDefines_temp), aStorage),
         });
 
         if(technique.contains("annotations"))
@@ -877,7 +890,7 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
 
 
 IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
-                                      std::vector<std::string> aDefines_temp)
+                                      std::vector<std::string> aDefines_temp) const
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 

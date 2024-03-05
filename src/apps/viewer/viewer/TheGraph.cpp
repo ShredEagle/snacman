@@ -172,7 +172,8 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
     mUbos{aStorage},
     mInstanceStream{makeInstanceStream(aStorage, gMaxDrawInstances)},
     mRenderSize{mGlfwAppInterface->getFramebufferSize()}, // TODO Ad 2023/11/28: Listen to framebuffer resize
-    mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")}
+    mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")},
+    mDebugRenderer{aStorage, aLoader}
 {
     graphics::allocateStorage(mDepthMap, GL_DEPTH_COMPONENT24, mRenderSize);
     [this](GLenum aFiltering)
@@ -285,6 +286,15 @@ void TheGraph::renderFrame(const PartList & aPartList, const Camera & aCamera, S
     showDepthTexture(mDepthMap, nearZ, farZ) ;
     showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
     showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
+}
+
+
+void TheGraph::renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage)
+{
+    // Fullscreen viewport
+    glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
+
+    mDebugRenderer.render(std::move(aDrawList), mUbos.mUboRepository, aStorage);
 }
 
 

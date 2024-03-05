@@ -18,6 +18,9 @@ set(${TARGET_NAME}_HEADERS
     Semantics.h
     SetupDrawing.h
 
+    debug/DebugDrawing.h
+    debug/DebugRenderer.h
+
     files/Flags.h
     files/BinaryArchive.h
     files/Loader.h
@@ -31,6 +34,9 @@ set(${TARGET_NAME}_SOURCES
     Profiling.cpp
     Rigging.cpp
     SetupDrawing.cpp
+
+    debug/DebugDrawing.cpp
+    debug/DebugRenderer.cpp
 
     files/Loader.cpp
 )
@@ -76,6 +82,9 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 target_link_libraries(${TARGET_NAME}
     PUBLIC
         ad::resource
+
+        #TODO Remove this! Currently needed for the debug drawer
+        ad::snac-renderer-V1
     PRIVATE
         ad::graphics
         ad::math

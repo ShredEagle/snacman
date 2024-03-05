@@ -4,11 +4,16 @@
 #include <build_info.h>
 
 #include <graphics/ApplicationGlfw.h>
+
 #include <imguiui/ImguiUi.h>
 #include <imguiui/Widgets.h>
+
 #include <profiler/GlApi.h>
 #include <profiler/Profiler.h> // Internals are used to measure frame duration
+
+#include <snac-renderer-V2/Debug/DebugDrawing.h>
 #include <snac-renderer-V2/Profiling.h>
+
 #include <utilities/Time.h>
 
 #include <iostream>
@@ -98,6 +103,8 @@ void showGui(imguiui::ImguiUi & imguiUi,
 void runApplication(int argc, char * argv[])
 {
     SELOG(info)("Starting application '{}'.", gApplicationName);
+
+    renderer::initializeDebugDrawers();
 
     // Application and window initialization
     graphics::ApplicationFlag glfwFlags = graphics::ApplicationFlag::None;

@@ -108,13 +108,6 @@ struct SnacGraph
         };
     }
 
-    // TODO This should be handled by the Renderer library
-    const renderer::BufferView & getBufferView(renderer::Semantic aSemantic) const
-    {
-        return mInstanceStream.mVertexBufferViews[
-            mInstanceStream.mSemanticToAttribute.at(aSemantic).mBufferViewIndex];
-    }
-
     // TODO #RV2: It should be implementing the frame rendering of models, instead of 
     // having it inline in Renderer_V2::render()
     //void renderFrame()

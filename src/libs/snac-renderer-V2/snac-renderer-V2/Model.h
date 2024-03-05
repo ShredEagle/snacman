@@ -186,6 +186,24 @@ struct VertexStream /*: public SemanticBufferViews*/
 
 #undef SEMANTIC_BUFFER_MEMBERS
 
+/// @brief Helper to retrieve the `BufferView` associated to a `Semantic`
+/// @attention I am not convinced this is a good idea to provide such methods,
+/// since clients should probably cache this info (not really on calling this each frame).
+inline const renderer::BufferView & getBufferView(const VertexStream & aVertexStream,
+                                                  Semantic aSemantic)
+{
+    return aVertexStream.mVertexBufferViews[
+        aVertexStream.mSemanticToAttribute.at(aSemantic).mBufferViewIndex];
+}
+
+
+inline const renderer::BufferView & getBufferView(const GenericStream & aStream,
+                                                  Semantic aSemantic)
+{
+    return aStream.mVertexBufferViews[
+        aStream.mSemanticToAttribute.at(aSemantic).mBufferViewIndex];
+}
+
 //// TODO might be better as a binary flag, but this still should allow for user extension
 //// (anyway, feature order should not be important)
 //using FeatureSet = std::set<Feature>;

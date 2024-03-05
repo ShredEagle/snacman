@@ -258,7 +258,7 @@ void Renderer_V2::render(const visu::GraphicState & aState)
                         aEntity.albedo,
                         (GLuint)part.mMaterial.mPhongMaterialIdx,
                     };
-                    renderer::proto::loadSingle(*mRendererToKeep.mRenderGraph.getBufferView(semantic::gLocalToWorld).mGLBuffer,
+                    renderer::proto::loadSingle(*getBufferView(mRendererToKeep.mRenderGraph.mInstanceStream, semantic::gLocalToWorld).mGLBuffer,
                                                 instanceData,          
                                                 // TODO #azdo change to DynamicDraw when properly handling AZDO
                                                 graphics::BufferHint::StreamDraw);
