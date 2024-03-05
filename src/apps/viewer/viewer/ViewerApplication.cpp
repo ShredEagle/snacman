@@ -21,7 +21,6 @@
 #include <snac-renderer-V2/Profiling.h>
 
 // TODO #nvtx This should be handled cleanly by the profiler
-#define NOMINMAX
 #include "../../../libs/snac-renderer-V1/snac-renderer-V1/3rdparty/nvtx/include/nvtx3/nvtx3.hpp"
 
 #include <array>
