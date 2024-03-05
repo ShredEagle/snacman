@@ -19,6 +19,7 @@
 #include <snac-renderer-V2/Cube.h>
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/Profiling.h>
+#include <snac-renderer-V2/debug/DebugDrawing.h>
 
 // TODO #nvtx This should be handled cleanly by the profiler
 #include "../../../libs/snac-renderer-V1/snac-renderer-V1/3rdparty/nvtx/include/nvtx3/nvtx3.hpp"
@@ -356,9 +357,65 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
 }
 
 
+constexpr std::array<math::hdr::Rgba<float>, 4> gColorRotation
+{
+    math::hdr::gCyan<float>,
+    math::hdr::gMagenta<float>,
+    math::hdr::gGreen<float>,
+    math::hdr::gYellow<float>,
+};
+
+void drawJointTree(const NodeTree<Rig::Pose> & aTree,
+                   NodeTree<Rig::Pose>::Node::Index aNodeIdx,
+                   std::size_t aColorIdx = 0,
+                   std::optional<math::Position<3, float>> aParentPosition = std::nullopt)
+{
+    using Node = NodeTree<Rig::Pose>::Node;
+
+    const Node & node = aTree.mHierarchy[aNodeIdx];
+    math::Position<3, float> position = aTree.mGlobalPose[aNodeIdx].getAffine().as<math::Position>();
+
+    if(aParentPosition)
+    {
+        DBGDRAW_INFO(drawer::gRig).addLine(*aParentPosition, position, gColorRotation[aColorIdx % gColorRotation.size()]);
+    }
+
+    if(aTree.hasChild(aNodeIdx))
+    {
+        drawJointTree(aTree, node.mFirstChild, aColorIdx + 1, position);
+    }
+
+    if(node.mNextSibling != Node::gInvalidIndex)
+    {
+        drawJointTree(aTree, node.mNextSibling, aColorIdx, aParentPosition);
+    }
+}
+
+
+void searchRigs(const Node & aNode)
+{
+    if(const Object * object = aNode.mInstance.mObject;
+       object && object->mRig)
+    {
+        const Rig * rig = object->mRig;
+        drawJointTree(rig->mJointTree, rig->mJointTree.mFirstRoot);
+    }
+
+    for(const Node & child : aNode.mChildren)
+    {
+        searchRigs(child);
+    }
+}
+
+
 void ViewerApplication::update(float aDeltaTime)
 {
     PROFILER_SCOPE_RECURRING_SECTION("ViewerApplication::update()", CpuTime);
+
+    snac::DebugDrawer::StartFrame();
+
+    searchRigs(mScene.mRoot);
+
     mFirstPersonControl.update(aDeltaTime);
 
     // TODO #camera: handle this when necessary
@@ -391,6 +448,8 @@ void ViewerApplication::render()
     // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
     PartList partList = mScene.populatePartList();
     mGraph.renderFrame(partList, mCamera, mStorage);
+
+    mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
 }
 
 

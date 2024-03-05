@@ -50,6 +50,7 @@ static constexpr auto gNullHandle = nullptr;
 // This offset in implemented by the Part m*First and m*Count members.
 struct BufferView
 {
+    // TODO Ad 2024/03/05: This should probably be a direct GL name (probably via a Handle), not a pointer.
     graphics::BufferAny * mGLBuffer;
     // The stride is at the view level (not buffer).
     // This way the buffer can store heterogeneous sections, accessed by distinct views.
@@ -232,9 +233,7 @@ struct Object
 {
     std::vector<Part> mParts;
     math::Box<GLfloat> mAabb;
-    // TODO #RV2 animation should actually store rigs
-    //Handle<Rig> mRig = gNullHandle;
-    Handle<NodeTree<Rig::Pose>> mRigTree = gNullHandle;
+    Handle<Rig> mRig = gNullHandle;
 };
 
 
@@ -303,8 +302,7 @@ struct Storage
     std::list<MaterialContext> mMaterialContexts;
     // Used for random access (DOD)
     std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, so the name at index zero can be used when there are no material parameters
-    // TODO #RV2 animation should actually store rigs
-    std::list<NodeTree<Rig::Pose>> mRigs;
+    std::list<Rig> mRigs;
 };
 
 

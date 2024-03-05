@@ -206,6 +206,19 @@ namespace {
     //          [mesh.boneIndices (i.e 4 unsigned int per vertex)]
     //          [mesh.boneWeights (i.e 4 floats per vertex)]
     //      mesh.boundingBox (AABB, as a math::Box<float>)
+    //    node.rigCount <currently, only 0 or 1>// computed from the meshes with bones
+    //    each node.Rig <at most 1>:
+    //      rig.mJointTree:
+    //        jointTree.numNodes
+    //        raw memory dump of span<Node>
+    //        jointTree.firstRootIndex
+    //        raw memory dump of span<LocalPose>
+    //        raw memory dump of span<GlobalPose>
+    //        jointTree.nodeNames
+    //      rig.mJoints:
+    //        numJoints
+    //        raw memory dump of span<Node::Index> // 1 per joint
+    //        raw memory dump of span<InverseBindMatrices> // 1 per joint
     //    bounding box union of all meshes (AABB, as a math::Box<float>, even if there are no meshes)
     //    each node.child:
     //      // recurse Node:
@@ -330,11 +343,12 @@ namespace {
             if(nodeRig)
             {
 
+                const Rig & rig = nodeRig->mRig;
 // Run some more sanity checks on the Rig
 #if not defined(NDEBUG)
                 // Let's ensure that all bones, from the different meshes,
                 // point to distinct Nodes in the hierarchy.
-                const auto & indices = nodeRig->mRig.mJoints.mIndices;
+                const auto & indices = rig.mJoints.mIndices;
                 std::vector<NodeTree<Rig::Pose>::Node::Index> sortedIndices(indices.size(), 0);
                 std::partial_sort_copy(indices.begin(), indices.end(),
                                        sortedIndices.begin(), sortedIndices.end());
@@ -352,7 +366,8 @@ namespace {
                 //assert(std::adjacent_find(sortedIndices.begin(), sortedIndices.end()) == sortedIndices.end()
                 //    && "Duplicate bones found in the rig");
 #endif
-                const NodeTree<Rig::Pose> & jointTree = nodeRig->mRig.mJointTree;
+                // Joint Tree
+                const NodeTree<Rig::Pose> & jointTree = rig.mJointTree;
                 // Writes the number of elements first
                 aWriter.writeRaw(std::span{jointTree.mHierarchy});
                 aWriter.forward(jointTree.mFirstRoot);
@@ -360,6 +375,14 @@ namespace {
                 aWriter.forward(std::span{jointTree.mLocalPose});
                 aWriter.forward(std::span{jointTree.mGlobalPose});
                 aWriter.forward(jointTree.mNodeNames);
+
+                // Joint Data
+                // Writes the number of joints first
+                aWriter.writeRaw(std::span{rig.mJoints.mIndices});
+                aWriter.forward(std::span{rig.mJoints.mInverseBindMatrices});
+
+                // Armature name
+                aWriter.forward(rig.mArmatureName);
             }
         }
 

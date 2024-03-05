@@ -208,11 +208,12 @@ void SceneGui::presentObject(const Object & aObject)
         ImGui::TreePop();
     }
 
-    if(aObject.mRigTree != gNullHandle)
+    if(aObject.mRig != gNullHandle)
     {
+        // TODO I suspect this shared name is not ensuring unicity of the "RIG" node state.
         if(ImGui::TreeNodeEx("[Rig]", gBaseFlags))
         {
-            presentJointTree(*aObject.mRigTree, aObject.mRigTree->mFirstRoot) ;
+            presentJointTree(aObject.mRig->mJointTree, aObject.mRig->mJointTree.mFirstRoot);
             ImGui::TreePop();
         }
     }

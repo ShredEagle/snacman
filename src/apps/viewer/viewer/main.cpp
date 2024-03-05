@@ -57,7 +57,7 @@ void showGui(imguiui::ImguiUi & imguiUi,
 
     ImGui::Begin("Main control");
     {
-        static bool showProfiler = true;
+        static bool showProfiler = false;
         if(imguiui::addCheckbox("Profiler", showProfiler))
         {
             ImGui::Begin("Profiler");

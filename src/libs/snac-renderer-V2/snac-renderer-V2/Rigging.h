@@ -69,6 +69,7 @@ struct NodeTree
 struct Rig
 {
     using Pose = math::AffineMatrix<4, float>;
+    using Ibm = math::AffineMatrix<4, float>;
 
     NodeTree<Pose> mJointTree;
 
@@ -82,7 +83,7 @@ struct Rig
         std::vector<NodeTree<Pose>::Node::Index> mIndices;
 
         // Directly given in the order of bones in aiMesh.mBones.
-        std::vector<math::AffineMatrix<4, float>> mInverseBindMatrices;
+        std::vector<Ibm> mInverseBindMatrices;
     } mJoints;
 
     // With Assimp, I do not know any better name for the rig as a whole than its armature
