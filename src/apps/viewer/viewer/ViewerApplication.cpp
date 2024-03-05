@@ -367,13 +367,15 @@ constexpr std::array<math::hdr::Rgba<float>, 4> gColorRotation
 
 void drawJointTree(const NodeTree<Rig::Pose> & aTree,
                    NodeTree<Rig::Pose>::Node::Index aNodeIdx,
+                   math::AffineMatrix<4, float> aModelTransform,
                    std::size_t aColorIdx = 0,
                    std::optional<math::Position<3, float>> aParentPosition = std::nullopt)
 {
     using Node = NodeTree<Rig::Pose>::Node;
 
     const Node & node = aTree.mHierarchy[aNodeIdx];
-    math::Position<3, float> position = aTree.mGlobalPose[aNodeIdx].getAffine().as<math::Position>();
+    math::Position<3, float> position =
+        (aTree.mGlobalPose[aNodeIdx] * aModelTransform).getAffine().as<math::Position>();
 
     if(aParentPosition)
     {
@@ -382,28 +384,32 @@ void drawJointTree(const NodeTree<Rig::Pose> & aTree,
 
     if(aTree.hasChild(aNodeIdx))
     {
-        drawJointTree(aTree, node.mFirstChild, aColorIdx + 1, position);
+        drawJointTree(aTree, node.mFirstChild, aModelTransform, aColorIdx + 1, position);
     }
 
     if(node.mNextSibling != Node::gInvalidIndex)
     {
-        drawJointTree(aTree, node.mNextSibling, aColorIdx, aParentPosition);
+        drawJointTree(aTree, node.mNextSibling, aModelTransform, aColorIdx, aParentPosition);
     }
 }
 
 
-void searchRigs(const Node & aNode)
+void searchRigs(const Node & aNode,
+                Pose aParentPose = {})
 {
+    Pose pose = aParentPose.transform(aNode.mInstance.mPose);
     if(const Object * object = aNode.mInstance.mObject;
        object && object->mRig)
     {
         const Rig * rig = object->mRig;
-        drawJointTree(rig->mJointTree, rig->mJointTree.mFirstRoot);
+        drawJointTree(rig->mJointTree,
+                      rig->mJointTree.mFirstRoot,
+                      static_cast<math::AffineMatrix<4, float>>(pose));
     }
 
     for(const Node & child : aNode.mChildren)
     {
-        searchRigs(child);
+        searchRigs(child, pose);
     }
 }
 

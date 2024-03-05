@@ -30,6 +30,7 @@ set(${TARGET_NAME}_SOURCES
     Camera.cpp
     IntrospectProgram.cpp
     Logging-init.cpp
+    Model.cpp
     Pass.cpp
     Profiling.cpp
     Rigging.cpp

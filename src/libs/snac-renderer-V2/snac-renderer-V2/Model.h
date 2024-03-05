@@ -252,6 +252,8 @@ struct Pose
         aNested.mUniformScale *= mUniformScale;
         return aNested;
     }
+
+    explicit operator math::AffineMatrix<4, float> () const;
 };
 
 
