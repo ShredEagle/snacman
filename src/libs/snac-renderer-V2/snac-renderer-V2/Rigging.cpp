@@ -102,4 +102,22 @@ void animate(const RigAnimation & aAnimation, float aTimepoint, NodeTree<Rig::Po
 }
 
 
+std::vector<Rig::Pose> Rig::computeJointMatrices() const
+{
+    assert(mJoints.mIndices.size() == mJoints.mInverseBindMatrices.size());
+
+    std::vector<math::AffineMatrix<4, float>> result;
+    result.reserve(mJoints.mIndices.size());
+
+    for(std::size_t jointIdx = 0; jointIdx != mJoints.mIndices.size(); ++jointIdx)
+    {
+        result.push_back(
+            mJoints.mInverseBindMatrices[jointIdx] 
+            * mJointTree.mGlobalPose[mJoints.mIndices[jointIdx]]);
+    }
+
+    return result;
+}
+
+
 } // namespace ad::renderer

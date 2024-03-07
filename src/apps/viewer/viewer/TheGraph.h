@@ -35,6 +35,9 @@ struct HardcodedUbos
     graphics::UniformBufferObject * mFrameUbo;
     graphics::UniformBufferObject * mViewingUbo;
     graphics::UniformBufferObject * mModelTransformUbo;
+
+    // TODO #jointproto refactor
+    graphics::UniformBufferObject * mJointMatrixPalette;
 };
 
 
@@ -45,7 +48,11 @@ struct TheGraph
              Storage & aStorage,
              const Loader & aLoader);
 
-    void renderFrame(const PartList & aPartList, const Camera & aCamera, Storage & aStorage);
+    void renderFrame(const PartList & aPartList, 
+                     const Camera & aCamera,
+                     Storage & aStorage,
+                     // TODO #jointproto the matrix palette should not be passed, need to define a proper API
+                     std::span<const Rig::Pose> aJointMatrixPalette);
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 

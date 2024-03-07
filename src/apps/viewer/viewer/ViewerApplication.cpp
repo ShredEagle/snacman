@@ -459,11 +459,26 @@ void ViewerApplication::render()
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
+    std::span<const Rig::Pose> jointMatrixPalette;
+    std::vector<Rig::Pose> jointMatrixBuffer;
+    if(auto selectedAnimation = mSceneGui.mSelectedAnimation; selectedAnimation.mAnimatedRig)
+    {
+        // To prolongate lifetime of container
+        jointMatrixBuffer = selectedAnimation.mAnimatedRig->mRig.computeJointMatrices();
+        jointMatrixPalette = std::span{jointMatrixBuffer};
+    }
+    else
+    {
+        static const std::vector<math::AffineMatrix<4,GLfloat>> gIdentities(
+            64, math::AffineMatrix<4,GLfloat>::Identity());
+        jointMatrixPalette = std::span{gIdentities};
+    }
+
     // TODO: How to handle material/program selection while generating the part list,
     // if the camera (or pass itself?) might override the materials?
     // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
     PartList partList = mScene.populatePartList();
-    mGraph.renderFrame(partList, mCamera, mStorage);
+    mGraph.renderFrame(partList, mCamera, mStorage, jointMatrixPalette);
 
     mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
 }

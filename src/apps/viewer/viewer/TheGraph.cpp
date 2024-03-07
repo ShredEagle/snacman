@@ -82,6 +82,11 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
     aStorage.mUbos.emplace_back();
     mModelTransformUbo = &aStorage.mUbos.back();
     mUboRepository.emplace(semantic::gLocalToWorld, mModelTransformUbo);
+
+    // TODO #jointproto refactor
+    aStorage.mUbos.emplace_back();
+    mJointMatrixPalette = &aStorage.mUbos.back();
+    mUboRepository.emplace(semantic::gJointMatrices, mJointMatrixPalette);
 }
 
 
@@ -257,13 +262,19 @@ void TheGraph::loadDrawBuffers(const PartList & aPartList,
 }
 
 
-void TheGraph::renderFrame(const PartList & aPartList, const Camera & aCamera, Storage & aStorage)
+void TheGraph::renderFrame(const PartList & aPartList, 
+                           const Camera & aCamera,
+                           Storage & aStorage,
+                           std::span<const Rig::Pose> aJointMatrixPalette)
 {
     {
         PROFILER_SCOPE_RECURRING_SECTION("load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
         loadFrameUbo(*mUbos.mFrameUbo);
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, aCamera);
+
+        // TODO #jointproto refactor
+        proto::load(*mUbos.mJointMatrixPalette, std::span{aJointMatrixPalette}, graphics::BufferHint::StaticDraw);
     }
 
     // Use the same indirect buffer for all drawings

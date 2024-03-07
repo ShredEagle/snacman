@@ -112,6 +112,10 @@ struct Rig
     using Pose = math::AffineMatrix<4, float>;
     using Ibm = math::AffineMatrix<4, float>;
 
+    /// @brief Return the joint matrix palette, used by shaders to compute vertex deplacement
+    /// from skeletal animation.
+    std::vector<Rig::Pose> computeJointMatrices() const;
+
     // Note: currently usually represents a hierarchy larger than the skeleton.
     // The entries of this tree that are used as actual bones are given by mJoints.mIndices.
     NodeTree<Pose> mJointTree;
