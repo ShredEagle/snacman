@@ -1,7 +1,10 @@
 #pragma once
 
 
+#include "Commons.h"
+
 #include <math/Homogeneous.h>
+#include <math/Quaternion.h>
 
 #include <functional>
 #include <ostream>
@@ -31,6 +34,8 @@ struct NodeTree
         unsigned int mLevel = 0;
     };
 
+    using Callback_t = std::function<void(typename NodeTree::Node::Index /*node*/,
+                                          NodeTree &/*tree*/)>;
 
     /// @param aParent if set to invalid index, the call adds a root node.
     Node::Index addNode(Node::Index aParent, T_Pose aPose);
@@ -43,6 +48,12 @@ struct NodeTree
 
     bool hasName(Node::Index aNode) const
     { return mNodeNames.find(aNode) != mNodeNames.end(); }
+
+    Node & operator[](Node::Index aNodeIdx)
+    { return mHierarchy[aNodeIdx]; }
+
+    const Node & operator[](Node::Index aNodeIdx) const
+    { return mHierarchy[aNodeIdx]; }
 
     void reserve(std::size_t aCapacity)
     {
@@ -63,14 +74,46 @@ struct NodeTree
 };
 
 
+/// @brief Depth first traversal.
+template <class T_pose>
+void traverseDepth(NodeTree<T_pose> & aTree,
+                   const typename NodeTree<T_pose>::Callback_t & aCallback)
+{
+    traverseDepth(aTree, aCallback, aTree.mFirstRoot);
+}
+                   
+template <class T_pose>
+void traverseDepth(NodeTree<T_pose> & aTree,
+                   const typename NodeTree<T_pose>::Callback_t & aCallback,
+                   typename NodeTree<T_pose>::Node::Index aNodeIdx)
+{
+    using Node = NodeTree<T_pose>::Node;
 
-/// @brief 
+    aCallback(aNodeIdx, aTree);
+
+    const Node & node = aTree.mHierarchy[aNodeIdx];
+
+    if(aTree.hasChild(aNodeIdx))
+    {
+        traverseDepth(aTree, aCallback, node.mFirstChild);
+    }
+
+    if(node.mNextSibling != Node::gInvalidIndex)
+    {
+        traverseDepth(aTree, aCallback, node.mNextSibling);
+    }
+}
+
+
+/// @brief Attempt to model a notion of Skeleton / Rig (this notion is not an explicit concept in Assimp).
 /// @note A single Rig might be used for several Parts of a given Object.
 struct Rig
 {
     using Pose = math::AffineMatrix<4, float>;
     using Ibm = math::AffineMatrix<4, float>;
 
+    // Note: currently usually represents a hierarchy larger than the skeleton.
+    // The entries of this tree that are used as actual bones are given by mJoints.mIndices.
     NodeTree<Pose> mJointTree;
 
     struct JointData
@@ -91,7 +134,54 @@ struct Rig
 };
 
 
-/// @brief Per-vertex data required for skeletal animation.
+struct RigAnimation
+{
+    std::string mName; // Might duplicate some keys in the map of animation at first, but the key might become a hash.
+
+    float mDuration;
+
+    // SOA design for animation keyframes
+    std::vector<float> mTimepoints;
+
+    // Attention: This data members couples the RigAnimation to the Rig, which is a bit smelly.
+    // I do not know if we want this class to become a member of the Rig, so coupling is assumed.
+    // The sequence of nodes that are animated, given by index in the Rig's NodeTree.
+    // Note: It would be tempting to get rid of those indices, by giving the animation in the 
+    // (linear) order of nodes in the Rig's NodeTree. Yet it is common that somes nodes are not animated.
+    // (It might still be better for spatial coherance to sort those indices).
+    std::vector<NodeTree<Rig::Pose>::Node::Index> mNodes;
+
+    struct NodeKeyframes
+    {
+        std::vector<math::Vec<3, float>> mTranslations;
+        std::vector<math::Quaternion<float>> mRotations;
+        std::vector<math::Vec<3, float>> mScales;
+
+        void reserve(std::size_t aCapacity)
+        {
+            mTranslations.reserve(aCapacity);
+            mRotations.reserve(aCapacity);
+            mScales.reserve(aCapacity);
+        }
+
+    };
+    // The keyframes for each node, given in the order of mNodes.
+    std::vector<NodeKeyframes> mKeyframes;
+};
+
+
+void animate(const RigAnimation & aAnimation, float aTimepoint, NodeTree<Rig::Pose> & aAnimatedTree);
+
+
+/// @brief Associated RigAnimations to the Rig they target
+struct AnimatedRig
+{
+    Rig mRig;
+    std::unordered_map<StringKey/*name*/, RigAnimation> mNameToAnimation;
+};
+
+
+/// @brief Per-vertex data required for skeletal animation, usually used as generic vertex attribute.
 struct VertexJointData
 {
     static constexpr std::size_t gMaxBones = 4;

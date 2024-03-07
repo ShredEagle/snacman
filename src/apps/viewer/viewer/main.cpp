@@ -132,6 +132,8 @@ void runApplication(int argc, char * argv[])
     };
     PROFILER_POP_SECTION(loadingSection);
 
+    renderer::Timing timing;
+
     renderer::Profiler::Values<std::uint64_t> frameDuration;
     Clock::time_point previousFrame = Clock::now();
     using FrameDurationUnit = std::chrono::microseconds;
@@ -168,7 +170,7 @@ void runApplication(int argc, char * argv[])
             }
         }
 
-        application.update(stepDuration);
+        application.update(timing.advance(stepDuration));
         application.render();
 
         // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame

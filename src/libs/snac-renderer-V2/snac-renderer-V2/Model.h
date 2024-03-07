@@ -233,7 +233,7 @@ struct Object
 {
     std::vector<Part> mParts;
     math::Box<GLfloat> mAabb;
-    Handle<Rig> mRig = gNullHandle;
+    Handle<AnimatedRig> mAnimatedRig = gNullHandle;
 };
 
 
@@ -304,7 +304,7 @@ struct Storage
     std::list<MaterialContext> mMaterialContexts;
     // Used for random access (DOD)
     std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, so the name at index zero can be used when there are no material parameters
-    std::list<Rig> mRigs;
+    std::list<AnimatedRig> mAnimatedRigs;
 };
 
 

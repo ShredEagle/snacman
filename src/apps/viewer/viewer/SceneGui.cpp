@@ -139,6 +139,32 @@ Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
 }
 
 
+void SceneGui::presentAnimations(Handle<AnimatedRig> mAnimatedRig)
+{
+    if(ImGui::TreeNodeEx("[Animations]", gBaseFlags))
+    {
+        int flags = gLeafFlags;
+        for(const auto & [key, rigAnimation] : mAnimatedRig->mNameToAnimation)
+        {
+            bool opened = ImGui::TreeNodeEx(&rigAnimation, flags, "%s", rigAnimation.mName.c_str());
+            if(opened)
+            {
+                ImGui::TreePop();
+            }
+            if(isItemDoubleClicked())
+            {
+                mSelectedAnimation = AnimationSelection{
+                    .mAnimatedRig = mAnimatedRig,
+                    .mAnimation = &rigAnimation,
+                };
+            }
+        }
+
+        ImGui::TreePop();
+    }
+}
+
+
 // When the main scene graph in our Model becomes a DOD NodeTree, this should be 
 // factorized with main traversal in presentNodeTree()
 void SceneGui::presentJointTree(const NodeTree<Rig::Pose> & aTree,
@@ -208,12 +234,14 @@ void SceneGui::presentObject(const Object & aObject)
         ImGui::TreePop();
     }
 
-    if(aObject.mRig != gNullHandle)
+    if(aObject.mAnimatedRig != gNullHandle)
     {
         // TODO I suspect this shared name is not ensuring unicity of the "RIG" node state.
         if(ImGui::TreeNodeEx("[Rig]", gBaseFlags))
         {
-            presentJointTree(aObject.mRig->mJointTree, aObject.mRig->mJointTree.mFirstRoot);
+            presentAnimations(aObject.mAnimatedRig);
+            presentJointTree(aObject.mAnimatedRig->mRig.mJointTree,
+                             aObject.mAnimatedRig->mRig.mJointTree.mFirstRoot);
             ImGui::TreePop();
         }
     }

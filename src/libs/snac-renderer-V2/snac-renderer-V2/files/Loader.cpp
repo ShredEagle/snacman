@@ -21,6 +21,9 @@
 
 #include <profiler/GlApi.h>
 
+#include <cassert>
+
+
 namespace ad::renderer {
 
 
@@ -35,7 +38,7 @@ namespace {
         return diff <= (maxMagnitude * aRelativeTolerance);
     }
 
-    // TODO move to a more generic library (graphics?)
+    // TODO #math #linearalgebra move to a more generic library (graphics?)
     Pose decompose(const math::AffineMatrix<4, GLfloat> & aTransformation)
     {
         Pose result {
@@ -316,8 +319,8 @@ namespace {
             // Name
             rig.mArmatureName = aIn.readString();
 
-            aStorage.mRigs.push_back(std::move(rig));
-            node.mInstance.mObject->mRig = &aStorage.mRigs.back();
+            aStorage.mAnimatedRigs.push_back({.mRig = std::move(rig)});
+            node.mInstance.mObject->mAnimatedRig = &aStorage.mAnimatedRigs.back();
         }
 
 
@@ -336,6 +339,41 @@ namespace {
         aIn.read(node.mAabb);
 
         return node;
+    }
+
+
+    std::vector<RigAnimation> loadAnimations(BinaryInArchive & aIn)
+    {
+        auto animationsCount = readAs<unsigned int>(aIn);
+
+        std::vector<RigAnimation> result;
+        result.reserve(animationsCount);
+
+        for(unsigned int animIdx = 0; animIdx != animationsCount; ++animIdx)
+        {
+            RigAnimation & rigAnimation = result.emplace_back(RigAnimation{
+                .mName = aIn.readString(),
+                .mDuration = readAs<float>(aIn),
+            });
+
+            auto keyframesCount = readAs<unsigned int>(aIn);
+            rigAnimation.mTimepoints = readAsVector<float>(aIn, keyframesCount);
+
+            auto nodesCount = readAs<unsigned int>(aIn);
+            rigAnimation.mNodes = readAsVector<NodeTree<Rig::Pose>::Node::Index>(aIn, nodesCount);
+
+            for(unsigned int nodeIdx = 0; nodeIdx != nodesCount; ++nodeIdx)
+            {
+                rigAnimation.mKeyframes.emplace_back(RigAnimation::NodeKeyframes{
+                    .mTranslations = readAsVector<math::Vec<3, float>>(aIn, keyframesCount),
+                    .mRotations = readAsVector<math::Quaternion<float>>(
+                        aIn, keyframesCount, math::Quaternion<float>::Identity()),
+                    .mScales = readAsVector<math::Vec<3, float>>(aIn, keyframesCount),
+                });
+            }
+        }
+
+        return result;
     }
 
 
@@ -838,7 +876,32 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
 
     GLuint vertexFirst = 0;
     GLuint indexFirst = 0;
+
+    // TODO Ad 2024/03/07: Find a cleaner (more direct and explicit) way to handle rigs and their animations
+    // Currently compares the number of AnimatedRigs before and after loading then node, to see if one was added
+    std::size_t rigsCount = aStorage.mAnimatedRigs.size();
     Node result = loadNode(in, aStorage, baseMaterial, *consolidatedStream, vertexFirst, indexFirst);
+    rigsCount = aStorage.mAnimatedRigs.size() - rigsCount;
+
+    // Hackish way to add the RigAnimations into the AnimateRig
+    {
+        std::vector<RigAnimation> animations = loadAnimations(in);
+        
+        if(animations.empty())
+        {
+            assert(rigsCount == 0);
+        }
+        else
+        {
+            assert(rigsCount == 1);
+            auto & nameToAnim = aStorage.mAnimatedRigs.back().mNameToAnimation;
+            for(RigAnimation & anim : animations)
+            {
+                nameToAnim.emplace(anim.mName, std::move(anim));
+            }
+        }
+    }
+    
 
     // TODO #assetprocessor If materials were loaded first, then the empty context 
     // Then we could directly instantiate the MaterialContext with this value.

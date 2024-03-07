@@ -5,6 +5,7 @@
 
 #include <math/Box.h>
 #include <math/Matrix.h>
+#include <math/Quaternion.h>
 #include <math/Vector.h>
 
 #include <cassert>
@@ -42,6 +43,18 @@ inline math::Matrix<4, 3, float> extractAffinePart(const aiNode * aNode)
 inline math::Position<3, float> toPosition(aiVector3D aVec)
 {
     return {aVec.x, aVec.y, aVec.z};
+}
+
+
+inline math::Vec<3, float> toVec(aiVector3D aVec)
+{
+    return {aVec.x, aVec.y, aVec.z};
+}
+
+
+inline math::Quaternion<float> toQuaternion(aiQuaternion aQuat)
+{
+    return {aQuat.x, aQuat.y, aQuat.z, aQuat.w};
 }
 
 

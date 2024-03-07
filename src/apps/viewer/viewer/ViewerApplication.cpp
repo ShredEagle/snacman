@@ -394,35 +394,45 @@ void drawJointTree(const NodeTree<Rig::Pose> & aTree,
 }
 
 
-void searchRigs(const Node & aNode,
+void drawRigs(const Node & aNode,
                 Pose aParentPose = {})
 {
     Pose pose = aParentPose.transform(aNode.mInstance.mPose);
     if(const Object * object = aNode.mInstance.mObject;
-       object && object->mRig)
+       object && object->mAnimatedRig)
     {
-        const Rig * rig = object->mRig;
-        drawJointTree(rig->mJointTree,
-                      rig->mJointTree.mFirstRoot,
+        const Rig & rig = object->mAnimatedRig->mRig;
+        drawJointTree(rig.mJointTree,
+                      rig.mJointTree.mFirstRoot,
                       static_cast<math::AffineMatrix<4, float>>(pose));
     }
 
     for(const Node & child : aNode.mChildren)
     {
-        searchRigs(child, pose);
+        drawRigs(child, pose);
     }
 }
 
 
-void ViewerApplication::update(float aDeltaTime)
+void ViewerApplication::update(const Timing & aTime)
 {
     PROFILER_SCOPE_RECURRING_SECTION("ViewerApplication::update()", CpuTime);
 
     snac::DebugDrawer::StartFrame();
 
-    searchRigs(mScene.mRoot);
+    // Draw the Rigs joints / bones using DebugDrawer
+    drawRigs(mScene.mRoot);
 
-    mFirstPersonControl.update(aDeltaTime);
+    // Play selected animation, if any.
+    if(auto selectedAnimation = mSceneGui.mSelectedAnimation; selectedAnimation.mAnimatedRig)
+    {
+        assert(selectedAnimation.mAnimation);
+        animate(*selectedAnimation.mAnimation,
+                (float)std::fmod(aTime.mSimulationTimepoint, (double)selectedAnimation.mAnimation->mDuration),
+                selectedAnimation.mAnimatedRig->mRig.mJointTree);
+    }
+
+    mFirstPersonControl.update(aTime.mDeltaDuration);
 
     // TODO #camera: handle this when necessary
     // Update camera to match current values in orbital control.

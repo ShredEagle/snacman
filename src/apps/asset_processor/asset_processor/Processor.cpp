@@ -115,15 +115,39 @@ namespace {
             }
         }
 
-        void write(const std::vector<std::string> & aStrings)
+
+        void write(const RigAnimation & aAnimation)
         {
-            mArchive.write((unsigned int)aStrings.size());
-            for(const auto & string : aStrings)
+            forward(aAnimation.mName);
+            forward(aAnimation.mDuration);
+            writeRaw(std::span{aAnimation.mTimepoints});
+            writeRaw(std::span{aAnimation.mNodes});
+
+            for(const RigAnimation::NodeKeyframes & keyframes : aAnimation.mKeyframes)
             {
-                mArchive.write(string);
+                forward(std::span{keyframes.mTranslations});
+                forward(std::span{keyframes.mRotations});
+                forward(std::span{keyframes.mScales});
             }
         }
 
+
+        void write(const std::string & aString)
+        {
+            forward(aString);
+        }
+
+        template<class T_element>
+        void write(const std::vector<T_element> & aVector)
+        {
+            mArchive.write((unsigned int)aVector.size());
+            for(const auto & element : aVector)
+            {
+                write(element);
+            }
+        }
+
+        // TODO Ad 2024/02/29: rename
         template <class T_element>
         void writeRaw(std::span<T_element> aData)
         {
@@ -142,12 +166,24 @@ namespace {
     };
     
 
+    // Internal class, maintaining the state of the Rig created by parsing a given node.
+    struct NodeRig
+    {
+        aiNode * mCommonArmature;
+        Rig mRig;
+        NodePointerMap mAiNodeToTreeNode;
+        std::unordered_map<std::string, NodeTree<Rig::Pose>::Node::Index> mNameToTreeNode;
+    };
+
     /// @brief Return type on "visiting" a node (i.e. recurseNode())
     struct NodeResult
     {
         math::Box<float> mAabb;
         unsigned int mVerticesCount = 0;
         unsigned int mIndicesCount = 0;
+
+        // #singlerig At most a single Rig accross the whole scene is supported ATM.
+        std::optional<NodeRig> mNodeRig;
     };
 
     
@@ -223,6 +259,19 @@ namespace {
     //    each node.child:
     //      // recurse Node:
     //    node.boundingBox (AABB, as a math::Box<float>) // Note: I dislike having the node bounding box after the children BB, but it is computed form children's...
+    //  numAnimations
+    //  each RigAnimation:
+    //    name string size
+    //    name string characters
+    //    duration
+    //    num keyframes (== num of timepoints)
+    //    raw dump of timepoints
+    //    num nodes
+    //    raw dump of node indices
+    //    each node:
+    //      [keyframes.positions (3 floats per keyframe)]
+    //      [keyframes.rotations (4 floats per keyframe)]
+    //      [keyframes.scalings  (3 floats per keyframe)]
     //  numMaterials
     //  raw memory dump of span<PhongMaterial>
     //  numMaterialNames (Note: redundant with num of materials...)
@@ -263,15 +312,8 @@ namespace {
 
         // NOTE Ad 2024/02/28: This is not a hard requirement (code should work without it)
         //   but this situation would exacerbate a design flaw (see note #flaw_593)
-        //   I mostly wanted to see if it ever happens (the assertion can be comment-out).
         assert(aNode->mNumMeshes == 0 || aNode->mNumChildren == 0);
 
-        struct NodeRig
-        {
-            aiNode * mCommonArmature;
-            Rig mRig;
-            NodePointerMap mAiNodeToTreeNode;
-        };
         std::optional<NodeRig> nodeRig;
 
         for(std::size_t meshIdx = 0; meshIdx != aNode->mNumMeshes; ++meshIdx)
@@ -317,6 +359,14 @@ namespace {
                         .mCommonArmature = meshArmature,
                     };
                     std::tie(nodeRig->mRig, nodeRig->mAiNodeToTreeNode) = loadRig(meshArmature);
+                    traverseDepth(
+                        nodeRig->mRig.mJointTree, 
+                        [& nameMap = nodeRig->mNameToTreeNode]
+                        (NodeTree<Rig::Pose>::Node::Index aNodeIdx, NodeTree<Rig::Pose> & aTree)
+                        {
+                            assert(aTree.hasName(aNodeIdx));
+                            nameMap.emplace(aTree.mNodeNames.at(aNodeIdx), aNodeIdx);
+                        });
                 }
                 // The code is written assuming all (rigged) meshes of the same node have the same armature.
                 // If this assertion fails, code needs reviewing.
@@ -342,6 +392,7 @@ namespace {
             aWriter.forward(rigCount);
             if(nodeRig)
             {
+                result.mNodeRig = nodeRig;
 
                 const Rig & rig = nodeRig->mRig;
 // Run some more sanity checks on the Rig
@@ -407,12 +458,150 @@ namespace {
 
             result.mVerticesCount += childResult.mVerticesCount;
             result.mIndicesCount  += childResult.mIndicesCount;
+            if(childResult.mNodeRig)
+            {
+                // NOTE Ad 2024/03/06: This is currently a **hard** requirement.
+                //   #animation #singlerig Assimp data-model keeps "Animation" decoupled from nodes (listed under the global scene),
+                //   and it does not really have a notion of Rig.
+                //   Currently, we assume all animations are targeting the single rig we allow.
+                assert(!result.mNodeRig);
+                result.mNodeRig = childResult.mNodeRig;
+            }
         }
 
         // This is now the AABB including the children nodes.
         aWriter.forward(result.mAabb);
 
         return result;
+    }
+
+
+    void dumpAnimations(const aiScene * aScene, const NodeRig & aExtractedRig, FileWriter & aWriter)
+    {
+        using Node = NodeTree<Rig::Pose>::Node;
+        const NodeTree<Rig::Pose> & nodeTree = aExtractedRig.mRig.mJointTree;
+
+        std::vector<RigAnimation> animations;
+
+        for(unsigned int animationIdx = 0; animationIdx != aScene->mNumAnimations; ++animationIdx)
+        {
+            const aiAnimation * animation = aScene->mAnimations[animationIdx];
+            assert(animation->mTicksPerSecond != 0); // Means it would be absent from the imported file
+
+            const float duration = (float)(animation->mDuration / animation->mTicksPerSecond);
+            std::cout << "Animation '" << animation->mName.C_Str() << "'"
+                << ", " << "duration " << duration << "s"
+                << " (at " << animation->mTicksPerSecond << " ticks/s)"
+                << "\n"
+                ;
+
+            RigAnimation & rigAnimation = animations.emplace_back(RigAnimation{
+                .mName = animation->mName.C_Str(),
+                .mDuration = duration,
+            });
+
+            unsigned int animationNumKeyframes = 0;
+            unsigned int animatedNodes = 0;
+            for(unsigned int channelIdx = 0; channelIdx != animation->mNumChannels; ++channelIdx)
+            {
+                const aiNodeAnim * channel = animation->mChannels[channelIdx];
+                const unsigned int numKeys = 
+                    std::max(channel->mNumPositionKeys, 
+                        std::max(channel->mNumRotationKeys, channel->mNumScalingKeys));
+
+                if(numKeys == 1)
+                {
+#if not defined(NDEBUG)
+                    assert(channel->mPositionKeys[0].mTime == 0.);
+                    assert(channel->mRotationKeys[0].mTime == 0.);
+                    assert(channel->mScalingKeys[0].mTime  == 0.);
+#endif
+                    continue; // A single state (hopefully at time zero) means the node is not animated
+                              // (at least it does for us).
+                }
+                else
+                {
+                    if(animationNumKeyframes == 0)
+                    {
+                        animationNumKeyframes = numKeys;
+                    }
+                    assert(numKeys == animationNumKeyframes);
+
+                    ++animatedNodes;
+                    Node::Index treeNodeIdx = aExtractedRig.mNameToTreeNode.at(channel->mNodeName.C_Str());
+                    rigAnimation.mNodes.push_back(treeNodeIdx);
+
+                    RigAnimation::NodeKeyframes & keyframes = rigAnimation.mKeyframes.emplace_back();
+                    keyframes.reserve(numKeys);
+
+                    auto populateKeyframes = 
+                        [animationNumKeyframes, &rigAnimation, ticksPerSecond = (float)animation->mTicksPerSecond]
+                        (auto & keyframesArray, unsigned int keyCount, auto keys, const auto & converter)
+                        {
+                            if(keyCount == 1) // We consider it to mean "not animated"
+                            {
+                                auto key = keys[0];
+                                assert(key.mTime == 0.);
+
+                                std::fill_n(std::back_inserter(keyframesArray), 
+                                            animationNumKeyframes,
+                                            converter(key.mValue));
+                            }
+                            else
+                            {
+                                // We require each key to either be not animated (num == 1),
+                                // or have the same number of entries as other animated keys.
+                                assert(keyCount == animationNumKeyframes);
+
+                                // We expect the first keyframe to be at time zero,
+                                // and the last to be at the final time of the animation (i.e. its duration)
+                                assert(keys[0].mTime == 0.);
+                                assert((float)keys[animationNumKeyframes - 1].mTime / ticksPerSecond 
+                                       == rigAnimation.mDuration);
+
+                                if(rigAnimation.mTimepoints.empty())
+                                {
+                                    for(unsigned int keyIdx = 0; keyIdx != animationNumKeyframes; ++keyIdx)
+                                    {
+                                        rigAnimation.mTimepoints.push_back(
+                                            (float)keys[keyIdx].mTime / ticksPerSecond);
+                                        keyframesArray.push_back(converter(keys[keyIdx].mValue));
+                                    }
+                                }
+                                else
+                                {
+                                    // Ideally we could use std::transform, but we also want to assert that time points are matching
+                                    for(unsigned int keyIdx = 0; keyIdx != animationNumKeyframes; ++keyIdx)
+                                    {
+                                        assert(rigAnimation.mTimepoints[keyIdx] 
+                                               == (float)keys[keyIdx].mTime / ticksPerSecond);
+                                        keyframesArray.push_back(converter(keys[keyIdx].mValue));
+                                    }
+                                }
+                            }
+                        };
+
+                    // Allows to assert that scaling is uniform, while doing the conversion
+                    auto scaleConverter = [](aiVector3D aScaleVec)
+                    {
+                        auto result = toVec(aScaleVec);
+                        // We require uniform scaling at the moment.
+                        // (no specific reason atm, but let's be conservative for when we want to decompose)
+                        assert(math::relativeTolerance(result.x(), result.y(), 0.0001f)
+                            && math::relativeTolerance(result.x(), result.z(), 0.0001f));
+                        return result;
+                    };
+
+                    populateKeyframes(keyframes.mTranslations, channel->mNumPositionKeys, channel->mPositionKeys, &::ad::renderer::toVec);
+                    populateKeyframes(keyframes.mRotations, channel->mNumRotationKeys, channel->mRotationKeys, &::ad::renderer::toQuaternion);
+                    populateKeyframes(keyframes.mScales, channel->mNumScalingKeys, channel->mScalingKeys, scaleConverter);
+                }
+            }
+
+            std::cout << "  * " << animationNumKeyframes << " keyframes posing " << animatedNodes << " nodes\n";
+        }
+
+        aWriter.write(animations);
     }
 
 
@@ -732,6 +921,11 @@ void processModel(const std::filesystem::path & aFile)
     NodeResult topResult = recurseNodes(scene->mRootNode, scene, writer);
 
     completePreamble(writer, preamblePosition, topResult);
+
+    if(auto nodeRig = topResult.mNodeRig)
+    {
+        dumpAnimations(scene, *nodeRig, writer);
+    }
 
     dumpMaterials(scene, writer);
 
