@@ -483,6 +483,17 @@ namespace {
 
         std::vector<RigAnimation> animations;
 
+        // Allows to assert that scaling is uniform, while doing the conversion
+        auto scaleConverter = [](aiVector3D aScaleVec)
+        {
+            auto result = toVec(aScaleVec);
+            // We require uniform scaling at the moment.
+            // (no specific reason atm, but let's be conservative for when we want to decompose)
+            assert(math::relativeTolerance(result.x(), result.y(), 0.0001f)
+                && math::relativeTolerance(result.x(), result.z(), 0.0001f));
+            return result;
+        };
+
         for(unsigned int animationIdx = 0; animationIdx != aScene->mNumAnimations; ++animationIdx)
         {
             const aiAnimation * animation = aScene->mAnimations[animationIdx];
@@ -495,112 +506,100 @@ namespace {
                 << "\n"
                 ;
 
+            // It seems it is not an animation if there are no channels
+            assert(animation->mNumChannels > 0);
+
             RigAnimation & rigAnimation = animations.emplace_back(RigAnimation{
                 .mName = animation->mName.C_Str(),
                 .mDuration = duration,
             });
 
+            // Compute the number of keyframes in the animation
             unsigned int animationNumKeyframes = 0;
+            for(unsigned int channelIdx = 0; channelIdx != animation->mNumChannels; ++channelIdx)
+            {
+                const aiNodeAnim * channel = animation->mChannels[channelIdx];
+                animationNumKeyframes = 
+                    std::max(animationNumKeyframes,
+                        std::max(channel->mNumPositionKeys, 
+                            std::max(channel->mNumRotationKeys, channel->mNumScalingKeys)));
+            }
+            assert(animationNumKeyframes != 0);
+
             unsigned int animatedNodes = 0;
             for(unsigned int channelIdx = 0; channelIdx != animation->mNumChannels; ++channelIdx)
             {
                 const aiNodeAnim * channel = animation->mChannels[channelIdx];
-                const unsigned int numKeys = 
-                    std::max(channel->mNumPositionKeys, 
-                        std::max(channel->mNumRotationKeys, channel->mNumScalingKeys));
 
-                if(numKeys == 1)
-                {
-#if not defined(NDEBUG)
-                    assert(channel->mPositionKeys[0].mTime == 0.);
-                    assert(channel->mRotationKeys[0].mTime == 0.);
-                    assert(channel->mScalingKeys[0].mTime  == 0.);
-#endif
-                    continue; // A single state (hopefully at time zero) means the node is not animated
-                              // (at least it does for us).
-                }
-                else
-                {
-                    if(animationNumKeyframes == 0)
+                ++animatedNodes;
+                Node::Index treeNodeIdx = aExtractedRig.mNameToTreeNode.at(channel->mNodeName.C_Str());
+                rigAnimation.mNodes.push_back(treeNodeIdx);
+
+                RigAnimation::NodeKeyframes & keyframes = rigAnimation.mKeyframes.emplace_back();
+                keyframes.reserve(animationNumKeyframes);
+
+                auto populateKeyframes = 
+                    [animationNumKeyframes, &rigAnimation, ticksPerSecond = (float)animation->mTicksPerSecond]
+                    (auto & keyframesArray, unsigned int keyCount, auto keys, const auto & converter)
                     {
-                        animationNumKeyframes = numKeys;
-                    }
-                    assert(numKeys == animationNumKeyframes);
-
-                    ++animatedNodes;
-                    Node::Index treeNodeIdx = aExtractedRig.mNameToTreeNode.at(channel->mNodeName.C_Str());
-                    rigAnimation.mNodes.push_back(treeNodeIdx);
-
-                    RigAnimation::NodeKeyframes & keyframes = rigAnimation.mKeyframes.emplace_back();
-                    keyframes.reserve(numKeys);
-
-                    auto populateKeyframes = 
-                        [animationNumKeyframes, &rigAnimation, ticksPerSecond = (float)animation->mTicksPerSecond]
-                        (auto & keyframesArray, unsigned int keyCount, auto keys, const auto & converter)
+                        if(keyCount == 1) // We consider it to mean "not animated"
                         {
-                            if(keyCount == 1) // We consider it to mean "not animated"
-                            {
-                                auto key = keys[0];
-                                assert(key.mTime == 0.);
+                            auto key = keys[0];
+                            assert(key.mTime == 0.);
 
-                                std::fill_n(std::back_inserter(keyframesArray), 
-                                            animationNumKeyframes,
-                                            converter(key.mValue));
+                            std::fill_n(std::back_inserter(keyframesArray), 
+                                        animationNumKeyframes,
+                                        converter(key.mValue));
+                        }
+                        else
+                        {
+                            // We require each key to either be not animated (num == 1),
+                            // or have the same number of entries as other animated keys.
+                            assert(keyCount == animationNumKeyframes);
+
+                            // We expect the first keyframe to be at time zero,
+                            // and the last to be at the final time of the animation (i.e. its duration)
+                            assert(keys[0].mTime == 0.);
+                            assert((float)keys[animationNumKeyframes - 1].mTime / ticksPerSecond 
+                                    == rigAnimation.mDuration);
+
+                            if(rigAnimation.mTimepoints.empty())
+                            {
+                                for(unsigned int keyIdx = 0; keyIdx != animationNumKeyframes; ++keyIdx)
+                                {
+                                    rigAnimation.mTimepoints.push_back(
+                                        (float)keys[keyIdx].mTime / ticksPerSecond);
+                                    keyframesArray.push_back(converter(keys[keyIdx].mValue));
+                                }
                             }
                             else
                             {
-                                // We require each key to either be not animated (num == 1),
-                                // or have the same number of entries as other animated keys.
-                                assert(keyCount == animationNumKeyframes);
-
-                                // We expect the first keyframe to be at time zero,
-                                // and the last to be at the final time of the animation (i.e. its duration)
-                                assert(keys[0].mTime == 0.);
-                                assert((float)keys[animationNumKeyframes - 1].mTime / ticksPerSecond 
-                                       == rigAnimation.mDuration);
-
-                                if(rigAnimation.mTimepoints.empty())
+                                // Ideally we could use std::transform, but we also want to assert that time points are matching
+                                for(unsigned int keyIdx = 0; keyIdx != animationNumKeyframes; ++keyIdx)
                                 {
-                                    for(unsigned int keyIdx = 0; keyIdx != animationNumKeyframes; ++keyIdx)
-                                    {
-                                        rigAnimation.mTimepoints.push_back(
-                                            (float)keys[keyIdx].mTime / ticksPerSecond);
-                                        keyframesArray.push_back(converter(keys[keyIdx].mValue));
-                                    }
-                                }
-                                else
-                                {
-                                    // Ideally we could use std::transform, but we also want to assert that time points are matching
-                                    for(unsigned int keyIdx = 0; keyIdx != animationNumKeyframes; ++keyIdx)
-                                    {
-                                        assert(rigAnimation.mTimepoints[keyIdx] 
-                                               == (float)keys[keyIdx].mTime / ticksPerSecond);
-                                        keyframesArray.push_back(converter(keys[keyIdx].mValue));
-                                    }
+                                    assert(rigAnimation.mTimepoints[keyIdx] 
+                                            == (float)keys[keyIdx].mTime / ticksPerSecond);
+                                    keyframesArray.push_back(converter(keys[keyIdx].mValue));
                                 }
                             }
-                        };
-
-                    // Allows to assert that scaling is uniform, while doing the conversion
-                    auto scaleConverter = [](aiVector3D aScaleVec)
-                    {
-                        auto result = toVec(aScaleVec);
-                        // We require uniform scaling at the moment.
-                        // (no specific reason atm, but let's be conservative for when we want to decompose)
-                        assert(math::relativeTolerance(result.x(), result.y(), 0.0001f)
-                            && math::relativeTolerance(result.x(), result.z(), 0.0001f));
-                        return result;
+                        }
                     };
 
-                    populateKeyframes(keyframes.mTranslations, channel->mNumPositionKeys, channel->mPositionKeys, &::ad::renderer::toVec);
-                    populateKeyframes(keyframes.mRotations, channel->mNumRotationKeys, channel->mRotationKeys, &::ad::renderer::toQuaternion);
-                    populateKeyframes(keyframes.mScales, channel->mNumScalingKeys, channel->mScalingKeys, scaleConverter);
-                }
+                populateKeyframes(keyframes.mTranslations, channel->mNumPositionKeys, channel->mPositionKeys, &::ad::renderer::toVec);
+                populateKeyframes(keyframes.mRotations, channel->mNumRotationKeys, channel->mRotationKeys, &::ad::renderer::toQuaternion);
+                populateKeyframes(keyframes.mScales, channel->mNumScalingKeys, channel->mScalingKeys, scaleConverter);
+            }
+
+            // Handle the special case when an animation only has 1 keyframe in *all* of its channels
+            if(animationNumKeyframes == 1)
+            {
+                assert(rigAnimation.mDuration == 0.);
+                assert(rigAnimation.mTimepoints.empty());
+                rigAnimation.mTimepoints.push_back(0.);
             }
 
             std::cout << "  * " << animationNumKeyframes << " keyframes posing " << animatedNodes << " nodes\n";
         }
-
         aWriter.write(animations);
     }
 
