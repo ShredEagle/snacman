@@ -36,8 +36,7 @@ struct HardcodedUbos
     graphics::UniformBufferObject * mViewingUbo;
     graphics::UniformBufferObject * mModelTransformUbo;
 
-    // TODO #jointproto refactor
-    graphics::UniformBufferObject * mJointMatrixPalette;
+    graphics::UniformBufferObject * mJointMatrixPaletteUbo;
 };
 
 
