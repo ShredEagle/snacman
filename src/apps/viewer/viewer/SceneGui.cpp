@@ -47,7 +47,7 @@ const ImGuiTreeNodeFlags SceneGui::gPartFlags =
     | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
 
 
-void SceneGui::present(Scene & aScene)
+void SceneGui::present(Scene & aScene, const Timing & aTime)
 {
     ImGui::Begin("Scene tree", nullptr, ImGuiWindowFlags_MenuBar);
     if(ImGui::BeginMenuBar())
@@ -59,7 +59,7 @@ void SceneGui::present(Scene & aScene)
         }
         ImGui::EndMenuBar();
     }
-    Node * hovered = presentNodeTree(aScene.mRoot, 0);
+    Node * hovered = presentNodeTree(aScene.mRoot, 0, aTime);
     ImGui::End();
 
     handleHighlight(hovered);
@@ -88,7 +88,7 @@ void SceneGui::handleHighlight(Node * aHovered)
 
 // Note: currently returns the selected Node (but not Part or any heterogeneous type).
 // This is inherited from the time before this was free function, not sure it can be usefull now.
-Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
+Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex, const Timing & aTime)
 {
     //auto & nodeTree = mSkin.mRig.mScene;
     Node * hovered = nullptr;
@@ -117,13 +117,13 @@ Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
     {
         if(const Object * object = aNode.mInstance.mObject)
         {
-            presentObject(*object);
+            presentObject(*object, aNode.mInstance, aTime);
         }
 
         unsigned int childIdx = 0;
         for(Node & child : aNode.mChildren)
         {
-            if(Node * hoveredChild = presentNodeTree(child, childIdx++);
+            if(Node * hoveredChild = presentNodeTree(child, childIdx++, aTime);
                hoveredChild)
             {
                 hovered = hoveredChild;
@@ -139,7 +139,9 @@ Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
 }
 
 
-void SceneGui::presentAnimations(Handle<AnimatedRig> mAnimatedRig)
+void SceneGui::presentAnimations(Handle<AnimatedRig> mAnimatedRig,
+                                 Instance & aInstance,
+                                 const Timing & aTime)
 {
     if(ImGui::TreeNodeEx("[Animations]", gBaseFlags))
     {
@@ -153,9 +155,9 @@ void SceneGui::presentAnimations(Handle<AnimatedRig> mAnimatedRig)
             }
             if(isItemDoubleClicked())
             {
-                mSelectedAnimation = AnimationSelection{
-                    .mAnimatedRig = mAnimatedRig,
+                aInstance.mAnimation = AnimationState{
                     .mAnimation = &rigAnimation,
+                    .mStartTimepoint = aTime.mSimulationTimepoint,
                 };
             }
         }
@@ -199,7 +201,7 @@ void SceneGui::presentJointTree(const NodeTree<Rig::Pose> & aTree,
 };
 
 
-void SceneGui::presentObject(const Object & aObject)
+void SceneGui::presentObject(const Object & aObject, Instance & aInstance, const Timing & aTime)
 {
     assert(!aObject.mParts.empty());
     if(ImGui::TreeNodeEx("[Parts]", gBaseFlags))
@@ -239,7 +241,7 @@ void SceneGui::presentObject(const Object & aObject)
         // TODO I suspect this shared name is not ensuring unicity of the "RIG" node state.
         if(ImGui::TreeNodeEx("[Rig]", gBaseFlags))
         {
-            presentAnimations(aObject.mAnimatedRig);
+            presentAnimations(aObject.mAnimatedRig, aInstance, aTime);
             presentJointTree(aObject.mAnimatedRig->mRig.mJointTree,
                              aObject.mAnimatedRig->mRig.mJointTree.mFirstRoot);
             ImGui::TreePop();

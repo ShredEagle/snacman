@@ -19,6 +19,7 @@ namespace semantic
     const Semantic gNormalTexture{"NormalTexture"};
     const Semantic gModelTransformIdx{"ModelTransformIdx"};
     const Semantic gMaterialIdx{"MaterialIdx"};
+    SEM(MatrixPaletteOffset);
 
     #undef SEM
 

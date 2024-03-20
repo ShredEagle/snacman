@@ -7,6 +7,7 @@
 #include <math/Quaternion.h>
 
 #include <functional>
+#include <iterator>
 #include <ostream>
 #include <string>
 #include <unordered_map>
@@ -54,6 +55,9 @@ struct NodeTree
 
     const Node & operator[](Node::Index aNodeIdx) const
     { return mHierarchy[aNodeIdx]; }
+
+    std::size_t size() const
+    { return mHierarchy.size(); }
 
     void reserve(std::size_t aCapacity)
     {
@@ -111,10 +115,22 @@ struct Rig
 {
     using Pose = math::AffineMatrix<4, float>;
     using Ibm = math::AffineMatrix<4, float>;
+    using MatrixPalette = std::vector<Rig::Pose>;
+
+    // See animate() TODO, there is an actual type waiting to emerge.
+    using FuturePose_type = NodeTree<Rig::Pose>;
 
     /// @brief Return the joint matrix palette, used by shaders to compute vertex deplacement
     /// from skeletal animation.
-    std::vector<Rig::Pose> computeJointMatrices() const;
+    MatrixPalette computeJointMatrices(const FuturePose_type & aPosedNodes) const;
+
+    // TODO Ad 2024/03/20: Why does it need the apparently redundant Rig:: qualification in front of Pose?
+    // (at least on MSVC)
+    template <std::output_iterator<Rig::Pose> T_outputIt>
+    T_outputIt computeJointMatrices(T_outputIt aOutFirst, const FuturePose_type & aPosedNodes) const;
+
+    std::size_t countJoints() const
+    { return mJoints.mIndices.size(); }
 
     // Note: currently usually represents a hierarchy larger than the skeleton.
     // The entries of this tree that are used as actual bones are given by mJoints.mIndices.
@@ -148,7 +164,7 @@ struct RigAnimation
     std::vector<float> mTimepoints;
 
     // Attention: This data members couples the RigAnimation to the Rig, which is a bit smelly.
-    // I do not know if we want this class to become a member of the Rig, so coupling is assumed.
+    // I do not know if we want this class to become a member of the Rig, so coupling is explicit.
     // The sequence of nodes that are animated, given by index in the Rig's NodeTree.
     // Note: It would be tempting to get rid of those indices, by giving the animation in the 
     // (linear) order of nodes in the Rig's NodeTree. Yet it is common that somes nodes are not animated.
@@ -174,7 +190,17 @@ struct RigAnimation
 };
 
 
-void animate(const RigAnimation & aAnimation, float aTimepoint, NodeTree<Rig::Pose> & aAnimatedTree);
+// TODO Redesign the API, the coupling between the Rig and its Animation is awkward
+// and so is this function signature.
+// TODO & IMPORTANT NOTE: The returned value is not a correct NodeTree (and does not need to be),
+// since it does not contain hierarchy info. We should actually use a distinct type here.
+//    Note for this future type: All we need for this return type is the global pose of each node
+//    Yet at the moment we use it interchangeably with the Rig's JointTree, depending whether we
+//    have an actual animation (the future type), or we just have the default rig pose available (a plain NodeTree)
+//    (In these situation, using the same type is convenient, as we can ternary-operator).
+Rig::FuturePose_type animate(const RigAnimation & aAnimation,
+                             float aTimepoint,
+                             const NodeTree<Rig::Pose> & aAnimatedTree);
 
 
 /// @brief Associated RigAnimations to the Rig they target
@@ -203,6 +229,26 @@ struct VertexJointData
 //
 // Implementation
 //
+
+// We also have implicit coupling here, between the posed nodes and the Rig.
+template <std::output_iterator<Rig::Pose> T_outputIt>
+T_outputIt Rig::computeJointMatrices(T_outputIt aOutFirst, const FuturePose_type & aPosedNodes) const
+{
+    assert(mJoints.mIndices.size() == mJoints.mInverseBindMatrices.size());
+    assert(aPosedNodes.mGlobalPose.size() == mJointTree.mGlobalPose.size());
+
+    for(std::size_t jointIdx = 0; jointIdx != mJoints.mIndices.size(); ++jointIdx)
+    {
+        *aOutFirst = (
+            mJoints.mInverseBindMatrices[jointIdx] 
+            * aPosedNodes.mGlobalPose[mJoints.mIndices[jointIdx]]);
+        ++aOutFirst;
+    }
+
+    return aOutFirst;
+}
+
+
 template <class T_Pose>
 std::ostream & operator<<(std::ostream & aOut, const NodeTree<T_Pose> & aTree)
 {

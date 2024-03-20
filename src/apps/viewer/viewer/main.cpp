@@ -1,4 +1,5 @@
 #include "Logging.h"
+#include "Timing.h"
 #include "ViewerApplication.h"
 
 #include <build_info.h>
@@ -49,7 +50,8 @@ std::filesystem::path handleArguments(int argc, char * argv[])
 
 void showGui(imguiui::ImguiUi & imguiUi,
              renderer::ViewerApplication & aApplication,
-             const std::string & aProfilerOutput)
+             const std::string & aProfilerOutput,
+             const renderer::Timing & aTime)
 {
     PROFILER_SCOPE_RECURRING_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
 
@@ -84,7 +86,7 @@ void showGui(imguiui::ImguiUi & imguiUi,
         static bool showSceneTree = true;
         if(imguiui::addCheckbox("Scene tree", showSceneTree))
         {
-            aApplication.drawUi();
+            aApplication.drawUi(aTime);
         }
 
         static bool showDemo = false;
@@ -176,7 +178,7 @@ void runApplication(int argc, char * argv[])
         // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
         // would be better to show current frame 
         // (but this implies to end the profiler frame earlier, thus not profiling ImGui UI)
-        showGui(imguiUi, application, profilerOut.str());
+        showGui(imguiUi, application, profilerOut.str(), timing);
 
         glfwApp.swapBuffers();
 

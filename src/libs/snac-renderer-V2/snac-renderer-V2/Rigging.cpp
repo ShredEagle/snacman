@@ -32,9 +32,24 @@ namespace {
 } // unnamed namespace
 
 
-void animate(const RigAnimation & aAnimation, float aTimepoint, NodeTree<Rig::Pose> & aAnimatedTree)
+// IMPORTANT: This is not a correct NodeTree, has it does not contain hierarchy info
+// We should actually use a distinct type here (i.e. TODO)
+Rig::FuturePose_type animate(const RigAnimation & aAnimation,
+                             float aTimepoint,
+                             const NodeTree<Rig::Pose> & aAnimatedTree)
 {
     using Node = NodeTree<Rig::Pose>::Node;
+
+    // The posed nodes are only used for a list of global poses
+    // (which has to be in the same order as the Rig.)
+    NodeTree<Rig::Pose> posedNodes;
+    posedNodes.mGlobalPose.reserve(aAnimatedTree.size());
+
+    // Internal use only:
+    // Copy the local poses of the rig:
+    // some will be overwritten by the animation, but the one not targeted
+    // by the animation should have the rig base value.
+    auto localPoses = aAnimatedTree.mLocalPose;
 
     const auto & timepoints = aAnimation.mTimepoints;
     assert(!timepoints.empty());
@@ -79,7 +94,7 @@ void animate(const RigAnimation & aAnimation, float aTimepoint, NodeTree<Rig::Po
         Node::Index hierarchyIdx = nodes[jointIdx];
         const RigAnimation::NodeKeyframes & keyframes = aAnimation.mKeyframes[jointIdx];
 
-        aAnimatedTree.mLocalPose[hierarchyIdx] = 
+        localPoses[hierarchyIdx] = 
             computeInterpolatedMatrix(keyframes, previousIdx, nextIdx, interpolant);
     }
 
@@ -91,30 +106,25 @@ void animate(const RigAnimation & aAnimation, float aTimepoint, NodeTree<Rig::Po
         if(Node::Index parentIdx = aAnimatedTree.mHierarchy[hierarchyIdx].mParent;
            parentIdx != Node::gInvalidIndex)
         {
-            aAnimatedTree.mGlobalPose[hierarchyIdx] =
-                aAnimatedTree.mLocalPose[hierarchyIdx] * aAnimatedTree.mGlobalPose[parentIdx];
+            posedNodes.mGlobalPose.push_back(
+                localPoses[hierarchyIdx] * posedNodes.mGlobalPose[parentIdx]);
         }
         else
         {
-            aAnimatedTree.mGlobalPose[hierarchyIdx] = aAnimatedTree.mLocalPose[hierarchyIdx];
+            posedNodes.mGlobalPose.push_back(localPoses[hierarchyIdx]);
         }
     }
+
+    return posedNodes;
 }
 
 
-std::vector<Rig::Pose> Rig::computeJointMatrices() const
+Rig::MatrixPalette Rig::computeJointMatrices(const FuturePose_type & aPosedNodes) const
 {
-    assert(mJoints.mIndices.size() == mJoints.mInverseBindMatrices.size());
-
     std::vector<math::AffineMatrix<4, float>> result;
-    result.reserve(mJoints.mIndices.size());
+    result.reserve(countJoints());
 
-    for(std::size_t jointIdx = 0; jointIdx != mJoints.mIndices.size(); ++jointIdx)
-    {
-        result.push_back(
-            mJoints.mInverseBindMatrices[jointIdx] 
-            * mJointTree.mGlobalPose[mJoints.mIndices[jointIdx]]);
-    }
+    computeJointMatrices(std::back_inserter(result), aPosedNodes);
 
     return result;
 }

@@ -50,9 +50,7 @@ struct TheGraph
 
     void renderFrame(const PartList & aPartList, 
                      const Camera & aCamera,
-                     Storage & aStorage,
-                     // TODO #jointproto the matrix palette should not be passed, need to define a proper API
-                     std::span<const Rig::Pose> aJointMatrixPalette);
+                     Storage & aStorage);
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 

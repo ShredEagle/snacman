@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "Timing.h"
+
 #include <snac-renderer-V2/Model.h>
 
 
@@ -22,15 +24,15 @@ public:
         mStorage{aStorage}
     {}
 
-    void present(Scene & aScene);
+    void present(Scene & aScene, const Timing & aTime);
 
 private:
     /// @return Hovered node
-    Node * presentNodeTree(Node & aNode, unsigned int aIndex);
-    void presentObject(const Object & aObject);
+    Node * presentNodeTree(Node & aNode, unsigned int aIndex, const Timing & aTime);
+    void presentObject(const Object & aObject, Instance & aInstance, const Timing & aTime);
     void presentEffect(Handle<const Effect> aEffect);
     void presentShaders(const IntrospectProgram & aIntrospectProgram);
-    void presentAnimations(Handle<AnimatedRig> mAnimatedRig);
+    void presentAnimations(Handle<AnimatedRig> mAnimatedRig, Instance & aInstance, const Timing & aTime);
     static void presentJointTree(const NodeTree<Rig::Pose> & aTree,
                                  NodeTree<Rig::Pose>::Node::Index aNodeIdx);
 
@@ -59,14 +61,6 @@ private:
     Node * mSelectedNode = nullptr;
     Node * mHighlightedNode = nullptr;
     const std::string * mSelectedShaderSource = nullptr;
-
-    struct AnimationSelection
-    {
-        // Note: Cannot be const, because we might animate the selected rig
-        // (which mutates in place the Rig's JointTree).
-        Handle</*const */AnimatedRig> mAnimatedRig = gNullHandle;
-        const RigAnimation * mAnimation = nullptr;
-    } mSelectedAnimation;
 
     Material mHighlightMaterial;
 

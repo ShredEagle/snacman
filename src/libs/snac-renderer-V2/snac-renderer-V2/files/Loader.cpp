@@ -1054,6 +1054,17 @@ GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
                     },
                 }
             },
+            {
+                semantic::gMatrixPaletteOffset,
+                AttributeAccessor{
+                    .mBufferViewIndex = 0, // view is added above
+                    .mClientDataFormat{
+                        .mDimension = 1,
+                        .mOffset = offsetof(InstanceData, mMatrixPaletteOffset),
+                        .mComponentType = GL_UNSIGNED_INT,
+                    },
+                }
+            }
         }
     };
 }

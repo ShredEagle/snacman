@@ -264,8 +264,7 @@ void TheGraph::loadDrawBuffers(const PartList & aPartList,
 
 void TheGraph::renderFrame(const PartList & aPartList, 
                            const Camera & aCamera,
-                           Storage & aStorage,
-                           std::span<const Rig::Pose> aJointMatrixPalette)
+                           Storage & aStorage)
 {
     {
         PROFILER_SCOPE_RECURRING_SECTION("load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
@@ -273,8 +272,7 @@ void TheGraph::renderFrame(const PartList & aPartList,
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, aCamera);
 
-        // TODO #jointproto refactor
-        proto::load(*mUbos.mJointMatrixPalette, std::span{aJointMatrixPalette}, graphics::BufferHint::StaticDraw);
+        proto::load(*mUbos.mJointMatrixPalette, std::span{aPartList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
     }
 
     // Use the same indirect buffer for all drawings

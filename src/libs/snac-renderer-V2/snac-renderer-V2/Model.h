@@ -233,6 +233,9 @@ struct Object
 {
     std::vector<Part> mParts;
     math::Box<GLfloat> mAabb;
+    // TODO should we only store the Rig?
+    // Storing both is convenient to enumerate in the viewer GUI.
+    // Yet the pure animation feature only require the Rig data.
     Handle<AnimatedRig> mAnimatedRig = gNullHandle;
 };
 
@@ -257,6 +260,30 @@ struct Pose
 };
 
 
+// TODO Ad 2024/03/20 #animation: After implementing the viewer skeletal animation
+// I do not like having this AnimationState represented in the generic data model.
+// In its current states, it mixes something that is purely clients responsibility (the selected animation and its start time)
+// with something usefull for the rendrer (the posed rig)
+// At a higher level, this poses the problem of scalability of this model regarding features
+// and the ability for clients to implement such techniques without touching the renderer's model.
+// I suspect there might be some cleaner generic approach, allowing clients to populate buffer blocks on their own
+// while allowing them to provide semantic indexes into them as part of the instance stream.
+struct AnimationState
+{
+    // TODO we probably want to store an handle to the RigAnimation directly
+    // instead of a key to the animation (note: that is what we ended up doing here, hence the comment)
+    //StringKey mAnimationKey;
+
+    // TODO get rid of those data, it seems they should really live in the client representation of the instances.
+    const RigAnimation * mAnimation;
+    double mStartTimepoint;
+
+    // Actually, we do not know what we are doing with the design of the rigging system in Model
+    // What the renderer actually needs is a NodeTree "pose", so let us give it that.
+    NodeTree<Rig::Pose> mPosedTree;
+};
+
+
 /// A good candidate to be at the interface between client and renderer lib.
 /// Equivalent to a "Shape" in the shape list from AZDO talks.
 struct Instance
@@ -265,6 +292,12 @@ struct Instance
     Pose mPose;
     // TODO #matref
     std::optional<Material> mMaterialOverride;
+    // TODO Ad 2024/03/19: Redesign the whole hierarchy data-model with DOD.
+    // This will allow to get rid of those optionals, and to unify the Rig joint tree with the general scene tree.
+    // (SOA NodeTree is a good candidate, with hashmap for optionals).
+    // Note: This is a bad design: Instances without an Object cannot have animation.
+    // Yet this model would allow it.
+    std::optional<AnimationState> mAnimation; 
     Name mName;
 };
 
@@ -302,9 +335,9 @@ struct Storage
     std::list<ProgramConfig> mProgramConfigs;
     std::list<graphics::VertexArrayObject> mVaos;
     std::list<MaterialContext> mMaterialContexts;
+    std::list<AnimatedRig> mAnimatedRigs;
     // Used for random access (DOD)
     std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, so the name at index zero can be used when there are no material parameters
-    std::list<AnimatedRig> mAnimatedRigs;
 };
 
 

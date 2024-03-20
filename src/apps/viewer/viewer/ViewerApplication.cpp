@@ -167,7 +167,10 @@ namespace {
     }
 
 
-    void populatePartList(PartList & aPartList, const Node & aNode, const Pose & aParentPose, const Material * aMaterialOverride)
+    void populatePartList(PartList & aPartList,
+                          const Node & aNode,
+                          const Pose & aParentPose,
+                          const Material * aMaterialOverride)
     {
         const Instance & instance = aNode.mInstance;
         const Pose & localPose = instance.mPose;
@@ -181,6 +184,25 @@ namespace {
         if(Object * object = aNode.mInstance.mObject;
            object != nullptr)
         {
+            // the default value (i.e. not rigged)
+            GLsizei paletteOffset = PartList::gInvalidIdx;
+
+            if(auto animatedRig = object->mAnimatedRig)
+            {
+                // TODO Ad 2024/03/20 #perf #animation:
+                // We could share the matrix palette for all no-animation (i.e. default rig pose),
+                // or even for "static animations" (i.e. single keyframe, defining a static pose)
+                // instead of currently always producing a matrix palette for each object with a rig.
+                paletteOffset = (GLsizei)aPartList.mRiggingPalettes.size();
+
+                const Rig & rig = animatedRig->mRig;
+                aPartList.mRiggingPalettes.reserve(aPartList.mRiggingPalettes.size() + rig.countJoints());
+                rig.computeJointMatrices(
+                        std::back_inserter(aPartList.mRiggingPalettes), 
+                        aNode.mInstance.mAnimation ? aNode.mInstance.mAnimation->mPosedTree 
+                                                   : animatedRig->mRig.mJointTree);
+            }
+
             for(const Part & part: object->mParts)
             {
                 const Material * material =
@@ -190,6 +212,7 @@ namespace {
                 aPartList.mMaterials.push_back(material);
                 // pushed after
                 aPartList.mTransformIdx.push_back((GLsizei)aPartList.mInstanceTransforms.size());
+                aPartList.mPaletteOffset.push_back(paletteOffset);
             }
 
             aPartList.mInstanceTransforms.push_back(
@@ -212,8 +235,11 @@ PartList Scene::populatePartList() const
     PROFILER_SCOPE_RECURRING_SECTION("populate_draw_list", CpuTime);
 
     PartList partList;
-    renderer::populatePartList(partList, mRoot, mRoot.mInstance.mPose, 
-                               mRoot.mInstance.mMaterialOverride ? &*mRoot.mInstance.mMaterialOverride : nullptr);
+    renderer::populatePartList(partList,
+                                mRoot,
+                                mRoot.mInstance.mPose, 
+                                mRoot.mInstance.mMaterialOverride ? &*mRoot.mInstance.mMaterialOverride 
+                                                                    : nullptr);
     return partList;
 }
 
@@ -365,51 +391,69 @@ constexpr std::array<math::hdr::Rgba<float>, 4> gColorRotation
     math::hdr::gYellow<float>,
 };
 
-void drawJointTree(const NodeTree<Rig::Pose> & aTree,
+void drawJointTree(const NodeTree<Rig::Pose> & aRigTree,
                    NodeTree<Rig::Pose>::Node::Index aNodeIdx,
+                   const Rig::FuturePose_type & aPose,
                    math::AffineMatrix<4, float> aModelTransform,
                    std::size_t aColorIdx = 0,
                    std::optional<math::Position<3, float>> aParentPosition = std::nullopt)
 {
     using Node = NodeTree<Rig::Pose>::Node;
 
-    const Node & node = aTree.mHierarchy[aNodeIdx];
+    const Node & node = aRigTree.mHierarchy[aNodeIdx];
     math::Position<3, float> position =
-        (aTree.mGlobalPose[aNodeIdx] * aModelTransform).getAffine().as<math::Position>();
+        (aPose.mGlobalPose[aNodeIdx] * aModelTransform).getAffine().as<math::Position>();
 
     if(aParentPosition)
     {
         DBGDRAW_INFO(drawer::gRig).addLine(*aParentPosition, position, gColorRotation[aColorIdx % gColorRotation.size()]);
     }
 
-    if(aTree.hasChild(aNodeIdx))
+    if(aRigTree.hasChild(aNodeIdx))
     {
-        drawJointTree(aTree, node.mFirstChild, aModelTransform, aColorIdx + 1, position);
+        drawJointTree(aRigTree, node.mFirstChild, aPose, aModelTransform, aColorIdx + 1, position);
     }
 
     if(node.mNextSibling != Node::gInvalidIndex)
     {
-        drawJointTree(aTree, node.mNextSibling, aModelTransform, aColorIdx, aParentPosition);
+        drawJointTree(aRigTree, node.mNextSibling, aPose, aModelTransform, aColorIdx, aParentPosition);
     }
 }
 
 
-void drawRigs(const Node & aNode,
-                Pose aParentPose = {})
+void handleAnimations(Node & aNode,
+                      const Timing & aTime,
+                      Pose aParentPose = {})
 {
     Pose pose = aParentPose.transform(aNode.mInstance.mPose);
-    if(const Object * object = aNode.mInstance.mObject;
-       object && object->mAnimatedRig)
+    if(const Object * object = aNode.mInstance.mObject)
     {
-        const Rig & rig = object->mAnimatedRig->mRig;
-        drawJointTree(rig.mJointTree,
-                      rig.mJointTree.mFirstRoot,
-                      static_cast<math::AffineMatrix<4, float>>(pose));
+        if(auto & animationState = aNode.mInstance.mAnimation)
+        {
+            assert(object->mAnimatedRig);
+            const RigAnimation & animation = *animationState->mAnimation;
+            animationState->mPosedTree = animate(
+                animation,
+                (float)std::fmod(aTime.mSimulationTimepoint - animationState->mStartTimepoint, (double)animation.mDuration),
+                object->mAnimatedRig->mRig.mJointTree);
+        }
+
+        // Draw the rig (potentially posed by animation)
+        if(object->mAnimatedRig)
+        {
+            const Rig & rig = object->mAnimatedRig->mRig;
+            drawJointTree(rig.mJointTree,
+                            rig.mJointTree.mFirstRoot,
+                            aNode.mInstance.mAnimation ? aNode.mInstance.mAnimation->mPosedTree
+                                                        : rig.mJointTree,
+                            static_cast<math::AffineMatrix<4, float>>(pose));
+        }
+
     }
 
-    for(const Node & child : aNode.mChildren)
+    for(Node & child : aNode.mChildren)
     {
-        drawRigs(child, pose);
+        handleAnimations(child, aTime, pose);
     }
 }
 
@@ -421,16 +465,8 @@ void ViewerApplication::update(const Timing & aTime)
     snac::DebugDrawer::StartFrame();
 
     // Draw the Rigs joints / bones using DebugDrawer
-    drawRigs(mScene.mRoot);
-
-    // Play selected animation, if any.
-    if(auto selectedAnimation = mSceneGui.mSelectedAnimation; selectedAnimation.mAnimatedRig)
-    {
-        assert(selectedAnimation.mAnimation);
-        animate(*selectedAnimation.mAnimation,
-                (float)std::fmod(aTime.mSimulationTimepoint, (double)selectedAnimation.mAnimation->mDuration),
-                selectedAnimation.mAnimatedRig->mRig.mJointTree);
-    }
+    // Animate the rigs
+    handleAnimations(mScene.mRoot, aTime);
 
     mFirstPersonControl.update(aTime.mDeltaDuration);
 
@@ -447,9 +483,9 @@ void ViewerApplication::update(const Timing & aTime)
 }
 
 
-void ViewerApplication::drawUi()
+void ViewerApplication::drawUi(const renderer::Timing & aTime)
 {
-    mSceneGui.present(mScene);
+    mSceneGui.present(mScene, aTime);
 }
 
 
@@ -459,26 +495,11 @@ void ViewerApplication::render()
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
-    std::span<const Rig::Pose> jointMatrixPalette;
-    std::vector<Rig::Pose> jointMatrixBuffer;
-    if(auto selectedAnimation = mSceneGui.mSelectedAnimation; selectedAnimation.mAnimatedRig)
-    {
-        // To prolongate lifetime of container
-        jointMatrixBuffer = selectedAnimation.mAnimatedRig->mRig.computeJointMatrices();
-        jointMatrixPalette = std::span{jointMatrixBuffer};
-    }
-    else
-    {
-        static const std::vector<math::AffineMatrix<4,GLfloat>> gIdentities(
-            64, math::AffineMatrix<4,GLfloat>::Identity());
-        jointMatrixPalette = std::span{gIdentities};
-    }
-
     // TODO: How to handle material/program selection while generating the part list,
     // if the camera (or pass itself?) might override the materials?
     // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
     PartList partList = mScene.populatePartList();
-    mGraph.renderFrame(partList, mCamera, mStorage, jointMatrixPalette);
+    mGraph.renderFrame(partList, mCamera, mStorage);
 
     mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
 }
