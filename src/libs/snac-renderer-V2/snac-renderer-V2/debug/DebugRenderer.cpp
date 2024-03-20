@@ -3,6 +3,7 @@
 #include "../Pass.h"
 #include "../Semantics.h"
 #include "../SetupDrawing.h"
+#include "../VertexStreamUtilities.h"
 
 #include "../files/Loader.h"
 

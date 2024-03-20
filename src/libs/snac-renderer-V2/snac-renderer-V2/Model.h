@@ -44,6 +44,7 @@ static constexpr auto gNullHandle = nullptr;
 
 // Note: Represent an "homogeneous" chunck in a buffer, for example an array of per-vertex or per-instance data
 // (with a shared stride and instance divisor).
+// (NB: A buffer can thus store heterogenous data, each addressed by distinct views)
 // If we allow to store distinct logical objects in the same view, we can then use the view (or VertexStream) 
 // as an identifier to match VAOs (while batching).
 // This implies that a Part will need an offset into its buffer views.

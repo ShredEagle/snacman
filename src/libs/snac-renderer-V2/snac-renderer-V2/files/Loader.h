@@ -21,32 +21,6 @@ struct InstanceData
 };
 
 
-// TODO move to a more generic header
-// TODO review the usefulness of aVertexStream last argument
-// alongside makeVertexStream
-struct AttributeDescription
-{
-    Semantic mSemantic;
-    // To replace wih graphics::ClientAttribute if we support interleaved buffers (i.e. with offset)
-    graphics::AttributeDimension mDimension;
-    GLenum mComponentType;   // data individual components' type.
-};
-
-
-// TODO move to a more generic header, review the usefulness of aVertexStream last argument
-/// @note Provide a distinct buffer for each attribute stream at the moment (i.e. no interleaving).
-/// @param aVertexStream If not nullptr, create views into this vertex stream buffers instead of creating
-/// new buffers.
-Handle<VertexStream> makeVertexStream(unsigned int aVerticesCount,
-                                      unsigned int aIndicesCount,
-                                      std::span<const AttributeDescription> aBufferedStreams,
-                                      Storage & aStorage,
-                                      const GenericStream & aStream,
-                                      // This is probably only useful to create debug data buffers
-                                      // (as there is little sense to not reuse the existing views)
-                                      const VertexStream * aVertexStream = nullptr);
-
-
 // IMPORTANT: for the moment, just load the first vertex stream in the file
 // has to be extended to actually load complex models.
 Node loadBinary(const std::filesystem::path & aBinaryFile,
@@ -63,20 +37,9 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
                                           const GenericStream & aStream);
 
 
-// TODO Ad 2024/02/15: Those free functins should be relocated
+// TODO Ad 2024/02/15: Those free function should be relocated
 // (not even sure we want the library to propose an instance stream format at all)
 GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount);
-
-/// @brief Create a GL buffer of specified size (without loading data into it).
-/// @return Buffer view to the buffer.
-BufferView createBuffer(GLsizei aElementSize,
-                        GLsizeiptr aElementCount,
-                        GLuint aInstanceDivisor,
-                        GLenum aHint,
-                        Storage & aStorage);
-
-
-Handle<ConfiguredProgram> storeConfiguredProgram(IntrospectProgram aProgram, Storage & aStorage);
 
 
 struct Loader

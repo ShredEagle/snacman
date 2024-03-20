@@ -17,6 +17,7 @@ set(${TARGET_NAME}_HEADERS
     Rigging.h
     Semantics.h
     SetupDrawing.h
+    VertexStreamUtilities.h
 
     debug/DebugDrawing.h
     debug/DebugRenderer.h
@@ -35,6 +36,7 @@ set(${TARGET_NAME}_SOURCES
     Profiling.cpp
     Rigging.cpp
     SetupDrawing.cpp
+    VertexStreamUtilities.cpp
 
     debug/DebugDrawing.cpp
     debug/DebugRenderer.cpp

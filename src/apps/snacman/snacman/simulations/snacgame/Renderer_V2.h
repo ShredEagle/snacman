@@ -16,6 +16,7 @@
 
 // V2: the good stuff
 #include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/VertexStreamUtilities.h>
 #include <snac-renderer-V2/files/Loader.h>
 
 #include <filesystem>
