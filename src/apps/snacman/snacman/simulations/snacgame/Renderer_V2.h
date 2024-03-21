@@ -63,11 +63,11 @@ struct SnacGraph
 
     static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage, std::size_t aInstanceCount)
     {
-        renderer::BufferView vboView = renderer::createBuffer(sizeof(InstanceData),
-                                                              aInstanceCount,
-                                                              1, // intance divisor
-                                                              GL_STREAM_DRAW,
-                                                              aStorage);
+        renderer::BufferView vboView = renderer::makeBufferGetView(sizeof(InstanceData),
+                                                                   aInstanceCount,
+                                                                   1, // intance divisor
+                                                                   GL_STREAM_DRAW,
+                                                                   aStorage);
 
         return renderer::GenericStream{
             .mVertexBufferViews = { vboView, },

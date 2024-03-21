@@ -34,7 +34,7 @@ DebugRenderer::DebugRenderer(Storage & aStorage, const Loader & aLoader) :
         // TODO It would be more semantically correct to host the "mLineBuffer" ourselves,
         // and use a (to be implemented) function that would create the vertex stream *around* 
         // this buffer we are explicitly responsible for.
-        .mVertexStream = makeVertexStream(0, 0, gLineAttributes, aStorage, {}),
+        .mVertexStream = makeVertexStream(0, 0, GL_UNSIGNED_INT, gLineAttributes, aStorage, {}),
         .mPrimitiveMode = GL_LINES,
     },
     mLinePositionBuffer{getBufferView(*mLines.mVertexStream, semantic::gPosition).mGLBuffer},

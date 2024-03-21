@@ -494,6 +494,11 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
         },
     };
 
+    using IndexType = GLuint;
+
+    //
+    // Populate the vertex attributes values, client side
+    //
     std::vector<math::Position<3, GLfloat>> trianglePositions;
     std::vector<math::Vec<3, GLfloat>> triangleNormals;
     std::vector<math::hdr::Rgba_f> triangleColors{
@@ -508,7 +513,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
         trianglePositions.push_back(triangle::Maker::getPosition(vertex) + math::Vec<3, GLfloat>{0.f, 0.f, -1.1f});
         triangleNormals.push_back(triangle::Maker::getNormal(vertex));
     }
-    std::vector<GLuint> triangleIndices{0, 1, 2};
+    std::vector<IndexType> triangleIndices{0, 1, 2};
 
     auto cubePositions = getExpandedCubePositions();
     auto cubeNormals = getExpandedCubeNormals();
@@ -516,48 +521,64 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
     assert(cubePositions.size() == cubeNormals.size());
 
     //TODO handle non-indexed geometry in draw(), so we can get rid of the sequential indices.
-    std::vector<GLuint> cubeIndices(cubePositions.size());
+    std::vector<IndexType> cubeIndices(cubePositions.size());
     std::iota(cubeIndices.begin(), cubeIndices.end(), 0);
 
     const unsigned int verticesCount = (unsigned int)(trianglePositions.size() + cubePositions.size());
     const unsigned int indicesCount = (unsigned int)(triangleIndices.size() + cubeIndices.size());
 
-    // Prepare the common buffer storage for the whole binary (one buffer / attribute)
-    Handle<VertexStream> triangleStream = makeVertexStream(
-        verticesCount,
+    //
+    // Prepare the buffers and vertex streams
+    // Note: The buffers are shared by both shapes,
+    //       but we want each shape to use distinct BufferViews (so distinct VertexStream).
+    //       This tests BufferView offsets.
+
+    // The buffers are for both shapes, so we use the cumulative vertices and indices counts
+    Handle<graphics::BufferAny> indexBuffer = makeBuffer(
+        sizeof(IndexType),
         indicesCount,
-        gAttributeStreamsInBinary,
-        aStorage,
-        aStream);
-    
-    
-    // This is the pendant of hardcoded vertex attributes description, and must be kept in sync
-    // (which is a code smell, we should do better)
-    // The buffer views from aStream have been added at the beginning of the vertex buffer views
-    // so we fetch back from the end.
-    BufferView & positionBufferView = *(triangleStream->mVertexBufferViews.end() - 3);
-    BufferView & normalBufferView   = *(triangleStream->mVertexBufferViews.end() - 2);
-    BufferView & colorBufferView    = *(triangleStream->mVertexBufferViews.end() - 1);
-    BufferView & indexBufferView    = triangleStream->mIndexBufferView;
+        GL_STATIC_DRAW,
+        aStorage
+    );
 
-    // We want each shape to use distinct BufferViews (so distinct VertexStream)
-    // to test BufferView offsets.
-    // Manually get there.
-    positionBufferView.mSize = sizeof(GLfloat) * 3 * trianglePositions.size();
-    normalBufferView.mSize   = sizeof(GLfloat) * 3 * trianglePositions.size();
-    colorBufferView.mSize    = sizeof(GLfloat) * 4 * trianglePositions.size();
-    indexBufferView.mSize    = sizeof(GLuint) * triangleIndices.size();
+    std::vector<Handle<graphics::BufferAny>> attributeBuffers;
+    for(auto attribute : gAttributeStreamsInBinary)
+    {
+        attributeBuffers.push_back(
+            makeBuffer(
+                getByteSize(attribute),
+                verticesCount,
+                GL_STATIC_DRAW,
+                aStorage
+            ));
+    }
 
-    Handle<VertexStream> cubeStream = makeVertexStream(
-        (GLuint)cubePositions.size(),
-        (GLuint)cubeIndices.size(),
-        gAttributeStreamsInBinary,
-        aStorage,
-        aStream,
-        triangleStream);
+    // The vertex streams are separate
+    Handle<VertexStream> triangleStream = primeVertexStream(aStream, aStorage);
+    setIndexBuffer(triangleStream, 
+                   graphics::MappedGL_v<IndexType>,
+                   indexBuffer,
+                   (GLuint)triangleIndices.size(),
+                   0/*offset*/);
+    Handle<VertexStream> cubeStream = primeVertexStream(aStream, aStorage);
+    setIndexBuffer(cubeStream,
+                   graphics::MappedGL_v<IndexType>,
+                   indexBuffer,
+                   (GLuint)cubeIndices.size(),
+                   sizeof(IndexType) * triangleIndices.size());
 
-    // Load the buffers of the vertex streams
+    for(unsigned int idx = 0; idx != gAttributeStreamsInBinary.size(); ++idx)
+    {
+        const auto & attribute = gAttributeStreamsInBinary[idx];
+        const auto & buffer = attributeBuffers[idx];
 
+        addVertexAttributes(triangleStream, attribute, buffer, (GLuint)trianglePositions.size(), 0/*offset*/);
+        addVertexAttributes(cubeStream,     attribute, buffer, (GLuint)cubePositions.size(),     getByteSize(attribute) * trianglePositions.size());
+    }
+
+    //
+    // Load data into the buffers of the vertex streams
+    //
     auto load =
         [](Handle<VertexStream>  aStream,
            GLuint aFirstIndex,  // write offset
@@ -581,7 +602,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
     load(cubeStream, cubeFirstVertex, cubeIndices, cubePositions, cubeNormals, cubeColors);
 
     //
-    // Push the objects
+    // Push the objects in storage, return their Nodes.
     //
 
     // Triangle
@@ -727,6 +748,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
     VertexStream * consolidatedStream = makeVertexStream(
         verticesCount,
         indicesCount,
+        GL_UNSIGNED_INT,
         gAttributeStreamsInBinary,
         aStorage,
         aStream);
@@ -883,11 +905,11 @@ graphics::ShaderSource Loader::loadShader(const filesystem::path & aShaderFile) 
 
 GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
 {
-    BufferView vboView = createBuffer(sizeof(InstanceData),
-                                      aInstanceCount,
-                                      1,
-                                      GL_STREAM_DRAW,
-                                      aStorage);
+    BufferView vboView = makeBufferGetView(sizeof(InstanceData),
+                                           aInstanceCount,
+                                           1,
+                                           GL_STREAM_DRAW,
+                                           aStorage);
 
     return GenericStream{
         .mVertexBufferViews = { vboView, },
