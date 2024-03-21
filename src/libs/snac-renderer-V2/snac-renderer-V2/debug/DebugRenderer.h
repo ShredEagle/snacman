@@ -30,8 +30,8 @@ private:
                    Storage & aStorage);
 
     Part mLines;
-    graphics::BufferAny * mLinePositionBuffer;
-    graphics::BufferAny * mLineColorBuffer;
+    const graphics::BufferAny * mLinePositionBuffer;
+    const graphics::BufferAny * mLineColorBuffer;
     Handle<ConfiguredProgram> mLineProgram;
 };
 

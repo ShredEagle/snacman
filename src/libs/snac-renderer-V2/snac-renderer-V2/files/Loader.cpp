@@ -123,7 +123,7 @@ namespace {
     {
         // Load data into an existing buffer, with offset aElementFirst.
         auto loadBufferFromArchive = 
-            [&aIn](graphics::BufferAny & aBuffer, 
+            [&aIn](const graphics::BufferAny & aBuffer, 
                    GLuint aElementFirst,
                    GLsizei aElementSize,
                    std::size_t aElementCount)
@@ -134,14 +134,14 @@ namespace {
             };
 
         // TODO #loader Those hardcoded indices are smelly, hard-coupled to the attribute streams structure in the binary.
-        graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 7)->mGLBuffer;
-        graphics::BufferAny & normalBuffer   = *(aVertexStream.mVertexBufferViews.end() - 6)->mGLBuffer;
-        graphics::BufferAny & tangentBuffer  = *(aVertexStream.mVertexBufferViews.end() - 5)->mGLBuffer;
-        graphics::BufferAny & colorBuffer = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
-        graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
-        graphics::BufferAny & boneIndicesBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
-        graphics::BufferAny & boneWeightsBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
-        graphics::BufferAny & indexBuffer = *(aVertexStream.mIndexBufferView.mGLBuffer);
+        const graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 7)->mGLBuffer;
+        const graphics::BufferAny & normalBuffer   = *(aVertexStream.mVertexBufferViews.end() - 6)->mGLBuffer;
+        const graphics::BufferAny & tangentBuffer  = *(aVertexStream.mVertexBufferViews.end() - 5)->mGLBuffer;
+        const graphics::BufferAny & colorBuffer = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
+        const graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
+        const graphics::BufferAny & boneIndicesBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
+        const graphics::BufferAny & boneWeightsBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
+        const graphics::BufferAny & indexBuffer = *(aVertexStream.mIndexBufferView.mGLBuffer);
 
         const std::string meshName = aIn.readString();
 

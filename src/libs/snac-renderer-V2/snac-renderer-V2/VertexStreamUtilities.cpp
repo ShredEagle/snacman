@@ -9,7 +9,7 @@ namespace ad::renderer {
 namespace {
 
 
-    BufferView makeBufferView(graphics::BufferAny * aBuffer,
+    BufferView makeBufferView(const graphics::BufferAny * aBuffer,
                               GLsizei aElementSize,
                               GLsizeiptr aElementCount,
                               GLuint aInstanceDivisor,
@@ -83,7 +83,7 @@ Handle<VertexStream> primeVertexStream(const GenericStream & aGenericStream,
 
 void setIndexBuffer(Handle<VertexStream> aVertexStream, 
                     GLenum aIndexType,
-                    Handle<graphics::BufferAny> aIndexBuffer,
+                    Handle<const graphics::BufferAny> aIndexBuffer,
                     unsigned int aIndicesCount,
                     GLintptr aBufferOffset)
 {
@@ -98,7 +98,7 @@ void setIndexBuffer(Handle<VertexStream> aVertexStream,
 
 void addVertexAttributes(Handle<VertexStream> aVertexStream, 
                          AttributeDescription aAttribute,
-                         Handle<graphics::BufferAny> aVertexBuffer,
+                         Handle<const graphics::BufferAny> aVertexBuffer,
                          unsigned int aVerticesCount,
                          GLintptr aBufferOffset)
 {
@@ -114,6 +114,7 @@ void addVertexAttributes(Handle<VertexStream> aVertexStream,
             .mBufferViewIndex = aVertexStream->mVertexBufferViews.size(), // view is added next
             .mClientDataFormat{
                 .mDimension = aAttribute.mDimension,
+                // TODO allow interleaving of vertex attributes
                 .mOffset = 0, // No interleaving is hardcoded at the moment
                 .mComponentType = aAttribute.mComponentType,
             },
@@ -174,7 +175,6 @@ Handle<VertexStream> makeVertexStream(unsigned int aVerticesCount,
             GL_STATIC_DRAW,
             aStorage);
 
-        // TODO allow interleaving of vertex attributes
         vertexStream.mSemanticToAttribute.emplace(
             attribute.mSemantic,
             AttributeAccessor{

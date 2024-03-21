@@ -52,7 +52,7 @@ static constexpr auto gNullHandle = nullptr;
 struct BufferView
 {
     // TODO Ad 2024/03/05: This should probably be a direct GL name (probably via a Handle), not a pointer.
-    graphics::BufferAny * mGLBuffer;
+    const graphics::BufferAny * mGLBuffer;
     // The stride is at the view level (not buffer).
     // This way the buffer can store heterogeneous sections, accessed by distinct views.
     GLsizei mStride;

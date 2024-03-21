@@ -51,7 +51,7 @@ Handle<VertexStream> primeVertexStream(const GenericStream & aGenericStream,
 /// @brief Set the index buffer for `aStream`.
 void setIndexBuffer(Handle<VertexStream> aStream, 
                     GLenum aIndexType,
-                    Handle<graphics::BufferAny> aIndexBuffer,
+                    Handle<const graphics::BufferAny> aIndexBuffer,
                     unsigned int aIndicesCount,
                     GLintptr aBufferOffset = 0);
 
@@ -60,7 +60,7 @@ void setIndexBuffer(Handle<VertexStream> aStream,
 /// @brief Add vertex attributes to `aVertexStream`.
 void addVertexAttributes(Handle<VertexStream> aVertexStream, 
                          AttributeDescription aAttribute,
-                         Handle<graphics::BufferAny> aVertexBuffer,
+                         Handle<const graphics::BufferAny> aVertexBuffer,
                          unsigned int aVerticesCount,
                          GLintptr aBufferOffset = 0);
 
