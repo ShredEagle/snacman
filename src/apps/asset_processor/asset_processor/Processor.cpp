@@ -238,9 +238,7 @@ namespace {
     //      [mesh.faces(i.e. 3 unsigned int per face)]
     //      mesh.numBones
     //      <if mesh.hasBones>:
-    //          // TODO IF WE COULD INTERLEAVE ATTRIBUTES: [mesh.jointData (i.e 4 bone indices (unsigned int) then 4 bone weights (float), per vertex)]
-    //          [mesh.boneIndices (i.e 4 unsigned int per vertex)]
-    //          [mesh.boneWeights (i.e 4 floats per vertex)]
+    //          [mesh.jointData (i.e 4 bone indices (unsigned int) then 4 bone weights (float), per vertex)]
     //      mesh.boundingBox (AABB, as a math::Box<float>)
     //    node.rigCount <currently, only 0 or 1>// computed from the meshes with bones
     //    each node.Rig <at most 1>:
@@ -373,13 +371,13 @@ namespace {
                 // (in particular the fact that a single rig can be assigned to a Node)
                 assert(meshArmature == nodeRig->mCommonArmature);
 
-                VertexJointData jointData = populateJointData(nodeRig->mRig.mJoints,
-                                                              mesh,
-                                                              nodeRig->mAiNodeToTreeNode,
-                                                              nodeRig->mCommonArmature);
+                const std::vector<VertexJointData> jointData = 
+                    populateJointData(nodeRig->mRig.mJoints,
+                                      mesh,
+                                      nodeRig->mAiNodeToTreeNode,
+                                      nodeRig->mCommonArmature);
 
-                aWriter.forward(std::span{jointData.mBoneIndices});
-                aWriter.forward(std::span{jointData.mBoneWeights});
+                aWriter.forward(std::span{jointData});
             }
 
             aWriter.forward(meshAabb);

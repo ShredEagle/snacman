@@ -63,10 +63,7 @@ namespace {
         static_assert(VertexJointData::gMaxBones < std::numeric_limits<Counter_t>::max());
 
         JointDataManager(std::size_t aNumVertices) :
-            mVertexJointData{VertexJointData{
-                .mBoneIndices{aNumVertices, math::Vec<VertexJointData::gMaxBones, unsigned int>::Zero()},
-                .mBoneWeights{aNumVertices, math::Vec<VertexJointData::gMaxBones, float>::Zero()},
-            }},
+            mVertexJointData{aNumVertices},
             mVertexJointNumber(aNumVertices, Counter_t{0})
         {}
 
@@ -74,12 +71,12 @@ namespace {
         {
             Counter_t & nextInfluenceIdx = mVertexJointNumber[aVertexIdx];
             assert(nextInfluenceIdx < VertexJointData::gMaxBones);
-            mVertexJointData.mBoneIndices[aVertexIdx][nextInfluenceIdx] = aBoneIdx;
-            mVertexJointData.mBoneWeights[aVertexIdx][nextInfluenceIdx] = aWeight;
+            mVertexJointData[aVertexIdx].mBoneIndices[nextInfluenceIdx] = aBoneIdx;
+            mVertexJointData[aVertexIdx].mBoneWeights[nextInfluenceIdx] = aWeight;
             ++nextInfluenceIdx;
         }
 
-        VertexJointData mVertexJointData;
+        std::vector<VertexJointData> mVertexJointData;
         std::vector<Counter_t> mVertexJointNumber;
     };
 
@@ -115,10 +112,10 @@ std::pair<Rig, NodePointerMap> loadRig(const aiNode * aArmature)
 // * Populate the list of joints and their inverse bind matrices
 // * Populate the joint data vertex attributes (array of VertexJointData)
 //
-VertexJointData populateJointData(Rig::JointData & aOutJointData,
-                                  const aiMesh * aMesh,
-                                  const NodePointerMap & aAiNodeToTreeNode,
-                                  const aiNode * aExpectedArmature)
+std::vector<VertexJointData> populateJointData(Rig::JointData & aOutJointData,
+                                               const aiMesh * aMesh,
+                                               const NodePointerMap & aAiNodeToTreeNode,
+                                               const aiNode * aExpectedArmature)
 {
     JointDataManager jointData{aMesh->mNumVertices};
 

@@ -19,10 +19,10 @@ using NodePointerMap = std::unordered_map<const aiNode *, NodeTree<Rig::Pose>::N
 
 std::pair<Rig, NodePointerMap> loadRig(const aiNode * aArmature);
 
-VertexJointData populateJointData(Rig::JointData & aOutJointData,
-                                  const aiMesh * aMesh,
-                                  const NodePointerMap & aAiNodeToTreeNode,
-                                  const aiNode * aExpectedArmature);
+std::vector<VertexJointData> populateJointData(Rig::JointData & aOutJointData,
+                                               const aiMesh * aMesh,
+                                               const NodePointerMap & aAiNodeToTreeNode,
+                                               const aiNode * aExpectedArmature);
 
 
 } // namespace ad::renderer

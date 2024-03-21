@@ -96,11 +96,11 @@ void setIndexBuffer(Handle<VertexStream> aVertexStream,
 }
 
 
-void addVertexAttributes(Handle<VertexStream> aVertexStream, 
-                         AttributeDescription aAttribute,
-                         Handle<const graphics::BufferAny> aVertexBuffer,
-                         unsigned int aVerticesCount,
-                         GLintptr aBufferOffset)
+void addVertexAttribute(Handle<VertexStream> aVertexStream, 
+                        AttributeDescription aAttribute,
+                        Handle<const graphics::BufferAny> aVertexBuffer,
+                        unsigned int aVerticesCount,
+                        GLintptr aBufferOffset)
 {
     BufferView attributeView = makeBufferView(aVertexBuffer,
                                               getByteSize(aAttribute),
@@ -111,10 +111,9 @@ void addVertexAttributes(Handle<VertexStream> aVertexStream,
     aVertexStream->mSemanticToAttribute.emplace(
         aAttribute.mSemantic,
         AttributeAccessor{
-            .mBufferViewIndex = aVertexStream->mVertexBufferViews.size(), // view is added next
+            .mBufferViewIndex = aVertexStream->mVertexBufferViews.size(), // view is added below
             .mClientDataFormat{
                 .mDimension = aAttribute.mDimension,
-                // TODO allow interleaving of vertex attributes
                 .mOffset = 0, // No interleaving is hardcoded at the moment
                 .mComponentType = aAttribute.mComponentType,
             },
@@ -125,12 +124,43 @@ void addVertexAttributes(Handle<VertexStream> aVertexStream,
 }
 
 
+void addInterleavedVertexAttributes(Handle<VertexStream> aVertexStream, 
+                                    GLsizei aElementStride,
+                                    std::span<const std::pair<AttributeDescription, size_t>> aAttributesAndOffsets,
+                                    Handle<const graphics::BufferAny> aVertexBuffer,
+                                    unsigned int aVerticesCount,
+                                    GLintptr aBufferOffset)
+{
+    BufferView attributeView = makeBufferView(aVertexBuffer,
+                                              aElementStride,
+                                              aVerticesCount,
+                                              0, // This is a per vertex attribute, divisor is 0
+                                              aBufferOffset);
+
+    for(const auto & [attribute, offset] : aAttributesAndOffsets)
+    {
+        aVertexStream->mSemanticToAttribute.emplace(
+            attribute.mSemantic,
+            AttributeAccessor{
+                .mBufferViewIndex = aVertexStream->mVertexBufferViews.size(), // view is added below
+                .mClientDataFormat{
+                    .mDimension = attribute.mDimension,
+                    .mOffset = offset,
+                    .mComponentType = attribute.mComponentType,
+                },
+            });
+    }
+
+    aVertexStream->mVertexBufferViews.push_back(std::move(attributeView));
+}
+
+
 
 Handle<ConfiguredProgram> storeConfiguredProgram(IntrospectProgram aProgram, Storage & aStorage)
 {
     aStorage.mPrograms.push_back(ConfiguredProgram{
         .mProgram = std::move(aProgram),
-        // TODO Share Configs between programs that are compatibles (i.e., same input semantic and type at same attribute index)
+        // TODO #perf Share Configs between programs that are compatibles (i.e., same input semantic and type at same attribute index)
         // (For simplicity, we create one Config per program at the moment).
         .mConfig = (aStorage.mProgramConfigs.emplace_back(), &aStorage.mProgramConfigs.back()),
     });

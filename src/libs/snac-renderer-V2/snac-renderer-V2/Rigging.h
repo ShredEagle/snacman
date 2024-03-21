@@ -211,18 +211,14 @@ struct AnimatedRig
 };
 
 
-/// @brief Per-vertex data required for skeletal animation, usually used as generic vertex attribute.
+/// @brief Per-vertex data required for skeletal animation, intended as generic vertex attribute.
 struct VertexJointData
 {
     static constexpr std::size_t gMaxBones = 4;
     using BoneIndex_t = unsigned int; // TODO #perf use a more compact type than uint
 
-    // Would require attribute interleaving, and VertexJointData would be per-vertex 
-    // (instead of containing all vertices)
-    //math::Vec<gMaxBones, unsigned int> mBoneIndices{math::Vec<gMaxBones, unsigned int>::Zero()};
-    //math::Vec<gMaxBones, float> mBoneWeights{math::Vec<gMaxBones, float>::Zero()};
-    std::vector<math::Vec<gMaxBones, BoneIndex_t>> mBoneIndices; 
-    std::vector<math::Vec<gMaxBones, float>> mBoneWeights;
+    math::Vec<gMaxBones, unsigned int> mBoneIndices{math::Vec<gMaxBones, unsigned int>::Zero()};
+    math::Vec<gMaxBones, float> mBoneWeights{math::Vec<gMaxBones, float>::Zero()};
 };
 
 

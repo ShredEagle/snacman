@@ -56,13 +56,23 @@ void setIndexBuffer(Handle<VertexStream> aStream,
                     GLintptr aBufferOffset = 0);
 
 
-// TODO extend for interleaving
-/// @brief Add vertex attributes to `aVertexStream`.
-void addVertexAttributes(Handle<VertexStream> aVertexStream, 
+/// @brief Add a single vertex attributes to `aVertexStream`.
+void addVertexAttribute(Handle<VertexStream> aVertexStream, 
                          AttributeDescription aAttribute,
                          Handle<const graphics::BufferAny> aVertexBuffer,
                          unsigned int aVerticesCount,
                          GLintptr aBufferOffset = 0);
+
+
+/// @brief Add several vertex attributes to `aVertexStream`. Their data is interleaved in `aVertexBuffer`.
+/// @param aElementStride The size of the client (Cpp) struct containing the interleaved data for a single vertex.
+///        It is taken separately, since the struct might not match the sum size of attributes (padding, ...)
+void addInterleavedVertexAttributes(Handle<VertexStream> aVertexStream, 
+                                    GLsizei aElementStride,
+                                    std::span<const std::pair<AttributeDescription, size_t>> aAttributesAndOffsets,
+                                    Handle<const graphics::BufferAny> aVertexBuffer,
+                                    unsigned int aVerticesCount,
+                                    GLintptr aBufferOffset = 0);
 
 
 /*
