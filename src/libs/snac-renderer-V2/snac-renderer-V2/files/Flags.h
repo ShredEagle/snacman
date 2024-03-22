@@ -8,7 +8,7 @@ constexpr unsigned int gVertexPosition = 0b1;
 constexpr unsigned int gVertexNormal = gVertexPosition << 1;
 constexpr unsigned int gVertexTangent = gVertexPosition << 2;
 
-bool has(unsigned int aFlags, unsigned int aTag)
+inline bool has(unsigned int aFlags, unsigned int aTag)
 {
     return (aFlags & aTag) == aTag;
 }

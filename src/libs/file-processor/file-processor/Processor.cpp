@@ -4,6 +4,7 @@
 #include "Logging.h"
 #include "ProcessAnimation.h"
 
+#include <assimp/DefaultLogger.hpp>
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
@@ -17,10 +18,9 @@
 #include <snac-renderer-V2/Material.h>
 #include <snac-renderer-V2/files/BinaryArchive.h>
 #include <snac-renderer-V2/files/Flags.h>
+#include <snac-renderer-V2/files/Versioning.h>
 
 #include <fmt/ostream.h>
-
-#include <assimp/DefaultLogger.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -40,8 +40,8 @@ namespace {
                 .mParentPath = aDestinationFile.parent_path(),
             }
         {
-            unsigned int version = 1;
-            mArchive.write(version);
+            mArchive.write(gSeumMagic);
+            mArchive.write(gSeumVersion);
         }
 
         void write(const aiNode * aNode)
@@ -64,7 +64,7 @@ namespace {
             aiVector3D * tangents = aMesh->mTangents;
             // positions and normals are always required
             unsigned int vertexAttributesFlags = gVertexPosition | gVertexNormal;
-            // Note: For the moment, since the structure of the loader if too rigid
+            // Note: For the moment, since the structure of the loader is too rigid
             // the tangents are mandatory (the vertexAttributesFlags is an illusion)
             // TODO Ad 2024/02/21: #assetprocessor Can we handle "dynamic" list of vertex attributes?
             // (e.g., making tangents optional)
@@ -922,6 +922,11 @@ void processModel(const std::filesystem::path & aFile)
     if(auto nodeRig = topResult.mNodeRig)
     {
         dumpAnimations(scene, *nodeRig, writer);
+    }
+    else
+    {
+        // Otherwise, there are zero animations
+        writer.forward((unsigned int)0);
     }
 
     dumpMaterials(scene, writer);

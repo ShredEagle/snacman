@@ -22,9 +22,10 @@ set(${TARGET_NAME}_HEADERS
     debug/DebugDrawing.h
     debug/DebugRenderer.h
 
-    files/Flags.h
     files/BinaryArchive.h
+    files/Flags.h
     files/Loader.h
+    files/Versioning.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -81,6 +82,8 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 ##
 ## Dependencies
 ##
+
+cmc_find_dependencies()
 
 target_link_libraries(${TARGET_NAME}
     PUBLIC
