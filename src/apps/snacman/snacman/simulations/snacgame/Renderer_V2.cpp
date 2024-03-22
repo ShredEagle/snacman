@@ -28,9 +28,12 @@
 #include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/SetupDrawing.h>
 
+#include <snacman/Logging.h>
 #include <snacman/Profiling.h>
 #include <snacman/ProfilingGPU.h>
 #include <snacman/Resources.h>
+
+#include <file-processor/Processor.h>
 
 // TODO #generic-render remove once all geometry and shader programs are created
 // outside.
@@ -61,14 +64,39 @@ Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
 
 
 Handle<renderer::Node> Renderer_V2::loadModel(filesystem::path aModel,
-                                                           filesystem::path aEffect, 
-                                                           Resources_t & aResources)
+                                              filesystem::path aEffect, 
+                                              Resources_t & aResources)
 {
-    return std::make_shared<renderer::Node>(
-        loadBinary(aModel, 
-                   mRendererToKeep.mStorage,
-                   aResources.loadEffect(aEffect, mRendererToKeep.mStorage),
-                   mRendererToKeep.mRenderGraph.mInstanceStream));
+    if(auto loadResult = loadBinary(aModel, 
+                                    mRendererToKeep.mStorage,
+                                    aResources.loadEffect(aEffect, mRendererToKeep.mStorage),
+                                    mRendererToKeep.mRenderGraph.mInstanceStream);
+        std::holds_alternative<renderer::Node>(loadResult))
+    {
+        return std::make_shared<renderer::Node>(std::get<renderer::Node>(loadResult));
+    }
+    else
+    {
+        auto errorCode = std::get<renderer::SeumErrorCode>(loadResult);
+        if(auto basePath = filesystem::path{aModel}.replace_extension(".gltf");
+           errorCode == renderer::SeumErrorCode::OutdatedVersion && is_regular_file(basePath))
+        {
+            SELOG(warn)("Failed to load '{}', error code '{}'. Attempting to re-process file '{}'.", 
+                        aModel.string(),
+                        (unsigned int)errorCode,
+                        basePath.string());
+            ad::renderer::processModel(basePath);
+            // Note: This recursion intention is to try again **one** time, since the seum file has been processed
+            //       and should now match the current version (which would prevent re-satisfying this condition)
+            //       This is quite brittle, and could lead to infinite loops.
+            return loadModel(aModel, aEffect, aResources);
+        }
+
+        SELOG(critical)("Failed to load '{}', error code '{}'.", 
+                        aModel.string(),
+                        (unsigned int)errorCode);
+        throw std::runtime_error{"Invalid binary file in loadModel()."};
+    }
 }
 
 std::shared_ptr<snac::Font> Renderer_V2::loadFont(arte::FontFace aFontFace,

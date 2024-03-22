@@ -33,10 +33,20 @@ Scene loadScene(const filesystem::path & aSceneFile,
         std::vector<std::string> defines = entry["features"].get<std::vector<std::string>>();
         filesystem::path modelFile = entry.at("model");
 
-        Node model = loadBinary(workingDir / modelFile,
-                                aStorage,
-                                aLoader.loadEffect(entry["effect"], aStorage, defines),
-                                aStream);
+        Node model;
+        if(auto loadResult = loadBinary(workingDir / modelFile,
+                                        aStorage,
+                                        aLoader.loadEffect(entry["effect"], aStorage, defines),
+                                        aStream);
+           ! std::holds_alternative<Node>(loadResult))
+        {
+            SELOG(critical)("Failed to load '{}'", (workingDir / modelFile).string());
+            throw std::runtime_error{"Invalid binary file."};
+        }
+        else
+        {
+            model = std::get<Node>(loadResult);
+        }
 
         // TODO store and load names in the binary file format
         SELOG(info)("Loaded model '{}' with bouding box {}.",

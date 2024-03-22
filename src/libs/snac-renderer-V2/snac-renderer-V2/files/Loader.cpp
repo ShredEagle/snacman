@@ -2,6 +2,7 @@
 
 #include "BinaryArchive.h" 
 #include "Flags.h" 
+#include "Versioning.h" 
 
 #include "../Cube.h"
 #include "../Json.h"
@@ -680,20 +681,41 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
 
 // TODO should not take a default effect, but have a way to get the actual effect to use 
 // (maybe directly from the binary file)
-Node loadBinary(const std::filesystem::path & aBinaryFile,
-                Storage & aStorage,
-                Effect * aPartsEffect,
-                const GenericStream & aStream)
+std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBinaryFile,
+                                             Storage & aStorage,
+                                             Effect * aPartsEffect,
+                                             const GenericStream & aStream)
 {
+    if(aBinaryFile.extension() != ".seum")
+    {
+        SELOG(error)("Files with extension '{}' are not supported.",
+                     aBinaryFile.extension().string());
+        return SeumErrorCode::UnsupportedFormat;
+    }
+
     BinaryInArchive in{
         .mIn{std::ifstream{aBinaryFile, std::ios::binary}},
         .mParentPath{aBinaryFile.parent_path()},
     };
 
     // TODO we need a unified design where the load code does not duplicate the type of the write.
+    std::uint16_t magicValue{0};
+    in.read(magicValue);
+    if(magicValue != gSeumMagic)
+    {
+        SELOG(error)("The seum magic preamble is not matching.");
+        return SeumErrorCode::InvalidMagicPreamble;
+    }
+
     unsigned int version;
     in.read(version);
-    assert(version == 1);
+    assert(version <= gSeumVersion);
+    if(version != gSeumVersion)
+    {
+        SELOG(warn)("The provided binary has version {}, but current version of the format is {}.", 
+                    version, gSeumVersion);
+        return SeumErrorCode::OutdatedVersion;
+    }
 
     unsigned int verticesCount = 0;
     unsigned int indicesCount = 0;

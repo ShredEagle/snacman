@@ -8,6 +8,7 @@
 #include <resource/ResourceFinder.h>
 
 #include <filesystem>
+#include <variant>
 
 
 namespace ad::renderer {
@@ -23,12 +24,20 @@ struct InstanceData
 
 // IMPORTANT: for the moment, just load the first vertex stream in the file
 // has to be extended to actually load complex models.
-Node loadBinary(const std::filesystem::path & aBinaryFile,
-                Storage & aStorage,
-                Effect * aPartsEffect,
-                // TODO should be replaced by the Handle to a shared VertexStream (when it is properly reused),
-                // stream already containing the instance data
-                const GenericStream & aStream/*to provide instance data, such as model transform*/);
+enum class SeumErrorCode
+{
+    NoError, // Should never be returned
+    InvalidMagicPreamble,
+    UnsupportedFormat,
+    OutdatedVersion,
+};
+
+std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBinaryFile,
+                                             Storage & aStorage,
+                                             Effect * aPartsEffect,
+                                             // TODO should be replaced by the Handle to a shared VertexStream (when it is properly reused),
+                                             // stream already containing the instance data
+                                             const GenericStream & aStream/*to provide instance data, such as model transform*/);
 
 
 /// @brief Load a triangle and a cube models in the same buffer objects (they do not share vertices though).

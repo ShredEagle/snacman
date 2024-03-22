@@ -220,6 +220,7 @@ find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
+        ad::file-processor
         ad::profiler
         ad::snac-renderer-V1 # TODO #RV2 remove
         ad::snac-renderer-V2
