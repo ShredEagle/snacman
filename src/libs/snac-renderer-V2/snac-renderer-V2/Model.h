@@ -151,7 +151,7 @@ struct Material
     std::size_t mNameArrayOffset = (std::size_t)-1;
 
     // Allow sorting on the Handle, if the MaterialContext are consolidated.
-    // (lookup for an existing MaterialContext should be done by consolidation when the material in instantiated,
+    // (lookup for an existing MaterialContext should be done by consolidation when the material is instantiated,
     // not each frame)
     Handle<MaterialContext> mContext = gNullHandle;
 
