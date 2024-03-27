@@ -12,12 +12,11 @@ namespace ad::snacgame {
 
 // TODO Ad 2024/03/26: #RV2 API get rid of those, or refactor and relocate them
 
-inline renderer::Handle<renderer::Object> recurseToObject(const renderer::Node & aNode)
+inline renderer::Handle<const renderer::Object> recurseToObject(const renderer::Node & aNode)
 {
     if(auto object = aNode.mInstance.mObject; object != renderer::gNullHandle)
     {
         return object;
-
     }
 
     for(const renderer::Node & child : aNode.mChildren)
@@ -32,7 +31,7 @@ inline renderer::Handle<renderer::Object> recurseToObject(const renderer::Node &
     return renderer::gNullHandle;
 }
 
-inline renderer::Handle<renderer::Object> extractObject(const component::VisualModel & aVisualModel)
+inline renderer::Handle<const renderer::Object> extractObject(const component::VisualModel & aVisualModel)
 {
     auto result = recurseToObject(*aVisualModel.mModel);
 

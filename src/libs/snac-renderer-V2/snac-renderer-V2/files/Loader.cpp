@@ -224,7 +224,7 @@ namespace {
     }
 
 
-    Object * addObject(Storage & aStorage)
+    Handle<Object> addObject(Storage & aStorage)
     {
         aStorage.mObjects.emplace_back();
         return &aStorage.mObjects.back();
@@ -248,20 +248,28 @@ namespace {
         math::Matrix<4, 3, GLfloat> localTransformation;
         aIn.read(localTransformation);
 
+        Handle<Object> object = [&]()
+        {
+            Handle<Object> result = (meshesCount > 0) ? addObject(aStorage) : gNullHandle;
+
+            for(std::size_t meshIdx = 0; meshIdx != meshesCount; ++meshIdx)
+            {
+                result->mParts.push_back(
+                    loadMesh(aIn, aVertexStream, aVertexFirst, aIndexFirst, aBaseMaterial)
+                );
+            }
+
+            return result;
+        }();
+
         Node node{
             .mInstance{
-                .mObject = (meshesCount > 0) ? addObject(aStorage) : nullptr,
+                .mObject = object,
                 .mPose = decompose(math::AffineMatrix<4, GLfloat>{localTransformation}),
                 .mName = std::move(name),
             },
         };
 
-        for(std::size_t meshIdx = 0; meshIdx != meshesCount; ++meshIdx)
-        {
-            node.mInstance.mObject->mParts.push_back(
-                loadMesh(aIn, aVertexStream, aVertexFirst, aIndexFirst, aBaseMaterial)
-            );
-        }
         
         // Rig of the Node
         unsigned int rigCount;
@@ -301,7 +309,7 @@ namespace {
             rig.mArmatureName = aIn.readString();
 
             aStorage.mAnimatedRigs.push_back({.mRig = std::move(rig)});
-            node.mInstance.mObject->mAnimatedRig = &aStorage.mAnimatedRigs.back();
+            object->mAnimatedRig = &aStorage.mAnimatedRigs.back();
         }
 
 
@@ -309,7 +317,7 @@ namespace {
         aIn.read(objectAabb);
         if(node.mInstance.mObject != nullptr)
         {
-            node.mInstance.mObject->mAabb = objectAabb;
+            object->mAabb = objectAabb;
         }
 
         for(std::size_t childIdx = 0; childIdx != childrenCount; ++childIdx)

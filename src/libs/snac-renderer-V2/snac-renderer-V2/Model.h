@@ -284,7 +284,7 @@ struct AnimationState
 /// Equivalent to a "Shape" in the shape list from AZDO talks.
 struct Instance
 {
-    Handle<Object> mObject; // TODO: can we const it?
+    Handle<const Object> mObject;
     Pose mPose;
     // TODO #matref
     std::optional<Material> mMaterialOverride;

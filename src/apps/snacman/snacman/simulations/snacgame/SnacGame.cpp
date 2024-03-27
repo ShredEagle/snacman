@@ -449,7 +449,7 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
         }
 
         // #RV2 API: this is a non-sense to do that each frame
-        renderer::Handle<renderer::Object> object = extractObject(aVisualModel);
+        renderer::Handle<const renderer::Object> object = extractObject(aVisualModel);
         state->mEntities.insert(
             aHandle.id(),
             visu_V2::Entity{

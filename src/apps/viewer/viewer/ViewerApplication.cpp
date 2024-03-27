@@ -181,7 +181,7 @@ namespace {
             aMaterialOverride = &*instance.mMaterialOverride;
         }
 
-        if(Object * object = aNode.mInstance.mObject;
+        if(const Object * object = aNode.mInstance.mObject;
            object != nullptr)
         {
             // the default value (i.e. not rigged)
