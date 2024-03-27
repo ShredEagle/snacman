@@ -1,6 +1,6 @@
 #include "OrbitalControlInput.h"
 
-#include "GraphicState.h"
+#include "GraphicState_V2.h"
 
 #include <snacman/Input.h>
 
@@ -31,7 +31,7 @@ void OrbitalControlInput::update(const RawInput & aInput,
 }
 
 
-visu::Camera OrbitalControlInput::getCameraState()
+visu_V2::Camera OrbitalControlInput::getCameraState()
 {
     return {
         .mWorldToCamera = mOrbital.getParentToLocal(),

@@ -161,10 +161,5 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
                                          std::string aText,
                                          const component::GlobalPose & aPose);
 
-ent::Handle<ent::Entity>
-createAnimatedTest(GameContext & aContext,
-                   ent::Phase & aPhase,
-                   snac::Clock::time_point aStartTime,
-                   const math::Position<2, float> & aGridPos);
 } // namespace snacgame
 } // namespace ad

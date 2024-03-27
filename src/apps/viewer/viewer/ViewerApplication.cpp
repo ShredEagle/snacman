@@ -199,7 +199,7 @@ namespace {
                 aPartList.mRiggingPalettes.reserve(aPartList.mRiggingPalettes.size() + rig.countJoints());
                 rig.computeJointMatrices(
                         std::back_inserter(aPartList.mRiggingPalettes), 
-                        aNode.mInstance.mAnimation ? aNode.mInstance.mAnimation->mPosedTree 
+                        aNode.mInstance.mAnimationState ? aNode.mInstance.mAnimationState->mPosedTree 
                                                    : animatedRig->mRig.mJointTree);
             }
 
@@ -428,7 +428,7 @@ void handleAnimations(Node & aNode,
     Pose pose = aParentPose.transform(aNode.mInstance.mPose);
     if(const Object * object = aNode.mInstance.mObject)
     {
-        if(auto & animationState = aNode.mInstance.mAnimation)
+        if(auto & animationState = aNode.mInstance.mAnimationState)
         {
             assert(object->mAnimatedRig);
             const RigAnimation & animation = *animationState->mAnimation;
@@ -444,7 +444,7 @@ void handleAnimations(Node & aNode,
             const Rig & rig = object->mAnimatedRig->mRig;
             drawJointTree(rig.mJointTree,
                             rig.mJointTree.mFirstRoot,
-                            aNode.mInstance.mAnimation ? aNode.mInstance.mAnimation->mPosedTree
+                            aNode.mInstance.mAnimationState ? aNode.mInstance.mAnimationState->mPosedTree
                                                         : rig.mJointTree,
                             static_cast<math::AffineMatrix<4, float>>(pose));
         }

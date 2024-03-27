@@ -11,9 +11,9 @@ namespace ad {
 namespace ad::snacgame {
 
 
-namespace visu {
+namespace visu_V2 {
     struct Camera;
-} // namespace visu
+} // namespace visu_V2 
 
 /// @brief Controls an orbital from RawInput
 struct OrbitalControlInput
@@ -23,7 +23,7 @@ struct OrbitalControlInput
                 int aWindowHeight_screen);
     
 
-    visu::Camera getCameraState();
+    visu_V2::Camera getCameraState();
 
     renderer::Orbital mOrbital;
 

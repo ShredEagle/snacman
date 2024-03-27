@@ -35,6 +35,8 @@
 #include "system/SystemOrbitalCamera.h"
 #include "typedef.h"
 
+#include <snacman/TemporaryRendererHelpers.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -339,6 +341,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 {
                     Phase pathfinding;
                     Entity pEntity = *pathfinder.get(pathfinding);
+                    assert(false && "Sorry, I removed support for cube special case");
                     addMeshGeoNode(mGameContext, pEntity, "CUBE",
                                    "effects/Mesh.sefx", {7.f, 7.f, gPillHeight},
                                    1.f, {0.5f, 0.5f, 0.5f});
@@ -410,11 +413,12 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
     return false;
 }
 
-std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
+
+std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
 {
     TIME_RECURRING_FUNC(Main);
 
-    auto state = std::make_unique<visu::GraphicState>();
+    auto state = std::make_unique<Renderer_t::GraphicState_t>();
 
     ent::Phase nomutation;
 
@@ -433,27 +437,32 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         // but we do not want to handle VisualModel the same way depending on
         // the presence of RigAnimation (and we do not have "negation" on
         // Queries, to separately get VisualModels without RigAnimation)
-        visu::Entity::SkeletalAnimation skeletal;
+        visu_V2::Entity::SkeletalAnimation skeletal;
         if (auto entity = *aHandle.get(); entity.has<component::RigAnimation>())
         {
-            // TODO #RV2 animation
-            //const auto & rigAnimation =
-            //    aHandle.get()->get<component::RigAnimation>();
-            //skeletal = visu::Entity::SkeletalAnimation{
-            //    .mRig = &aVisualModel.mModel->mRig,
-            //    .mAnimation = rigAnimation.mAnimation,
-            //    .mParameterValue = rigAnimation.mParameterValue,
-            //};
+            const auto & rigAnimation =
+                aHandle.get()->get<component::RigAnimation>();
+            skeletal = visu_V2::Entity::SkeletalAnimation{
+                .mAnimation = rigAnimation.mAnimation,
+                .mParameterValue = rigAnimation.mParameterValue,
+            };
         }
+
+        // #RV2 API: this is a non-sense to do that each frame
+        renderer::Handle<renderer::Object> object = extractObject(aVisualModel);
         state->mEntities.insert(
             aHandle.id(),
-            visu::Entity{
+            visu_V2::Entity{
                 .mPosition_world = aGlobPose.mPosition,
                 .mScaling = aGlobPose.mInstanceScaling * aGlobPose.mScaling,
                 .mOrientation = aGlobPose.mOrientation,
                 .mColor = aGlobPose.mColor,
-                .mModel = aVisualModel.mModel,
-                .mRigging = std::move(skeletal),
+                .mInstance = renderer::Instance{
+                    .mObject = object,
+                    .mPose = {},// TODO #RV2 pose
+                    .mName = aHandle.name(),
+                },
+                .mAnimationState = std::move(skeletal),
                 .mDisableInterpolation = aVisualModel.mDisableInterpolation,
             });
         // Note: Although it does not feel correct, this is a convenient place
@@ -471,7 +480,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
             {
         state->mTextWorldEntities.insert(
             aHandle.id(),
-            visu::Text{
+            visu_V2::Text{
                 .mPosition_world = aGlobPose.mPosition,
                 // TODO remove the hardcoded value of 100
                 // Note hardcoded 100 scale down. Because I'd like a value of 1
@@ -505,7 +514,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
         state->mTextScreenEntities.insert(
             aHandle.id(),
-            visu::Text{
+            visu_V2::Text{
                 .mPosition_world = position_screenPix,
                 .mScaling = math::Size<3, float>{aPose.mScale, 1.f},
                 .mOrientation =

@@ -4,9 +4,11 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Commons.h
     Cube.h
+    Handle.h
     IntrospectProgram.h
     Json.h
     Logging.h
+    Logging-channels.h
     Logging-init.h
     Model.h
     Material.h

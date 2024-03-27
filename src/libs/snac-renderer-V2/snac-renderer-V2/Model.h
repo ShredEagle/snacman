@@ -2,6 +2,7 @@
 
 
 #include "Commons.h" 
+#include "Handle.h"
 #include "IntrospectProgram.h" 
 #include "Material.h"
 #include "Repositories.h"
@@ -14,7 +15,7 @@
 #include <math/Box.h>
 #include <math/Vector.h>
 
-// TODO this is a bit of heavy includes for the general Model file.
+// TODO #compiletime this is a bit of heavy includes for the general Model file.
 #include <list>
 #include <map>
 #include <optional>
@@ -29,14 +30,6 @@ namespace ad::renderer {
 // Do we accept to pollute the object model? (The initial approach, as of this writing)
 // I feel maybe there is a more data-oriented design lurking here...
 using Name = std::string;
-
-// TODO Ad 2023/08/04: #handle Define a Handle wrapper which makes sense.
-// Note that a central question will be whether we have a "global" storage 
-// (thus handle can be dereferenced without a storage param / without storing a pointer to storage) or not?
-template <class T>
-using Handle = T *;
-
-static constexpr auto gNullHandle = nullptr;
 
 //
 // GL coupled (low level)
@@ -234,9 +227,11 @@ struct Object
 {
     std::vector<Part> mParts;
     math::Box<GLfloat> mAabb;
-    // TODO should we only store the Rig?
+    // TODO #animation should we only store the Rig?
     // Storing both is convenient to enumerate in the viewer GUI.
     // Yet the pure animation feature only require the Rig data.
+    // (and it would make sense that even the Viewer has its data-model wrapping this Model,
+    //  to store its client data such as animation lists for Rigs, animation state of Objects, etc...)
     Handle<AnimatedRig> mAnimatedRig = gNullHandle;
 };
 
@@ -289,7 +284,7 @@ struct AnimationState
 /// Equivalent to a "Shape" in the shape list from AZDO talks.
 struct Instance
 {
-    Object * mObject;
+    Handle<Object> mObject; // TODO: can we const it?
     Pose mPose;
     // TODO #matref
     std::optional<Material> mMaterialOverride;
@@ -298,7 +293,7 @@ struct Instance
     // (SOA NodeTree is a good candidate, with hashmap for optionals).
     // Note: This is a bad design: Instances without an Object cannot have animation.
     // Yet this model would allow it.
-    std::optional<AnimationState> mAnimation; 
+    std::optional<AnimationState> mAnimationState; 
     Name mName;
 };
 

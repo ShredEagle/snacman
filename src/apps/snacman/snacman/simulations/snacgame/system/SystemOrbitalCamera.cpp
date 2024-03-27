@@ -1,9 +1,12 @@
 #include "SystemOrbitalCamera.h"
-#include "snacman/simulations/snacgame/GameParameters.h"
+
+#include "../GraphicState_V2.h"
+#include "../GameParameters.h"
 
 #include "../component/Geometry.h"
 
 #include <entity/EntityManager.h>
+
 
 namespace ad {
 namespace snacgame {
@@ -29,7 +32,7 @@ void OrbitalCamera::update(const RawInput & aInput,
 }
 
 
-visu::Camera OrbitalCamera::getCamera() const
+visu_V2::Camera OrbitalCamera::getCamera() const
 {
     return mControl->getCameraState();
 }

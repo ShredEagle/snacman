@@ -188,7 +188,10 @@ std::unique_ptr<visu::GraphicState> ModelLoader::makeGraphicState()
     //        });
     //    });
 
-    state->mCamera = mOrbitalControl.getCameraState();
+    // V2 to V1 patch...
+    state->mCamera = visu::Camera{
+        .mWorldToCamera = mOrbitalControl.getCameraState().mWorldToCamera
+    };
 
     //state->mDebugDrawList = snac::DebugDrawer::EndFrame();
 

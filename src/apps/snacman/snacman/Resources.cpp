@@ -23,7 +23,11 @@ Resources::~Resources()
 
 snacgame::Handle<renderer::Node> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
 {
-    // This is bad design, but lazy to get the result quickly
+    // TODO Ad 2024/03/27: Since it will reuse the effect of first load,
+    // we should explicitly error if an already-loader model is requested with a different effect file.
+
+    // TODO: remove this cube section when we fill confident there are not requests left in the code
+    // This was bad design, but lazy to get the result quickly
     if(aModel.string() == "CUBE")
     {
         throw std::invalid_argument("'CUBE' hardcoded model is now deprecated.");

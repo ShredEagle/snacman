@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "GraphicState.h"
+#include "GraphicState_V2.h"
 #include "Handle_V2.h"
 
 // TODO Ad 2024/02/13: #RV2 Remove all V1 stuff
@@ -46,6 +46,7 @@ namespace semantic {
 
     BLOCK_SEM(ViewProjection);
     BLOCK_SEM(Materials);
+    BLOCK_SEM(JointMatrices);
 
     #undef SEMANTIC
 } // namespace semantic
@@ -149,7 +150,7 @@ class Renderer_V2
     };
 
 public:
-    using GraphicState_t = visu::GraphicState;
+    using GraphicState_t = visu_V2::GraphicState;
 
     using Resources_t = Resources_V2;
 
@@ -175,7 +176,7 @@ public:
 
     void continueGui();
 
-    void render(const visu::GraphicState & aState);
+    void render(const GraphicState_t & aState);
 
     /// \brief Forwards the request to reset repositories down to the generic renderer.
     void resetRepositories()
@@ -197,6 +198,9 @@ private:
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;
+
+    // Intended for local storage, made a member so its reuses the allocated memory between frames.
+    std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
     graphics::UniformBufferObject mJointMatrices;};
 
 

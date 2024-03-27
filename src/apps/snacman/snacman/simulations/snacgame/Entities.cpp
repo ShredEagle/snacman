@@ -28,6 +28,8 @@
 #include "ModelInfos.h"
 #include "typedef.h"
 
+#include <snacman/TemporaryRendererHelpers.h>
+
 #include <algorithm>
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
@@ -134,34 +136,6 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
              })
         .add(aPose)
         .add(component::GameTransient{});
-
-    return handle;
-}
-
-ent::Handle<ent::Entity>
-createAnimatedTest(GameContext & aContext,
-                   Phase & aPhase,
-                   snac::Clock::time_point aStartTime,
-                   const math::Position<2, float> & aGridPos)
-{
-    auto handle = aContext.mWorld.addEntity();
-    Entity entity = *handle.get(aPhase);
-    auto model = addMeshGeoNode(
-        aContext, entity, "models/anim/anim.gltf", "effects/MeshRigging.sefx",
-        {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
-         gLevelHeight},
-        0.45f, lLevelElementScaling,
-        math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
-                                math::Turn<float>{0.25f}});
-    // TODO #RV2 animation
-    //const snac::NodeAnimation & animation = model->mAnimations.begin()->second;
-    //entity.add(component::RigAnimation{
-    //    .mAnimation = &animation,
-    //    .mStartTime = aStartTime,
-    //    .mParameter =
-    //        decltype(component::RigAnimation::mParameter){animation.mEndTime},
-    //});
-    entity.add(component::GameTransient{});
 
     return handle;
 }
@@ -441,26 +415,24 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
 
         auto modelData = addMeshGeoNode(
             aContext, model, "models/donut/donut.gltf",
-            // TODO #RV2 animation Change back to the rigging effect!
-            //"effects/MeshRiggingTextures.sefx",
-            "effects/Mesh.sefx",
+            "effects/MeshRiggingTextures.sefx",
             Pos3::Zero(), 1.f,
             gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation,
             gSlotColors.at(slot.mSlotIndex));
 
-        // TODO #RV2 animation
-        //std::string animName = "idle";
-        //const snac::NodeAnimation & animation =
-        //    modelData->mAnimations.at(animName);
-        //model.add(component::RigAnimation{
-        //    .mAnimName = animName,
-        //    .mAnimation = &animation,
-        //    .mAnimationMap = &modelData->mAnimations,
-        //    .mStartTime = snac::Clock::now(),
-        //    .mParameter =
-        //        decltype(component::RigAnimation::mParameter){
-        //            animation.mEndTime},
-        //});
+        const std::string animName = "idle";
+        // TODO #RV2 API
+        auto object = recurseToObject(*modelData);
+        assert(object);
+        const renderer::RigAnimation & animation = object->mAnimatedRig->mNameToAnimation.at(animName);
+        model.add(component::RigAnimation{
+            .mAnimation = &animation,
+            .mAnimatedRig = object->mAnimatedRig,
+            .mStartTime = snac::Clock::now(),
+            .mParameter =
+                decltype(component::RigAnimation::mParameter){
+                    animation.mDuration},
+        });
     }
 
     return playerModelHandle;
@@ -706,28 +678,29 @@ EntHandle createPortalImage(GameContext & aContext,
         Phase addPortalImage;
         component::Geometry modelGeo =
             aPlayerData.mModel.get()->get<component::Geometry>();
-        // TODO #RV2 animation
-        //component::RigAnimation animation =
-        //    aPlayerData.mModel.get()->get<component::RigAnimation>();
+
+        component::RigAnimation animation =
+            aPlayerData.mModel.get()->get<component::RigAnimation>();
         Entity portal = *newPortalImage.get(addPortalImage);
         Vec2 relativePos =
             aPortal.mMirrorSpawnPosition.xy() - aPlayerData.mCurrentPortalPos;
         addMeshGeoNode(aContext, portal, "models/donut/donut.gltf",
+                       // Again, this is working by accident... Reusing the effect used on first load
+                       // (which is correct, unless this one)
                        "effects/MeshTextures.sefx",
                        {relativePos.x(), relativePos.y(), 0.f},
                        modelGeo.mScaling, modelGeo.mInstanceScaling,
                        modelGeo.mOrientation, modelGeo.mColor);
-        portal.add(component::Collision{component::gPlayerHitbox})
-            // TODO #RV2 animation
-            //.add(component::RigAnimation{
-            //    .mAnimName = animation.mAnimName,
-            //    .mAnimation = animation.mAnimation,
-            //    .mStartTime = animation.mStartTime,
-            //    .mParameter =
-            //        decltype(component::RigAnimation::mParameter){
-            //            animation.mAnimation->mEndTime},
-            //})
-            ;
+        portal
+            .add(component::Collision{component::gPlayerHitbox})
+            .add(component::RigAnimation{
+                .mAnimation = animation.mAnimation,
+                .mStartTime = animation.mStartTime,
+                .mParameter = decltype(component::RigAnimation::mParameter){
+                        animation.mAnimation->mDuration},
+                    }
+            )
+        ;
         aPlayerData.mPortalImage = newPortalImage;
     }
 

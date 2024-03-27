@@ -155,7 +155,7 @@ void SceneGui::presentAnimations(Handle<AnimatedRig> mAnimatedRig,
             }
             if(isItemDoubleClicked())
             {
-                aInstance.mAnimation = AnimationState{
+                aInstance.mAnimationState = AnimationState{
                     .mAnimation = &rigAnimation,
                     .mStartTimepoint = aTime.mSimulationTimepoint,
                 };

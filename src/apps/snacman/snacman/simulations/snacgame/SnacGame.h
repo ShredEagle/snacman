@@ -105,7 +105,7 @@ public:
                      ImguiInhibiter & aInhibiter,
                      RawInput & aInput);
 
-    std::unique_ptr<visu::GraphicState> makeGraphicState();
+    std::unique_ptr<Renderer_t::GraphicState_t> makeGraphicState();
 
 private:
     graphics::AppInterface * mAppInterface;
