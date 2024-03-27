@@ -61,6 +61,8 @@
 #include <utility>
 #include <vector>
 
+#include <cassert>
+
 namespace ad {
 struct RawInput;
 
@@ -448,18 +450,29 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
             };
         }
 
+        // Sorry, we will only handle that as long as we do not need more
+        float scaleInstanceHack = 1.f;
+        if(aGlobPose.mInstanceScaling != math::Size<3, float>{1.f, 1.f, 1.f})
+        {
+            SELOG(warn)("Instance '{}' has a non-unit instance-scaling of '{}'. It will be mishandled.",
+                        aHandle.name(), fmt::streamed(aGlobPose.mInstanceScaling));
+            // Arbitrarily pick the first dimension as representative of the "mean instance scaling".
+            scaleInstanceHack = aGlobPose.mInstanceScaling.width();
+        }
+
         // #RV2 API: this is a non-sense to do that each frame
         renderer::Handle<const renderer::Object> object = extractObject(aVisualModel);
         state->mEntities.insert(
             aHandle.id(),
             visu_V2::Entity{
-                .mPosition_world = aGlobPose.mPosition,
-                .mScaling = aGlobPose.mInstanceScaling * aGlobPose.mScaling,
-                .mOrientation = aGlobPose.mOrientation,
                 .mColor = aGlobPose.mColor,
                 .mInstance = renderer::Instance{
                     .mObject = object,
-                    .mPose = {},// TODO #RV2 pose
+                    .mPose = renderer::Pose{
+                        .mPosition = aGlobPose.mPosition.as<math::Vec>(),
+                        .mUniformScale = aGlobPose.mScaling * scaleInstanceHack,
+                        .mOrientation = aGlobPose.mOrientation,
+                    },
                     .mName = aHandle.name(),
                 },
                 .mAnimationState = std::move(skeletal),

@@ -242,18 +242,29 @@ struct Object
 
 struct Pose
 {
+    // TODO change to math::Position ?
     math::Vec<3, float> mPosition;
     float mUniformScale{1.f};
+    math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
 
+    // Assuming `this` Pose represents a Pose in space A (i.e., local-to-A transform, from `this` perspective).
+    // Given the Pose of a child Node (from the child perspective, its local-to-parent),
+    // this functions returns the child Pose in space A  (i.e. local-to-A transform, from the child perspective).
+    // If space A is canonical, it allows to recursively get aboslute Pose for each Node in a tree.
     Pose transform(Pose aNested) const
     {
-        aNested.mPosition += mPosition;
+        // TODO #math Is it correct? When it is, this should be moved to the math library
+        aNested.mPosition = mPosition + mOrientation.rotate(mUniformScale * aNested.mPosition);
         aNested.mUniformScale *= mUniformScale;
+        aNested.mOrientation = mOrientation * aNested.mOrientation;
         return aNested;
     }
 
     explicit operator math::AffineMatrix<4, float> () const;
 };
+
+
+Pose interpolate(const Pose & aLeft, const Pose & aRight, float aInterpolant);
 
 
 // TODO Ad 2024/03/20 #animation: After implementing the viewer skeletal animation
@@ -285,6 +296,7 @@ struct AnimationState
 struct Instance
 {
     Handle<const Object> mObject;
+    // The local-to-parent Pose of this instance. (Note that parent might be the canonical space.)
     Pose mPose;
     // TODO #matref
     std::optional<Material> mMaterialOverride;

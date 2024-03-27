@@ -199,11 +199,7 @@ void Renderer_V2::render(const GraphicState_t & aState)
 
         sortedModels[object].push_back(
             snac::PoseColorSkeleton{
-                // #RV2 pose
-                .pose = math::trans3d::scale(entity.mScaling)
-                        * entity.mOrientation.toRotationMatrix()
-                        * math::trans3d::translate(
-                            entity.mPosition_world.as<math::Vec>()),
+                .pose = static_cast<math::AffineMatrix<4, float>>(entity.mInstance.mPose),
                 // TODO #RV2: No need to go to SDR, we can directly stream hdr floats
                 .albedo = to_sdr(entity.mColor),
                 .matrixPaletteOffset = matrixPaletteOffset,

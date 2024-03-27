@@ -41,6 +41,7 @@ namespace {
     // TODO #math #linearalgebra move to a more generic library (graphics?)
     Pose decompose(const math::AffineMatrix<4, GLfloat> & aTransformation)
     {
+        // TODO Ad 2024/03/27: #pose Also get the rotation part!
         Pose result {
             .mPosition = aTransformation.getAffine(),
         };

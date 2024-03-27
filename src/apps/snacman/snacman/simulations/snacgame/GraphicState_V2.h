@@ -28,11 +28,8 @@ namespace visu_V2 {
 
 struct Entity
 {
-    // TODO #RV2 pose embbed int the renderer::Instance already-existing pose!
-    math::Position<3, float> mPosition_world;
-    math::Size<3, float> mScaling; // TODO were is it used?
-    math::Quaternion<float> mOrientation;
     math::hdr::Rgba_f mColor;
+    // Note: the Pose is embedded in the Instance
     renderer::Instance mInstance;
 
     // TODO #animation would be better to interpolate the animation time (Parameter)
@@ -56,14 +53,13 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
     }
     else
     {
-        return Entity{
-            math::lerp(aLeftEntity.mPosition_world, aRightEntity.mPosition_world,   aInterpolant),
-            math::lerp(aLeftEntity.mScaling,        aRightEntity.mScaling,          aInterpolant),
-            math::slerp(aLeftEntity.mOrientation,   aRightEntity.mOrientation,      aInterpolant),
-            math::lerp(aLeftEntity.mColor,          aRightEntity.mColor,            aInterpolant),
+        Entity result{
+            math::lerp(aLeftEntity.mColor, aRightEntity.mColor, aInterpolant),
             aRightEntity.mInstance,
             aRightEntity.mAnimationState,
         };
+        result.mInstance.mPose = interpolate(aLeftEntity.mInstance.mPose, aRightEntity.mInstance.mPose, aInterpolant);
+        return result;
     }
 }
 

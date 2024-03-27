@@ -169,12 +169,12 @@ namespace {
 
     void populatePartList(PartList & aPartList,
                           const Node & aNode,
-                          const Pose & aParentPose,
+                          const Pose & aParentAbsolutePose,
                           const Material * aMaterialOverride)
     {
         const Instance & instance = aNode.mInstance;
         const Pose & localPose = instance.mPose;
-        Pose absolutePose = aParentPose.transform(localPose);
+        Pose absolutePose = aParentAbsolutePose.transform(localPose);
 
         if(instance.mMaterialOverride)
         {
@@ -237,7 +237,8 @@ PartList Scene::populatePartList() const
     PartList partList;
     renderer::populatePartList(partList,
                                 mRoot,
-                                mRoot.mInstance.mPose, 
+                                Pose{}, // Identity pose, because it represents
+                                        // the pose of the canonical space in the canonical space
                                 mRoot.mInstance.mMaterialOverride ? &*mRoot.mInstance.mMaterialOverride 
                                                                     : nullptr);
     return partList;

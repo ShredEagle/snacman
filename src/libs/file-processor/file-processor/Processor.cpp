@@ -49,6 +49,8 @@ namespace {
             mArchive.write(std::string{aNode->mName.C_Str()});
             mArchive.write(aNode->mNumMeshes);
             mArchive.write(aNode->mNumChildren);
+            // TODO Should we decompose the transformation to store the decomposed form?
+            // (since currently we decompose on load, it would be an optimization)
             mArchive.write(extractAffinePart(aNode));
         }
 
