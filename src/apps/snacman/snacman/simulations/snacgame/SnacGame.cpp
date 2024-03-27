@@ -480,7 +480,7 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
             {
         state->mTextWorldEntities.insert(
             aHandle.id(),
-            visu_V2::Text{
+            visu_V1::Text{
                 .mPosition_world = aGlobPose.mPosition,
                 // TODO remove the hardcoded value of 100
                 // Note hardcoded 100 scale down. Because I'd like a value of 1
@@ -514,7 +514,7 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
 
         state->mTextScreenEntities.insert(
             aHandle.id(),
-            visu_V2::Text{
+            visu_V1::Text{
                 .mPosition_world = position_screenPix,
                 .mScaling = math::Size<3, float>{aPose.mScale, 1.f},
                 .mOrientation =

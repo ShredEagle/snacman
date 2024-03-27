@@ -31,7 +31,7 @@ void OrbitalControlInput::update(const RawInput & aInput,
 }
 
 
-visu_V2::Camera OrbitalControlInput::getCameraState()
+visu_V1::Camera OrbitalControlInput::getCameraState()
 {
     return {
         .mWorldToCamera = mOrbital.getParentToLocal(),

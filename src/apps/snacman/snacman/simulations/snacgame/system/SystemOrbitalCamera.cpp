@@ -32,7 +32,7 @@ void OrbitalCamera::update(const RawInput & aInput,
 }
 
 
-visu_V2::Camera OrbitalCamera::getCamera() const
+visu_V1::Camera OrbitalCamera::getCamera() const
 {
     return mControl->getCameraState();
 }

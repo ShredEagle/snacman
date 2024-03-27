@@ -70,8 +70,7 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
 } // namespace visu_V2
 
 
-// TODO #RV2 change to V1, this is used with V1 renderer
-namespace visu_V2 {
+namespace visu_V1 {
 
 
 struct Text
@@ -110,7 +109,7 @@ struct Camera
 };
 
 
-} // namespace visu_V2
+} // namespace visu_V1
 
 
 namespace visu_V2 {
@@ -121,10 +120,10 @@ struct GraphicState
     static constexpr std::size_t MaxEntityId{2048};
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
-    snac::SparseSet<Text, MaxEntityId> mTextWorldEntities;
-    Camera mCamera; 
+    snac::SparseSet<visu_V1::Text, MaxEntityId> mTextWorldEntities;
+    visu_V1::Camera mCamera; 
 
-    snac::SparseSet<Text, MaxEntityId> mTextScreenEntities;
+    snac::SparseSet<visu_V1::Text, MaxEntityId> mTextScreenEntities;
 
     snac::DebugDrawer::DrawList mDebugDrawList;
 };

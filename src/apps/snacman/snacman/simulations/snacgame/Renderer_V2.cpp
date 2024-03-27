@@ -133,7 +133,7 @@ void Renderer_V2::renderText(const T_range & aTexts, snac::ProgramSetup & aProgr
     // Note: this is pessimised code.
     // Most of these expensive operations should be taken out and the results
     // cached.
-    for (const visu_V2::Text & text : aTexts)
+    for (const visu_V1::Text & text : aTexts)
     {
         auto localToWorld = 
             math::trans3d::scale(text.mScaling)
