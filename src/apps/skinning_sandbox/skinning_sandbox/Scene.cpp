@@ -139,9 +139,10 @@ void Scene::update(double aDelta)
 
     // TODO handle different playback modes (single, ping-pong, repeat)
     animation.animate((float)std::fmod(mAnimationTime, animation.mEndTime), nodeTree);
-    const auto sillyLValue = mSkin.mRig.computeJointMatrices();
+    // Need a lvalue to pass to span ctor
+    const auto jointMatrices = mSkin.mRig.computeJointMatrices();
     graphics::load(mJointMatrices,
-                   std::span{sillyLValue},
+                   std::span{jointMatrices},
                    graphics::BufferHint::StreamDraw);
 
     DebugDrawer::StartFrame();

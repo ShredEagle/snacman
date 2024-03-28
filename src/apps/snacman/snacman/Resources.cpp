@@ -1,7 +1,6 @@
 #include "Resources.h"
 
 #include "RenderThread.h"                   // for RenderThread
-#include "simulations/snacgame/Renderer.h"  // for Renderer
 
 #include <resource/ResourceManager.h>               // for ResourceManager
                                                     //
@@ -22,21 +21,25 @@ Resources::~Resources()
 }
 
 
-std::shared_ptr<Model> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
+snacgame::Renderer_t::Handle_t<const renderer::Object> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
 {
-    // This is bad design, but lazy to get the result quickly
+    // TODO Ad 2024/03/27: Since it will reuse the effect of first load,
+    // we should explicitly error if an already-loader model is requested with a different effect file.
+
+    // TODO: remove this cube section when we fill confident there are not requests left in the code
+    // This was bad design, but lazy to get the result quickly
     if(aModel.string() == "CUBE")
     {
-        if (!mCube)
-        {
-            mCube = mRenderThread.loadModel(aModel, aEffect, *this)
-                .get(); // synchronize call
-        }
-        return mCube;
+        throw std::invalid_argument("'CUBE' hardcoded model is now deprecated.");
     }
     else
     {
-        return mModels.load(aModel, mFinder, aEffect, mRenderThread, *this);
+        if(aModel.extension() == ".gltf")
+        {
+            aModel.replace_extension(".seum");
+            SELOG(warn)("Live patching extension of '{}'.", aModel.string());
+        }
+        return mModels.load(aModel, mFinder, aEffect, mRenderThread, mResources_V2);
     }
 }
 
@@ -57,7 +60,7 @@ std::shared_ptr<Effect> Resources::getShaderEffect(filesystem::path aEffect)
 
 std::shared_ptr<Effect> Resources::EffectLoader(
     filesystem::path aEffect, 
-    RenderThread<snacgame::Renderer> & aRenderThread,
+    RenderThread<snacgame::Renderer_t> & aRenderThread,
     Resources & aResources)
 {
     return loadEffect(aEffect, aResources.getTechniqueLoader());
@@ -68,7 +71,7 @@ std::shared_ptr<Font> Resources::FontLoader(
     filesystem::path aFont, 
     unsigned int aPixelHeight,
     filesystem::path aEffect,
-    RenderThread<snacgame::Renderer> & aRenderThread,
+    RenderThread<snacgame::Renderer_t> & aRenderThread,
     Resources & aResources)
 {
     return aRenderThread.loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aEffect, aResources)
@@ -76,11 +79,11 @@ std::shared_ptr<Font> Resources::FontLoader(
 }
 
 
-std::shared_ptr<Model> Resources::ModelLoader(
+snacgame::Renderer_t::Handle_t<const renderer::Object> Resources::ModelLoader(
     filesystem::path aModel, 
     filesystem::path aEffect,
-    RenderThread<snacgame::Renderer> & aRenderThread,
-    Resources & aResources)
+    RenderThread<snacgame::Renderer_t> & aRenderThread,
+    snacgame::Resources_V2 & aResources)
 {
     return aRenderThread.loadModel(aModel, aEffect, aResources)
             .get(); // synchronize call

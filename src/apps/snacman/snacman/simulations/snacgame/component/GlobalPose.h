@@ -11,6 +11,8 @@ namespace component {
 struct GlobalPose
 {
     math::Position<3, float> mPosition;
+    // TODO rename mUniformScaling
+    // TODO Use a Pose struct directly here!
     float mScaling = 1.f;
     math::Size<3, float> mInstanceScaling = math::Size<3, float>{1.f, 1.f, 1.f};
     math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();

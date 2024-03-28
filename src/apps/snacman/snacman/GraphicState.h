@@ -14,12 +14,6 @@ namespace ad {
 namespace snac {
 
 
-struct GraphicState
-{
-    math::sdr::Rgb color;
-};
-
-
 template <class T_state>
 class StateFifo
 {

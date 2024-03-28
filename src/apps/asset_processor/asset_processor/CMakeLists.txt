@@ -5,15 +5,10 @@ set(REPO_FOLDER ${PROJECT_SOURCE_DIR})
 configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
-    Logging.h
-    Processor.h
 )
 
 set(${TARGET_NAME}_SOURCES
     main.cpp
-
-    Logging.cpp
-    Processor.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -57,20 +52,9 @@ file(GENERATE
 ##
 
 
-find_package(Math CONFIG REQUIRED COMPONENTS math)
-find_package(Graphics CONFIG REQUIRED COMPONENTS arte)
-
-find_package(assimp CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
-
 target_link_libraries(${TARGET_NAME}
     PRIVATE
-        ad::arte
-        ad::math
-        ad::snac-renderer-V2
-
-        assimp::assimp
-        spdlog::spdlog
+        file-processor
 )
 
 

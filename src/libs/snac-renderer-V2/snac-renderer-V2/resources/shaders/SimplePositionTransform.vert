@@ -1,0 +1,40 @@
+#version 420
+
+in vec3 ve_Position_l;
+in vec4 ve_Color;
+in vec2 ve_TextureCoords0;
+
+#ifdef MODEL_MATRIX
+in mat4 in_LocalToWorld;
+#endif
+
+#ifdef RIGGING
+#include "Rigging.glsl"
+#endif
+
+layout(std140, binding = 0) uniform ViewBlock
+{
+    mat4 worldToCamera;
+    mat4 projection;
+    mat4 viewingProjection;
+};
+
+out vec4 ex_Color;
+out vec2 ex_TextureCoords;
+
+void main(void)
+{
+    gl_Position = 
+        viewingProjection  
+#ifdef MODEL_MATRIX
+        * in_LocalToWorld
+#endif
+#ifdef RIGGING
+        * assembleSkinningMatrix()
+#endif
+        * vec4(ve_Position_l, 1.f)
+        ;
+
+    ex_Color = ve_Color;
+    ex_TextureCoords = ve_TextureCoords0;
+}

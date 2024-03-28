@@ -82,6 +82,10 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
     aStorage.mUbos.emplace_back();
     mModelTransformUbo = &aStorage.mUbos.back();
     mUboRepository.emplace(semantic::gLocalToWorld, mModelTransformUbo);
+
+    aStorage.mUbos.emplace_back();
+    mJointMatrixPaletteUbo = &aStorage.mUbos.back();
+    mUboRepository.emplace(semantic::gJointMatrices, mJointMatrixPaletteUbo);
 }
 
 
@@ -172,7 +176,8 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
     mUbos{aStorage},
     mInstanceStream{makeInstanceStream(aStorage, gMaxDrawInstances)},
     mRenderSize{mGlfwAppInterface->getFramebufferSize()}, // TODO Ad 2023/11/28: Listen to framebuffer resize
-    mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")}
+    mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")},
+    mDebugRenderer{aStorage, aLoader}
 {
     graphics::allocateStorage(mDepthMap, GL_DEPTH_COMPONENT24, mRenderSize);
     [this](GLenum aFiltering)
@@ -256,13 +261,17 @@ void TheGraph::loadDrawBuffers(const PartList & aPartList,
 }
 
 
-void TheGraph::renderFrame(const PartList & aPartList, const Camera & aCamera, Storage & aStorage)
+void TheGraph::renderFrame(const PartList & aPartList, 
+                           const Camera & aCamera,
+                           Storage & aStorage)
 {
     {
         PROFILER_SCOPE_RECURRING_SECTION("load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
         loadFrameUbo(*mUbos.mFrameUbo);
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, aCamera);
+
+        proto::load(*mUbos.mJointMatrixPaletteUbo, std::span{aPartList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
     }
 
     // Use the same indirect buffer for all drawings
@@ -285,6 +294,15 @@ void TheGraph::renderFrame(const PartList & aPartList, const Camera & aCamera, S
     showDepthTexture(mDepthMap, nearZ, farZ) ;
     showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
     showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
+}
+
+
+void TheGraph::renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage)
+{
+    // Fullscreen viewport
+    glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
+
+    mDebugRenderer.render(std::move(aDrawList), mUbos.mUboRepository, aStorage);
 }
 
 

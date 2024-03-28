@@ -50,6 +50,7 @@ if(MSVC)
     # Otherwise big object files might error with:
     # "fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj"
     target_compile_options(${TARGET_NAME} PRIVATE "/bigobj")
+    target_compile_definitions(${TARGET_NAME} PUBLIC NOMINMAX)
 endif()
 
 cmc_target_current_include_directory(${TARGET_NAME})

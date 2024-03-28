@@ -17,6 +17,7 @@ namespace snac {
 #define TMP   T_value, N_universeSize, T_index
 
 
+// TODO Ad 2024/02/13: Move to Handy library
 template <TMA_D>
 class SparseSet
 {

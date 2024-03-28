@@ -16,8 +16,10 @@ constexpr const char * gGameSceneName = "Game";
 constexpr const char * gJoinGameSceneName = "JoinGame";
 
 constexpr math::Spherical<float> gInitialCameraSpherical{
-    20.f, math::Turn<float>{0.075f},
-    math::Turn<float>{0.f}};
+    20.f,
+    math::Turn<float>{0.075f},
+    math::Turn<float>{0.f}
+};
 
 constexpr std::array<math::hdr::Rgba_f, 5> gSlotColors{
     math::hdr::Rgba_f{1.f, 1.f, 1.f, 1.f},

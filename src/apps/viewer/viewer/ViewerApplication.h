@@ -30,10 +30,10 @@ struct ViewerApplication
                 const imguiui::ImguiUi & aImguiUi);
 
     // for camera movements, should be moved out to the simuation of course
-    void update(float aDeltaTime);
+    void update(const Timing & aTime);
     void render();
 
-    void drawUi();
+    void drawUi(const Timing & aTime);
 
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
