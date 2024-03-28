@@ -28,6 +28,8 @@
 #include "ModelInfos.h"
 #include "typedef.h"
 
+#include <snacman/TemporaryRendererHelpers.h>
+
 #include <algorithm>
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
@@ -71,15 +73,16 @@ void addGeoNode(GameContext & aContext,
         .add(component::GlobalPose{});
 }
 
-std::shared_ptr<snac::Model> addMeshGeoNode(GameContext & aContext,
-                                            Entity & aEnt,
-                                            const char * aModelPath,
-                                            const char * aEffectPath,
-                                            Pos3 aPos,
-                                            float aScale,
-                                            Size3 aInstanceScale,
-                                            Quat_f aOrientation,
-                                            HdrColor_f aColor)
+renderer::Handle<const renderer::Object> addMeshGeoNode(
+    GameContext & aContext,
+    Entity & aEnt,
+    const char * aModelPath,
+    const char * aEffectPath,
+    Pos3 aPos,
+    float aScale,
+    Size3 aInstanceScale,
+    Quat_f aOrientation,
+    HdrColor_f aColor)
 {
     auto model = aContext.mResources.getModel(aModelPath, aEffectPath);
     aEnt.add(component::Geometry{.mPosition = aPos,
@@ -133,33 +136,6 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
              })
         .add(aPose)
         .add(component::GameTransient{});
-
-    return handle;
-}
-
-ent::Handle<ent::Entity>
-createAnimatedTest(GameContext & aContext,
-                   Phase & aPhase,
-                   snac::Clock::time_point aStartTime,
-                   const math::Position<2, float> & aGridPos)
-{
-    auto handle = aContext.mWorld.addEntity();
-    Entity entity = *handle.get(aPhase);
-    std::shared_ptr<snac::Model> model = addMeshGeoNode(
-        aContext, entity, "models/anim/anim.gltf", "effects/MeshRigging.sefx",
-        {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
-         gLevelHeight},
-        0.45f, lLevelElementScaling,
-        math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
-                                math::Turn<float>{0.25f}});
-    const snac::NodeAnimation & animation = model->mAnimations.begin()->second;
-    entity.add(component::RigAnimation{
-        .mAnimation = &animation,
-        .mStartTime = aStartTime,
-        .mParameter =
-            decltype(component::RigAnimation::mParameter){animation.mEndTime},
-    });
-    entity.add(component::GameTransient{});
 
     return handle;
 }
@@ -437,23 +413,22 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
         Phase createModel;
         Entity model = *playerModelHandle.get(createModel);
 
-        std::shared_ptr<snac::Model> modelData = addMeshGeoNode(
+        auto modelData = addMeshGeoNode(
             aContext, model, "models/donut/donut.gltf",
-            "effects/MeshRiggingTextures.sefx", Pos3::Zero(), 1.f,
+            "effects/MeshRiggingTextures.sefx",
+            Pos3::Zero(), 1.f,
             gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation,
             gSlotColors.at(slot.mSlotIndex));
 
-        std::string animName = "idle";
-        const snac::NodeAnimation & animation =
-            modelData->mAnimations.at(animName);
+        const std::string animName = "idle";
+        const renderer::RigAnimation & animation = modelData->mAnimatedRig->mNameToAnimation.at(animName);
         model.add(component::RigAnimation{
-            .mAnimName = animName,
             .mAnimation = &animation,
-            .mAnimationMap = &modelData->mAnimations,
+            .mAnimatedRig = modelData->mAnimatedRig,
             .mStartTime = snac::Clock::now(),
             .mParameter =
                 decltype(component::RigAnimation::mParameter){
-                    animation.mEndTime},
+                    animation.mDuration},
         });
     }
 
@@ -466,7 +441,7 @@ ent::Handle<ent::Entity> createCrown(GameContext & aContext)
     EntHandle crownHandle = aContext.mWorld.addEntity();
     Entity crown = *crownHandle.get(createCrown);
 
-    std::shared_ptr<snac::Model> crownData = addMeshGeoNode(
+    addMeshGeoNode(
         aContext, crown, "models/crown/crown.gltf",
         "effects/MeshTextures.sefx", gBaseCrownPosition, 1.f,
         gBaseCrownInstanceScaling, gBaseCrownOrientation);
@@ -700,25 +675,29 @@ EntHandle createPortalImage(GameContext & aContext,
         Phase addPortalImage;
         component::Geometry modelGeo =
             aPlayerData.mModel.get()->get<component::Geometry>();
+
         component::RigAnimation animation =
             aPlayerData.mModel.get()->get<component::RigAnimation>();
         Entity portal = *newPortalImage.get(addPortalImage);
         Vec2 relativePos =
             aPortal.mMirrorSpawnPosition.xy() - aPlayerData.mCurrentPortalPos;
         addMeshGeoNode(aContext, portal, "models/donut/donut.gltf",
+                       // Again, this is working by accident... Reusing the effect used on first load
+                       // (which is correct, unless this one)
                        "effects/MeshTextures.sefx",
                        {relativePos.x(), relativePos.y(), 0.f},
                        modelGeo.mScaling, modelGeo.mInstanceScaling,
                        modelGeo.mOrientation, modelGeo.mColor);
-        portal.add(component::Collision{component::gPlayerHitbox})
+        portal
+            .add(component::Collision{component::gPlayerHitbox})
             .add(component::RigAnimation{
-                .mAnimName = animation.mAnimName,
                 .mAnimation = animation.mAnimation,
                 .mStartTime = animation.mStartTime,
-                .mParameter =
-                    decltype(component::RigAnimation::mParameter){
-                        animation.mAnimation->mEndTime},
-            });
+                .mParameter = decltype(component::RigAnimation::mParameter){
+                        animation.mAnimation->mDuration},
+                    }
+            )
+        ;
         aPlayerData.mPortalImage = newPortalImage;
     }
 

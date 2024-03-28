@@ -1,0 +1,5 @@
+{
+    "defines": ["SHADOW", "RIGGING", "TEXTURES"],
+    "vertex": "PhongLighting.vert",
+    "fragment": "PhongLighting.frag"
+}

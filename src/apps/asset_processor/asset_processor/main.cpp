@@ -1,5 +1,4 @@
-#include "Processor.h"
-#include "Logging.h"
+#include <file-processor/Processor.h>
 
 #include <filesystem>
 #include <iostream>
@@ -23,7 +22,6 @@ int main(int argc, char * argv[])
         return EXIT_FAILURE;
     }
 
-    ad::initializeLogging();
     ad::renderer::processModel(inputPath);
 
     return EXIT_SUCCESS;

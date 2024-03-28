@@ -11,22 +11,22 @@ namespace ad::renderer {
 namespace {
 
 
-// see: https://github.com/ocornut/imgui/issues/1872
-bool isItemDoubleClicked(ImGuiMouseButton mouse_button = 0)
-{
-    return
-        ImGui::IsMouseDoubleClicked(mouse_button) 
-        && ImGui::IsItemHovered();
-}
+    // see: https://github.com/ocornut/imgui/issues/1872
+    bool isItemDoubleClicked(ImGuiMouseButton mouse_button = 0)
+    {
+        return
+            ImGui::IsMouseDoubleClicked(mouse_button) 
+            && ImGui::IsItemHovered();
+    }
 
 
-GLuint getInstanceDivisor(const VertexStream & aStream, const AttributeAccessor & aAccessor)
-{
-    GLuint divisor = aStream.mVertexBufferViews.at(aAccessor.mBufferViewIndex).mInstanceDivisor;
-    // Note: As of this writting, I do not think we have use for divisors other than 0 or 1.
-    assert(divisor <= 1);
-    return divisor;
-}
+    GLuint getInstanceDivisor(const VertexStream & aStream, const AttributeAccessor & aAccessor)
+    {
+        GLuint divisor = aStream.mVertexBufferViews.at(aAccessor.mBufferViewIndex).mInstanceDivisor;
+        // Note: As of this writting, I do not think we have use for divisors other than 0 or 1.
+        assert(divisor <= 1);
+        return divisor;
+    }
 
 
 } // unnamed namespace
@@ -47,7 +47,7 @@ const ImGuiTreeNodeFlags SceneGui::gPartFlags =
     | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
 
 
-void SceneGui::present(Scene & aScene)
+void SceneGui::present(Scene & aScene, const Timing & aTime)
 {
     ImGui::Begin("Scene tree", nullptr, ImGuiWindowFlags_MenuBar);
     if(ImGui::BeginMenuBar())
@@ -59,7 +59,7 @@ void SceneGui::present(Scene & aScene)
         }
         ImGui::EndMenuBar();
     }
-    Node * hovered = presentNodeTree(aScene.mRoot, 0);
+    Node * hovered = presentNodeTree(aScene.mRoot, 0, aTime);
     ImGui::End();
 
     handleHighlight(hovered);
@@ -88,7 +88,7 @@ void SceneGui::handleHighlight(Node * aHovered)
 
 // Note: currently returns the selected Node (but not Part or any heterogeneous type).
 // This is inherited from the time before this was free function, not sure it can be usefull now.
-Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
+Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex, const Timing & aTime)
 {
     //auto & nodeTree = mSkin.mRig.mScene;
     Node * hovered = nullptr;
@@ -117,13 +117,13 @@ Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
     {
         if(const Object * object = aNode.mInstance.mObject)
         {
-            presentObject(*object);
+            presentObject(*object, aNode.mInstance, aTime);
         }
 
         unsigned int childIdx = 0;
         for(Node & child : aNode.mChildren)
         {
-            if(Node * hoveredChild = presentNodeTree(child, childIdx++);
+            if(Node * hoveredChild = presentNodeTree(child, childIdx++, aTime);
                hoveredChild)
             {
                 hovered = hoveredChild;
@@ -139,7 +139,69 @@ Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex)
 }
 
 
-void SceneGui::presentObject(const Object & aObject)
+void SceneGui::presentAnimations(Handle<AnimatedRig> mAnimatedRig,
+                                 Instance & aInstance,
+                                 const Timing & aTime)
+{
+    if(ImGui::TreeNodeEx("[Animations]", gBaseFlags))
+    {
+        int flags = gLeafFlags;
+        for(const auto & [key, rigAnimation] : mAnimatedRig->mNameToAnimation)
+        {
+            bool opened = ImGui::TreeNodeEx(&rigAnimation, flags, "%s", rigAnimation.mName.c_str());
+            if(opened)
+            {
+                ImGui::TreePop();
+            }
+            if(isItemDoubleClicked())
+            {
+                aInstance.mAnimationState = AnimationState{
+                    .mAnimation = &rigAnimation,
+                    .mStartTimepoint = aTime.mSimulationTimepoint,
+                };
+            }
+        }
+
+        ImGui::TreePop();
+    }
+}
+
+
+// When the main scene graph in our Model becomes a DOD NodeTree, this should be 
+// factorized with main traversal in presentNodeTree()
+void SceneGui::presentJointTree(const NodeTree<Rig::Pose> & aTree,
+                                NodeTree<Rig::Pose>::Node::Index aNodeIdx)
+{
+    using Node = NodeTree<Rig::Pose>::Node;
+
+    int flags = (aTree.hasChild(aNodeIdx)) ? gBaseFlags : gLeafFlags;
+
+    std::string name = "<Bone #" + std::to_string(aNodeIdx) + ">";
+    if(auto nameIt = aTree.mNodeNames.find(aNodeIdx); nameIt != aTree.mNodeNames.end())
+    {
+        name = nameIt->second;
+    }
+
+    const Node & node = aTree.mHierarchy[aNodeIdx];
+    bool opened = ImGui::TreeNodeEx(&node, flags, "%s", name.c_str());
+
+    if(opened)
+    {
+        if(aTree.hasChild(aNodeIdx))
+        {
+            presentJointTree(aTree, node.mFirstChild);
+        }
+        ImGui::TreePop();
+    }
+
+    if(node.mNextSibling != Node::gInvalidIndex)
+    {
+        presentJointTree(aTree, node.mNextSibling);
+    }
+};
+
+
+void SceneGui::presentObject(const Object & aObject, Instance & aInstance, const Timing & aTime)
 {
     assert(!aObject.mParts.empty());
     if(ImGui::TreeNodeEx("[Parts]", gBaseFlags))
@@ -171,8 +233,19 @@ void SceneGui::presentObject(const Object & aObject)
 
             ++partIdx;
         }
-
         ImGui::TreePop();
+    }
+
+    if(aObject.mAnimatedRig != gNullHandle)
+    {
+        // TODO I suspect this shared name is not ensuring unicity of the "RIG" node state.
+        if(ImGui::TreeNodeEx("[Rig]", gBaseFlags))
+        {
+            presentAnimations(aObject.mAnimatedRig, aInstance, aTime);
+            presentJointTree(aObject.mAnimatedRig->mRig.mJointTree,
+                             aObject.mAnimatedRig->mRig.mJointTree.mFirstRoot);
+            ImGui::TreePop();
+        }
     }
 }
 

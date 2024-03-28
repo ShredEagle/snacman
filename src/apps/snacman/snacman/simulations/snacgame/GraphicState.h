@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "Handle_V2.h"
 #include "../../SparseSet.h"
 
 #include <math/Angle.h>
@@ -29,7 +30,7 @@ struct Entity
     math::Size<3, float> mScaling; // TODO were is it used?
     math::Quaternion<float> mOrientation;
     math::hdr::Rgba_f mColor;
-    std::shared_ptr<snac::Model> mModel;
+    renderer::Handle<const renderer::Object> mModel;
 
     // TODO #anim would be better to interpolate the animation time (Parameter)
     // between each GPU frame, instead of providing fixed parameter value
@@ -37,7 +38,7 @@ struct Entity
     struct SkeletalAnimation
     {
         //TODO #anim (a48c8) this is **not** const because animation writes to the underlying scene,
-        // but this is very smelly (and an invitatin to race conditions)
+        // but this is very smelly (and an invitation to race conditions)
         snac::Rig *mRig = nullptr;
         const snac::NodeAnimation * mAnimation = nullptr;
         double mParameterValue = 0.;

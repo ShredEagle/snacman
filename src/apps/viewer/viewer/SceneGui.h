@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "Timing.h"
+
 #include <snac-renderer-V2/Model.h>
 
 
@@ -12,6 +14,8 @@ struct Scene;
 
 class SceneGui
 {
+    friend struct ViewerApplication;
+
 public:
     SceneGui(Handle<Effect> aHighlight, const Storage & aStorage) :
         mHighlightMaterial{
@@ -20,14 +24,17 @@ public:
         mStorage{aStorage}
     {}
 
-    void present(Scene & aScene);
+    void present(Scene & aScene, const Timing & aTime);
 
 private:
     /// @return Hovered node
-    Node * presentNodeTree(Node & aNode, unsigned int aIndex);
-    void presentObject(const Object & aObject);
+    Node * presentNodeTree(Node & aNode, unsigned int aIndex, const Timing & aTime);
+    void presentObject(const Object & aObject, Instance & aInstance, const Timing & aTime);
     void presentEffect(Handle<const Effect> aEffect);
     void presentShaders(const IntrospectProgram & aIntrospectProgram);
+    void presentAnimations(Handle<AnimatedRig> mAnimatedRig, Instance & aInstance, const Timing & aTime);
+    static void presentJointTree(const NodeTree<Rig::Pose> & aTree,
+                                 NodeTree<Rig::Pose>::Node::Index aNodeIdx);
 
     void presentSelection();
 

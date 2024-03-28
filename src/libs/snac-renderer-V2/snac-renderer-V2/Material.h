@@ -11,7 +11,11 @@ struct TextureInput
     using Index = unsigned int;
     inline static constexpr Index gNoEntry = std::numeric_limits<Index>::max();
 
-    Index mTextureIndex = gNoEntry; // Index of the texture in storage. Maybe could be the texture name directly.
+    // NOTE Ad 2024/02/21: If one day we go with bindless textures, this should probably become
+    //   the "address" of a plain TEXTURE_2D 
+    //   (since we would not have to assemble several logical textures in a common TEXTURE_2D_ARRAY)
+    Index mTextureIndex = gNoEntry; // Index of the texture in the TEXTURE_2D_ARRAY.
+
     Index mUVAttributeIndex = gNoEntry;
 };
 
@@ -25,6 +29,7 @@ struct alignas(16) PhongMaterial
     math::hdr::Rgba<float> mDiffuseColor  = math::hdr::gWhite<float>;
     math::hdr::Rgba<float> mSpecularColor = math::hdr::gWhite<float>;
     TextureInput mDiffuseMap; 
+    TextureInput mNormalMap; 
     float mSpecularExponent = 1.f;
 };
 

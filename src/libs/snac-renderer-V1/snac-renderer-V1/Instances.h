@@ -23,7 +23,7 @@ struct PoseColor
 
 struct PoseColorSkeleton
 {
-    math::Matrix<4, 4, float> pose;
+    math::AffineMatrix<4, float> pose;
     math::sdr::Rgba albedo;
     GLuint matrixPaletteOffset; // offset to the first joint of this instance in the buffer of joints.
 };

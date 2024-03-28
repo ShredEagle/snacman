@@ -9,7 +9,11 @@
 
 #include <build_info.h>
 
+#include "simulations/sandbox/ModelLoader.h"
+
+#include "simulations/snacgame/ImguiInhibiter.h"
 #include "simulations/snacgame/SnacGame.h"
+#include "simulations/snacgame/Renderer.h"
 
 // TODO we should not include something from detail.
 // So either move it out of detail, either use nholmann directly
@@ -23,7 +27,11 @@
 
 #include <resource/ResourceFinder.h>
 
+// TODO remove
 #include <snac-renderer-V1/ResourceLoad.h>
+
+// For fine-tuning the log-levels.
+#include <snac-renderer-V2/Logging-channels.h>
 
 #include <fstream>
 
@@ -33,6 +41,10 @@ using namespace ad::snac;
 
 // TODO find a better place than global
 constexpr bool gWaitByBusyLoop = true;
+
+
+using Simulation_t = snacgame::SnacGame;
+//using Simulation_t = snacgame::ModelLoader;
 
 
 resource::ResourceFinder makeResourceFinder()
@@ -131,7 +143,7 @@ void runApplication()
     // TODO we provide a Load<Technique> so the shadow pipeline can use it to load the effects for its cube.
     // this complicates the interface a lot, and since it does not use the ResourceManager those effects are not hot-recompilable.
     snac::TechniqueLoader techniqueLoader{finder};
-    snacgame::Renderer renderer{
+    snacgame::Renderer_t renderer{
         *glfwApp.getAppInterface(),
          techniqueLoader,
          freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))
@@ -141,7 +153,7 @@ void runApplication()
     // the render thread.
     glfwApp.removeCurrentContext();
 
-    GraphicStateFifo<snacgame::Renderer> graphicStates;
+    GraphicStateFifo<snacgame::Renderer_t> graphicStates;
     RenderThread renderingThread{
         glfwApp,
         graphicStates,
@@ -160,7 +172,7 @@ void runApplication()
     //
     // Initialize scene
     //
-    snacgame::SnacGame simulation{
+    Simulation_t simulation{
         *glfwApp.getAppInterface(),
         renderingThread,
         imguiUi,
@@ -289,6 +301,9 @@ int main(int argc, char * argv[])
     {
         snac::detail::initializeLogging();
         spdlog::set_level(spdlog::level::debug);
+
+        // Opportunity to control the default log-level per-logger
+        //spdlog::get(renderer::gPipelineDiag)->set_level(spdlog::level::critical);
     }
     catch (std::exception & aException)
     {
