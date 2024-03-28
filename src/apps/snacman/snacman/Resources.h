@@ -53,11 +53,13 @@ public:
     /// so the model will always have the effect it was loaded with the first time.
     snacgame::Renderer_t::Handle_t<const renderer::Object> getModel(filesystem::path aModel, filesystem::path aEffect);
 
+    // TODO Ad 2024/03/28: #RV2 #text
     std::shared_ptr<Font> getFont(filesystem::path aFont,
                                   unsigned int aPixelHeight = gDefaultPixelHeight,
                                   filesystem::path aEffect = "effects/Text.sefx");
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
+    // TODO Ad 2024/03/28: #RV2 Finishing porting to V2 resources (not even sure we need a this as a public function)
     std::shared_ptr<Effect> getShaderEffect(filesystem::path aEffect);
 
     auto find(const filesystem::path & aPath) const
