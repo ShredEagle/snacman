@@ -2,6 +2,8 @@
 
 #include "AssimpUtils.h"
 
+#include "Logging.h"
+
 #include <assimp/scene.h>
 
 #include <cassert>
@@ -107,12 +109,35 @@ std::pair<Rig, NodePointerMap> loadRig(const aiNode * aArmature)
     return {result, aiNodeToTreeNode}; 
 }
 
+VertexJointData::BoneIndex_t JointDataDeduplicate::insertOrRetrieveBoneIndex(
+    Rig::JointData & aOutJointData,
+    NodeTree<Rig::Pose>::Node::Index aNodeIndex,
+    math::AffineMatrix<4, float> aInverseBindMatrix)
+{
+    auto [iterator, didInsert] = 
+        mUsedNodes.try_emplace(aNodeIndex, (VertexJointData::BoneIndex_t)aOutJointData.mIndices.size());
+    auto jointDataIdx = iterator->second;
+    if(!didInsert)
+    {
+        SELOG(warn)("Deduplicated a bone.");
+        // When we deduplicate a bone, the IBMs must match
+        assert(aOutJointData.mInverseBindMatrices[jointDataIdx] == aInverseBindMatrix);
+    }
+    else
+    {
+        aOutJointData.mIndices.push_back(aNodeIndex);
+        aOutJointData.mInverseBindMatrices.push_back(std::move(aInverseBindMatrix));
+    }
+    return static_cast<VertexJointData::BoneIndex_t>(jointDataIdx);
+}
+
 //
 // Iterate over all bones:
 // * Populate the list of joints and their inverse bind matrices
 // * Populate the joint data vertex attributes (array of VertexJointData)
 //
-std::vector<VertexJointData> populateJointData(Rig::JointData & aOutJointData,
+std::vector<VertexJointData> populateJointData(JointDataDeduplicate & aDeduplicator,
+                                               Rig::JointData & aOutJointData,
                                                const aiMesh * aMesh,
                                                const NodePointerMap & aAiNodeToTreeNode,
                                                const aiNode * aExpectedArmature)
@@ -125,12 +150,15 @@ std::vector<VertexJointData> populateJointData(Rig::JointData & aOutJointData,
         // I am making the assumption that the armature is a common root node of a skeleton
         // and thus it must be equal for all the bones.
         assert(bone.mArmature == aExpectedArmature);
+
+        const VertexJointData::BoneIndex_t jointIndex =
+            aDeduplicator.insertOrRetrieveBoneIndex(
+                aOutJointData,
+                aAiNodeToTreeNode.at(bone.mNode),
+                math::AffineMatrix<4, float>{extractAffinePart(bone.mOffsetMatrix)});
+
         // Assert that the joint index fits in the destination type.
-        assert(aOutJointData.mIndices.size() < std::numeric_limits<VertexJointData::BoneIndex_t>::max());
-        const VertexJointData::BoneIndex_t jointIndex = (VertexJointData::BoneIndex_t)aOutJointData.mIndices.size();
-        aOutJointData.mInverseBindMatrices.push_back(
-            math::AffineMatrix<4, float>{extractAffinePart(bone.mOffsetMatrix)});
-        aOutJointData.mIndices.push_back(aAiNodeToTreeNode.at(bone.mNode));
+        assert(jointIndex < std::numeric_limits<VertexJointData::BoneIndex_t>::max());
 
         for(unsigned int weightIdx = 0; weightIdx != bone.mNumWeights; ++weightIdx)
         {

@@ -173,6 +173,7 @@ namespace {
     {
         aiNode * mCommonArmature;
         Rig mRig;
+        JointDataDeduplicate mJointDataDeduplicator;
         NodePointerMap mAiNodeToTreeNode;
         std::unordered_map<std::string, NodeTree<Rig::Pose>::Node::Index> mNameToTreeNode;
     };
@@ -374,7 +375,8 @@ namespace {
                 assert(meshArmature == nodeRig->mCommonArmature);
 
                 const std::vector<VertexJointData> jointData = 
-                    populateJointData(nodeRig->mRig.mJoints,
+                    populateJointData(nodeRig->mJointDataDeduplicator,
+                                      nodeRig->mRig.mJoints,
                                       mesh,
                                       nodeRig->mAiNodeToTreeNode,
                                       nodeRig->mCommonArmature);
@@ -404,18 +406,14 @@ namespace {
                 std::partial_sort_copy(indices.begin(), indices.end(),
                                        sortedIndices.begin(), sortedIndices.end());
                 
-                // If this trips, it means several bones pointed to the same aiNode 
-                // (and thus to the same Joint in the JointTree)
-                // The logic might still work, but this indicated some unpleasant duplication.
-                // Note: I suppose it could happen because of the Assimp model design:
+                // If this trips, it means several bones pointed to the same aiNode,
+                // and this should never be the case because we take explicit measures to implement bone deduplication.
+                // Note: Joint duplicates happen in the Assimp model because of this design:
                 // The Bones are stored in the meshes.
                 // So, if several meshes are influenced by the same bone in a logical skeleton,
                 // each meach probably stores a bone to reference to the same node.
-                // (Then, the question is, do they have the same inverse bind matrix, so we could merge)
-                // TODO Ad 2024/02/29: #deduplicate_bones This trips in the donut, we have to address it
-                // A potential complication is the IBM, we have to make sure it is equal on both sides.
-                //assert(std::adjacent_find(sortedIndices.begin(), sortedIndices.end()) == sortedIndices.end()
-                //    && "Duplicate bones found in the rig");
+                assert(std::adjacent_find(sortedIndices.begin(), sortedIndices.end()) == sortedIndices.end()
+                    && "Duplicate bones found in the rig");
 #endif
                 // Joint Tree
                 const NodeTree<Rig::Pose> & jointTree = rig.mJointTree;
