@@ -36,10 +36,11 @@ ModelLoader::ModelLoader(graphics::AppInterface & aAppInterface,
         aRenderThread
     };
 
-    mModel ={
+    mModel = {
         .mIndex = 0,
         //.mNode = resources.getModel("models/stage/stage.seum", "effects/MeshTextures.sefx"),
-        .mNode = resources.getModel("models/square_biscuit/square_biscuit.seum", "effects/MeshTextures.sefx"),
+        //.mNode = resources.getModel("models/square_biscuit/square_biscuit.seum", "effects/MeshTextures.sefx"),
+        .mObject = resources.getModel("models/donut/donut.seum", "effects/Mesh.sefx"),
     };
 }
 
@@ -120,7 +121,7 @@ std::unique_ptr<visu::GraphicState> ModelLoader::makeGraphicState()
                 .mScaling = {1.f, 1.f, 1.f},
                 .mOrientation = math::Quaternion<GLfloat>::Identity(),
                 .mColor = math::hdr::gWhite<GLfloat>,
-                .mModel = mModel.mNode,
+                .mModel = mModel.mObject,
                 //.mRigging = std::move(skeletal),
                 //.mDisableInterpolation = aVisualModel.mDisableInterpolation,
             });
@@ -187,7 +188,10 @@ std::unique_ptr<visu::GraphicState> ModelLoader::makeGraphicState()
     //        });
     //    });
 
-    state->mCamera = mOrbitalControl.getCameraState();
+    // V2 to V1 patch...
+    state->mCamera = visu::Camera{
+        .mWorldToCamera = mOrbitalControl.getCameraState().mWorldToCamera
+    };
 
     //state->mDebugDrawList = snac::DebugDrawer::EndFrame();
 

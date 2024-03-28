@@ -35,6 +35,8 @@
 #include "system/SystemOrbitalCamera.h"
 #include "typedef.h"
 
+#include <snacman/TemporaryRendererHelpers.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -58,6 +60,8 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#include <cassert>
 
 namespace ad {
 struct RawInput;
@@ -339,6 +343,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 {
                     Phase pathfinding;
                     Entity pEntity = *pathfinder.get(pathfinding);
+                    assert(false && "Sorry, I removed support for cube special case");
                     addMeshGeoNode(mGameContext, pEntity, "CUBE",
                                    "effects/Mesh.sefx", {7.f, 7.f, gPillHeight},
                                    1.f, {0.5f, 0.5f, 0.5f});
@@ -410,11 +415,12 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
     return false;
 }
 
-std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
+
+std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
 {
     TIME_RECURRING_FUNC(Main);
 
-    auto state = std::make_unique<visu::GraphicState>();
+    auto state = std::make_unique<Renderer_t::GraphicState_t>();
 
     ent::Phase nomutation;
 
@@ -433,27 +439,41 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         // but we do not want to handle VisualModel the same way depending on
         // the presence of RigAnimation (and we do not have "negation" on
         // Queries, to separately get VisualModels without RigAnimation)
-        visu::Entity::SkeletalAnimation skeletal;
+        visu_V2::Entity::SkeletalAnimation skeletal;
         if (auto entity = *aHandle.get(); entity.has<component::RigAnimation>())
         {
-            // TODO #RV2 animation
-            //const auto & rigAnimation =
-            //    aHandle.get()->get<component::RigAnimation>();
-            //skeletal = visu::Entity::SkeletalAnimation{
-            //    .mRig = &aVisualModel.mModel->mRig,
-            //    .mAnimation = rigAnimation.mAnimation,
-            //    .mParameterValue = rigAnimation.mParameterValue,
-            //};
+            const auto & rigAnimation =
+                aHandle.get()->get<component::RigAnimation>();
+            skeletal = visu_V2::Entity::SkeletalAnimation{
+                .mAnimation = rigAnimation.mAnimation,
+                .mParameterValue = rigAnimation.mParameterValue,
+            };
         }
+
+        // Sorry, we will only handle that as long as we do not need more
+        float scaleInstanceHack = 1.f;
+        if(aGlobPose.mInstanceScaling != math::Size<3, float>{1.f, 1.f, 1.f})
+        {
+            SELOG(warn)("Instance '{}' has a non-unit instance-scaling of '{}'. It will be mishandled.",
+                        aHandle.name(), fmt::streamed(aGlobPose.mInstanceScaling));
+            // Arbitrarily pick the first dimension as representative of the "mean instance scaling".
+            scaleInstanceHack = aGlobPose.mInstanceScaling.width();
+        }
+
         state->mEntities.insert(
             aHandle.id(),
-            visu::Entity{
-                .mPosition_world = aGlobPose.mPosition,
-                .mScaling = aGlobPose.mInstanceScaling * aGlobPose.mScaling,
-                .mOrientation = aGlobPose.mOrientation,
+            visu_V2::Entity{
                 .mColor = aGlobPose.mColor,
-                .mModel = aVisualModel.mModel,
-                .mRigging = std::move(skeletal),
+                .mInstance = renderer::Instance{
+                    .mObject = aVisualModel.mModel,
+                    .mPose = renderer::Pose{
+                        .mPosition = aGlobPose.mPosition.as<math::Vec>(),
+                        .mUniformScale = aGlobPose.mScaling * scaleInstanceHack,
+                        .mOrientation = aGlobPose.mOrientation,
+                    },
+                    .mName = aHandle.name(),
+                },
+                .mAnimationState = std::move(skeletal),
                 .mDisableInterpolation = aVisualModel.mDisableInterpolation,
             });
         // Note: Although it does not feel correct, this is a convenient place
@@ -471,7 +491,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
             {
         state->mTextWorldEntities.insert(
             aHandle.id(),
-            visu::Text{
+            visu_V1::Text{
                 .mPosition_world = aGlobPose.mPosition,
                 // TODO remove the hardcoded value of 100
                 // Note hardcoded 100 scale down. Because I'd like a value of 1
@@ -505,7 +525,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
         state->mTextScreenEntities.insert(
             aHandle.id(),
-            visu::Text{
+            visu_V1::Text{
                 .mPosition_world = position_screenPix,
                 .mScaling = math::Size<3, float>{aPose.mScale, 1.f},
                 .mOrientation =

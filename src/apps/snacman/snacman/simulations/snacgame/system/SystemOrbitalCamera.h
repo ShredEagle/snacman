@@ -12,9 +12,22 @@
 
 namespace ad {
 namespace snacgame {
+
+
+namespace visu_V1 {
+
+    struct Camera;
+
+} // namespace visu_V1
+
+
 namespace component {
-struct Geometry;
+
+    struct Geometry;
+
 }
+
+
 namespace system {
 
 class OrbitalCamera
@@ -26,7 +39,7 @@ public:
                 math::Radian<float> aVerticalFov,
                 int aWindowHeight_screen);
 
-    visu::Camera getCamera() const;
+    visu_V1::Camera getCamera() const;
 
 private:
     EntityWrap<OrbitalControlInput> mControl;

@@ -4,9 +4,11 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Commons.h
     Cube.h
+    Handle.h
     IntrospectProgram.h
     Json.h
     Logging.h
+    Logging-channels.h
     Logging-init.h
     Model.h
     Material.h
@@ -14,21 +16,33 @@ set(${TARGET_NAME}_HEADERS
     Profiling.h
     RendererReimplement.h
     Repositories.h
+    Rigging.h
     Semantics.h
     SetupDrawing.h
+    VertexStreamUtilities.h
 
-    files/Flags.h
+    debug/DebugDrawing.h
+    debug/DebugRenderer.h
+
     files/BinaryArchive.h
+    files/Flags.h
     files/Loader.h
+    files/Versioning.h
 )
 
 set(${TARGET_NAME}_SOURCES
     Camera.cpp
     IntrospectProgram.cpp
     Logging-init.cpp
+    Model.cpp
     Pass.cpp
     Profiling.cpp
+    Rigging.cpp
     SetupDrawing.cpp
+    VertexStreamUtilities.cpp
+
+    debug/DebugDrawing.cpp
+    debug/DebugRenderer.cpp
 
     files/Loader.cpp
 )
@@ -71,9 +85,14 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 ## Dependencies
 ##
 
+cmc_find_dependencies()
+
 target_link_libraries(${TARGET_NAME}
     PUBLIC
         ad::resource
+
+        #TODO Remove this! Currently needed for the debug drawer
+        ad::snac-renderer-V1
     PRIVATE
         ad::graphics
         ad::math

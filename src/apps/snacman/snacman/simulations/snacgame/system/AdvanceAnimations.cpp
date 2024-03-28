@@ -25,7 +25,8 @@ void AdvanceAnimations::update(const snac::Time & aSimulationTime)
 
     mAnimations.each([&](component::RigAnimation & aRigAnimation)
     {
-        aRigAnimation.mParameterValue = aRigAnimation.getParameter(aSimulationTime.mTimepoint);
+        // TODO Ad 2024/03/27: It should be asserted that the resulting value has enough precision as a float.
+        aRigAnimation.mParameterValue = (float)aRigAnimation.getParameter(aSimulationTime.mTimepoint);
     });
 }
 

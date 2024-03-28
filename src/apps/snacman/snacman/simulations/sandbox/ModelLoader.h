@@ -54,7 +54,7 @@ private:
     struct Model
     {
         std::size_t mIndex;  // for sparse set
-        Handle<renderer::Node> mNode;
+        renderer::Handle<const renderer::Object> mObject;
     };
 
     graphics::AppInterface * mAppInterface;

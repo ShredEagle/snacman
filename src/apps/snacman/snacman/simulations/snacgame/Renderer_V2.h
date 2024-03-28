@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "GraphicState.h"
+#include "GraphicState_V2.h"
 #include "Handle_V2.h"
 
 // TODO Ad 2024/02/13: #RV2 Remove all V1 stuff
@@ -16,6 +16,7 @@
 
 // V2: the good stuff
 #include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/VertexStreamUtilities.h>
 #include <snac-renderer-V2/files/Loader.h>
 
 #include <filesystem>
@@ -45,6 +46,7 @@ namespace semantic {
 
     BLOCK_SEM(ViewProjection);
     BLOCK_SEM(Materials);
+    BLOCK_SEM(JointMatrices);
 
     #undef SEMANTIC
 } // namespace semantic
@@ -62,11 +64,11 @@ struct SnacGraph
 
     static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage, std::size_t aInstanceCount)
     {
-        renderer::BufferView vboView = renderer::createBuffer(sizeof(InstanceData),
-                                                              aInstanceCount,
-                                                              1, // intance divisor
-                                                              GL_STREAM_DRAW,
-                                                              aStorage);
+        renderer::BufferView vboView = renderer::makeBufferGetView(sizeof(InstanceData),
+                                                                   aInstanceCount,
+                                                                   1, // intance divisor
+                                                                   GL_STREAM_DRAW,
+                                                                   aStorage);
 
         return renderer::GenericStream{
             .mVertexBufferViews = { vboView, },
@@ -106,13 +108,6 @@ struct SnacGraph
                 },
             }
         };
-    }
-
-    // TODO This should be handled by the Renderer library
-    const renderer::BufferView & getBufferView(renderer::Semantic aSemantic) const
-    {
-        return mInstanceStream.mVertexBufferViews[
-            mInstanceStream.mSemanticToAttribute.at(aSemantic).mBufferViewIndex];
     }
 
     // TODO #RV2: It should be implementing the frame rendering of models, instead of 
@@ -155,14 +150,14 @@ class Renderer_V2
     };
 
 public:
-    using GraphicState_t = visu::GraphicState;
+    using GraphicState_t = visu_V2::GraphicState;
 
     using Resources_t = Resources_V2;
 
     // This is smelly, ideally we should not Handle alias a second time.
     // But is currently used by RenderThread to derive the handle type from the renderer type.
     template <class T_resource>
-    using Handle_t = snacgame::Handle<T_resource>;
+    using Handle_t = renderer::Handle<T_resource>;
 
     Renderer_V2(graphics::AppInterface & aAppInterface,
                 snac::Load<snac::Technique> & aTechniqueAccess,
@@ -170,10 +165,11 @@ public:
 
     //void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
-    Handle<renderer::Node> loadModel(filesystem::path aModel,
-                                     filesystem::path aEffect,
-                                     Resources_t & aResources);
+    renderer::Handle<const renderer::Object> loadModel(filesystem::path aModel,
+                                                       filesystem::path aEffect,
+                                                       Resources_t & aResources);
 
+    // TODO Ad 2024/03/28: #font #RV2 still using the V1 renderer (and V1 type of handle)
     std::shared_ptr<snac::Font> loadFont(arte::FontFace aFontFace,
                                          unsigned int aPixelHeight,
                                          filesystem::path aEffect,
@@ -181,7 +177,7 @@ public:
 
     void continueGui();
 
-    void render(const visu::GraphicState & aState);
+    void render(const GraphicState_t & aState);
 
     /// \brief Forwards the request to reset repositories down to the generic renderer.
     void resetRepositories()
@@ -203,6 +199,9 @@ private:
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;
+
+    // Intended for local storage, made a member so its reuses the allocated memory between frames.
+    std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
     graphics::UniformBufferObject mJointMatrices;};
 
 

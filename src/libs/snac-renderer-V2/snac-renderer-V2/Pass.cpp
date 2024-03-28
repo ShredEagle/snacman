@@ -294,6 +294,7 @@ PassCache preparePass(StringKey aPass,
         result.mDrawInstances.push_back(DrawInstance{
             .mInstanceTransformIdx = aPartList.mTransformIdx[entry.mPartListIdx],
             .mMaterialIdx = (GLsizei)material.mPhongMaterialIdx,
+            .mMatrixPaletteOffset = aPartList.mPaletteOffset[entry.mPartListIdx],
         });
     }
 

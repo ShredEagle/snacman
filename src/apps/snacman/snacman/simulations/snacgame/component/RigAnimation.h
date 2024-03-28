@@ -4,7 +4,8 @@
 
 #include <math/Interpolation/ParameterAnimation.h>
 
-#include <snac-renderer-V1/Rigging.h>
+#include <snac-renderer-V2/Handle.h>
+#include <snac-renderer-V2/Rigging.h>
 
 
 namespace ad {
@@ -13,14 +14,14 @@ namespace component {
 
 struct RigAnimation
 {
-    // TODO this pointer is bad design, we need a better handle mechanism for resources
-    std::string mAnimName = "";
-    const snac::NodeAnimation * mAnimation;
-    const std::unordered_map<std::string, snac::NodeAnimation> * mAnimationMap;
+    renderer::Handle<const renderer::RigAnimation> mAnimation;
+    // Used to get to the map of RigAnimations
+    renderer::Handle<const renderer::AnimatedRig> mAnimatedRig;
     snac::Clock::time_point mStartTime;
     math::ParameterAnimation<double, math::FullRange, math::periodic::Repeat> mParameter;
+
     // TODO this is a somehow a duplication, because we need the resulting parameter value to make the graphic state.
-    double mParameterValue;
+    float mParameterValue; // A float should be enough, we expect animations to run for a few minutes at maximum.
 
     double getParameter(snac::Clock::time_point aCurrentTime) const
     {

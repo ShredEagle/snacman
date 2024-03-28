@@ -1,7 +1,10 @@
 #include "Processor.h"
 
+#include "AssimpUtils.h"
 #include "Logging.h"
+#include "ProcessAnimation.h"
 
+#include <assimp/DefaultLogger.hpp>
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
@@ -15,10 +18,9 @@
 #include <snac-renderer-V2/Material.h>
 #include <snac-renderer-V2/files/BinaryArchive.h>
 #include <snac-renderer-V2/files/Flags.h>
+#include <snac-renderer-V2/files/Versioning.h>
 
 #include <fmt/ostream.h>
-
-#include <assimp/DefaultLogger.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -29,39 +31,7 @@ namespace ad::renderer {
 
 namespace {
 
-    [[maybe_unused]] bool hasTrianglesOnly(aiMesh * aMesh)
-    {
-        //TODO Ad 2023/07/21: Understand what is this NGON encoding flag for.
-        return (aMesh->mPrimitiveTypes = (aiPrimitiveType_TRIANGLE | aiPrimitiveType_NGONEncodingFlag));
-    }
 
-    math::Matrix<4, 3, float> extractAffinePart(const aiNode * aNode)
-    {
-        auto m = aNode->mTransformation;
-        assert(m.d1 == 0 && m.d2 == 0 && m.d3 == 0 && m.d4 == 1);
-        return math::Matrix<4, 3, float>{
-            m.a1, m.b1, m.c1,
-            m.a2, m.b2, m.c2,
-            m.a3, m.b3, m.c3,
-            m.a4, m.b4, m.c4,
-        };
-    }
-
-    math::Position<3, float> toPosition(aiVector3D aVec)
-    {
-        return {aVec.x, aVec.y, aVec.z};
-    }
-
-    math::Box<float> extractAabb(const aiMesh * aMesh)
-    {
-        aiAABB aiBox = aMesh->mAABB;
-        return{
-            .mPosition = toPosition(aiBox.mMin),
-            .mDimension = (toPosition(aiBox.mMax) - toPosition(aiBox.mMin)).as<math::Size>(),
-        };
-    }
-
-    
     struct FileWriter
     {
         FileWriter(std::filesystem::path aDestinationFile) :
@@ -70,8 +40,8 @@ namespace {
                 .mParentPath = aDestinationFile.parent_path(),
             }
         {
-            unsigned int version = 1;
-            mArchive.write(version);
+            mArchive.write(gSeumMagic);
+            mArchive.write(gSeumVersion);
         }
 
         void write(const aiNode * aNode)
@@ -79,6 +49,8 @@ namespace {
             mArchive.write(std::string{aNode->mName.C_Str()});
             mArchive.write(aNode->mNumMeshes);
             mArchive.write(aNode->mNumChildren);
+            // TODO Should we decompose the transformation to store the decomposed form?
+            // (since currently we decompose on load, it would be an optimization)
             mArchive.write(extractAffinePart(aNode));
         }
 
@@ -94,7 +66,7 @@ namespace {
             aiVector3D * tangents = aMesh->mTangents;
             // positions and normals are always required
             unsigned int vertexAttributesFlags = gVertexPosition | gVertexNormal;
-            // Note: For the moment, since the structure of the loader if too rigid
+            // Note: For the moment, since the structure of the loader is too rigid
             // the tangents are mandatory (the vertexAttributesFlags is an illusion)
             // TODO Ad 2024/02/21: #assetprocessor Can we handle "dynamic" list of vertex attributes?
             // (e.g., making tangents optional)
@@ -145,15 +117,39 @@ namespace {
             }
         }
 
-        void write(const std::vector<std::string> & aStrings)
+
+        void write(const RigAnimation & aAnimation)
         {
-            mArchive.write((unsigned int)aStrings.size());
-            for(const auto & string : aStrings)
+            forward(aAnimation.mName);
+            forward(aAnimation.mDuration);
+            writeRaw(std::span{aAnimation.mTimepoints});
+            writeRaw(std::span{aAnimation.mNodes});
+
+            for(const RigAnimation::NodeKeyframes & keyframes : aAnimation.mKeyframes)
             {
-                mArchive.write(string);
+                forward(std::span{keyframes.mTranslations});
+                forward(std::span{keyframes.mRotations});
+                forward(std::span{keyframes.mScales});
             }
         }
 
+
+        void write(const std::string & aString)
+        {
+            forward(aString);
+        }
+
+        template<class T_element>
+        void write(const std::vector<T_element> & aVector)
+        {
+            mArchive.write((unsigned int)aVector.size());
+            for(const auto & element : aVector)
+            {
+                write(element);
+            }
+        }
+
+        // TODO Ad 2024/02/29: rename
         template <class T_element>
         void writeRaw(std::span<T_element> aData)
         {
@@ -161,7 +157,7 @@ namespace {
             mArchive.write(aData);
         }
 
-        // TODO this feels out of place, this file writer being inteded to be high level
+        // TODO this feels out of place, this file writer being intended to be high level
         template <class T_data>
         void forward(const T_data & aData)
         {
@@ -172,12 +168,25 @@ namespace {
     };
     
 
+    // Internal class, maintaining the state of the Rig created by parsing a given node.
+    struct NodeRig
+    {
+        aiNode * mCommonArmature;
+        Rig mRig;
+        JointDataDeduplicate mJointDataDeduplicator;
+        NodePointerMap mAiNodeToTreeNode;
+        std::unordered_map<std::string, NodeTree<Rig::Pose>::Node::Index> mNameToTreeNode;
+    };
+
     /// @brief Return type on "visiting" a node (i.e. recurseNode())
     struct NodeResult
     {
         math::Box<float> mAabb;
         unsigned int mVerticesCount = 0;
         unsigned int mIndicesCount = 0;
+
+        // #singlerig At most a single Rig accross the whole scene is supported ATM.
+        std::optional<NodeRig> mNodeRig;
     };
 
     
@@ -230,11 +239,40 @@ namespace {
     //        [UVChannel.coordinates(2 floats per vertex)]
     //      mesh.numFaces
     //      [mesh.faces(i.e. 3 unsigned int per face)]
+    //      mesh.numBones
+    //      <if mesh.hasBones>:
+    //          [mesh.jointData (i.e 4 bone indices (unsigned int) then 4 bone weights (float), per vertex)]
     //      mesh.boundingBox (AABB, as a math::Box<float>)
+    //    node.rigCount <currently, only 0 or 1>// computed from the meshes with bones
+    //    each node.Rig <at most 1>:
+    //      rig.mJointTree:
+    //        jointTree.numNodes
+    //        raw memory dump of span<Node>
+    //        jointTree.firstRootIndex
+    //        raw memory dump of span<LocalPose>
+    //        raw memory dump of span<GlobalPose>
+    //        jointTree.nodeNames
+    //      rig.mJoints:
+    //        numJoints
+    //        raw memory dump of span<Node::Index> // 1 per joint
+    //        raw memory dump of span<InverseBindMatrices> // 1 per joint
     //    bounding box union of all meshes (AABB, as a math::Box<float>, even if there are no meshes)
     //    each node.child:
     //      // recurse Node:
     //    node.boundingBox (AABB, as a math::Box<float>) // Note: I dislike having the node bounding box after the children BB, but it is computed form children's...
+    //  numAnimations
+    //  each RigAnimation:
+    //    name string size
+    //    name string characters
+    //    duration
+    //    num keyframes (== num of timepoints)
+    //    raw dump of timepoints
+    //    num nodes
+    //    raw dump of node indices
+    //    each node:
+    //      [keyframes.positions (3 floats per keyframe)]
+    //      [keyframes.rotations (4 floats per keyframe)]
+    //      [keyframes.scalings  (3 floats per keyframe)]
     //  numMaterials
     //  raw memory dump of span<PhongMaterial>
     //  numMaterialNames (Note: redundant with num of materials...)
@@ -273,6 +311,12 @@ namespace {
             result.mAabb = extractAabb(aScene->mMeshes[0]);
         }
 
+        // NOTE Ad 2024/02/28: This is not a hard requirement (code should work without it)
+        //   but this situation would exacerbate a design flaw (see note #flaw_593)
+        assert(aNode->mNumMeshes == 0 || aNode->mNumChildren == 0);
+
+        std::optional<NodeRig> nodeRig;
+
         for(std::size_t meshIdx = 0; meshIdx != aNode->mNumMeshes; ++meshIdx)
         {
             unsigned int globalMeshIndex = aNode->mMeshes[meshIdx];
@@ -286,20 +330,112 @@ namespace {
             result.mIndicesCount += mesh->mNumFaces * 3;
 
             std::cout << std::string(2 * level, ' ')
-                << "- Mesh " << globalMeshIndex << " '" << mesh->mName.C_Str() << "'" << " with " << mesh->mNumVertices << " vertices, " 
-                << mesh->mNumFaces << " triangles."
+                << "- Mesh " << globalMeshIndex << " '" << mesh->mName.C_Str() << "'" 
+                    << " with " << mesh->mNumVertices << " vertices, " << mesh->mNumFaces << " triangles"
+                    << ", material '" << aScene->mMaterials[mesh->mMaterialIndex]->GetName().C_Str() 
+                    << "'."
                 << "\n"
                 << std::string(2 * level + 2, ' ') << "- " << mesh->GetNumColorChannels() << " color channel(s), "
                     << mesh->GetNumUVChannels() << " UV channel(s)."
+                << "\n" << std::string(2 * level + 2, ' ') << "- "
+                    << mesh->mNumBones << " bones."
                 << "\n"
                 << std::string(2 * level + 2, ' ') << "- AABB " << meshAabb << "."
                 << "\n"
                 ;
 
             aWriter.write(mesh);
+
+            //
+            // Skeletal animation data
+            //
+            aWriter.forward(mesh->mNumBones);
+            if(mesh->mNumBones != 0)
+            {
+                aiNode * meshArmature = mesh->mBones[0]->mArmature;
+                assert(meshArmature);
+                if(!nodeRig) 
+                {
+                    nodeRig = NodeRig{
+                        .mCommonArmature = meshArmature,
+                    };
+                    std::tie(nodeRig->mRig, nodeRig->mAiNodeToTreeNode) = loadRig(meshArmature);
+                    traverseDepth(
+                        nodeRig->mRig.mJointTree, 
+                        [& nameMap = nodeRig->mNameToTreeNode]
+                        (NodeTree<Rig::Pose>::Node::Index aNodeIdx, NodeTree<Rig::Pose> & aTree)
+                        {
+                            assert(aTree.hasName(aNodeIdx));
+                            nameMap.emplace(aTree.mNodeNames.at(aNodeIdx), aNodeIdx);
+                        });
+                }
+                // The code is written assuming all (rigged) meshes of the same node have the same armature.
+                // If this assertion fails, code needs reviewing.
+                // (in particular the fact that a single rig can be assigned to a Node)
+                assert(meshArmature == nodeRig->mCommonArmature);
+
+                const std::vector<VertexJointData> jointData = 
+                    populateJointData(nodeRig->mJointDataDeduplicator,
+                                      nodeRig->mRig.mJoints,
+                                      mesh,
+                                      nodeRig->mAiNodeToTreeNode,
+                                      nodeRig->mCommonArmature);
+
+                aWriter.forward(std::span{jointData});
+            }
+
             aWriter.forward(meshAabb);
         }
 
+        // Rig of the Node
+        {
+            // Node rig count (can only have one at the moment)
+            unsigned int rigCount = nodeRig ? 1 : 0;
+            aWriter.forward(rigCount);
+            if(nodeRig)
+            {
+                result.mNodeRig = nodeRig;
+
+                const Rig & rig = nodeRig->mRig;
+// Run some more sanity checks on the Rig
+#if not defined(NDEBUG)
+                // Let's ensure that all bones, from the different meshes,
+                // point to distinct Nodes in the hierarchy.
+                const auto & indices = rig.mJoints.mIndices;
+                std::vector<NodeTree<Rig::Pose>::Node::Index> sortedIndices(indices.size(), 0);
+                std::partial_sort_copy(indices.begin(), indices.end(),
+                                       sortedIndices.begin(), sortedIndices.end());
+                
+                // If this trips, it means several bones pointed to the same aiNode,
+                // and this should never be the case because we take explicit measures to implement bone deduplication.
+                // Note: Joint duplicates happen in the Assimp model because of this design:
+                // The Bones are stored in the meshes.
+                // So, if several meshes are influenced by the same bone in a logical skeleton,
+                // each meach probably stores a bone to reference to the same node.
+                assert(std::adjacent_find(sortedIndices.begin(), sortedIndices.end()) == sortedIndices.end()
+                    && "Duplicate bones found in the rig");
+#endif
+                // Joint Tree
+                const NodeTree<Rig::Pose> & jointTree = rig.mJointTree;
+                // Writes the number of elements first
+                aWriter.writeRaw(std::span{jointTree.mHierarchy});
+                aWriter.forward(jointTree.mFirstRoot);
+                // Does not write number of elements (will be the same)
+                aWriter.forward(std::span{jointTree.mLocalPose});
+                aWriter.forward(std::span{jointTree.mGlobalPose});
+                aWriter.forward(jointTree.mNodeNames);
+
+                // Joint Data
+                // Writes the number of joints first
+                aWriter.writeRaw(std::span{rig.mJoints.mIndices});
+                aWriter.forward(std::span{rig.mJoints.mInverseBindMatrices});
+
+                // Armature name
+                aWriter.forward(rig.mArmatureName);
+            }
+        }
+
+        // AABB of the Node
         aWriter.forward(result.mAabb); // this is the AABB of all direct parts, without children nodes. (i.e the `Object`).
 
         // TODO do we really want to compute the node's AABB? This is tricky, because there might be transformations
@@ -320,12 +456,149 @@ namespace {
 
             result.mVerticesCount += childResult.mVerticesCount;
             result.mIndicesCount  += childResult.mIndicesCount;
+            if(childResult.mNodeRig)
+            {
+                // NOTE Ad 2024/03/06: This is currently a **hard** requirement.
+                //   #animation #singlerig Assimp data-model keeps "Animation" decoupled from nodes (listed under the global scene),
+                //   and it does not really have a notion of Rig.
+                //   Currently, we assume all animations are targeting the single rig we allow.
+                assert(!result.mNodeRig);
+                result.mNodeRig = childResult.mNodeRig;
+            }
         }
 
         // This is now the AABB including the children nodes.
         aWriter.forward(result.mAabb);
 
         return result;
+    }
+
+
+    void dumpAnimations(const aiScene * aScene, const NodeRig & aExtractedRig, FileWriter & aWriter)
+    {
+        using Node = NodeTree<Rig::Pose>::Node;
+        const NodeTree<Rig::Pose> & nodeTree = aExtractedRig.mRig.mJointTree;
+
+        std::vector<RigAnimation> animations;
+
+        // Allows to assert that scaling is uniform, while doing the conversion
+        auto scaleConverter = [](aiVector3D aScaleVec)
+        {
+            auto result = toVec(aScaleVec);
+            // We require uniform scaling at the moment.
+            // (no specific reason atm, but let's be conservative for when we want to decompose)
+            assert(math::relativeTolerance(result.x(), result.y(), 0.0001f)
+                && math::relativeTolerance(result.x(), result.z(), 0.0001f));
+            return result;
+        };
+
+        for(unsigned int animationIdx = 0; animationIdx != aScene->mNumAnimations; ++animationIdx)
+        {
+            const aiAnimation * animation = aScene->mAnimations[animationIdx];
+            assert(animation->mTicksPerSecond != 0); // Means it would be absent from the imported file
+
+            const float duration = (float)(animation->mDuration / animation->mTicksPerSecond);
+            std::cout << "Animation '" << animation->mName.C_Str() << "'"
+                << ", " << "duration " << duration << "s"
+                << " (at " << animation->mTicksPerSecond << " ticks/s)"
+                << "\n"
+                ;
+
+            // It seems it is not an animation if there are no channels
+            assert(animation->mNumChannels > 0);
+
+            RigAnimation & rigAnimation = animations.emplace_back(RigAnimation{
+                .mName = animation->mName.C_Str(),
+                .mDuration = duration,
+            });
+
+            // Compute the number of keyframes in the animation
+            unsigned int animationNumKeyframes = 0;
+            for(unsigned int channelIdx = 0; channelIdx != animation->mNumChannels; ++channelIdx)
+            {
+                const aiNodeAnim * channel = animation->mChannels[channelIdx];
+                animationNumKeyframes = 
+                    std::max(animationNumKeyframes,
+                        std::max(channel->mNumPositionKeys, 
+                            std::max(channel->mNumRotationKeys, channel->mNumScalingKeys)));
+            }
+            assert(animationNumKeyframes != 0);
+
+            unsigned int animatedNodes = 0;
+            for(unsigned int channelIdx = 0; channelIdx != animation->mNumChannels; ++channelIdx)
+            {
+                const aiNodeAnim * channel = animation->mChannels[channelIdx];
+
+                ++animatedNodes;
+                Node::Index treeNodeIdx = aExtractedRig.mNameToTreeNode.at(channel->mNodeName.C_Str());
+                rigAnimation.mNodes.push_back(treeNodeIdx);
+
+                RigAnimation::NodeKeyframes & keyframes = rigAnimation.mKeyframes.emplace_back();
+                keyframes.reserve(animationNumKeyframes);
+
+                auto populateKeyframes = 
+                    [animationNumKeyframes, &rigAnimation, ticksPerSecond = (float)animation->mTicksPerSecond]
+                    (auto & keyframesArray, unsigned int keyCount, auto keys, const auto & converter)
+                    {
+                        if(keyCount == 1) // We consider it to mean "not animated"
+                        {
+                            auto key = keys[0];
+                            assert(key.mTime == 0.);
+
+                            std::fill_n(std::back_inserter(keyframesArray), 
+                                        animationNumKeyframes,
+                                        converter(key.mValue));
+                        }
+                        else
+                        {
+                            // We require each key to either be not animated (num == 1),
+                            // or have the same number of entries as other animated keys.
+                            assert(keyCount == animationNumKeyframes);
+
+                            // We expect the first keyframe to be at time zero,
+                            // and the last to be at the final time of the animation (i.e. its duration)
+                            assert(keys[0].mTime == 0.);
+                            assert((float)keys[animationNumKeyframes - 1].mTime / ticksPerSecond 
+                                    == rigAnimation.mDuration);
+
+                            if(rigAnimation.mTimepoints.empty())
+                            {
+                                for(unsigned int keyIdx = 0; keyIdx != animationNumKeyframes; ++keyIdx)
+                                {
+                                    rigAnimation.mTimepoints.push_back(
+                                        (float)keys[keyIdx].mTime / ticksPerSecond);
+                                    keyframesArray.push_back(converter(keys[keyIdx].mValue));
+                                }
+                            }
+                            else
+                            {
+                                // Ideally we could use std::transform, but we also want to assert that time points are matching
+                                for(unsigned int keyIdx = 0; keyIdx != animationNumKeyframes; ++keyIdx)
+                                {
+                                    assert(rigAnimation.mTimepoints[keyIdx] 
+                                            == (float)keys[keyIdx].mTime / ticksPerSecond);
+                                    keyframesArray.push_back(converter(keys[keyIdx].mValue));
+                                }
+                            }
+                        }
+                    };
+
+                populateKeyframes(keyframes.mTranslations, channel->mNumPositionKeys, channel->mPositionKeys, &::ad::renderer::toVec);
+                populateKeyframes(keyframes.mRotations, channel->mNumRotationKeys, channel->mRotationKeys, &::ad::renderer::toQuaternion);
+                populateKeyframes(keyframes.mScales, channel->mNumScalingKeys, channel->mScalingKeys, scaleConverter);
+            }
+
+            // Handle the special case when an animation only has 1 keyframe in *all* of its channels
+            if(animationNumKeyframes == 1)
+            {
+                assert(rigAnimation.mDuration == 0.);
+                assert(rigAnimation.mTimepoints.empty());
+                rigAnimation.mTimepoints.push_back(0.);
+            }
+
+            std::cout << "  * " << animationNumKeyframes << " keyframes posing " << animatedNodes << " nodes\n";
+        }
+        aWriter.write(animations);
     }
 
 
@@ -619,6 +892,12 @@ void processModel(const std::filesystem::path & aFile)
         aiProcess_FindInvalidData           |
         // Generate bouding boxes, see: https://stackoverflow.com/a/74331859/1027706
         aiProcess_GenBoundingBoxes          |
+        // Populate the mNode member of aiBone, so we do not have to manually
+        // match up on node names
+        aiProcess_PopulateArmatureData      |
+        // Limit the maximum number of bones affecting a single vertex
+        // (default limit is 4)
+        aiProcess_LimitBoneWeights          |
         /* to allow final | */0
     );
     
@@ -639,6 +918,16 @@ void processModel(const std::filesystem::path & aFile)
     NodeResult topResult = recurseNodes(scene->mRootNode, scene, writer);
 
     completePreamble(writer, preamblePosition, topResult);
+
+    if(auto nodeRig = topResult.mNodeRig)
+    {
+        dumpAnimations(scene, *nodeRig, writer);
+    }
+    else
+    {
+        // Otherwise, there are zero animations
+        writer.forward((unsigned int)0);
+    }
 
     dumpMaterials(scene, writer);
 

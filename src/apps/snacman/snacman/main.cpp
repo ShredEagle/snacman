@@ -27,7 +27,11 @@
 
 #include <resource/ResourceFinder.h>
 
+// TODO remove
 #include <snac-renderer-V1/ResourceLoad.h>
+
+// For fine-tuning the log-levels.
+#include <snac-renderer-V2/Logging-channels.h>
 
 #include <fstream>
 
@@ -297,6 +301,9 @@ int main(int argc, char * argv[])
     {
         snac::detail::initializeLogging();
         spdlog::set_level(spdlog::level::debug);
+
+        // Opportunity to control the default log-level per-logger
+        //spdlog::get(renderer::gPipelineDiag)->set_level(spdlog::level::critical);
     }
     catch (std::exception & aException)
     {

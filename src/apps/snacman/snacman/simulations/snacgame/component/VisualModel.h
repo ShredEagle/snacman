@@ -9,7 +9,7 @@ namespace component {
 
 struct VisualModel
 {
-    std::shared_ptr<renderer::Node> mModel;
+    renderer::Handle<const renderer::Object> mModel;
     bool mDisableInterpolation = false;
 };
 

@@ -20,6 +20,7 @@ set(${TARGET_NAME}_HEADERS
     RenderThread.h
     Resources.h
     SparseSet.h
+    TemporaryRendererHelpers.h # TODO should be removed, this was a hack waiting to host Object instead of Node in VisualModel
     Timing.h
 
     simulations/sandbox/ModelLoader.h
@@ -29,6 +30,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/GameContext.h
     simulations/snacgame/GameParameters.h
     simulations/snacgame/GraphicState.h
+    simulations/snacgame/GraphicState_V2.h
     simulations/snacgame/ImguiInhibiter.h
     simulations/snacgame/ImguiSceneEditor.h
     simulations/snacgame/InputConstants.h
@@ -220,6 +222,7 @@ find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
+        ad::file-processor
         ad::profiler
         ad::snac-renderer-V1 # TODO #RV2 remove
         ad::snac-renderer-V2

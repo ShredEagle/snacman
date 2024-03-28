@@ -10,17 +10,23 @@ namespace ad::renderer {
 
 
 /// @brief A list of parts to be drawn, each associated to a Material and a transformation.
-/// It is intended to be reused accross distinct passes inside a frame (or even accross frame for static parts).
+/// It is intended to be reused accross distinct passes inside a frame (or even accross frames for static parts).
 struct PartList
 {
+    static constexpr GLsizei gInvalidIdx = std::numeric_limits<GLsizei>::max();
+
     // The individual renderer::Objects transforms. Several parts might index to the same transform.
     // (Same way several parts might index the same material parameters)
     std::vector<math::AffineMatrix<4, GLfloat>> mInstanceTransforms;
+
+    // All the palettes are concatenated in a single unidimensionnal container.
+    std::vector<Rig::Pose> mRiggingPalettes;
 
     // SOA
     std::vector<const Part *> mParts;
     std::vector<const Material *> mMaterials;
     std::vector<GLsizei> mTransformIdx;
+    std::vector<GLsizei> mPaletteOffset; // the first bone index for a each part in the global matrix palette
 };
 
 
@@ -37,10 +43,12 @@ struct DrawElementsIndirectCommand
 
 /// @brief Entry to populate the instance buffer (attribute divisor == 1).
 /// Each instance (mapping to a `Part` in client data model) has a pose and a material.
+// TODO Ad 2024/03/20: Why does it duplicate Loader.h InstanceData? (modulo the alias types)
 struct DrawInstance
 {
     GLsizei mInstanceTransformIdx; // index in the instance UBO
     GLsizei mMaterialIdx;
+    GLsizei mMatrixPaletteOffset;
 };
 
 
