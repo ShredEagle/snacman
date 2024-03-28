@@ -53,7 +53,7 @@ void addGeoNode(
     math::Quaternion<float> aOrientation = math::Quaternion<float>::Identity(),
     math::hdr::Rgba_f aColor = math::hdr::gWhite<float>);
 
-snacgame::Handle<renderer::Node> addMeshGeoNode(
+renderer::Handle<const renderer::Object> addMeshGeoNode(
     GameContext & aContext,
     ent::Entity & aEnt,
     const char * aModelPath,

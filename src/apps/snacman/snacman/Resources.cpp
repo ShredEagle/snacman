@@ -21,7 +21,7 @@ Resources::~Resources()
 }
 
 
-snacgame::Handle<renderer::Node> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
+snacgame::Renderer_t::Handle_t<const renderer::Object> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
 {
     // TODO Ad 2024/03/27: Since it will reuse the effect of first load,
     // we should explicitly error if an already-loader model is requested with a different effect file.
@@ -79,7 +79,7 @@ std::shared_ptr<Font> Resources::FontLoader(
 }
 
 
-snacgame::Handle<renderer::Node> Resources::ModelLoader(
+snacgame::Renderer_t::Handle_t<const renderer::Object> Resources::ModelLoader(
     filesystem::path aModel, 
     filesystem::path aEffect,
     RenderThread<snacgame::Renderer_t> & aRenderThread,

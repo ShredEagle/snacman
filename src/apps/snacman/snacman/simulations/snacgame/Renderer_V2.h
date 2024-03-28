@@ -157,7 +157,7 @@ public:
     // This is smelly, ideally we should not Handle alias a second time.
     // But is currently used by RenderThread to derive the handle type from the renderer type.
     template <class T_resource>
-    using Handle_t = snacgame::Handle<T_resource>;
+    using Handle_t = renderer::Handle<T_resource>;
 
     Renderer_V2(graphics::AppInterface & aAppInterface,
                 snac::Load<snac::Technique> & aTechniqueAccess,
@@ -165,10 +165,11 @@ public:
 
     //void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
 
-    Handle<renderer::Node> loadModel(filesystem::path aModel,
-                                     filesystem::path aEffect,
-                                     Resources_t & aResources);
+    renderer::Handle<const renderer::Object> loadModel(filesystem::path aModel,
+                                                       filesystem::path aEffect,
+                                                       Resources_t & aResources);
 
+    // TODO Ad 2024/03/28: #font #RV2 still using the V1 renderer (and V1 type of handle)
     std::shared_ptr<snac::Font> loadFont(arte::FontFace aFontFace,
                                          unsigned int aPixelHeight,
                                          filesystem::path aEffect,

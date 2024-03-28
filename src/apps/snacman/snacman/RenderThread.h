@@ -178,7 +178,7 @@ public:
     //    });
     //}
 
-    std::future<typename T_renderer::template Handle_t<renderer::Node>> 
+    std::future<typename T_renderer::template Handle_t<const renderer::Object>> 
     loadModel(filesystem::path aModel, 
               filesystem::path aEffect, 
               typename T_renderer::Resources_t & aResources)
@@ -190,7 +190,7 @@ public:
 
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
-        using Handle_t = typename T_renderer::template Handle_t<renderer::Node>;
+        using Handle_t = typename T_renderer::template Handle_t<const renderer::Object>;
         auto promise = std::make_shared<std::promise<Handle_t>>();
         std::future<Handle_t> future = promise->get_future();
         push([promise = std::move(promise), shape = std::move(aModel), effect = std::move(aEffect), &aResources]

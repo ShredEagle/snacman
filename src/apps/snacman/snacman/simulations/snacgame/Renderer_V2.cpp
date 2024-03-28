@@ -32,6 +32,7 @@
 #include <snacman/Profiling.h>
 #include <snacman/ProfilingGPU.h>
 #include <snacman/Resources.h>
+#include <snacman/TemporaryRendererHelpers.h>
 
 #include <file-processor/Processor.h>
 
@@ -62,9 +63,9 @@ Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
 }
 
 
-Handle<renderer::Node> Renderer_V2::loadModel(filesystem::path aModel,
-                                              filesystem::path aEffect, 
-                                              Resources_t & aResources)
+renderer::Handle<const renderer::Object> Renderer_V2::loadModel(filesystem::path aModel,
+                                                                filesystem::path aEffect, 
+                                                                Resources_t & aResources)
 {
     if(auto loadResult = loadBinary(aModel, 
                                     mRendererToKeep.mStorage,
@@ -72,7 +73,17 @@ Handle<renderer::Node> Renderer_V2::loadModel(filesystem::path aModel,
                                     mRendererToKeep.mRenderGraph.mInstanceStream);
         std::holds_alternative<renderer::Node>(loadResult))
     {
-        return std::make_shared<renderer::Node>(std::get<renderer::Node>(loadResult));
+        // TODO Ad 2024/03/27: This does not feel right:
+        // we would like the models to be consistent discretes Objects,
+        // instead of Nodes with potential trees behind them.
+        // Yet our .seum file format can host Node trees (which I think is a good thing).
+        // Somehow we have to reconciliate the two, and the current approach seems too brittle.
+        renderer::Handle<const renderer::Object> object = recurseToObject(std::get<renderer::Node>(loadResult));
+        if(object == renderer::gNullHandle)
+        {
+            throw std::logic_error{"There should have been an object in the Node hierarchy of a VisualModel"};
+        }
+        return object;
     }
     else
     {

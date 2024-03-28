@@ -30,7 +30,7 @@ struct Entity
     math::Size<3, float> mScaling; // TODO were is it used?
     math::Quaternion<float> mOrientation;
     math::hdr::Rgba_f mColor;
-    Handle<renderer::Node> mModel;
+    renderer::Handle<const renderer::Object> mModel;
 
     // TODO #anim would be better to interpolate the animation time (Parameter)
     // between each GPU frame, instead of providing fixed parameter value

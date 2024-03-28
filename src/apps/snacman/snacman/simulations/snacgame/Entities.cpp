@@ -73,7 +73,7 @@ void addGeoNode(GameContext & aContext,
         .add(component::GlobalPose{});
 }
 
-snacgame::Handle<renderer::Node> addMeshGeoNode(
+renderer::Handle<const renderer::Object> addMeshGeoNode(
     GameContext & aContext,
     Entity & aEnt,
     const char * aModelPath,
@@ -421,13 +421,10 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
             gSlotColors.at(slot.mSlotIndex));
 
         const std::string animName = "idle";
-        // TODO #RV2 API
-        auto object = recurseToObject(*modelData);
-        assert(object);
-        const renderer::RigAnimation & animation = object->mAnimatedRig->mNameToAnimation.at(animName);
+        const renderer::RigAnimation & animation = modelData->mAnimatedRig->mNameToAnimation.at(animName);
         model.add(component::RigAnimation{
             .mAnimation = &animation,
-            .mAnimatedRig = object->mAnimatedRig,
+            .mAnimatedRig = modelData->mAnimatedRig,
             .mStartTime = snac::Clock::now(),
             .mParameter =
                 decltype(component::RigAnimation::mParameter){

@@ -31,21 +31,5 @@ inline renderer::Handle<const renderer::Object> recurseToObject(const renderer::
     return renderer::gNullHandle;
 }
 
-inline renderer::Handle<const renderer::Object> extractObject(const component::VisualModel & aVisualModel)
-{
-    auto result = recurseToObject(*aVisualModel.mModel);
-
-    // TODO we also need to ensure unicity of the underlying, but it would be better
-    // to simply host objects directly...
-    if(result == renderer::gNullHandle)
-    {
-        throw std::logic_error{"There should have been an object in the Node hierarchy of a VisualModel"};
-    }
-    else
-    {
-        return result;
-    }
-}
-
 
 } // namespace ad::snacgame

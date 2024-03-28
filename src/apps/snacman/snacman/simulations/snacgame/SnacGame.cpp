@@ -460,14 +460,12 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
             scaleInstanceHack = aGlobPose.mInstanceScaling.width();
         }
 
-        // #RV2 API: this is a non-sense to do that each frame
-        renderer::Handle<const renderer::Object> object = extractObject(aVisualModel);
         state->mEntities.insert(
             aHandle.id(),
             visu_V2::Entity{
                 .mColor = aGlobPose.mColor,
                 .mInstance = renderer::Instance{
-                    .mObject = object,
+                    .mObject = aVisualModel.mModel,
                     .mPose = renderer::Pose{
                         .mPosition = aGlobPose.mPosition.as<math::Vec>(),
                         .mUniformScale = aGlobPose.mScaling * scaleInstanceHack,
