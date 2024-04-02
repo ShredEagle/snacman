@@ -125,9 +125,9 @@ void Renderer::renderText(const T_range & aTexts, snac::ProgramSetup & aProgramS
         // TODO should be consolidated, a single call for all string of the same
         // font.
         mDynamicStrings.respecifyData(std::span{textBufferData});
-        auto drawStringEntry = BEGIN_RECURRING_GL("Draw string", drawStringProfile);
+        auto drawStringEntry = BEGIN_RECURRING_GL("Draw string");
         mTextRenderer.render(mDynamicStrings, *text.mFont, mRenderer, aProgramSetup);
-        END_RECURRING_GL(drawStringProfile, drawStringEntry);
+        END_RECURRING_GL(drawStringEntry);
     }
 }
 
@@ -140,7 +140,7 @@ void Renderer::render(const visu::GraphicState & aState)
     std::map<renderer::Handle<const renderer::Object>,
              std::vector<snac::PoseColorSkeleton>> sortedModels;
 
-    auto sortModelEntry = BEGIN_RECURRING_GL("Sort_meshes", sortModelProfile);
+    auto sortModelEntry = BEGIN_RECURRING_GL("Sort_meshes");
     GLuint jointMatricesCount = 0;
     for (const visu::Entity & entity : aState.mEntities)
     {
@@ -171,7 +171,7 @@ void Renderer::render(const visu::GraphicState & aState)
             .matrixPaletteOffset = matrixPaletteOffset,
         });
     }
-    END_RECURRING_GL(sortModelProfile, sortModelEntry);
+    END_RECURRING_GL(sortModelEntry);
 
     // Position camera
     // TODO #camera The Camera instance should come from the graphic state directly

@@ -404,7 +404,7 @@ private:
                 Guard frameProfiling_v2 = renderer::scopeProfilerFrame(renderer::gRenderProfiler);
 
                 // Without the swap buffer
-                auto iterationProfileEntry = BEGIN_RECURRING_GL("Iteration", iterationScope);
+                auto iterationProfileEntry = BEGIN_RECURRING_GL("Iteration");
 
                 // Service all queued operations first.
                 {
@@ -474,7 +474,7 @@ private:
                 //
                 // Render
                 //
-                auto frameProfileEntry = BEGIN_RECURRING_GL("Frame", frameProfilerScope);
+                auto frameProfileEntry = BEGIN_RECURRING_GL("Frame");
                     
                 mApplication.getAppInterface()->clear();
 
@@ -486,8 +486,8 @@ private:
                     mImguiUi.renderBackend();
                 }
 
-                END_RECURRING_GL(frameProfilerScope, frameProfileEntry);
-                END_RECURRING_GL(iterationScope, iterationProfileEntry);
+                END_RECURRING_GL(frameProfileEntry);
+                END_RECURRING_GL(iterationProfileEntry);
 
                 {
                     TIME_RECURRING_GL("Swap buffers");
