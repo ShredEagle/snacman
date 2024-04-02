@@ -119,6 +119,7 @@ void runApplication()
 
     // Must be scoped below the GL context.
     auto renderProfilerScope = SCOPE_PROFILER(renderer::gRenderProfiler);
+    auto mainProfilerScope = SCOPE_PROFILER(gMainProfiler);
 
     // Ensures the messages are sent synchronously with the event triggering them
     // This makes debug stepping much more feasible.
@@ -198,9 +199,11 @@ void runApplication()
 
     while (glfwApp.handleEvents())
     {
+        // TODO Ad 2024/04/02: #profilerv1 Remove the old profiler frame guard
         Guard stepProfiling = profileFrame(getProfiler(snac::Profiler::Main));
+        Guard scopedMainFrameProfiling = renderer::scopeProfilerFrame(gMainProfiler);
 
-        BEGIN_RECURRING(Main, "Step", stepRecurringScope);
+        auto stepRecurringScope = BEGIN_RECURRING(Main, "Step");
 
         if constexpr(isDevmode())
         {

@@ -8,6 +8,8 @@
 #include <ratio>
 #include <vector>
 
+#include <cassert>
+
 
 // Implementation notes:
 // A profiler is one of those features that seem trivial, until you try to implement one.
@@ -162,9 +164,31 @@ public:
 
     struct [[nodiscard]] SectionGuard
     {
+        SectionGuard(Profiler * aProfiler, EntryIndex aEntry) :
+            mProfiler{aProfiler},
+            mEntry{aEntry}
+        {
+            assert(mProfiler != nullptr);
+        }
+
         ~SectionGuard()
         {
-            mProfiler->endSection(mEntry);
+            if(mProfiler != nullptr)
+            {
+                mProfiler->endSection(mEntry);
+            }
+        }
+
+        // Not copyable
+        SectionGuard(const SectionGuard &) = delete;
+        SectionGuard & operator = (const SectionGuard &) = delete;
+
+        // Movable
+        SectionGuard(SectionGuard && aRhs)
+        {
+            mProfiler = aRhs.mProfiler;
+            mEntry = aRhs.mEntry;
+            aRhs.mProfiler = nullptr; // disable the call to endSection() in dtor
         }
 
         Profiler * mProfiler;
@@ -174,8 +198,8 @@ public:
     SectionGuard scopeSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders)
     { 
         return {
-            .mProfiler = this,
-            .mEntry = beginSection(aNature, aName, std::move(aProviders))
+            this,
+            beginSection(aNature, aName, std::move(aProviders))
         };
     }
 

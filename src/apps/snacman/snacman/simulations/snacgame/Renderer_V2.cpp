@@ -160,9 +160,9 @@ void Renderer_V2::renderText(const T_range & aTexts, snac::ProgramSetup & aProgr
         // TODO should be consolidated, a single call for all string of the same
         // font.
         mDynamicStrings.respecifyData(std::span{textBufferData});
-        BEGIN_RECURRING_GL("Draw string", drawStringProfile);
+        auto drawStringEntry = BEGIN_RECURRING_GL("Draw string", drawStringProfile);
         mTextRenderer.render(mDynamicStrings, *text.mFont, mRendererToDecomission, aProgramSetup);
-        END_RECURRING_GL(drawStringProfile);
+        END_RECURRING_GL(drawStringProfile, drawStringEntry);
     }
 }
 
@@ -177,7 +177,7 @@ void Renderer_V2::render(const GraphicState_t & aState)
             // TODO Ad 2024/03/26 #RV2 change the instance type to something hosted in renderer_V2
              std::vector<snac::PoseColorSkeleton>> sortedModels;
 
-    BEGIN_RECURRING_GL("Sort_meshes_and_animate", sortModelProfile);
+    auto sortModelEntry = BEGIN_RECURRING_GL("Sort_meshes_and_animate", sortModelProfile);
     // The "ideal" semantic for the paletter buffer is a local,
     // but we do not want to reallocate dynamic data each frame. So clear between runs.
     mRiggingPalettesBuffer.clear();
@@ -220,7 +220,7 @@ void Renderer_V2::render(const GraphicState_t & aState)
     // Load the matrix palettes UBO with all palettes computed during the loop
     renderer::proto::load(mJointMatrices, std::span{mRiggingPalettesBuffer}, graphics::BufferHint::StreamDraw);
 
-    END_RECURRING_GL(sortModelProfile);
+    END_RECURRING_GL(sortModelProfile, sortModelEntry);
 
     // Position camera
     // TODO #camera The Camera instance should come from the graphic state directly

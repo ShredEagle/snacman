@@ -30,7 +30,15 @@ namespace {
 Profiler & ProfilerRegistry::Get(const Key & aProfilerKey)
 {
     RegistryStore & store = getRegistryStore();
-    return store.mMap.at(aProfilerKey);
+    if(auto found = store.mMap.find(aProfilerKey); found != store.mMap.end())
+    {
+        return found->second;
+    }
+    else
+    {
+        throw std::out_of_range{
+            "ProfilerRegistry cannot find a profiler associated to '" + aProfilerKey + "'."};
+    }
 }
 
 

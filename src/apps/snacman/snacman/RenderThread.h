@@ -395,113 +395,114 @@ private:
 
         while (!mStop)
         {
+            // The V1 profiler does not require the frame ot be ended before writting its output.
             Guard frameProfiling = profileFrame(getProfilerGL());
+
+            // NOTE: The artificial scope below is to help with profiler V2
             // At the moment, we must end the frame before calling the print to ostream
-            //Guard frameProfiling_v2 = v2::scopeProfilerFrame();
-            PROFILER_BEGIN_FRAME(renderer::gRenderProfiler);
-
-            // Without the swap buffer
-            BEGIN_RECURRING_GL("Iteration", iterationScope);
-            //PROFILER_SCOPE_RECURRING_SECTION("Iteration", renderer::CpuTime);
-            auto sectionIteration = PROFILER_PUSH_RECURRING_SECTION(renderer::gRenderProfiler, "Iteration", renderer::CpuTime);
-
-            // Service all queued operations first.
             {
-                TIME_RECURRING(Render, "Service_operations");
-                serviceOperations(*mRenderer);
-            }
+                Guard frameProfiling_v2 = renderer::scopeProfilerFrame(renderer::gRenderProfiler);
 
-            // TODO simulate delay in the render thread:
-            // * Thread iteration time (simulate what CPU compuations run on the
-            // thread, e.g. visibility).
-            // * GPU load, i.e. rendering time. This might be harder to
-            // simulate.
-            // std::this_thread::sleep_for(ms{8});
+                // Without the swap buffer
+                auto iterationProfileEntry = BEGIN_RECURRING_GL("Iteration", iterationScope);
 
-            // Get new latest state, if any
-            {
-                TIME_RECURRING(Render, "Consume_available_states");
-                entries->consume(aStates);
-            }
-
-            //
-            // Interpolate (or pick the current state if interpolation is
-            // disabled)
-            //
-            typename T_renderer::GraphicState_t state;
-            if (mControls.mInterpolate)
-            {
-                TIME_RECURRING(Render, "Interpolation");
-
-                const auto & previous = entries->previous();
-                const auto & latest = entries->current();
-
-                // TODO Is it better to use difference in push times, or the
-                // fixed simulation delta as denominator? Note: using the
-                // difference in push time smoothly "slows" the game if push
-                // occurs less frequently than the simulation period would
-                // require.
-                float interpolant =
-                    float((Clock::now() - latest.pushTime).count())
-                    / (latest.pushTime - previous.pushTime).count();
-                SELOG(trace)
-                ("Render thread: Interpolant is {}, delta between entries is "
-                 "{}ms.",
-                 interpolant,
-                 duration_cast<ms>(latest.pushTime - previous.pushTime)
-                     .count());
-
-                state =
-                    interpolate(*previous.state, *latest.state, interpolant);
-            }
-            else
-            {
-                const auto & latest = entries->current();
-                if (latest.pushTime != renderedPushTime)
+                // Service all queued operations first.
                 {
-                    state = *latest.state;
-                    renderedPushTime = latest.pushTime;
+                    TIME_RECURRING(Render, "Service_operations");
+                    serviceOperations(*mRenderer);
+                }
+
+                // TODO simulate delay in the render thread:
+                // * Thread iteration time (simulate what CPU compuations run on the
+                // thread, e.g. visibility).
+                // * GPU load, i.e. rendering time. This might be harder to
+                // simulate.
+                // std::this_thread::sleep_for(ms{8});
+
+                // Get new latest state, if any
+                {
+                    TIME_RECURRING(Render, "Consume_available_states");
+                    entries->consume(aStates);
+                }
+
+                //
+                // Interpolate (or pick the current state if interpolation is
+                // disabled)
+                //
+                typename T_renderer::GraphicState_t state;
+                if (mControls.mInterpolate)
+                {
+                    TIME_RECURRING(Render, "Interpolation");
+
+                    const auto & previous = entries->previous();
+                    const auto & latest = entries->current();
+
+                    // TODO Is it better to use difference in push times, or the
+                    // fixed simulation delta as denominator? Note: using the
+                    // difference in push time smoothly "slows" the game if push
+                    // occurs less frequently than the simulation period would
+                    // require.
+                    float interpolant =
+                        float((Clock::now() - latest.pushTime).count())
+                        / (latest.pushTime - previous.pushTime).count();
+                    SELOG(trace)
+                    ("Render thread: Interpolant is {}, delta between entries is "
+                    "{}ms.",
+                    interpolant,
+                    duration_cast<ms>(latest.pushTime - previous.pushTime)
+                        .count());
+
+                    state =
+                        interpolate(*previous.state, *latest.state, interpolant);
                 }
                 else
                 {
-                    // The last frame rendered is still for the latest state,
-                    // non need to render.
-                    continue;
+                    const auto & latest = entries->current();
+                    if (latest.pushTime != renderedPushTime)
+                    {
+                        state = *latest.state;
+                        renderedPushTime = latest.pushTime;
+                    }
+                    else
+                    {
+                        // The last frame rendered is still for the latest state,
+                        // non need to render.
+                        continue;
+                    }
+                }
+
+                //
+                // Render
+                //
+                auto frameProfileEntry = BEGIN_RECURRING_GL("Frame", frameProfilerScope);
+                    
+                mApplication.getAppInterface()->clear();
+
+                mRenderer->render(state);
+                SELOG(trace)("Render thread: Frame sent to GPU.");
+
+                {
+                    TIME_RECURRING_GL( "ImGui::renderBackend");
+                    mImguiUi.renderBackend();
+                }
+
+                END_RECURRING_GL(frameProfilerScope, frameProfileEntry);
+                END_RECURRING_GL(iterationScope, iterationProfileEntry);
+
+                {
+                    TIME_RECURRING_GL("Swap buffers");
+                    mApplication.swapBuffers();
                 }
             }
 
-            //
-            // Render
-            //
-            BEGIN_RECURRING_GL("Frame", frameProfilerScope);
-                
-            mApplication.getAppInterface()->clear();
-
-            mRenderer->render(state);
-            SELOG(trace)("Render thread: Frame sent to GPU.");
-
+            // Now that the profiler V2 frame scope has ended, we can print its results. 
             {
-                TIME_RECURRING_GL( "ImGui::renderBackend");
-                mImguiUi.renderBackend();
-            }
-
-            END_RECURRING_GL(frameProfilerScope);
-            END_RECURRING_GL(iterationScope);
-
-            {
-                TIME_RECURRING_GL("Swap buffers");
-                mApplication.swapBuffers();
-            }
-
-            {
-                TIME_RECURRING(Render, "RenderThread_Profiler_dump");
+                TIME_RECURRING_V1(Render, "RenderThread_Profiler_dump");
                 getRenderProfilerPrint().print();
-                // A complication from the limitation that our Profiler require sections and frame to be terminated before the print
-                PROFILER_POP_SECTION(renderer::gRenderProfiler, sectionIteration);
-                PROFILER_END_FRAME(renderer::gRenderProfiler);
                 v2::getRenderProfilerPrint().print();
             }
         }
+
         // This is smelly, but a consequence of the need to access it from both main and render thread
         // while the destruction should occur on the render thread (where the GL context is)
         mRenderer.reset(); // destruct on clean exit.

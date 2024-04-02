@@ -1,6 +1,7 @@
 #pragma once
 
 #include <snac-renderer-V1/3rdparty/nvpro/Profiler.hpp>
+#include <snac-renderer-V2/Profiling.h>
 
 #include <handy/Guard.h>
 
@@ -16,6 +17,14 @@ enum class Profiler
 {
     Main,
     Render,
+};
+
+const std::string gMainProfiler = "Main";
+
+struct ProfilerMap_V2
+{
+    inline static const std::string Main = gMainProfiler;
+    inline static const std::string Render = ::ad::renderer::gRenderProfiler;
 };
 
 
@@ -88,23 +97,34 @@ inline std::string remove_signature(std::string_view aStr)
     return std::string{aStr.substr(0, pos)};
 }
 
-#define BEGIN_SINGLE(profiler, name, var) \
-    auto var = std::make_optional(snac::getProfiler(::ad::snac::Profiler::profiler).timeSingle(name))
-
-#define END_SINGLE(var) \
-    var.reset()
+// Unused
+//#define BEGIN_SINGLE(profiler, name, var) \
+//    auto var = std::make_optional(snac::getProfiler(::ad::snac::Profiler::profiler).timeSingle(name))
+//
+//#define END_SINGLE(var) \
+//    var.reset()
 
 #define TIME_SINGLE(profiler, name) \
-    auto profilerSingleScoped = snac::getProfiler(::ad::snac::Profiler::profiler).timeSingle(name)
+    auto profilerSingleScoped = snac::getProfiler(::ad::snac::Profiler::profiler).timeSingle(name); \
+    //PROFILER_SCOPE_SINGLESHOT_SECTION(::ad::snac::ProfilerMap_V2::profiler, name, ::ad::renderer::CpuTime)
 
-#define BEGIN_RECURRING(profiler, name, var) \
-    auto var = std::make_optional(snac::getProfiler(::ad::snac::Profiler::profiler).timeRecurring(name))
+#define BEGIN_RECURRING(profiler, name) \
+    std::make_optional( \
+        std::make_tuple( \
+            snac::getProfiler(::ad::snac::Profiler::profiler).timeRecurring(name), \
+            ::ad::renderer::ProfilerRegistry::Get(::ad::snac::ProfilerMap_V2::profiler).scopeSection(::ad::renderer::EntryNature::Recurring, name, {::ad::renderer::CpuTime, }) \
+        ) \
+    )
 
-#define END_RECURRING(var) \
-    var.reset()
+#define END_RECURRING(entry) \
+    entry.reset();
+
+#define TIME_RECURRING_V1(profiler, name) \
+    auto profilerSectionScoped = snac::getProfiler(::ad::snac::Profiler::profiler).timeRecurring(name)
 
 #define TIME_RECURRING(profiler, name) \
-    auto profilerSectionScoped = snac::getProfiler(::ad::snac::Profiler::profiler).timeRecurring(name)
+    auto profilerSectionScoped = snac::getProfiler(::ad::snac::Profiler::profiler).timeRecurring(name); \
+    PROFILER_SCOPE_RECURRING_SECTION(::ad::snac::ProfilerMap_V2::profiler, name, ::ad::renderer::CpuTime)
 
 #if defined(__GNUC__)
 #define SNAC_FUNCTION_NAME ::ad::snac::remove_signature(__PRETTY_FUNCTION__)
