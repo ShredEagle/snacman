@@ -108,7 +108,8 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                            ImguiInhibiter & aInhibiter,
-                           RawInput & aInput)
+                           RawInput & aInput,
+                           const std::string & aProfilerResults)
 {
     TIME_RECURRING_FUNC(Main);
 
@@ -295,10 +296,16 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
         if (mImguiDisplays.mShowMainProfiler)
         {
-            ImGui::Begin("Main profiler", &mImguiDisplays.mShowMainProfiler);
-            std::string str;
-            snac::getProfiler(snac::Profiler::Main).print(str);
-            ImGui::TextUnformatted(str.c_str());
+            {
+                ImGui::Begin("Main profiler", &mImguiDisplays.mShowMainProfiler);
+                std::string str;
+                snac::getProfiler(snac::Profiler::Main).print(str);
+                ImGui::TextUnformatted(str.c_str());
+                ImGui::End();
+            }
+
+            ImGui::Begin("Main profiler V2", &mImguiDisplays.mShowMainProfiler);
+            ImGui::TextUnformatted(aProfilerResults.c_str());
             ImGui::End();
         }
         if (mImguiDisplays.mShowRenderProfiler)

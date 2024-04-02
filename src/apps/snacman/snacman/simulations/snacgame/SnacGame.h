@@ -103,7 +103,8 @@ public:
 
     void drawDebugUi(snac::ConfigurableSettings & aSettings,
                      ImguiInhibiter & aInhibiter,
-                     RawInput & aInput);
+                     RawInput & aInput,
+                     const std::string & aProfilerResults);
 
     std::unique_ptr<Renderer_t::GraphicState_t> makeGraphicState();
 

@@ -106,7 +106,15 @@ inline std::string remove_signature(std::string_view aStr)
 
 #define TIME_SINGLE(profiler, name) \
     auto profilerSingleScoped = snac::getProfiler(::ad::snac::Profiler::profiler).timeSingle(name); \
-    //PROFILER_SCOPE_SINGLESHOT_SECTION(::ad::snac::ProfilerMap_V2::profiler, name, ::ad::renderer::CpuTime)
+    PROFILER_SCOPE_SINGLESHOT_SECTION(::ad::snac::ProfilerMap_V2::profiler, name, ::ad::renderer::CpuTime)
+
+#define BEGIN_RECURRING_V1(profiler, name) \
+    std::make_optional( \
+        snac::getProfiler(::ad::snac::Profiler::profiler).timeRecurring(name) \
+    )
+
+#define END_RECURRING_V1(entry) \
+    entry.reset();
 
 #define BEGIN_RECURRING(profiler, name) \
     std::make_optional( \
@@ -131,6 +139,8 @@ inline std::string remove_signature(std::string_view aStr)
 #else
 #define SNAC_FUNCTION_NAME __FUNCTION__
 #endif
+
+#define TIME_RECURRING_FUNC_V1(profiler) TIME_RECURRING_V1(profiler, __func__)
 
 #define TIME_RECURRING_FUNC(profiler) TIME_RECURRING(profiler, __func__)
 

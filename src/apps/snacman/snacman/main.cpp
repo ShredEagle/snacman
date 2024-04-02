@@ -201,13 +201,19 @@ void runApplication()
     {
         // TODO Ad 2024/04/02: #profilerv1 Remove the old profiler frame guard
         Guard stepProfiling = profileFrame(getProfiler(snac::Profiler::Main));
-        Guard scopedMainFrameProfiling = renderer::scopeProfilerFrame(gMainProfiler);
+        
+        auto v2PrintScope = BEGIN_RECURRING_V1(Main, "profiler_v2_print");
+        // With profiler V2, we cannot print the results while inside a profiler's frame.
+        std::ostringstream profilerOutput;
+        PROFILER_PRINT_TO_STREAM(snac::gMainProfiler, profilerOutput);
+        END_RECURRING_V1(v2PrintScope);
 
+        Guard scopedMainFrameProfiling = renderer::scopeProfilerFrame(gMainProfiler);
         auto stepRecurringScope = BEGIN_RECURRING(Main, "Step");
 
         if constexpr(isDevmode())
         {
-            simulation.drawDebugUi(configurableSettings, inhibiter, input);
+            simulation.drawDebugUi(configurableSettings, inhibiter, input, profilerOutput.str());
         }
         else
         {
