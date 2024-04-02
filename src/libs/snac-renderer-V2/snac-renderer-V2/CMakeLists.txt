@@ -36,7 +36,6 @@ set(${TARGET_NAME}_SOURCES
     Logging-init.cpp
     Model.cpp
     Pass.cpp
-    Profiling.cpp
     Rigging.cpp
     SetupDrawing.cpp
     VertexStreamUtilities.cpp

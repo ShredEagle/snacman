@@ -171,7 +171,7 @@ PassCache preparePass(StringKey aPass,
                       const PartList & aPartList,
                       Storage & aStorage)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("prepare_pass", CpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "prepare_pass", CpuTime);
 
     constexpr unsigned int gProgramIdBits = 16;
     constexpr std::uint64_t gProgramIdMask = makeMask(gProgramIdBits);
@@ -232,7 +232,7 @@ PassCache preparePass(StringKey aPass,
     // Sort the entries
     //
     {
-        PROFILER_SCOPE_RECURRING_SECTION("sort_draw_entries", CpuTime);
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "sort_draw_entries", CpuTime);
         std::sort(entries.begin(), entries.end());
     }
 

@@ -5,6 +5,7 @@
 #include "Logging.h"
 #include "LoopSettings.h"
 #include "Profiling.h"
+#include "Profiling_V2.h"
 #include "ProfilingGPU.h"
 #include "Timing.h"
 
@@ -395,9 +396,14 @@ private:
         while (!mStop)
         {
             Guard frameProfiling = profileFrame(getProfilerGL());
+            // At the moment, we must end the frame before calling the print to ostream
+            //Guard frameProfiling_v2 = v2::scopeProfilerFrame();
+            PROFILER_BEGIN_FRAME(renderer::gRenderProfiler);
 
             // Without the swap buffer
             BEGIN_RECURRING_GL("Iteration", iterationScope);
+            //PROFILER_SCOPE_RECURRING_SECTION("Iteration", renderer::CpuTime);
+            auto sectionIteration = PROFILER_PUSH_RECURRING_SECTION(renderer::gRenderProfiler, "Iteration", renderer::CpuTime);
 
             // Service all queued operations first.
             {
@@ -490,6 +496,10 @@ private:
             {
                 TIME_RECURRING(Render, "RenderThread_Profiler_dump");
                 getRenderProfilerPrint().print();
+                // A complication from the limitation that our Profiler require sections and frame to be terminated before the print
+                PROFILER_POP_SECTION(renderer::gRenderProfiler, sectionIteration);
+                PROFILER_END_FRAME(renderer::gRenderProfiler);
+                v2::getRenderProfilerPrint().print();
             }
         }
         // This is smelly, but a consequence of the need to access it from both main and render thread

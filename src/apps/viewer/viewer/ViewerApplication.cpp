@@ -189,6 +189,8 @@ namespace {
 
             if(auto animatedRig = object->mAnimatedRig)
             {
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "compute_joint_matrices", CpuTime);
+
                 // TODO Ad 2024/03/20 #perf #animation:
                 // We could share the matrix palette for all no-animation (i.e. default rig pose),
                 // or even for "static animations" (i.e. single keyframe, defining a static pose)
@@ -232,7 +234,7 @@ namespace {
 
 PartList Scene::populatePartList() const
 {
-    PROFILER_SCOPE_RECURRING_SECTION("populate_draw_list", CpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "populate_part_list", CpuTime);
 
     PartList partList;
     renderer::populatePartList(partList,
@@ -429,6 +431,7 @@ void handleAnimations(Node & aNode,
     Pose pose = aParentPose.transform(aNode.mInstance.mPose);
     if(const Object * object = aNode.mInstance.mObject)
     {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "handle_animations", CpuTime);
         if(auto & animationState = aNode.mInstance.mAnimationState)
         {
             assert(object->mAnimatedRig);
@@ -461,7 +464,7 @@ void handleAnimations(Node & aNode,
 
 void ViewerApplication::update(const Timing & aTime)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("ViewerApplication::update()", CpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "ViewerApplication::update()", CpuTime);
 
     snac::DebugDrawer::StartFrame();
 
@@ -492,7 +495,7 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
 
 void ViewerApplication::render()
 {
-    PROFILER_SCOPE_RECURRING_SECTION("ViewerApplication::render()", CpuTime, GpuTime, BufferMemoryWritten);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "ViewerApplication::render()", CpuTime, GpuTime, BufferMemoryWritten);
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 

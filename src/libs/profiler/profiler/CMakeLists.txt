@@ -5,6 +5,7 @@ set(${TARGET_NAME}_HEADERS
     Logging.h
     Logging-init.h
     Profiler.h
+    ProfilerRegistry.h
 
     providers/ProviderApi.h
     providers/ProviderCpu.h
@@ -15,6 +16,8 @@ set(${TARGET_NAME}_HEADERS
 set(${TARGET_NAME}_SOURCES
     Logging-init.cpp
     Profiler.cpp
+    ProfilerRegistry.cpp
+    Profiling.h
 
     providers/ProviderCpu.cpp
     providers/ProviderGL.cpp
@@ -72,6 +75,7 @@ cmc_find_dependencies()
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
+        ad::handy
         ad::renderer
         ad::utilities
 

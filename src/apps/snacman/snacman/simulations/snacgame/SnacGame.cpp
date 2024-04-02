@@ -54,6 +54,7 @@
 #include <snacman/ImguiUtilities.h>
 #include <snacman/LoopSettings.h>
 #include <snacman/Profiling.h>
+#include <snacman/Profiling_V2.h>
 #include <snacman/QueryManipulation.h>
 #include <snacman/RenderThread.h>
 #include <string>
@@ -306,6 +307,12 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                          &mImguiDisplays.mShowRenderProfiler);
             ImGui::TextUnformatted(
                 snac::getRenderProfilerPrint().get().c_str());
+            ImGui::End();
+
+            ImGui::Begin("Render profiler V2",
+                         &mImguiDisplays.mShowRenderProfiler);
+            ImGui::TextUnformatted(
+                snac::v2::getRenderProfilerPrint().get().c_str());
             ImGui::End();
         }
         if (mImguiDisplays.mShowRenderControls)

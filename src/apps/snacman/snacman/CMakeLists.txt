@@ -15,6 +15,7 @@ set(${TARGET_NAME}_HEADERS
     Logging.h
     LoopSettings.h
     Profiling.h
+    Profiling_V2.h
     ProfilingGPU.h
     QueryManipulation.h
     RenderThread.h

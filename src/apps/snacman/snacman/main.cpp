@@ -32,6 +32,8 @@
 
 // For fine-tuning the log-levels.
 #include <snac-renderer-V2/Logging-channels.h>
+// TODO replace by an include not scoped to renderer-V2
+#include <snac-renderer-V2/Profiling.h>
 
 #include <fstream>
 
@@ -114,6 +116,9 @@ void runApplication()
         4, 1,
         { {GLFW_SAMPLES, 4} },
     };
+
+    // Must be scoped below the GL context.
+    auto renderProfilerScope = SCOPE_PROFILER(renderer::gRenderProfiler);
 
     // Ensures the messages are sent synchronously with the event triggering them
     // This makes debug stepping much more feasible.

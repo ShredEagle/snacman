@@ -105,23 +105,23 @@ void draw(const PassCache & aPassCache,
     GLuint firstInstance = 0; 
     for (const DrawCall & aCall : aPassCache.mCalls)
     {
-        PROFILER_SCOPE_RECURRING_SECTION("drawcall_iteration", CpuTime);
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "drawcall_iteration", CpuTime);
 
-        PROFILER_PUSH_RECURRING_SECTION("discard_2", CpuTime);
+        PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "discard_2", CpuTime);
         const IntrospectProgram & selectedProgram = *aCall.mProgram;
         const graphics::VertexArrayObject & vao = *aCall.mVao;
-        PROFILER_POP_RECURRING_SECTION;
+        PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
 
         // TODO Ad 2023/10/05: #perf #azdo 
         // Only change what is necessary, instead of rebiding everything each time.
         // Since we sorted our draw calls, it is very likely that program remain the same, and VAO changes.
         {
-            PROFILER_PUSH_RECURRING_SECTION("bind_VAO", CpuTime);
+            PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "bind_VAO", CpuTime);
             graphics::ScopedBind vaoScope{vao};
-            PROFILER_POP_RECURRING_SECTION;
+            PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
             
             {
-                PROFILER_SCOPE_RECURRING_SECTION("set_buffer_backed_blocks", CpuTime);
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
                 // TODO #repos This should be consolidated
                 RepositoryUbo uboRepo{aUboRepository};
                 if(aCall.mCallContext)
@@ -133,7 +133,7 @@ void draw(const PassCache & aPassCache,
             }
 
             {
-                PROFILER_SCOPE_RECURRING_SECTION("set_textures", CpuTime);
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
                 // TODO #repos This should be consolidated
                 RepositoryTexture textureRepo{aTextureRepository};
                 if(aCall.mCallContext)
@@ -144,14 +144,14 @@ void draw(const PassCache & aPassCache,
                 setTextures(selectedProgram, textureRepo);
             }
 
-            PROFILER_PUSH_RECURRING_SECTION("bind_program", CpuTime);
+            PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "bind_program", CpuTime);
             graphics::ScopedBind programScope{selectedProgram};
-            PROFILER_POP_RECURRING_SECTION;
+            PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
 
             {
                 // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
                 // Can we have efficient GPU measures?
-                PROFILER_SCOPE_RECURRING_SECTION("glDraw_call", CpuTime/*, GpuTime*/);
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw_call", CpuTime/*, GpuTime*/);
                 
                 gl.MultiDrawElementsIndirect(
                     aCall.mPrimitiveMode,
@@ -242,7 +242,7 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
 void TheGraph::loadDrawBuffers(const PartList & aPartList,
                                const PassCache & aPassCache)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("load_draw_buffers", CpuTime, BufferMemoryWritten);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_draw_buffers", CpuTime, BufferMemoryWritten);
 
     assert(aPassCache.mDrawInstances.size() <= gMaxDrawInstances);
 
@@ -266,7 +266,7 @@ void TheGraph::renderFrame(const PartList & aPartList,
                            Storage & aStorage)
 {
     {
-        PROFILER_SCOPE_RECURRING_SECTION("load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
         loadFrameUbo(*mUbos.mFrameUbo);
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, aCamera);
@@ -358,7 +358,7 @@ void TheGraph::showDepthTexture(const graphics::Texture & aTexture,
 
 void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("pass_depth", CpuTime, GpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_depth", CpuTime, GpuTime);
 
     // Can be done once even for distinct cameras, if there is no culling
     PassCache passCache = preparePass("depth_opaque", aPartList, aStorage);
@@ -373,7 +373,7 @@ void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
     // Note: Must be set before any drawing operations, including glClear(),
     // otherwise results becomes real mysterious real quick.
     {
-        PROFILER_SCOPE_RECURRING_SECTION("set_pipeline_state", CpuTime);
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_pipeline_state", CpuTime);
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_TRUE);
@@ -392,7 +392,7 @@ void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
     //for(whatever dimension)
     {
         {
-            PROFILER_SCOPE_RECURRING_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
+            PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
             draw(passCache, mUbos.mUboRepository, mDummyTextureRepository);
         }
     }
@@ -401,7 +401,7 @@ void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
 
 void TheGraph::passForward(const PartList & aPartList, Storage & mStorage)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("pass_forward", CpuTime, GpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_forward", CpuTime, GpuTime);
 
     // Can be done once for distinct camera, if there is no culling
     PassCache passCache = preparePass("forward", aPartList, mStorage);
@@ -416,7 +416,7 @@ void TheGraph::passForward(const PartList & aPartList, Storage & mStorage)
     // Set pipeline state
     //
     {
-        PROFILER_SCOPE_RECURRING_SECTION("set_pipeline_state", CpuTime);
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_pipeline_state", CpuTime);
         // TODO handle pipeline state with an abstraction
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
@@ -442,7 +442,7 @@ void TheGraph::passForward(const PartList & aPartList, Storage & mStorage)
         glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
         {
-            PROFILER_SCOPE_RECURRING_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
+            PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
             draw(passCache, mUbos.mUboRepository, mDummyTextureRepository);
         }
     }
@@ -451,7 +451,7 @@ void TheGraph::passForward(const PartList & aPartList, Storage & mStorage)
 
 void TheGraph::passTransparencyAccumulation(const PartList & aPartList, Storage & mStorage)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("pass_transparency_accum", CpuTime, GpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_transparency_accum", CpuTime, GpuTime);
 
     //
     // Clear output resources
@@ -472,7 +472,7 @@ void TheGraph::passTransparencyAccumulation(const PartList & aPartList, Storage 
     // Set pipeline state
     //
     {
-        PROFILER_SCOPE_RECURRING_SECTION("set_pipeline_state", CpuTime);
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_pipeline_state", CpuTime);
         // TODO handle pipeline state with an abstraction
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST); // Discard transparent fragments behind the closest opaque fragment.
@@ -499,7 +499,7 @@ void TheGraph::passTransparencyAccumulation(const PartList & aPartList, Storage 
                    mRenderSize.width(), mRenderSize.height());
 
         {
-            PROFILER_SCOPE_RECURRING_SECTION("draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
+            PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
             draw(passCache, mUbos.mUboRepository, mDummyTextureRepository);
         }
     }
@@ -508,7 +508,7 @@ void TheGraph::passTransparencyAccumulation(const PartList & aPartList, Storage 
 
 void TheGraph::passTransparencyResolve(const PartList & aPartList, Storage & mStorage)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("pass_transparency_resolve", CpuTime, GpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_transparency_resolve", CpuTime, GpuTime);
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
@@ -516,7 +516,7 @@ void TheGraph::passTransparencyResolve(const PartList & aPartList, Storage & mSt
     // Set pipeline state
     //
     {
-        PROFILER_SCOPE_RECURRING_SECTION("set_pipeline_state", CpuTime);
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_pipeline_state", CpuTime);
         // TODO handle pipeline state with an abstraction
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
@@ -544,7 +544,7 @@ void TheGraph::passTransparencyResolve(const PartList & aPartList, Storage & mSt
                    mRenderSize.width(), mRenderSize.height());
 
         {
-            PROFILER_SCOPE_RECURRING_SECTION("draw_quad", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
+            PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_quad", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
             mTransparencyResolver.drawQuad();
         }
     }

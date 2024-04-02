@@ -23,6 +23,7 @@
 using namespace ad;
 using namespace se;
 
+using renderer::gRenderProfiler;
 
 std::filesystem::path handleArguments(int argc, char * argv[])
 {
@@ -53,7 +54,7 @@ void showGui(imguiui::ImguiUi & imguiUi,
              const std::string & aProfilerOutput,
              const renderer::Timing & aTime)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "imgui ui", renderer::CpuTime, renderer::GpuTime);
 
     imguiUi.newFrame();
 
@@ -124,15 +125,15 @@ void runApplication(int argc, char * argv[])
 
     imguiui::ImguiUi imguiUi{glfwApp};
 
-    SCOPE_GLOBAL_PROFILER(scopeProfiler);
+    auto renderProfilerScope = SCOPE_PROFILER(gRenderProfiler);
 
-    PROFILER_PUSH_SINGLESHOT_SECTION(loadingSection, "rendergraph_loading", renderer::CpuTime);
+    PROFILER_PUSH_SINGLESHOT_SECTION(gRenderProfiler, loadingSection, "rendergraph_loading", renderer::CpuTime);
     renderer::ViewerApplication application{
         glfwApp.getAppInterface(),
         handleArguments(argc, argv),
         imguiUi,
     };
-    PROFILER_POP_SECTION(loadingSection);
+    PROFILER_POP_SECTION(gRenderProfiler, loadingSection);
 
     renderer::Timing timing;
 
@@ -146,11 +147,11 @@ void runApplication(int argc, char * argv[])
 
     while (glfwApp.handleEvents())
     {
-        PROFILER_BEGIN_FRAME;
-        PROFILER_PUSH_RECURRING_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
+        PROFILER_BEGIN_FRAME(gRenderProfiler);
+        PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "frame", renderer::CpuTime, renderer::GpuTime);
 
         {
-            PROFILER_SCOPE_RECURRING_SECTION("fps_counter", renderer::CpuTime);
+            PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "fps_counter", renderer::CpuTime);
             {
                 // TODO this could be integrated into the Profiler::beginFrame()
                 // Currently measure the real frame time (not just the time between beginFrame()/endFrame())
@@ -182,12 +183,12 @@ void runApplication(int argc, char * argv[])
 
         glfwApp.swapBuffers();
 
-        PROFILER_POP_RECURRING_SECTION; // frame
-        PROFILER_END_FRAME;
+        PROFILER_POP_RECURRING_SECTION(gRenderProfiler); // frame
+        PROFILER_END_FRAME(gRenderProfiler);
 
         // Note: the printing of the profiler content happens out of the frame, so its time is excluded from profiler's frame time
         profilerOut.str("");
-        PROFILER_PRINT_TO_STREAM(profilerOut);
+        PROFILER_PRINT_TO_STREAM(gRenderProfiler, profilerOut);
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }
