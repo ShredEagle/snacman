@@ -298,8 +298,12 @@ void Profiler::endSection(EntryIndex aIndex)
     {
         getProvider(entry.mMetrics[i]).endSection(aIndex, subframe);
     }
-    mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
-    --mFrameState.mCurrentLevel;
+
+    if(entry.getNature() == EntryNature::Recurring)
+    {
+        mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
+        --mFrameState.mCurrentLevel;
+    }
 }
 
 
@@ -569,6 +573,7 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     for(EntryIndex entryIdx : mSingleShots)
     {
         printSingleEntry(aOut, mEntries[entryIdx]);
+        aOut << "\n";
     }
 }
 
