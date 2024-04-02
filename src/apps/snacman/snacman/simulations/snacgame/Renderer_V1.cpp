@@ -137,7 +137,8 @@ void Renderer::render(const visu::GraphicState & aState)
     TIME_RECURRING_GL("Render");
 
     // Stream the instance buffer data
-    std::map<renderer::Node *, std::vector<snac::PoseColorSkeleton>> sortedModels;
+    std::map<renderer::Handle<const renderer::Object>,
+             std::vector<snac::PoseColorSkeleton>> sortedModels;
 
     BEGIN_RECURRING_GL("Sort_meshes", sortModelProfile);
     GLuint jointMatricesCount = 0;
@@ -161,7 +162,7 @@ void Renderer::render(const visu::GraphicState & aState)
             jointMatricesCount += (GLuint)entity.mRigging.mRig->mJoints.size();
         }
 
-        sortedModels[entity.mModel.get()].push_back(snac::PoseColorSkeleton{
+        sortedModels[entity.mModel].push_back(snac::PoseColorSkeleton{
             .pose = math::trans3d::scale(entity.mScaling)
                     * entity.mOrientation.toRotationMatrix()
                     * math::trans3d::translate(
