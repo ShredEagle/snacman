@@ -16,16 +16,20 @@ inline nvgl::ProfilerGL & getProfilerGL()
 }
 
 
-#define TIME_RECURRING_GL(name) \
+#define TIME_RECURRING_GL(name, ...) \
     auto profilerSectionScoped = ::ad::snac::getProfilerGL().timeRecurring(name); \
-    PROFILER_SCOPE_RECURRING_SECTION(::ad::snac::ProfilerMap_V2::Render, name, ::ad::renderer::CpuTime, ::ad::renderer::GpuTime)
+    PROFILER_SCOPE_RECURRING_SECTION(::ad::snac::ProfilerMap_V2::Render, name, ::ad::renderer::CpuTime, ::ad::renderer::GpuTime, __VA_ARGS__)
 
 
-#define BEGIN_RECURRING_GL(name) \
+#define BEGIN_RECURRING_GL(name, ...) \
     std::make_optional( \
         std::make_tuple( \
             ::ad::snac::getProfilerGL().timeRecurring(name), \
-            ::ad::renderer::ProfilerRegistry::Get(::ad::snac::ProfilerMap_V2::Render).scopeSection(::ad::renderer::EntryNature::Recurring, name, {::ad::renderer::CpuTime, ::ad::renderer::GpuTime}) \
+            ::ad::renderer::ProfilerRegistry::Get(::ad::snac::ProfilerMap_V2::Render) \
+                .scopeSection(::ad::renderer::EntryNature::Recurring, name, { \
+                    ::ad::renderer::CpuTime, \
+                    ::ad::renderer::GpuTime, \
+                    __VA_ARGS__}) \
         ) \
     )
 

@@ -169,7 +169,7 @@ void Renderer_V2::renderText(const T_range & aTexts, snac::ProgramSetup & aProgr
 
 void Renderer_V2::render(const GraphicState_t & aState)
 {
-    TIME_RECURRING_GL("Render");
+    TIME_RECURRING_GL("Render", renderer::GpuPrimitiveGen, renderer::DrawCalls);
 
     // Stream the instance buffer data
     // This maps each renderer::Object to the array of its instances data (allowing instanced rendering)
@@ -331,7 +331,7 @@ void Renderer_V2::render(const GraphicState_t & aState)
 
         // TODO Ad 2024/03/27: #RV2 #azdo Consolidate draw calls.
         // Currently draw each-instance of each-object in its own draw call
-        TIME_RECURRING_GL("Draw_meshes");
+        TIME_RECURRING_GL("Draw_meshes", renderer::DrawCalls);
         for (const auto & [object, instances] : sortedModels)
         {
             for (const auto & instance : instances)
@@ -345,7 +345,9 @@ void Renderer_V2::render(const GraphicState_t & aState)
     // Text
     //
     {
-        TIME_RECURRING_GL("Draw_texts");
+        // TODO Ad 2024/04/03: #profiling currently the count of draw calls is not working (returning 0)
+        // because we currently have to explicity instrument the draw calls (making it easy to miss some)
+        TIME_RECURRING_GL("Draw_texts", renderer::DrawCalls);
 
         // 3D world text
         if (mControl.mRenderText)
@@ -377,7 +379,7 @@ void Renderer_V2::render(const GraphicState_t & aState)
 
     if (mControl.mRenderDebug)
     {
-        TIME_RECURRING_GL("Draw_debug");
+        TIME_RECURRING_GL("Draw_debug", renderer::DrawCalls);
         mDebugRenderer.render(aState.mDebugDrawList, mRendererToDecomission, programSetup);
     }
 }

@@ -52,7 +52,8 @@ void Profiler::Entry::setProviders(T_iterator aFirstProviderIdx, T_iterator aLas
     {
         ProviderIndex providerIndex = *providerIdxIt;
         // Provider indices must always be sorted (this is notably an assumption in LogicalSection::accountForChildSection)
-        assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex);
+        assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex
+            && "Provider indices must given in ascending order.");
         previousProvider = providerIndex;
 
         mMetrics.at(mActiveMetrics++) = Metric<Sample_t>{
