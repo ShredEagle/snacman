@@ -184,11 +184,19 @@ public:
         SectionGuard & operator = (const SectionGuard &) = delete;
 
         // Movable
-        SectionGuard(SectionGuard && aRhs)
+        SectionGuard(SectionGuard && aRhs) :
+            mProfiler{aRhs.mProfiler},
+            mEntry{aRhs.mEntry}
+        {
+            aRhs.mProfiler = nullptr; // to disable the call to endSection() in dtor
+        }
+
+        SectionGuard & operator = (SectionGuard && aRhs)
         {
             mProfiler = aRhs.mProfiler;
             mEntry = aRhs.mEntry;
-            aRhs.mProfiler = nullptr; // disable the call to endSection() in dtor
+            aRhs.mProfiler = nullptr; // to disable the call to endSection() in dtor
+            return *this;
         }
 
         Profiler * mProfiler;

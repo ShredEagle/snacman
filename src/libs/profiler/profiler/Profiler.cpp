@@ -389,6 +389,7 @@ struct LogicalSection
             if(mValues[thisMetricIdx].mProviderIndex == aNested.mValues[childMetricIdx].mProviderIndex)
             {
                 mAccountedFor[thisMetricIdx] += aNested.mValues[childMetricIdx].mValues.average();
+                ++mAccountedChildren[thisMetricIdx];
                 ++thisMetricIdx;
                 ++childMetricIdx;
             }
@@ -401,6 +402,13 @@ struct LogicalSection
                 ++childMetricIdx;
             }
         }
+    }
+
+    /// @brief Returns wether this LogicalSection has accounted children samples for metric `aMetrixIdx`.
+    /// (Otherwise, it is expected that the accounted total will be zero, providing no valuable information for display)
+    bool hasAccountedChildrenFor(std::size_t aMetricIdx) const
+    { 
+        return mAccountedChildren[aMetricIdx] != 0; 
     }
 
     /// @brief Identity that determines the belonging of an Entry to this logical Section.
@@ -418,7 +426,8 @@ struct LogicalSection
 
     /// @brief Keep track of the samples accounted for by sub-sections 
     /// (thus allowing to know what has not been accounted for)
-    std::array<Profiler::Sample_t, Profiler::gMaxMetricsPerSection> mAccountedFor{0}; 
+    std::array<Profiler::Sample_t, Profiler::gMaxMetricsPerSection> mAccountedFor{}; // request value-initialization
+    std::array<unsigned int, Profiler::gMaxMetricsPerSection> mAccountedChildren{};
 };
 
 
@@ -517,8 +526,15 @@ void Profiler::prettyPrint(std::ostream & aOut) const
             aOut << " " << provider.mQuantityName << " " 
                 << provider.scale(metric.mValues.average())
                 // Show what has not been accounted for by child sections in between parenthesis
-                << " (" << provider.scale(metric.mValues.average() - aSection.mAccountedFor[valueIdx]) << ")"
-                << " " << provider.mUnit << ","
+                ;
+
+            if(aSection.hasAccountedChildrenFor(valueIdx))
+            {
+                aOut << " (" << provider.scale(metric.mValues.average() - aSection.mAccountedFor[valueIdx]) << ")"
+                    ;
+            }
+
+            aOut << " " << provider.mUnit << ","
                 ;
         }
 
