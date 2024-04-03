@@ -43,6 +43,7 @@ namespace semantic {
     SEM(LocalToWorld);
     SEM(Albedo);
     SEM(MaterialIdx);
+    SEM(MatrixPaletteOffset);
 
     BLOCK_SEM(ViewProjection);
     BLOCK_SEM(Materials);
@@ -59,7 +60,10 @@ struct SnacGraph
     {
         math::AffineMatrix<4, GLfloat> mModelTransform;
         math::sdr::Rgba mAlbedo;
-        GLuint mMaterialIdx;
+        // A complication is that the material index is is not really instance data:
+        // distinct parts of a given instance (mapping to an object) might use distinct materials
+        GLuint mMaterialIdx; 
+        GLuint mMatrixPaletteOffset; // offset to the first joint of this instance in the buffer of joints.
     };
 
     static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage, std::size_t aInstanceCount)
@@ -106,13 +110,25 @@ struct SnacGraph
                         },
                     }
                 },
+                {
+                    semantic::gMatrixPaletteOffset,
+                    renderer::AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 1,
+                            .mOffset = offsetof(InstanceData, mMatrixPaletteOffset),
+                            .mComponentType = GL_UNSIGNED_INT,
+                        },
+                    }
+                },
             }
         };
     }
 
-    // TODO #RV2: It should be implementing the frame rendering of models, instead of 
+    // TODO #RV2: This class should be implementing the frame rendering of models, instead of 
     // having it inline in Renderer_V2::render()
     //void renderFrame()
+
     // List and describes the buffer views used for per-instance vertex attributes
     renderer::GenericStream mInstanceStream;
 };
@@ -200,7 +216,7 @@ private:
     snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;
 
-    // Intended for local storage, made a member so its reuses the allocated memory between frames.
+    // Intended for function-local storage, made a member so its reuses the allocated memory between frames.
     std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
     graphics::UniformBufferObject mJointMatrices;};
 

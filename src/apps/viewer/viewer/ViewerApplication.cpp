@@ -238,11 +238,11 @@ PartList Scene::populatePartList() const
 
     PartList partList;
     renderer::populatePartList(partList,
-                                mRoot,
-                                Pose{}, // Identity pose, because it represents
-                                        // the pose of the canonical space in the canonical space
-                                mRoot.mInstance.mMaterialOverride ? &*mRoot.mInstance.mMaterialOverride 
-                                                                    : nullptr);
+                               mRoot,
+                               Pose{}, // Identity pose, because it represents
+                                       // the pose of the canonical space in the canonical space
+                               mRoot.mInstance.mMaterialOverride ? &*mRoot.mInstance.mMaterialOverride 
+                                                                   : nullptr);
     return partList;
 }
 

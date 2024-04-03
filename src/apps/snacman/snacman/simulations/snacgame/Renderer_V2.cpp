@@ -175,7 +175,7 @@ void Renderer_V2::render(const GraphicState_t & aState)
     // This maps each renderer::Object to the array of its instances data (allowing instanced rendering)
     std::map<renderer::Handle<const renderer::Object>,
             // TODO Ad 2024/03/26 #RV2 change the instance type to something hosted in renderer_V2
-             std::vector<snac::PoseColorSkeleton>> sortedModels;
+             std::vector<SnacGraph::InstanceData>> sortedModels;
 
     auto sortModelEntry = BEGIN_RECURRING_GL("Sort_meshes_and_animate");
     // The "ideal" semantic for the paletter buffer is a local,
@@ -209,11 +209,11 @@ void Renderer_V2::render(const GraphicState_t & aState)
         }
 
         sortedModels[object].push_back(
-            snac::PoseColorSkeleton{
-                .pose = static_cast<math::AffineMatrix<4, float>>(entity.mInstance.mPose),
+            SnacGraph::InstanceData{
+                .mModelTransform = static_cast<math::AffineMatrix<4, float>>(entity.mInstance.mPose),
                 // TODO #RV2: No need to go to SDR, we can directly stream hdr floats
-                .albedo = to_sdr(entity.mColor),
-                .matrixPaletteOffset = matrixPaletteOffset,
+                .mAlbedo = to_sdr(entity.mColor),
+                .mMatrixPaletteOffset = matrixPaletteOffset,
             });
     }
 
@@ -261,24 +261,21 @@ void Renderer_V2::render(const GraphicState_t & aState)
     {
         static const renderer::StringKey pass = "forward";
 
-        //std::function<void(const renderer::Object &, const snac::PoseColorSkeleton & aEntity)> recurseNodes;
         auto renderObjectInstance = 
             [&, this]
-            (const renderer::Object & aObject, const snac::PoseColorSkeleton & aInstance)
+            (const renderer::Object & aObject, SnacGraph::InstanceData aInstance)
         {
             using renderer::gl;
 
             for(const renderer::Part & part : aObject.mParts)
             {
+                // TODO Ad 2024/04/03: There is a design complication here: the material index is not instance data, but part data
+                // (and potentially sub-instance data). Here we are assigning per part, but we cannot use this approach for batching.
+                aInstance.mMaterialIdx = (GLuint)part.mMaterial.mPhongMaterialIdx;
                 // TODO Ad 2024/02/20: #perf #azdo pre-upload the buffer with all poses and albedos(or distinct buffer for albedos?)
                 // And only upload an index per instance (actually, all the instance data has to be pre-uploaded for azdo)
-                SnacGraph::InstanceData instanceData{
-                    aInstance.pose,
-                    aInstance.albedo,
-                    (GLuint)part.mMaterial.mPhongMaterialIdx,
-                };
                 renderer::proto::loadSingle(*getBufferView(mRendererToKeep.mRenderGraph.mInstanceStream, semantic::gLocalToWorld).mGLBuffer,
-                                            instanceData,          
+                                            aInstance,          
                                             graphics::BufferHint::StreamDraw);
 
                 if(renderer::Handle<renderer::ConfiguredProgram> configuredProgram = 
