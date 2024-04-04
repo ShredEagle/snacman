@@ -1,5 +1,5 @@
 {
-    "defines": ["MODEL_MATRIX"],
+    "defines": ["ENTITIES"],
     "vertex": "SimplePositionTransform.vert",
     "fragment": "Depth.frag"
 }

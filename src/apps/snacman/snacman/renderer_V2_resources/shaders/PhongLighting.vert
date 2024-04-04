@@ -19,14 +19,11 @@ in vec4 a_Color_normalized; // Note: could either be per vertex or per instance 
 const vec4 a_Color_normalized = vec4(1.0);
 #endif
 
+#include "Entities.glsl"
+
 #ifdef RIGGING
 #include "Rigging.glsl"
 #endif
-
-in mat4 in_LocalToWorld;
-// Will be required to support non-uniform scaling.
-//layout(location=10) in mat4 in_LocalToWorldInverseTranspose;
-in uint in_MaterialIdx;
 
 // WARNING: for some reason, the GLSL compiler assigns the same implicit binding
 // index to both uniform blocks if we do not set it explicitly.
@@ -63,10 +60,11 @@ out vec4 ex_Position_lightClip;
 
 void main(void)
 {
+    EntityData entity = getEntity();
     mat4 localToWorld =
-        in_LocalToWorld
+        entity.localToWorld
 #ifdef RIGGING
-        * assembleSkinningMatrix()
+        * assembleSkinningMatrix(entity.matrixPaletteOffset)
 #endif
     ;
 

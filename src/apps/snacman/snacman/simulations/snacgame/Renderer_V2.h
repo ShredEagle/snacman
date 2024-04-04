@@ -42,12 +42,14 @@ namespace semantic {
 
     SEM(LocalToWorld);
     SEM(Albedo);
+    SEM(EntityIdx);
     SEM(MaterialIdx);
     SEM(MatrixPaletteOffset);
 
     BLOCK_SEM(ViewProjection);
     BLOCK_SEM(Materials);
     BLOCK_SEM(JointMatrices);
+    BLOCK_SEM(Entities);
 
     #undef SEMANTIC
 } // namespace semantic
@@ -56,46 +58,54 @@ namespace semantic {
 // The Render Graph for snacman
 struct SnacGraph
 {
+    /// @brief Model for the per game-entity data that has to be available in shaders.
+    ///
+    /// An entity is not matching the notion of GL instance (since an entity maps to an Object, wich might contains several Parts).
+    /// So this cannot be made available as instance attributes, but should probably be accessed via buffer-backed blocks.
+    struct alignas(16) EntityData
+    {
+        // Note: 16-aligned, because it is intended to be stored as an array in a buffer object
+        // and then the elements are accessed via a std140 uniform block 
+
+        math::AffineMatrix<4, GLfloat> mModelTransform;
+        // TODO Do we use an entity-level color?
+        //math::sdr::Rgba mAlbedo;
+        GLuint mMatrixPaletteOffset; // offset to the first joint of this instance in the buffer of joints.
+    };
+    
+    static_assert(sizeof(EntityData) % 16 == 0, 
+        "Size a multiple of 16 so successive loads work as expected.");
+
+    /// @brief The data to populate the GL instance attribute buffer, for instanced rendering.
+    ///
+    /// From our data model, the graphics API instance is the Part (not the Object)
     struct InstanceData
     {
-        math::AffineMatrix<4, GLfloat> mModelTransform;
-        math::sdr::Rgba mAlbedo;
-        // A complication is that the material index is is not really instance data:
-        // distinct parts of a given instance (mapping to an object) might use distinct materials
+        GLuint mEntityIdx;
         GLuint mMaterialIdx; 
-        GLuint mMatrixPaletteOffset; // offset to the first joint of this instance in the buffer of joints.
     };
 
     static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage, std::size_t aInstanceCount)
     {
-        renderer::BufferView vboView = renderer::makeBufferGetView(sizeof(InstanceData),
+        renderer::BufferView vboView = renderer::makeBufferGetView(sizeof(EntityData),
                                                                    aInstanceCount,
                                                                    1, // intance divisor
                                                                    GL_STREAM_DRAW,
                                                                    aStorage);
 
+        // TODO Ad 2024/04/04: #perf Indices should be grouped by 4 in vertex attributes,
+        // instead of using a distinct attribute each.
         return renderer::GenericStream{
             .mVertexBufferViews = { vboView, },
             .mSemanticToAttribute{
                 {
-                    semantic::gLocalToWorld,
+                    semantic::gEntityIdx,
                     renderer::AttributeAccessor{
                         .mBufferViewIndex = 0, // view is added above
                         .mClientDataFormat{
-                            .mDimension = {4, 4},
-                            .mOffset = offsetof(InstanceData, mModelTransform),
-                            .mComponentType = GL_FLOAT,
-                        },
-                    }
-                },
-                {
-                    semantic::gAlbedo,
-                    renderer::AttributeAccessor{
-                        .mBufferViewIndex = 0, // view is added above
-                        .mClientDataFormat{
-                            .mDimension = 4,
-                            .mOffset = offsetof(InstanceData, mAlbedo),
-                            .mComponentType = GL_UNSIGNED_BYTE,
+                            .mDimension = 1,
+                            .mOffset = offsetof(InstanceData, mEntityIdx),
+                            .mComponentType = GL_UNSIGNED_INT,
                         },
                     }
                 },
@@ -106,17 +116,6 @@ struct SnacGraph
                         .mClientDataFormat{
                             .mDimension = 1,
                             .mOffset = offsetof(InstanceData, mMaterialIdx),
-                            .mComponentType = GL_UNSIGNED_INT,
-                        },
-                    }
-                },
-                {
-                    semantic::gMatrixPaletteOffset,
-                    renderer::AttributeAccessor{
-                        .mBufferViewIndex = 0, // view is added above
-                        .mClientDataFormat{
-                            .mDimension = 1,
-                            .mOffset = offsetof(InstanceData, mMatrixPaletteOffset),
                             .mComponentType = GL_UNSIGNED_INT,
                         },
                     }
@@ -216,9 +215,13 @@ private:
     snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;
 
+    graphics::UniformBufferObject mJointMatricesUbo;
+    graphics::UniformBufferObject mEntitiesUbo;
+
     // Intended for function-local storage, made a member so its reuses the allocated memory between frames.
     std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
-    graphics::UniformBufferObject mJointMatrices;};
+    std::vector<SnacGraph::EntityData> mEntityBuffer;
+};
 
 
 } // namespace snacgame

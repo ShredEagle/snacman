@@ -169,13 +169,21 @@ void Renderer_V2::renderText(const T_range & aTexts, snac::ProgramSetup & aProgr
 
 void Renderer_V2::render(const GraphicState_t & aState)
 {
+    using renderer::gl;
+
     TIME_RECURRING_GL("Render", renderer::GpuPrimitiveGen, renderer::DrawCalls);
 
-    // Stream the instance buffer data
-    // This maps each renderer::Object to the array of its instances data (allowing instanced rendering)
+    // This maps each renderer::Object to the array of its entity data.
+    // This is sorting each game entity by "visual model" (== renderer::Object), 
+    // associating each model to all the entities using it (represented by the EntityData required for rendering).
+    // TODO Ad 2024/04/04: #perf #dod There might be a way to store all EntityData contiguously directly,
+    // making it easier to load them into a GL buffer at once. But we might loose spatial coherency when accessing this buffer
+    // from shaders (since the EntityData might not be sorted by Object anymore.)
     std::map<renderer::Handle<const renderer::Object>,
-            // TODO Ad 2024/03/26 #RV2 change the instance type to something hosted in renderer_V2
-             std::vector<SnacGraph::InstanceData>> sortedModels;
+             std::vector<SnacGraph::EntityData>> sortedModels;
+
+    // TODO Ad 2024/04/04: #culling This will not be true anymore when we do no necessarilly render the whole graphic state.
+    std::size_t totalEntities = aState.mEntities.size();
 
     auto sortModelEntry = BEGIN_RECURRING_GL("Sort_meshes_and_animate");
     // The "ideal" semantic for the paletter buffer is a local,
@@ -209,16 +217,16 @@ void Renderer_V2::render(const GraphicState_t & aState)
         }
 
         sortedModels[object].push_back(
-            SnacGraph::InstanceData{
+            SnacGraph::EntityData{
                 .mModelTransform = static_cast<math::AffineMatrix<4, float>>(entity.mInstance.mPose),
                 // TODO #RV2: No need to go to SDR, we can directly stream hdr floats
-                .mAlbedo = to_sdr(entity.mColor),
+                //.mAlbedo = to_sdr(entity.mColor),
                 .mMatrixPaletteOffset = matrixPaletteOffset,
             });
     }
 
     // Load the matrix palettes UBO with all palettes computed during the loop
-    renderer::proto::load(mJointMatrices, std::span{mRiggingPalettesBuffer}, graphics::BufferHint::StreamDraw);
+    renderer::proto::load(mJointMatricesUbo, std::span{mRiggingPalettesBuffer}, graphics::BufferHint::StreamDraw);
 
     END_RECURRING_GL(sortModelEntry);
 
@@ -253,29 +261,60 @@ void Renderer_V2::render(const GraphicState_t & aState)
         },
         .mUniformBlocks{
             {snac::BlockSemantic::Viewing, &mCameraBuffer.mViewing},
-            {snac::BlockSemantic::JointMatrices, &mJointMatrices},
+            {snac::BlockSemantic::JointMatrices, &mJointMatricesUbo},
         }
     };
 
     if (mControl.mRenderModels)
     {
+        // Populate the EntityData buffers
+        {
+            // TODO Ad 2024/04/04: Should we use SSBO for this kind of "unbound" data?
+            assert(totalEntities <= 512
+                && "Currently, the shader Uniform Block array is 512.");
+
+            graphics::ScopedBind boundEntitiesUbo{mEntitiesUbo};
+            // Orphan the buffer, and set it to the current size 
+            //(TODO: might be good to keep a separate counter to never shrink it)
+            gl.BufferData(GL_UNIFORM_BUFFER,
+                          sizeof(SnacGraph::EntityData) * totalEntities,
+                          nullptr,
+                          GL_STREAM_DRAW);
+
+            GLintptr entityDataOffset = 0;
+            for (const auto & [object, entities] : sortedModels)
+            {
+                // In this state with multiple loads, maybe it is a good candidate for buffer mapping? (glMapBufferRange())
+                GLsizeiptr size = entities.size() * sizeof(SnacGraph::EntityData);
+                gl.BufferSubData(
+                    GL_UNIFORM_BUFFER,
+                    entityDataOffset,
+                    size,
+                    entities.data());
+
+                entityDataOffset += size;
+            }
+        }
+
         static const renderer::StringKey pass = "forward";
 
         auto renderObjectInstance = 
             [&, this]
-            (const renderer::Object & aObject, SnacGraph::InstanceData aInstance)
+            (const renderer::Object & aObject, unsigned int aEntityIdx)
         {
             using renderer::gl;
 
             for(const renderer::Part & part : aObject.mParts)
             {
-                // TODO Ad 2024/04/03: There is a design complication here: the material index is not instance data, but part data
-                // (and potentially sub-instance data). Here we are assigning per part, but we cannot use this approach for batching.
-                aInstance.mMaterialIdx = (GLuint)part.mMaterial.mPhongMaterialIdx;
+                // TODO #azdo preload this buffer, and do instanced rendering per part!
+                SnacGraph::InstanceData instance{
+                    .mEntityIdx = aEntityIdx,
+                    .mMaterialIdx = (GLuint)part.mMaterial.mPhongMaterialIdx,
+                };
                 // TODO Ad 2024/02/20: #perf #azdo pre-upload the buffer with all poses and albedos(or distinct buffer for albedos?)
                 // And only upload an index per instance (actually, all the instance data has to be pre-uploaded for azdo)
-                renderer::proto::loadSingle(*getBufferView(mRendererToKeep.mRenderGraph.mInstanceStream, semantic::gLocalToWorld).mGLBuffer,
-                                            aInstance,          
+                renderer::proto::loadSingle(*getBufferView(mRendererToKeep.mRenderGraph.mInstanceStream, semantic::gEntityIdx).mGLBuffer,
+                                            instance,          
                                             graphics::BufferHint::StreamDraw);
 
                 if(renderer::Handle<renderer::ConfiguredProgram> configuredProgram = 
@@ -288,7 +327,8 @@ void Renderer_V2::render(const GraphicState_t & aState)
                     // Make a copy of the materials ubo, and append to it.
                     renderer::RepositoryUbo repositoryUbo = part.mMaterial.mContext->mUboRepo;
                     repositoryUbo[semantic::gViewProjection] = &mCameraBuffer.mViewing;
-                    repositoryUbo[semantic::gJointMatrices] = &mJointMatrices;
+                    repositoryUbo[semantic::gJointMatrices] = &mJointMatricesUbo;
+                    repositoryUbo[semantic::gEntities] = &mEntitiesUbo;
 
                     renderer::setBufferBackedBlocks(configuredProgram->mProgram, repositoryUbo);
 
@@ -329,13 +369,18 @@ void Renderer_V2::render(const GraphicState_t & aState)
         // TODO Ad 2024/03/27: #RV2 #azdo Consolidate draw calls.
         // Currently draw each-instance of each-object in its own draw call
         TIME_RECURRING_GL("Draw_meshes", renderer::DrawCalls);
+        unsigned int entityIdx = 0;
         for (const auto & [object, instances] : sortedModels)
         {
-            for (const auto & instance : instances)
+            for (const auto & _instance : instances)
             {
-                renderObjectInstance(*object, instance);
+                // For the moment, we naively increment entity index, since the entities
+                // are visited exactly in the same order than when loading EntityData buffer.
+                renderObjectInstance(*object, entityIdx);
+                ++entityIdx;
             }
         }
+        assert(entityIdx == totalEntities);
     }
 
     //
