@@ -25,6 +25,17 @@ void imguiLogLevelSelection(bool * open = nullptr)
             "off",
         };
 
+        if(ImGui::Button("Turn off"))
+        {
+            spdlog::apply_all([&](std::shared_ptr<spdlog::logger> logger)
+                {
+                    // I suspect this is the default logger which we are not using.
+                    if (logger->name() == "") return;
+                    logger->set_level(spdlog::level::off);
+                }
+            );
+        }
+
         spdlog::apply_all([&](std::shared_ptr<spdlog::logger> logger)
             {
                 // I suspect this is the default logger which we are not using.
