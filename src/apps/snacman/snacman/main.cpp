@@ -118,8 +118,7 @@ void runApplication()
     };
 
     // Must be scoped below the GL context.
-    auto renderProfilerScope = SCOPE_PROFILER(renderer::gRenderProfiler);
-    auto mainProfilerScope = SCOPE_PROFILER(gMainProfiler);
+    auto mainProfilerScope = SCOPE_PROFILER(gMainProfiler, renderer::Profiler::Providers::CpuOnly);
 
     // Ensures the messages are sent synchronously with the event triggering them
     // This makes debug stepping much more feasible.

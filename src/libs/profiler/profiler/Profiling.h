@@ -23,8 +23,8 @@ enum
 using Profiler_t = Profiler;
 
 
-#define SCOPE_PROFILER(profiler) \
-    ::ad::renderer::ProfilerRegistry::ScopeNewProfiler(profiler);
+#define SCOPE_PROFILER(profiler, providerFeatures) \
+    ::ad::renderer::ProfilerRegistry::ScopeNewProfiler(profiler, providerFeatures);
 #define PROFILER_BEGIN_FRAME(profiler) ::ad::renderer::ProfilerRegistry::Get(profiler).beginFrame()
 #define PROFILER_END_FRAME(profiler) ::ad::renderer::ProfilerRegistry::Get(profiler).endFrame()
 

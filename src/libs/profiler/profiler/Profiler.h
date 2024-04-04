@@ -148,7 +148,15 @@ public:
     static constexpr std::uint32_t CountSubframes()
     { return gFrameDelay + 1; };
 
-    Profiler();
+    // TODO Ad 2024/04/04: Might be better as a bitwise flag to pick features, but for the moment we are
+    // very rigid with the index each provider is allowed to have (see hardcoded list in Profiling.h)
+    enum class Providers
+    {
+        CpuOnly,
+        All,
+    };
+
+    Profiler(Providers aProviderFeatures);
 
     void beginFrame();
     void endFrame();

@@ -125,7 +125,7 @@ void runApplication(int argc, char * argv[])
 
     imguiui::ImguiUi imguiUi{glfwApp};
 
-    auto renderProfilerScope = SCOPE_PROFILER(gRenderProfiler);
+    auto renderProfilerScope = SCOPE_PROFILER(gRenderProfiler, renderer::Profiler::Providers::All);
 
     PROFILER_PUSH_SINGLESHOT_SECTION(gRenderProfiler, loadingSection, "rendergraph_loading", renderer::CpuTime);
     renderer::ViewerApplication application{

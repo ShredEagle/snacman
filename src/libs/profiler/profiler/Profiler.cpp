@@ -75,17 +75,20 @@ void Profiler::Entry::resetValues()
 }
 
 
-Profiler::Profiler()
+Profiler::Profiler(Providers aProviderFeatures)
 {
 //#if defined(_WIN32)
 //    mMetricProviders.push_back(std::make_unique<ProviderCpuPerformanceCounter>());
 //#else
     mMetricProviders.push_back(std::make_unique<ProviderCpuRdtsc>());
     //mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
-    mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
-    mMetricProviders.push_back(std::make_unique<ProviderGL>());
-    mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::drawCount>>("draw", ""));
-    mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::bufferMemoryWritten>>("buffer w", "B"));
+    if(aProviderFeatures == Providers::All)
+    {
+        mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
+        mMetricProviders.push_back(std::make_unique<ProviderGL>());
+        mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::drawCount>>("draw", ""));
+        mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::bufferMemoryWritten>>("buffer w", "B"));
+    }
 
     resize(gInitialEntries);
 }

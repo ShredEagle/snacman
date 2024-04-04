@@ -21,7 +21,7 @@ public:
     /// The lifetime of added profiler is scoped to the returned Guard.
     /// @note Because some providers within the profiler require to destory GL objects,
     /// we ask the client to explicitly scope the global profiler where the GL context is valid for the whole scope.
-    static Guard ScopeNewProfiler(const Key & aProfilerKey);
+    static Guard ScopeNewProfiler(const Key & aProfilerKey, Profiler::Providers aProviderFeatures);
 };
 
 

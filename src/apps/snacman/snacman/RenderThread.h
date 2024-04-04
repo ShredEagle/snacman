@@ -370,6 +370,9 @@ private:
         // functions.
         mApplication.makeContextCurrent();
 
+        // Now that the GL context is active on this thread,
+        // we can scope a profiler with GL features enabled under it.
+        Guard mRenderProfilerScope = SCOPE_PROFILER(renderer::gRenderProfiler, renderer::Profiler::Providers::All);
 
         // Used by non-interpolating path, to decide if frame is dirty.
         Clock::time_point renderedPushTime;

@@ -42,7 +42,7 @@ Profiler & ProfilerRegistry::Get(const Key & aProfilerKey)
 }
 
 
-Guard ProfilerRegistry::ScopeNewProfiler(const Key & aProfilerKey)
+Guard ProfilerRegistry::ScopeNewProfiler(const Key & aProfilerKey, Profiler::Providers aProviderFeatures)
 {
     RegistryStore & store = getRegistryStore();
     const std::lock_guard<std::mutex> lock{store.mMapMutex};
@@ -50,7 +50,7 @@ Guard ProfilerRegistry::ScopeNewProfiler(const Key & aProfilerKey)
     {
         throw std::logic_error{"A profiler already exist for key '" + aProfilerKey + "'"};
     }
-    store.mMap.emplace(aProfilerKey, Profiler{});
+    store.mMap.emplace(aProfilerKey, Profiler{aProviderFeatures});
 
     return Guard{[aProfilerKey]()
     {
