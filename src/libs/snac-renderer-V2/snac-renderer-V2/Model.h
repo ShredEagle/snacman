@@ -172,6 +172,7 @@ struct GenericStream
 
 
 // Not using inheritance, since it does allow designated initializers
+// Important: Used as the lookup key for ProgramConfig VAOs
 struct VertexStream /*: public SemanticBufferViews*/
 {
     SEMANTIC_BUFFER_MEMBERS                 
@@ -214,9 +215,10 @@ struct Part
     Handle<const VertexStream> mVertexStream;
     GLenum mPrimitiveMode = 0;
     // GLuint because it is the type used in the Draw Indirect buffer
-    GLuint mVertexFirst = 0; // The offset of this part into the buffer view(s)
+    GLuint mVertexFirst = 0; // The offset (as a count of vertices) of this part into the vertex attributes buffer view(s)
+                             // (This is the basevertex in OpenGL lingua)
     GLuint mVertexCount = 0;
-    GLuint mIndexFirst = 0;
+    GLuint mIndexFirst = 0; // The offset (as a count of indices) of this part indices into the index buffer view
     GLuint mIndicesCount = 0;
     math::Box<GLfloat> mAabb;
     //FeatureSet mFeatures;
@@ -295,6 +297,7 @@ struct AnimationState
 /// Equivalent to a "Shape" in the shape list from AZDO talks.
 struct Instance
 {
+    // The object handle might be the null handle, which might be the case for "pure group" nodes
     Handle<const Object> mObject;
     // The local-to-parent Pose of this instance. (Note that parent might be the canonical space.)
     Pose mPose;
