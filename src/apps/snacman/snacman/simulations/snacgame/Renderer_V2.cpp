@@ -296,23 +296,15 @@ void Renderer_V2::render(const GraphicState_t & aState)
 
                 entityDataOffset += size;
 
-                //for(const renderer::Part & part : object->mParts)
-                //{
-                //    for(GLuint entityGlobalIdx = entityIdxOffset;
-                //        entityGlobalIdx != entityIdxOffset + entities.size();
-                //        ++entityGlobalIdx)
-                //    {
-                //        mInstanceBuffer.push_back(SnacGraph::InstanceData{
-                //            .mEntityIdx = entityGlobalIdx,
-                //            .mMaterialIdx = (GLuint)part.mMaterial.mPhongMaterialIdx,
-                //        });
-                //    }
-                //}
-                for(GLuint entityGlobalIdx = entityIdxOffset;
-                    entityGlobalIdx != entityIdxOffset + entities.size();
-                    ++entityGlobalIdx)
+                // For each Part, we load all the required entities indices
+                // before moving on to the next Part to load the same entities.
+                // This way, we can do instanced rendering on Parts 
+                // (the data for all instances of a given part is contiguous).
+                for(const renderer::Part & part : object->mParts)
                 {
-                    for(const renderer::Part & part : object->mParts)
+                    for(GLuint entityGlobalIdx = entityIdxOffset;
+                        entityGlobalIdx != entityIdxOffset + entities.size();
+                        ++entityGlobalIdx)
                     {
                         mInstanceBuffer.push_back(SnacGraph::InstanceData{
                             .mEntityIdx = entityGlobalIdx,
@@ -330,9 +322,9 @@ void Renderer_V2::render(const GraphicState_t & aState)
 
         static const renderer::StringKey pass = "forward";
 
-        auto renderObjectInstance = 
+        auto renderPartsInstanced = 
             [&, this]
-            (const renderer::Object & aObject, unsigned int & aBaseInstance)
+            (const renderer::Object & aObject, unsigned int & aBaseInstance, const GLsizei aInstancesCount)
         {
             using renderer::gl;
 
@@ -380,12 +372,12 @@ void Renderer_V2::render(const GraphicState_t & aState)
                         part.mIndicesCount,
                         part.mVertexStream->mIndicesType,
                         (void*)((size_t)part.mIndexFirst * graphics::getByteSize(part.mVertexStream->mIndicesType)),
-                        1, // instance count
+                        aInstancesCount,
                         part.mVertexFirst,
                         aBaseInstance
                     );
                 }
-                ++aBaseInstance;
+                aBaseInstance += aInstancesCount;
             }
         };
 
@@ -396,10 +388,9 @@ void Renderer_V2::render(const GraphicState_t & aState)
         unsigned int baseInstance = 0;
         for (const auto & [object, entities] : sortedModels)
         {
-            for (const auto & _entity : entities)
-            {
-                renderObjectInstance(*object, baseInstance);
-            }
+            // For each Part, there is one instance per entity 
+            // (so the instances-count, which is constant accross an object, is the number of entities).
+            renderPartsInstanced(*object, baseInstance, (GLsizei)entities.size());
         }
     }
 
