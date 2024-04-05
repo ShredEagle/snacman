@@ -42,6 +42,7 @@ public:
     void DrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices);
     void DrawElementsInstanced(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount);
     void DrawElementsInstancedBaseVertex(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex);
+    void DrawElementsInstancedBaseVertexBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex, GLuint baseinstance);
     void MultiDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect, GLsizei drawcount, GLsizei stride);
     void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
     void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
@@ -134,6 +135,15 @@ inline void GlApi::DrawElementsInstancedBaseVertex(GLenum mode, GLsizei count, G
     ++v().mDrawCount;
 #endif
     return glDrawElementsInstancedBaseVertex(mode, count, type, indices, instancecount, basevertex);
+}
+
+
+inline void GlApi::DrawElementsInstancedBaseVertexBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex, GLuint baseinstance)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawElementsInstancedBaseVertexBaseInstance(mode, count, type, indices, instancecount, basevertex, baseinstance);
 }
 
 

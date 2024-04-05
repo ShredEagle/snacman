@@ -87,7 +87,7 @@ struct SnacGraph
 
     static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage, std::size_t aInstanceCount)
     {
-        renderer::BufferView vboView = renderer::makeBufferGetView(sizeof(EntityData),
+        renderer::BufferView vboView = renderer::makeBufferGetView(sizeof(InstanceData),
                                                                    aInstanceCount,
                                                                    1, // intance divisor
                                                                    GL_STREAM_DRAW,
@@ -220,7 +220,7 @@ private:
 
     // Intended for function-local storage, made a member so its reuses the allocated memory between frames.
     std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
-    std::vector<SnacGraph::EntityData> mEntityBuffer;
+    std::vector<SnacGraph::InstanceData> mInstanceBuffer;
 };
 
 

@@ -281,7 +281,9 @@ void Renderer_V2::render(const GraphicState_t & aState)
                           nullptr,
                           GL_STREAM_DRAW);
 
+            mInstanceBuffer.clear();
             GLintptr entityDataOffset = 0;
+            GLuint entityIdxOffset = 0;
             for (const auto & [object, entities] : sortedModels)
             {
                 // In this state with multiple loads, maybe it is a good candidate for buffer mapping? (glMapBufferRange())
@@ -293,30 +295,49 @@ void Renderer_V2::render(const GraphicState_t & aState)
                     entities.data());
 
                 entityDataOffset += size;
+
+                //for(const renderer::Part & part : object->mParts)
+                //{
+                //    for(GLuint entityGlobalIdx = entityIdxOffset;
+                //        entityGlobalIdx != entityIdxOffset + entities.size();
+                //        ++entityGlobalIdx)
+                //    {
+                //        mInstanceBuffer.push_back(SnacGraph::InstanceData{
+                //            .mEntityIdx = entityGlobalIdx,
+                //            .mMaterialIdx = (GLuint)part.mMaterial.mPhongMaterialIdx,
+                //        });
+                //    }
+                //}
+                for(GLuint entityGlobalIdx = entityIdxOffset;
+                    entityGlobalIdx != entityIdxOffset + entities.size();
+                    ++entityGlobalIdx)
+                {
+                    for(const renderer::Part & part : object->mParts)
+                    {
+                        mInstanceBuffer.push_back(SnacGraph::InstanceData{
+                            .mEntityIdx = entityGlobalIdx,
+                            .mMaterialIdx = (GLuint)part.mMaterial.mPhongMaterialIdx,
+                        });
+                    }
+                }
+                entityIdxOffset += (GLuint)entities.size();
             }
         }
+
+        renderer::proto::load(*getBufferView(mRendererToKeep.mRenderGraph.mInstanceStream, semantic::gEntityIdx).mGLBuffer,
+                              std::span{mInstanceBuffer},          
+                              graphics::BufferHint::StreamDraw);
 
         static const renderer::StringKey pass = "forward";
 
         auto renderObjectInstance = 
             [&, this]
-            (const renderer::Object & aObject, unsigned int aEntityIdx)
+            (const renderer::Object & aObject, unsigned int & aBaseInstance)
         {
             using renderer::gl;
 
             for(const renderer::Part & part : aObject.mParts)
             {
-                // TODO #azdo preload this buffer, and do instanced rendering per part!
-                SnacGraph::InstanceData instance{
-                    .mEntityIdx = aEntityIdx,
-                    .mMaterialIdx = (GLuint)part.mMaterial.mPhongMaterialIdx,
-                };
-                // TODO Ad 2024/02/20: #perf #azdo pre-upload the buffer with all poses and albedos(or distinct buffer for albedos?)
-                // And only upload an index per instance (actually, all the instance data has to be pre-uploaded for azdo)
-                renderer::proto::loadSingle(*getBufferView(mRendererToKeep.mRenderGraph.mInstanceStream, semantic::gEntityIdx).mGLBuffer,
-                                            instance,          
-                                            graphics::BufferHint::StreamDraw);
-
                 if(renderer::Handle<renderer::ConfiguredProgram> configuredProgram = 
                         renderer::getProgramForPass(*part.mMaterial.mEffect, pass))
                 {
@@ -354,33 +375,32 @@ void Renderer_V2::render(const GraphicState_t & aState)
                     glDepthMask(GL_TRUE);
                     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-                    gl.DrawElementsInstancedBaseVertex(
+                    gl.DrawElementsInstancedBaseVertexBaseInstance(
                         part.mPrimitiveMode,
                         part.mIndicesCount,
                         part.mVertexStream->mIndicesType,
                         (void*)((size_t)part.mIndexFirst * graphics::getByteSize(part.mVertexStream->mIndicesType)),
                         1, // instance count
-                        part.mVertexFirst
+                        part.mVertexFirst,
+                        aBaseInstance
                     );
                 }
+                ++aBaseInstance;
             }
         };
 
         // TODO Ad 2024/03/27: #RV2 #azdo Consolidate draw calls.
         // Currently draw each-instance of each-object in its own draw call
         TIME_RECURRING_GL("Draw_meshes", renderer::DrawCalls);
-        unsigned int entityIdx = 0;
-        for (const auto & [object, instances] : sortedModels)
+        // Global instance index, in the instance buffer.
+        unsigned int baseInstance = 0;
+        for (const auto & [object, entities] : sortedModels)
         {
-            for (const auto & _instance : instances)
+            for (const auto & _entity : entities)
             {
-                // For the moment, we naively increment entity index, since the entities
-                // are visited exactly in the same order than when loading EntityData buffer.
-                renderObjectInstance(*object, entityIdx);
-                ++entityIdx;
+                renderObjectInstance(*object, baseInstance);
             }
         }
-        assert(entityIdx == totalEntities);
     }
 
     //
