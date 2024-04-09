@@ -328,6 +328,8 @@ void Renderer_V2::render(const GraphicState_t & aState)
         {
             using renderer::gl;
 
+            // Important: this logic assumes there is no override of the material for a part:
+            // A given part **always** use the same material, in all entities.
             for(const renderer::Part & part : aObject.mParts)
             {
                 if(renderer::Handle<renderer::ConfiguredProgram> configuredProgram = 
