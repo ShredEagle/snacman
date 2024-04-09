@@ -95,26 +95,6 @@ namespace {
     };
 
 
-    /// @brief Associate an integer key to a part.
-    /// Used to sort an array with one entry for each part, by manually composing a key by sort dimensions.
-    /// @see https://realtimecollisiondetection.net/blog/?p=86
-    struct DrawEntry
-    {
-        using Key = std::uint64_t;
-        static constexpr Key gInvalidKey = std::numeric_limits<Key>::max();
-
-        /// @brief Order purely by key.
-        /// @param aRhs 
-        /// @return 
-        bool operator<(const DrawEntry & aRhs) const
-        {
-            return mKey < aRhs.mKey;
-        }
-
-        Key mKey = 0;
-        std::size_t mPartListIdx;
-    };
-
 
 } // unnamed namespace
 
@@ -167,66 +147,121 @@ Handle<graphics::VertexArrayObject> getVao(const ConfiguredProgram & aProgram,
 }
 
 
+DrawEntryHelper::DrawEntryHelper() :
+    mImpl{std::make_unique<Opaque>()}
+{}
+
+
+struct DrawEntryHelper::Opaque
+{
+    static constexpr unsigned int gProgramIdBits = 16;
+    static constexpr std::uint64_t gProgramIdMask = makeMask(gProgramIdBits);
+
+    static constexpr unsigned int gVaoBits = 10;
+    static constexpr std::uint64_t gVaoIdMask = makeMask(gVaoBits);
+
+    static constexpr unsigned int gMaterialContextBits = 10;
+    static constexpr std::uint64_t gMaterialContextIdMask = makeMask(gMaterialContextBits);
+
+    ResourceIdMap<ConfiguredProgram, gProgramIdBits> mProgramToId;
+    ResourceIdMap<graphics::VertexArrayObject, gVaoBits> mVaoToId;
+    ResourceIdMap<MaterialContext, gMaterialContextBits> mMaterialContextToId;
+
+    std::vector<PartDrawEntry> generateDrawEntries(StringKey aPass,
+                                                   const PartList & aPartList,
+                                                   Storage & aStorage)
+    {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "generate_draw_entries", CpuTime);
+
+        using ProgramId = std::uint16_t;
+        assert(aStorage.mPrograms.size() < (1 << gProgramIdBits));
+
+        //constexpr unsigned int gPrimitiveModes = 12; // I counted 12 primitive modes
+        //unsigned int gPrimitiveModeIdBits = (unsigned int)std::ceil(std::log2(gPrimitiveModes));
+
+        using VaoId = std::uint16_t;
+        assert(aStorage.mVaos.size() < (1 << gVaoBits));
+
+        using MaterialContextId = std::uint16_t;
+        assert(aStorage.mMaterialContexts.size() < (1 << gMaterialContextBits));
+
+        //
+        // For each part, associated it to its sort key and store them in an array
+        // (this will already prune parts for which there is no program for aPass)
+        //
+        std::vector<PartDrawEntry> entries;
+        entries.reserve(aPartList.mParts.size());
+
+        for (std::size_t partIdx = 0; partIdx != aPartList.mParts.size(); ++partIdx)
+        {
+            const Part & part = *aPartList.mParts[partIdx];
+            const Material & material = *aPartList.mMaterials[partIdx];
+
+            // TODO Ad 2023/10/05: Also add those as sorting dimensions (to the LSB)
+            assert(part.mPrimitiveMode == GL_TRIANGLES);
+            assert(part.mVertexStream->mIndicesType == GL_UNSIGNED_INT);
+            
+            if(Handle<ConfiguredProgram> configuredProgram = getProgramForPass(*material.mEffect, aPass);
+                configuredProgram)
+            {
+                Handle<graphics::VertexArrayObject> vao = getVao(*configuredProgram, part, aStorage);
+
+                ProgramId programId = mProgramToId.get(configuredProgram);
+                VaoId vaoId = mVaoToId.get(vao);
+                MaterialContextId materialContextId = mMaterialContextToId.get(material.mContext);
+
+                std::uint64_t key = vaoId ;
+                key |= materialContextId << gVaoBits;
+                key |= programId << (gVaoBits + gMaterialContextBits);
+
+                entries.push_back(PartDrawEntry{.mKey = key, .mPartListIdx = partIdx});
+            }
+        }
+
+        return entries;
+    }
+
+    DrawCall generateDrawCall(const PartDrawEntry & aEntry, const Part & aPart, const VertexStream & aVertexStream)
+    {
+        PartDrawEntry::Key drawKey = aEntry.mKey;
+        return DrawCall{
+            .mPrimitiveMode = aPart.mPrimitiveMode,
+            .mIndicesType = aVertexStream.mIndicesType,
+            .mProgram = 
+                &mProgramToId.reverseLookup(gProgramIdMask & (drawKey >> (gVaoBits + gMaterialContextBits)))
+                    ->mProgram,
+            .mVao = mVaoToId.reverseLookup(gVaoIdMask & drawKey),
+            .mCallContext = mMaterialContextToId.reverseLookup(gMaterialContextIdMask & (drawKey >> gVaoBits)),
+            .mPartCount = 0,
+        };
+    }
+};
+
+
+std::vector<PartDrawEntry> DrawEntryHelper::generateDrawEntries(StringKey aPass,
+                                                                const PartList & aPartList,
+                                                                Storage & aStorage)
+{
+    return mImpl->generateDrawEntries(aPass, aPartList, aStorage);
+}
+
+
+DrawCall DrawEntryHelper::generateDrawCall(const PartDrawEntry & aEntry,
+                                           const Part & aPart,
+                                           const VertexStream & aVertexStream)
+{
+    return mImpl->generateDrawCall(aEntry, aPart, aVertexStream);
+}
+
+
 PassCache preparePass(StringKey aPass,
                       const PartList & aPartList,
                       Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "prepare_pass", CpuTime);
 
-    constexpr unsigned int gProgramIdBits = 16;
-    constexpr std::uint64_t gProgramIdMask = makeMask(gProgramIdBits);
-    using ProgramId = std::uint16_t;
-    assert(aStorage.mPrograms.size() < (1 << gProgramIdBits));
-
-    //constexpr unsigned int gPrimitiveModes = 12; // I counted 12 primitive modes
-    //unsigned int gPrimitiveModeIdBits = (unsigned int)std::ceil(std::log2(gPrimitiveModes));
-
-    constexpr unsigned int gVaoBits = 10;
-    constexpr std::uint64_t gVaoIdMask = makeMask(gVaoBits);
-    assert(aStorage.mVaos.size() < (1 << gVaoBits));
-    using VaoId = std::uint16_t;
-
-    constexpr unsigned int gMaterialContextBits = 10;
-    constexpr std::uint64_t gMaterialContextIdMask = makeMask(gMaterialContextBits);
-    assert(aStorage.mMaterialContexts.size() < (1 << gMaterialContextBits));
-    using MaterialContextId = std::uint16_t;
-
-    ResourceIdMap<ConfiguredProgram, gProgramIdBits> programToId;
-    ResourceIdMap<graphics::VertexArrayObject, gVaoBits> vaoToId;
-    ResourceIdMap<MaterialContext, gMaterialContextBits> materialContextToId;
-
-    //
-    // For each part, associated it to its sort key and store them in an array
-    // (this will already prune parts for which there is no program for aPass)
-    //
-    std::vector<DrawEntry> entries;
-    entries.reserve(aPartList.mParts.size());
-
-    for (std::size_t partIdx = 0; partIdx != aPartList.mParts.size(); ++partIdx)
-    {
-        const Part & part = *aPartList.mParts[partIdx];
-        const Material & material = *aPartList.mMaterials[partIdx];
-
-        // TODO Ad 2023/10/05: Also add those as sorting dimensions (to the LSB)
-        assert(part.mPrimitiveMode == GL_TRIANGLES);
-        assert(part.mVertexStream->mIndicesType == GL_UNSIGNED_INT);
-        
-        if(Handle<ConfiguredProgram> configuredProgram = getProgramForPass(*material.mEffect, aPass);
-            configuredProgram)
-        {
-            Handle<graphics::VertexArrayObject> vao = getVao(*configuredProgram, part, aStorage);
-
-            ProgramId programId = programToId.get(configuredProgram);
-            VaoId vaoId = vaoToId.get(vao);
-            MaterialContextId materialContextId = materialContextToId.get(material.mContext);
-
-            std::uint64_t key = vaoId ;
-            key |= materialContextId << gVaoBits;
-            key |= programId << (gVaoBits + gMaterialContextBits);
-
-            entries.push_back(DrawEntry{.mKey = key, .mPartListIdx = partIdx});
-        }
-    }
+    DrawEntryHelper helper;
+    std::vector<PartDrawEntry> entries = helper.generateDrawEntries(aPass, aPartList, aStorage);
 
     //
     // Sort the entries
@@ -240,8 +275,8 @@ PassCache preparePass(StringKey aPass,
     // Traverse the sorted array to generate the actual draw commands and draw calls
     //
     PassCache result;
-    DrawEntry::Key drawKey = DrawEntry::gInvalidKey;
-    for(const DrawEntry & entry : entries)
+    PartDrawEntry::Key drawKey = PartDrawEntry::gInvalidKey;
+    for(const PartDrawEntry & entry : entries)
     {
         const Part & part = *aPartList.mParts[entry.mPartListIdx];
         const VertexStream & vertexStream = *part.mVertexStream;
@@ -251,20 +286,8 @@ PassCache preparePass(StringKey aPass,
         {
             // Record the new drawkey
             drawKey = entry.mKey;
-
             // Push the new DrawCall
-            result.mCalls.push_back(
-                DrawCall{
-                    .mPrimitiveMode = part.mPrimitiveMode,
-                    .mIndicesType = vertexStream.mIndicesType,
-                    .mProgram = 
-                        &programToId.reverseLookup(gProgramIdMask & (drawKey >> (gVaoBits + gMaterialContextBits)))
-                            ->mProgram,
-                    .mVao = vaoToId.reverseLookup(gVaoIdMask & drawKey),
-                    .mCallContext = materialContextToId.reverseLookup(gMaterialContextIdMask & (drawKey >> gVaoBits)),
-                    .mPartCount = 0,
-                }
-            );
+            result.mCalls.push_back(helper.generateDrawCall(entry, part, vertexStream));
         }
         
         // Increment the part count of current DrawCall
@@ -279,7 +302,7 @@ PassCache preparePass(StringKey aPass,
         result.mDrawCommands.push_back(
             DrawElementsIndirectCommand{
                 .mCount = part.mIndicesCount,
-                // TODO Ad 2023/09/26: #bench Is it worth it to group identical parts and do "instanced" drawing?
+                // TODO Ad 2023/09/26: #bench #perf Is it worth it to group identical parts and do "instanced" drawing?
                 // For the moment, draw a single instance for each part (i.e. no instancing)
                 .mInstanceCount = 1,
                 .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset / indiceSize)
