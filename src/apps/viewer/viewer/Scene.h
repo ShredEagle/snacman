@@ -7,7 +7,7 @@
 namespace ad::renderer {
 
 struct Loader;
-struct PartList;
+struct ViewerPartList;
 
 
 struct Scene
@@ -35,7 +35,7 @@ struct Scene
     /// @param aSceneFile A sew file (json) describing the scene to load.
     Scene LoadFile(const filesystem::path aSceneFile);
 
-    PartList populatePartList() const;
+    ViewerPartList populatePartList() const;
 
     Node mRoot{
         .mInstance = {

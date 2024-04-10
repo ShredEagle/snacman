@@ -8,6 +8,7 @@ set(${TARGET_NAME}_HEADERS
     DrawQuad.h
     Json.h
     Logging.h
+    PassViewer.cpp
     Scene.h
     SceneGui.h
     TheGraph.h
@@ -19,6 +20,7 @@ set(${TARGET_NAME}_SOURCES
 
     DrawQuad.cpp
     Logging.cpp
+    PassViewer.cpp
     Scene.cpp
     SceneGui.cpp
     TheGraph.cpp

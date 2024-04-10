@@ -95,7 +95,7 @@ struct SnacGraph
     };
 
     /// @brief The list of parts to be rendered. This might be valid for several passes (intra, or inter frame)
-    struct PartList
+    struct PartList : public renderer::PartList
     {
         void push_back(const renderer::Part * aPart, const renderer::Material * aMaterial, GLuint aInstanceIdx)
         {
@@ -104,11 +104,7 @@ struct SnacGraph
             mInstanceIdx.push_back(aInstanceIdx);
         }
 
-        // SOA
-        // TODO replace pointers with handles? There is not really a handle for parts though
-        std::vector<const renderer::Part *> mParts;
-        // If the entity UBO is pre-populated with material indices, we might only need the effect.
-        std::vector<const renderer::Material *> mMaterials;
+        // SOA, continued
         // Index of this part in the instance buffer, which is filled before creating the partlist.
         std::vector<GLuint> mInstanceIdx;
         // Alternatively, might also store the EntityIdx, and create a sorted Instance stream per pass...

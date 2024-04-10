@@ -3,33 +3,22 @@
 
 #include <renderer/GL_Loader.h>
 
-#include <snac-renderer-V2/Model.h>
+#include "Model.h"
 
 
 namespace ad::renderer {
 
 
-// TODO Ad 2024/04/09: #viewer #model Seems to be application dependent.
-// We could try to extract the "base" PartList (probably only Parts and Materials),
-// and have a ViewerPartList derived (non-virtual) class for Viewer app specifically.
-/// @brief A list of parts to be drawn, each associated to a Material and a transformation.
+/// @brief A list of parts to be drawn, each associated to a Material.
 /// It is intended to be reused accross distinct passes inside a frame (or even accross frames for static parts).
+/// @note It is intended to be derived by applications if they have any more specific needs (e.g. ViewerPartList)
 struct PartList
 {
     static constexpr GLsizei gInvalidIdx = std::numeric_limits<GLsizei>::max();
 
-    // The individual renderer::Objects transforms. Several parts might index to the same transform.
-    // (Same way several parts might index the same material parameters)
-    std::vector<math::AffineMatrix<4, GLfloat>> mInstanceTransforms;
-
-    // All the palettes are concatenated in a single unidimensionnal container.
-    std::vector<Rig::Pose> mRiggingPalettes;
-
     // SOA
     std::vector<const Part *> mParts;
     std::vector<const Material *> mMaterials;
-    std::vector<GLsizei> mTransformIdx;
-    std::vector<GLsizei> mPaletteOffset; // the first bone index for a each part in the global matrix palette
 };
 
 
@@ -86,6 +75,7 @@ struct DrawCall
 
 // TODO #model rename to DrawXxx
 /// @brief The draw calls to be issued, usually valid for a given Pass.
+/// @note It is intended to be derived by applications if they have any more specific needs (e.g. ViewerPassCache)
 struct PassCache
 {
     std::vector<DrawCall> mCalls;
@@ -93,35 +83,15 @@ struct PassCache
 };
 
 
-// TODO Ad 2024/04/09: #model #viewer Is also application dependent, and should live outside of here.
-/// @brief Entry to populate the instance buffer (attribute divisor == 1).
-/// Each instance (mapping to a `Part` in client data model) has a pose and a material.
-// TODO Ad 2024/03/20: Why does it duplicate Loader.h InstanceData? (modulo the alias types)
-// TODO move into the viewer
-struct DrawInstance
-{
-    GLsizei mInstanceTransformIdx; // index in the instance UBO
-    GLsizei mMaterialIdx;
-    GLsizei mMatrixPaletteOffset;
-};
-
-
-struct ViewerPassCache : public PassCache
-{
-    std::vector<DrawInstance> mDrawInstances; // Intended to be loaded as a GL instance buffer
-};
-
-
 // 
 // High level API
 //
 
-/// @brief From a PartList, generates the PassCache for a given pass.
-/// @param aPass Pass name.
-/// @param aPartList The PartList that should be rendered.
-ViewerPassCache preparePass(StringKey aPass,
-                            const PartList & aPartList,
-                            Storage & aStorage);
+// Not implement, see prepareViewerPass for an example!
+// It is very much coupled to how the application populates its instance buffer.
+//PassCache preparePass(StringKey aPass,
+//                      const PartList & aPartList,
+//                      Storage & aStorage);
 
 
 void draw(const PassCache & aPassCache,
@@ -148,9 +118,7 @@ struct DrawEntryHelper
     /// @brief Returns an array with one DrawEntry per-part in the input PartList.
     /// The DrawEntries can be sorted in order to minimize state changes.
     std::vector<PartDrawEntry> generateDrawEntries(StringKey aPass,
-                                                   //const PartList & aPartList, We would like that, but this type is application dependent
-                                                   std::span<const Part * const> aParts,
-                                                   std::span<const Material * const> aMaterials,
+                                                   const PartList & aPartList,
                                                    Storage & aStorage);
 
     DrawCall generateDrawCall(const PartDrawEntry & aEntry,

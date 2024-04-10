@@ -2,12 +2,12 @@
 
 
 #include "DrawQuad.h"
+#include "PassViewer.h"
 #include "Scene.h"
 
 #include <snac-renderer-V2/Camera.h>
 // TODO Ad 2023/10/18: Should get rid of this repeated implementation
 #include <snac-renderer-V2/RendererReimplement.h>
-#include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/Semantics.h>
 #include <snac-renderer-V2/SetupDrawing.h>
@@ -162,7 +162,7 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
 // TODO Ad 2023/11/26: Even more, since the model transform is to world space (i.e. constant accross viewpoints)
 // and it is fetched from a buffer in the shaders, it could actually be pushed once per frame.
 // (and the pass would only index the transform for the objects it actually draws).
-void TheGraph::loadDrawBuffers(const PartList & aPartList,
+void TheGraph::loadDrawBuffers(const ViewerPartList & aPartList,
                                const ViewerPassCache & aPassCache)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_draw_buffers", CpuTime, BufferMemoryWritten);
@@ -184,7 +184,7 @@ void TheGraph::loadDrawBuffers(const PartList & aPartList,
 }
 
 
-void TheGraph::renderFrame(const PartList & aPartList, 
+void TheGraph::renderFrame(const ViewerPartList & aPartList, 
                            const Camera & aCamera,
                            Storage & aStorage)
 {
@@ -279,12 +279,12 @@ void TheGraph::showDepthTexture(const graphics::Texture & aTexture,
 }
 
 
-void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
+void TheGraph::passOpaqueDepth(const ViewerPartList & aPartList, Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_depth", CpuTime, GpuTime);
 
     // Can be done once even for distinct cameras, if there is no culling
-    ViewerPassCache passCache = preparePass("depth_opaque", aPartList, aStorage);
+    ViewerPassCache passCache = prepareViewerPass("depth_opaque", aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -322,12 +322,12 @@ void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
 }
 
 
-void TheGraph::passForward(const PartList & aPartList, Storage & mStorage)
+void TheGraph::passForward(const ViewerPartList & aPartList, Storage & mStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_forward", CpuTime, GpuTime);
 
     // Can be done once for distinct camera, if there is no culling
-    ViewerPassCache passCache = preparePass("forward", aPartList, mStorage);
+    ViewerPassCache passCache = prepareViewerPass("forward", aPartList, mStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -372,7 +372,7 @@ void TheGraph::passForward(const PartList & aPartList, Storage & mStorage)
 }
 
 
-void TheGraph::passTransparencyAccumulation(const PartList & aPartList, Storage & mStorage)
+void TheGraph::passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_transparency_accum", CpuTime, GpuTime);
 
@@ -411,7 +411,7 @@ void TheGraph::passTransparencyAccumulation(const PartList & aPartList, Storage 
     }
 
     // Can be done once for distinct camera, if there is no culling
-    ViewerPassCache passCache = preparePass("transparent", aPartList, mStorage);
+    ViewerPassCache passCache = prepareViewerPass("transparent", aPartList, mStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -429,7 +429,7 @@ void TheGraph::passTransparencyAccumulation(const PartList & aPartList, Storage 
 }
 
 
-void TheGraph::passTransparencyResolve(const PartList & aPartList, Storage & mStorage)
+void TheGraph::passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_transparency_resolve", CpuTime, GpuTime);
 

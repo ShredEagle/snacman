@@ -17,7 +17,7 @@ namespace ad::renderer {
 
 class Camera;
 struct Loader;
-struct PartList;
+struct ViewerPartList;
 struct ViewerPassCache;
 struct Storage;
 
@@ -42,19 +42,19 @@ struct TheGraph
              Storage & aStorage,
              const Loader & aLoader);
 
-    void renderFrame(const PartList & aPartList, 
+    void renderFrame(const ViewerPartList & aPartList, 
                      const Camera & aCamera,
                      Storage & aStorage);
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
-    void passOpaqueDepth(const PartList & aPartList, Storage & mStorage);
-    void passForward(const PartList & aPartList, Storage & mStorage);
-    void passTransparencyAccumulation(const PartList & aPartList, Storage & mStorage);
-    void passTransparencyResolve(const PartList & aPartList, Storage & mStorage);
+    void passOpaqueDepth(const ViewerPartList & aPartList, Storage & mStorage);
+    void passForward(const ViewerPartList & aPartList, Storage & mStorage);
+    void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
+    void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
 
-    void loadDrawBuffers(const PartList & aPartList, const ViewerPassCache & aPassCache);
+    void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache);
 
     void showTexture(const graphics::Texture & aTexture,
                      unsigned int aStackPosition,

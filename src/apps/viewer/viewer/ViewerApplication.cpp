@@ -2,6 +2,7 @@
 
 #include "Json.h"
 #include "Logging.h"
+#include "PassViewer.h"
 
 
 #include <handy/vector_utils.h>
@@ -17,7 +18,6 @@
 #include <profiler/GlApi.h>
 
 #include <snac-renderer-V2/Cube.h>
-#include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/debug/DebugDrawing.h>
 
@@ -167,7 +167,7 @@ namespace {
     }
 
 
-    void populatePartList(PartList & aPartList,
+    void populatePartList(ViewerPartList & aPartList,
                           const Node & aNode,
                           const Pose & aParentAbsolutePose,
                           const Material * aMaterialOverride)
@@ -185,7 +185,7 @@ namespace {
            object != nullptr)
         {
             // the default value (i.e. not rigged)
-            GLsizei paletteOffset = PartList::gInvalidIdx;
+            GLsizei paletteOffset = ViewerPartList::gInvalidIdx;
 
             if(auto animatedRig = object->mAnimatedRig)
             {
@@ -232,11 +232,11 @@ namespace {
 } // unnamed namespace
 
 
-PartList Scene::populatePartList() const
+ViewerPartList Scene::populatePartList() const
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "populate_part_list", CpuTime);
 
-    PartList partList;
+    ViewerPartList partList;
     renderer::populatePartList(partList,
                                mRoot,
                                Pose{}, // Identity pose, because it represents
@@ -502,7 +502,7 @@ void ViewerApplication::render()
     // TODO: How to handle material/program selection while generating the part list,
     // if the camera (or pass itself?) might override the materials?
     // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
-    PartList partList = mScene.populatePartList();
+    ViewerPartList partList = mScene.populatePartList();
     mGraph.renderFrame(partList, mCamera, mStorage);
 
     mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);

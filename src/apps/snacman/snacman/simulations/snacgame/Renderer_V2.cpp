@@ -180,7 +180,7 @@ renderer::PassCache SnacGraph::preparePass(renderer::StringKey aPass,
 
     renderer::DrawEntryHelper helper;
     std::vector<renderer::PartDrawEntry> entries = 
-        helper.generateDrawEntries(aPass, aPartList.mParts, aPartList.mMaterials, aStorage);
+        helper.generateDrawEntries(aPass, aPartList, aStorage);
 
     //
     // Sort the entries
