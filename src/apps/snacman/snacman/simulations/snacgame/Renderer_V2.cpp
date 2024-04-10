@@ -200,6 +200,9 @@ renderer::PassCache SnacGraph::preparePass(renderer::StringKey aPass,
     //
     renderer::PassCache result;
     renderer::PartDrawEntry::Key drawKey = renderer::PartDrawEntry::gInvalidKey;
+    // Note: there is actually no handle on Part atm...
+    renderer::Handle<const renderer::Part> currentPart = renderer::gNullHandle;
+    GLuint previousInstanceIdx = std::numeric_limits<GLuint>::max();
 
     for(const renderer::PartDrawEntry & entry : entries)
     {
@@ -215,11 +218,20 @@ renderer::PassCache SnacGraph::preparePass(renderer::StringKey aPass,
             // Push the new DrawCall
             result.mCalls.push_back(helper.generateDrawCall(entry, *part, vertexStream));
         }
-        
-        // Increment the draw count of current DrawCall:
-        // Since we are drawing a single instance with each command (i.e. 1 DrawElementsIndirectCommand for each Part)
-        // we increment the drawcount for each Part (so, with each PartDrawEntry)
-        ++result.mCalls.back().mDrawCount;
+        else if(part == currentPart 
+            // If there is a "hole" in the instance sequence (e.g. the part before had a different key)
+            // we cannot continue with the same instanced command
+            && instanceIdx == (previousInstanceIdx + 1))
+        {
+            // Should never be the case, we should not be able to enter this scope before the first command
+            assert(!result.mDrawCommands.empty());
+
+            // This can be drawn by incrementing the number of instances of current draw command.
+            ++result.mDrawCommands.back().mInstanceCount;
+            ++previousInstanceIdx;
+            // If we are drawing the same part as before, with the same 
+            continue;
+        }
 
         const std::size_t indiceSize = graphics::getByteSize(vertexStream.mIndicesType);
 
@@ -230,14 +242,19 @@ renderer::PassCache SnacGraph::preparePass(renderer::StringKey aPass,
         result.mDrawCommands.push_back(
             renderer::DrawElementsIndirectCommand{
                 .mCount = part->mIndicesCount,
-                // TODO try with limited instancing
-                .mInstanceCount = 1,
+                .mInstanceCount = 1, // Will be incremented if next entry allows it.
                 .mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset / indiceSize)
                                 + part->mIndexFirst,
                 .mBaseVertex = part->mVertexFirst,
                 .mBaseInstance = instanceIdx,
             }
         );
+        // Increment the draw count of current DrawCall, since we just added a DrawCommand to it.
+        ++result.mCalls.back().mDrawCount;
+        
+        // Update inter-iteration variables
+        currentPart = part;
+        previousInstanceIdx = instanceIdx;
     }
 
     return result;
