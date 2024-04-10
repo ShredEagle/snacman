@@ -43,5 +43,15 @@ inline nvgl::ProfilerGL & getProfilerGL()
     TIME_RECURRING_GL(keptStringForProfiling.c_str())
 
 
+#define DISABLE_PROFILING_GL \
+            ::ad::renderer::ProfilerRegistry::Get(::ad::snac::ProfilerMap_V2::Render) \
+                .control(::ad::renderer::Profiler::SectionProfiling::Disabled)
+
+
+#define ENABLE_PROFILING_GL \
+            ::ad::renderer::ProfilerRegistry::Get(::ad::snac::ProfilerMap_V2::Render) \
+                .control(::ad::renderer::Profiler::SectionProfiling::Enabled)
+
+
 } // namespace snac
 } // namespace ad

@@ -213,6 +213,8 @@ void Profiler::beginFrame()
 
 void Profiler::endFrame()
 {
+    assert(mEnabled 
+        && "The disable mechanism is only intended to inhibit sections of frame profiling.");
     assert(mFrameState.areAllSectionsClosed());
 
     // TODO Ad 2023/11/15: I do not like this explicit reset of all values at the end of the frame if a reset occurred:
@@ -257,6 +259,11 @@ void Profiler::endFrame()
 
 Profiler::EntryIndex Profiler::beginSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders)
 {
+    if(!mEnabled)
+    {
+        return Entry::gInvalidEntry;
+    }
+    
     // TODO Section identity is much more subtle than that
     // It should be robust to changing the structure of sections (loop variance, and logical structure)
     // and handle change in providers somehow.
@@ -296,6 +303,13 @@ Profiler::EntryIndex Profiler::beginSection(EntryNature aNature, const char * aN
 
 void Profiler::endSection(EntryIndex aIndex)
 {
+    if(!mEnabled)
+    {
+        // Otherwise, there is likely a mismatch in disabled sections
+        assert(aIndex == Entry::gInvalidEntry);
+        return;
+    }
+
     Entry & entry = mEntries.at(aIndex);
     std::uint32_t subframe = currentSubframe(entry.getNature());
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)

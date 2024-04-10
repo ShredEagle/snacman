@@ -161,6 +161,14 @@ public:
     void beginFrame();
     void endFrame();
 
+    enum class SectionProfiling
+    {
+        Disabled,
+        Enabled,
+    };
+    void control(SectionProfiling aState)
+    { mEnabled = (aState == SectionProfiling::Enabled); }
+
     EntryIndex beginSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders);
     void endSection(EntryIndex aIndex);
 
@@ -382,6 +390,7 @@ private:
     };
 
 
+    bool mEnabled = true;
     std::vector<Entry> mEntries; // Initial size handled in constructor
     std::vector<SingleShotRecord> mSingleShots;
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;
