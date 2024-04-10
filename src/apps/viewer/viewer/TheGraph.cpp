@@ -90,83 +90,6 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
 
 
 //
-// Draw
-//
-void draw(const PassCache & aPassCache,
-          const RepositoryUbo & aUboRepository,
-          const RepositoryTexture & aTextureRepository)
-{
-    //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
-    // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
-    // those could be "bound" before draw (potentially doing some binds and uniform setting, but not iterating the program)
-    // (We could even separate actual texture from the "format", allowing to change an underlying texture without revisiting the program)
-    // This would address the warnings repetitions (only issued when the compiled state is (re-)generated), and be better for perfs.
-
-    GLuint firstInstance = 0; 
-    for (const DrawCall & aCall : aPassCache.mCalls)
-    {
-        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "drawcall_iteration", CpuTime);
-
-        PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "discard_2", CpuTime);
-        const IntrospectProgram & selectedProgram = *aCall.mProgram;
-        const graphics::VertexArrayObject & vao = *aCall.mVao;
-        PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
-
-        // TODO Ad 2023/10/05: #perf #azdo 
-        // Only change what is necessary, instead of rebiding everything each time.
-        // Since we sorted our draw calls, it is very likely that program remain the same, and VAO changes.
-        {
-            PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "bind_VAO", CpuTime);
-            graphics::ScopedBind vaoScope{vao};
-            PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
-            
-            {
-                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
-                // TODO #repos This should be consolidated
-                RepositoryUbo uboRepo{aUboRepository};
-                if(aCall.mCallContext)
-                {
-                    RepositoryUbo callRepo{aCall.mCallContext->mUboRepo};
-                    uboRepo.merge(callRepo);
-                }
-                setBufferBackedBlocks(selectedProgram, uboRepo);
-            }
-
-            {
-                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
-                // TODO #repos This should be consolidated
-                RepositoryTexture textureRepo{aTextureRepository};
-                if(aCall.mCallContext)
-                {
-                    RepositoryTexture callRepo{aCall.mCallContext->mTextureRepo};
-                    textureRepo.merge(callRepo);
-                }
-                setTextures(selectedProgram, textureRepo);
-            }
-
-            PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "bind_program", CpuTime);
-            graphics::ScopedBind programScope{selectedProgram};
-            PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
-
-            {
-                // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
-                // Can we have efficient GPU measures?
-                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw_call", CpuTime/*, GpuTime*/);
-                
-                gl.MultiDrawElementsIndirect(
-                    aCall.mPrimitiveMode,
-                    aCall.mIndicesType,
-                    (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
-                    aCall.mPartCount,
-                    sizeof(DrawElementsIndirectCommand));
-            }
-        }
-        firstInstance += aCall.mPartCount;
-    }
-}
-
-
-//
 // TheGraph
 //
 TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
@@ -240,7 +163,7 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
 // and it is fetched from a buffer in the shaders, it could actually be pushed once per frame.
 // (and the pass would only index the transform for the objects it actually draws).
 void TheGraph::loadDrawBuffers(const PartList & aPartList,
-                               const PassCache & aPassCache)
+                               const ViewerPassCache & aPassCache)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_draw_buffers", CpuTime, BufferMemoryWritten);
 
@@ -361,7 +284,7 @@ void TheGraph::passOpaqueDepth(const PartList & aPartList, Storage & aStorage)
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_depth", CpuTime, GpuTime);
 
     // Can be done once even for distinct cameras, if there is no culling
-    PassCache passCache = preparePass("depth_opaque", aPartList, aStorage);
+    ViewerPassCache passCache = preparePass("depth_opaque", aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -404,7 +327,7 @@ void TheGraph::passForward(const PartList & aPartList, Storage & mStorage)
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_forward", CpuTime, GpuTime);
 
     // Can be done once for distinct camera, if there is no culling
-    PassCache passCache = preparePass("forward", aPartList, mStorage);
+    ViewerPassCache passCache = preparePass("forward", aPartList, mStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -488,7 +411,7 @@ void TheGraph::passTransparencyAccumulation(const PartList & aPartList, Storage 
     }
 
     // Can be done once for distinct camera, if there is no culling
-    PassCache passCache = preparePass("transparent", aPartList, mStorage);
+    ViewerPassCache passCache = preparePass("transparent", aPartList, mStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);

@@ -3,6 +3,8 @@
 #include "Profiling.h"
 #include "SetupDrawing.h"
 
+#include <profiler/GlApi.h>
+
 
 namespace ad::renderer {
 
@@ -152,6 +154,9 @@ DrawEntryHelper::DrawEntryHelper() :
 {}
 
 
+DrawEntryHelper::~DrawEntryHelper() = default;
+
+
 struct DrawEntryHelper::Opaque
 {
     static constexpr unsigned int gProgramIdBits = 16;
@@ -168,7 +173,8 @@ struct DrawEntryHelper::Opaque
     ResourceIdMap<MaterialContext, gMaterialContextBits> mMaterialContextToId;
 
     std::vector<PartDrawEntry> generateDrawEntries(StringKey aPass,
-                                                   const PartList & aPartList,
+                                                   std::span<const Part * const> aParts,
+                                                   std::span<const Material * const> aMaterials,
                                                    Storage & aStorage)
     {
         PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "generate_draw_entries", CpuTime);
@@ -190,12 +196,12 @@ struct DrawEntryHelper::Opaque
         // (this will already prune parts for which there is no program for aPass)
         //
         std::vector<PartDrawEntry> entries;
-        entries.reserve(aPartList.mParts.size());
+        entries.reserve(aParts.size());
 
-        for (std::size_t partIdx = 0; partIdx != aPartList.mParts.size(); ++partIdx)
+        for (std::size_t partIdx = 0; partIdx != aParts.size(); ++partIdx)
         {
-            const Part & part = *aPartList.mParts[partIdx];
-            const Material & material = *aPartList.mMaterials[partIdx];
+            const Part & part = *aParts[partIdx];
+            const Material & material = *aMaterials[partIdx];
 
             // TODO Ad 2023/10/05: Also add those as sorting dimensions (to the LSB)
             assert(part.mPrimitiveMode == GL_TRIANGLES);
@@ -232,17 +238,20 @@ struct DrawEntryHelper::Opaque
                     ->mProgram,
             .mVao = mVaoToId.reverseLookup(gVaoIdMask & drawKey),
             .mCallContext = mMaterialContextToId.reverseLookup(gMaterialContextIdMask & (drawKey >> gVaoBits)),
-            .mPartCount = 0,
+            .mDrawCount = 0,
         };
     }
 };
 
 
 std::vector<PartDrawEntry> DrawEntryHelper::generateDrawEntries(StringKey aPass,
-                                                                const PartList & aPartList,
+                                                                std::span<const Part * const> aParts,
+                                                                std::span<const Material * const> aMaterials,
                                                                 Storage & aStorage)
 {
-    return mImpl->generateDrawEntries(aPass, aPartList, aStorage);
+    assert(aParts.size() == aMaterials.size() 
+        && "This is expected to be part of a structure of arrays, taken from PartList.");
+    return mImpl->generateDrawEntries(aPass, aParts, aMaterials, aStorage);
 }
 
 
@@ -254,14 +263,18 @@ DrawCall DrawEntryHelper::generateDrawCall(const PartDrawEntry & aEntry,
 }
 
 
-PassCache preparePass(StringKey aPass,
-                      const PartList & aPartList,
-                      Storage & aStorage)
+ViewerPassCache preparePass(StringKey aPass,
+                            const PartList & aPartList,
+                            Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "prepare_pass", CpuTime);
 
     DrawEntryHelper helper;
-    std::vector<PartDrawEntry> entries = helper.generateDrawEntries(aPass, aPartList, aStorage);
+    std::vector<PartDrawEntry> entries = 
+        helper.generateDrawEntries(aPass,
+                                   aPartList.mParts,
+                                   aPartList.mMaterials,
+                                   aStorage);
 
     //
     // Sort the entries
@@ -274,7 +287,7 @@ PassCache preparePass(StringKey aPass,
     //
     // Traverse the sorted array to generate the actual draw commands and draw calls
     //
-    PassCache result;
+    ViewerPassCache result;
     PartDrawEntry::Key drawKey = PartDrawEntry::gInvalidKey;
     for(const PartDrawEntry & entry : entries)
     {
@@ -290,8 +303,10 @@ PassCache preparePass(StringKey aPass,
             result.mCalls.push_back(helper.generateDrawCall(entry, part, vertexStream));
         }
         
-        // Increment the part count of current DrawCall
-        ++result.mCalls.back().mPartCount;
+        // Increment the draw count of current DrawCall:
+        // Since we are drawing a single instance with each command (i.e. 1 DrawElementsIndirectCommand for each Part)
+        // we increment the drawcount for each Part (so, with each PartDrawEntry)
+        ++result.mCalls.back().mDrawCount;
 
         const std::size_t indiceSize = graphics::getByteSize(vertexStream.mIndicesType);
 
@@ -322,6 +337,81 @@ PassCache preparePass(StringKey aPass,
     }
 
     return result;
+}
+
+
+//
+// Draw
+//
+void draw(const PassCache & aPassCache,
+          const RepositoryUbo & aUboRepository,
+          const RepositoryTexture & aTextureRepository)
+{
+    //TODO Ad 2023/08/01: META todo, should we have "compiled state objects" (a-la VAO) for interface bocks, textures, etc
+    // where we actually map a state setup (e.g. which texture name to which image unit and which sampler)
+    // those could be "bound" before draw (potentially doing some binds and uniform setting, but not iterating the program)
+    // (We could even separate actual texture from the "format", allowing to change an underlying texture without revisiting the program)
+    // This would address the warnings repetitions (only issued when the compiled state is (re-)generated), and be better for perfs.
+
+    GLuint firstInstance = 0; 
+    for (const DrawCall & aCall : aPassCache.mCalls)
+    {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "drawcall_iteration", CpuTime);
+
+        const IntrospectProgram & selectedProgram = *aCall.mProgram;
+        const graphics::VertexArrayObject & vao = *aCall.mVao;
+
+        // TODO Ad 2023/10/05: #perf #azdo 
+        // Only change what is necessary, instead of rebiding everything each time.
+        // Since we sorted our draw calls, it is very likely that program remain the same, and VAO changes.
+        {
+            PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "bind_VAO", CpuTime);
+            graphics::ScopedBind vaoScope{vao};
+            PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
+            
+            {
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
+                // TODO #repos This should be consolidated
+                RepositoryUbo uboRepo{aUboRepository};
+                if(aCall.mCallContext)
+                {
+                    RepositoryUbo callRepo{aCall.mCallContext->mUboRepo};
+                    uboRepo.merge(callRepo);
+                }
+                setBufferBackedBlocks(selectedProgram, uboRepo);
+            }
+
+            {
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
+                // TODO #repos This should be consolidated
+                RepositoryTexture textureRepo{aTextureRepository};
+                if(aCall.mCallContext)
+                {
+                    RepositoryTexture callRepo{aCall.mCallContext->mTextureRepo};
+                    textureRepo.merge(callRepo);
+                }
+                setTextures(selectedProgram, textureRepo);
+            }
+
+            PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "bind_program", CpuTime);
+            graphics::ScopedBind programScope{selectedProgram};
+            PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
+
+            {
+                // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
+                // Can we have efficient GPU measures?
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw_call", CpuTime/*, GpuTime*/);
+                
+                gl.MultiDrawElementsIndirect(
+                    aCall.mPrimitiveMode,
+                    aCall.mIndicesType,
+                    (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
+                    aCall.mDrawCount,
+                    sizeof(DrawElementsIndirectCommand));
+            }
+        }
+        firstInstance += aCall.mDrawCount;
+    }
 }
 
 

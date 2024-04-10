@@ -18,13 +18,8 @@ namespace ad::renderer {
 class Camera;
 struct Loader;
 struct PartList;
-struct PassCache;
+struct ViewerPassCache;
 struct Storage;
-
-
-void draw(const PassCache & aPassCache,
-          const RepositoryUbo & aUboRepository,
-          const RepositoryTexture & aTextureRepository);
 
 
 struct HardcodedUbos
@@ -59,7 +54,7 @@ struct TheGraph
     void passTransparencyAccumulation(const PartList & aPartList, Storage & mStorage);
     void passTransparencyResolve(const PartList & aPartList, Storage & mStorage);
 
-    void loadDrawBuffers(const PartList & aPartList, const PassCache & aPassCache);
+    void loadDrawBuffers(const PartList & aPartList, const ViewerPassCache & aPassCache);
 
     void showTexture(const graphics::Texture & aTexture,
                      unsigned int aStackPosition,

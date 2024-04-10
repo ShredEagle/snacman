@@ -31,11 +31,13 @@ public:
         std::size_t bufferMemoryWritten() const
         { return mBufferMemory.mWritten ; }
 
+        unsigned int mBufferBindCount{0};
         unsigned int mDrawCount{0};
         Memory mBufferMemory;
         Memory mTextureMemory;
     };
 
+    void BindBuffer(GLenum target, GLuint buffer);
     void BufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
     void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
     void Clear(GLbitfield mask);
@@ -75,6 +77,15 @@ inline GlApi gl;
 //
 // Inline implementations    
 //
+inline void GlApi::BindBuffer(GLenum target, GLuint buffer)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mBufferBindCount;
+#endif
+    glBindBuffer(target, buffer);
+}
+
+
 inline void GlApi::BufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage)
 {
 #if defined(SE_INSTRUMENT_GL)

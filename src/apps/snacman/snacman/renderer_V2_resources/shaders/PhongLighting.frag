@@ -19,12 +19,21 @@ in vec4 ex_Color;
 in vec4 ex_Position_lightClip;
 #endif
 
-// Traditionnally, a single term accounting for all lights in the scene
-uniform vec3 u_AmbientColor = vec3(0.2, 0.0, 0.2);
-
 // Per-light data
-uniform vec3 u_LightPosition_c;
-uniform vec3 u_LightColor = vec3(0.8, 0.0, 0.8); // could be split between diffuse and specular itensities
+struct Light
+{
+    vec3 position_c;
+    vec3 color;// = vec3(0.8, 0.0, 0.8); // could be split between diffuse and specular itensities
+};
+
+
+layout(std140, binding = 4) uniform LightingBlock
+{
+    // Traditionnally, a single term accounting for all lights in the scene
+    vec3 ub_AmbientColor;// = vec3(0.2, 0.0, 0.2);
+    Light ub_Light;
+};
+
 
 #ifdef TEXTURES
 uniform sampler2DArray u_DiffuseTexture;
@@ -78,7 +87,7 @@ void main(void)
 
     // Everything in camera space
     const vec3 view_c = vec3(0., 0., 1.);
-    vec3 light_c = normalize(u_LightPosition_c - ex_Position_c);
+    vec3 light_c = normalize(ub_Light.position_c - ex_Position_c);
     vec3 h_c = normalize(view_c + light_c);
     
     vec4 albedo =
@@ -135,12 +144,12 @@ void main(void)
     // Phong illumination
     //
     vec3 ambient = 
-        u_AmbientColor * material.ambientFactor.xyz;
+        ub_AmbientColor * material.ambientFactor.xyz;
     vec3 diffuse =
-        u_LightColor * max(0.f, dot(normal_c, light_c))
+        ub_Light.color * max(0.f, dot(normal_c, light_c))
         * material.diffuseFactor.xyz;
     vec3 specular = 
-        u_LightColor * pow(max(0.f, dot(normal_c, h_c)), material.specularExponent)
+        ub_Light.color * pow(max(0.f, dot(normal_c, h_c)), material.specularExponent)
         * material.specularFactor.xyz;
 
 #ifdef SHADOW

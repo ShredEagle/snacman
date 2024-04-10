@@ -9,7 +9,9 @@
 namespace ad::renderer {
 
 
-// TODO Ad 2024/04/09: Seems to be application dependent...
+// TODO Ad 2024/04/09: #viewer #model Seems to be application dependent.
+// We could try to extract the "base" PartList (probably only Parts and Materials),
+// and have a ViewerPartList derived (non-virtual) class for Viewer app specifically.
 /// @brief A list of parts to be drawn, each associated to a Material and a transformation.
 /// It is intended to be reused accross distinct passes inside a frame (or even accross frames for static parts).
 struct PartList
@@ -64,18 +66,6 @@ struct DrawElementsIndirectCommand
 };
 
 
-// NOTE Ad 2024/04/09: Might also be application dependent
-/// @brief Entry to populate the instance buffer (attribute divisor == 1).
-/// Each instance (mapping to a `Part` in client data model) has a pose and a material.
-// TODO Ad 2024/03/20: Why does it duplicate Loader.h InstanceData? (modulo the alias types)
-struct DrawInstance
-{
-    GLsizei mInstanceTransformIdx; // index in the instance UBO
-    GLsizei mMaterialIdx;
-    GLsizei mMatrixPaletteOffset;
-};
-
-
 /// @brief Store state and parameters required to issue a GL draw call.
 struct DrawCall
 {
@@ -87,17 +77,37 @@ struct DrawCall
     // TODO I am not sure having the material context here is a good idea, it feels a bit high level
     Handle<MaterialContext> mCallContext;
 
-    GLsizei mPartCount;
+    // The number of consecutive DrawElementsIndirectCommand (loaded in the draw indirect buffer)
+    // for this draw call.
+    // Note: the offset to the first command is the sum of previous DrawCall::mDrawCount.
+    GLsizei mDrawCount;
 };
 
 
-// TODO rename to DrawXxx
+// TODO #model rename to DrawXxx
+/// @brief The draw calls to be issued, usually valid for a given Pass.
 struct PassCache
 {
     std::vector<DrawCall> mCalls;
-
-    // SOA at the moment, one entry per part
     std::vector<DrawElementsIndirectCommand> mDrawCommands;
+};
+
+
+// TODO Ad 2024/04/09: #model #viewer Is also application dependent, and should live outside of here.
+/// @brief Entry to populate the instance buffer (attribute divisor == 1).
+/// Each instance (mapping to a `Part` in client data model) has a pose and a material.
+// TODO Ad 2024/03/20: Why does it duplicate Loader.h InstanceData? (modulo the alias types)
+// TODO move into the viewer
+struct DrawInstance
+{
+    GLsizei mInstanceTransformIdx; // index in the instance UBO
+    GLsizei mMaterialIdx;
+    GLsizei mMatrixPaletteOffset;
+};
+
+
+struct ViewerPassCache : public PassCache
+{
     std::vector<DrawInstance> mDrawInstances; // Intended to be loaded as a GL instance buffer
 };
 
@@ -109,9 +119,14 @@ struct PassCache
 /// @brief From a PartList, generates the PassCache for a given pass.
 /// @param aPass Pass name.
 /// @param aPartList The PartList that should be rendered.
-PassCache preparePass(StringKey aPass,
-                      const PartList & aPartList,
-                      Storage & aStorage);
+ViewerPassCache preparePass(StringKey aPass,
+                            const PartList & aPartList,
+                            Storage & aStorage);
+
+
+void draw(const PassCache & aPassCache,
+          const RepositoryUbo & aUboRepository,
+          const RepositoryTexture & aTextureRepository);
 
 
 //
@@ -127,10 +142,15 @@ struct DrawEntryHelper
 {
     DrawEntryHelper();
 
+    // Must be defaulted in the implementation file, where Opaque definition is available 
+    ~DrawEntryHelper();
+
     /// @brief Returns an array with one DrawEntry per-part in the input PartList.
     /// The DrawEntries can be sorted in order to minimize state changes.
     std::vector<PartDrawEntry> generateDrawEntries(StringKey aPass,
-                                                   const PartList & aPartList,
+                                                   //const PartList & aPartList, We would like that, but this type is application dependent
+                                                   std::span<const Part * const> aParts,
+                                                   std::span<const Material * const> aMaterials,
                                                    Storage & aStorage);
 
     DrawCall generateDrawCall(const PartDrawEntry & aEntry,

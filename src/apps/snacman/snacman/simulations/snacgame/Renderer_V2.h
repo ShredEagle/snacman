@@ -16,6 +16,7 @@
 
 // V2: the good stuff
 #include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/VertexStreamUtilities.h>
 #include <snac-renderer-V2/files/Loader.h>
 
@@ -50,6 +51,7 @@ namespace semantic {
     BLOCK_SEM(Materials);
     BLOCK_SEM(JointMatrices);
     BLOCK_SEM(Entities);
+    BLOCK_SEM(Lighting);
 
     #undef SEMANTIC
 } // namespace semantic
@@ -76,6 +78,13 @@ struct SnacGraph
     static_assert(sizeof(EntityData) % 16 == 0, 
         "Size a multiple of 16 so successive loads work as expected.");
 
+    struct alignas(16) LightingData
+    {
+        alignas(16) math::hdr::Rgb<GLfloat> mAmbientColor;
+        alignas(16) math::Position<3, GLfloat>   mLightPosition_c;
+        alignas(16) math::hdr::Rgb<GLfloat> mLightColor;
+    };
+
     /// @brief The data to populate the GL instance attribute buffer, for instanced rendering.
     ///
     /// From our data model, the graphics API instance is the Part (not the Object)
@@ -84,6 +93,32 @@ struct SnacGraph
         GLuint mEntityIdx;
         GLuint mMaterialIdx; 
     };
+
+    /// @brief The list of parts to be rendered. This might be valid for several passes (intra, or inter frame)
+    struct PartList
+    {
+        void push_back(const renderer::Part * aPart, const renderer::Material * aMaterial, GLuint aInstanceIdx)
+        {
+            mParts.push_back(aPart);
+            mMaterials.push_back(aMaterial);
+            mInstanceIdx.push_back(aInstanceIdx);
+        }
+
+        // SOA
+        // TODO replace pointers with handles? There is not really a handle for parts though
+        std::vector<const renderer::Part *> mParts;
+        // If the entity UBO is pre-populated with material indices, we might only need the effect.
+        std::vector<const renderer::Material *> mMaterials;
+        // Index of this part in the instance buffer, which is filled before creating the partlist.
+        std::vector<GLuint> mInstanceIdx;
+        // Alternatively, might also store the EntityIdx, and create a sorted Instance stream per pass...
+        // This would more easily allow to do instanced rendering with multidraw, at the cost of loading the instance buffer each pass.
+        //std::vector<GLuint> mEntityIdx;
+    };
+
+    static renderer::PassCache preparePass(renderer::StringKey aPass,
+                                           const PartList & aPartList,
+                                           renderer::Storage & aStorage);
 
     static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage, std::size_t aInstanceCount)
     {
@@ -130,6 +165,23 @@ struct SnacGraph
 
     // List and describes the buffer views used for per-instance vertex attributes
     renderer::GenericStream mInstanceStream;
+
+    graphics::Buffer<graphics::BufferType::DrawIndirect> mIndirectBuffer;
+
+    struct GraphUbos
+    {
+        // TODO should they be hosted in renderer::Storage instead of this class?
+        graphics::UniformBufferObject mJointMatricesUbo;
+        graphics::UniformBufferObject mEntitiesUbo;
+        graphics::UniformBufferObject mLightingUbo;
+
+        renderer::RepositoryUbo mUboRepository{
+            {semantic::gJointMatrices, &mJointMatricesUbo},
+            {semantic::gEntities, &mEntitiesUbo},
+            {semantic::gLighting, &mLightingUbo},
+        };
+    } mGraphUbos;
+
 };
 
 using Resources_V2 = renderer::Loader;
@@ -214,9 +266,6 @@ private:
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;
-
-    graphics::UniformBufferObject mJointMatricesUbo;
-    graphics::UniformBufferObject mEntitiesUbo;
 
     // Intended for function-local storage, made a member so its reuses the allocated memory between frames.
     std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
