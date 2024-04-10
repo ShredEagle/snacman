@@ -167,7 +167,10 @@ public:
         Enabled,
     };
     void control(SectionProfiling aState)
-    { mEnabled = (aState == SectionProfiling::Enabled); }
+    { 
+        assert(mEnabled != static_cast<bool>(aState));
+        mEnabled = (aState == SectionProfiling::Enabled); 
+    }
 
     EntryIndex beginSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders);
     void endSection(EntryIndex aIndex);

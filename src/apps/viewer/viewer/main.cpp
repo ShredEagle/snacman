@@ -127,13 +127,13 @@ void runApplication(int argc, char * argv[])
 
     auto renderProfilerScope = SCOPE_PROFILER(gRenderProfiler, renderer::Profiler::Providers::All);
 
-    PROFILER_PUSH_SINGLESHOT_SECTION(gRenderProfiler, loadingSection, "rendergraph_loading", renderer::CpuTime);
+    auto loadingSection = PROFILER_BEGIN_SINGLESHOT_SECTION(gRenderProfiler, , "rendergraph_loading", renderer::CpuTime);
     renderer::ViewerApplication application{
         glfwApp.getAppInterface(),
         handleArguments(argc, argv),
         imguiUi,
     };
-    PROFILER_POP_SECTION(gRenderProfiler, loadingSection);
+    PROFILER_END_SECTION(loadingSection);
 
     renderer::Timing timing;
 
@@ -148,7 +148,7 @@ void runApplication(int argc, char * argv[])
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME(gRenderProfiler);
-        PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "frame", renderer::CpuTime, renderer::GpuTime);
+        auto frameSection = PROFILER_BEGIN_RECURRING_SECTION(gRenderProfiler, "frame", renderer::CpuTime, renderer::GpuTime);
 
         {
             PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "fps_counter", renderer::CpuTime);
@@ -183,7 +183,7 @@ void runApplication(int argc, char * argv[])
 
         glfwApp.swapBuffers();
 
-        PROFILER_POP_RECURRING_SECTION(gRenderProfiler); // frame
+        PROFILER_END_SECTION(frameSection);
         PROFILER_END_FRAME(gRenderProfiler);
 
         // Note: the printing of the profiler content happens out of the frame, so its time is excluded from profiler's frame time

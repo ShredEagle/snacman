@@ -28,29 +28,49 @@ using Profiler_t = Profiler;
 #define PROFILER_BEGIN_FRAME(profiler) ::ad::renderer::ProfilerRegistry::Get(profiler).beginFrame()
 #define PROFILER_END_FRAME(profiler) ::ad::renderer::ProfilerRegistry::Get(profiler).endFrame()
 
-//// TODO Ad 2024/04/02: #profiling 
-//// With this macro, all exit points have to be matched with explicit "end scope" calls.
-/// It would be much better we have to RAII our way out of this.
-//// This macro-based API should be reviewed, maybe only the scoped version should exist
-//// (still offering an explicit macro function to end a scope early, taking the guard variable).
+//
+// Scope unsafe macros
+// With those, all exit points have to be matched with explicit "end scope" calls.
+// I would say this is deprecated (unless at some point a real use for them emerges)
+//
+
+/// @deprecated
 /// @note The returned EntryIdx can be captured, to pop the section explicitly with PROFILER_POP_SECTION.
 /// Otherwise, the last section on the stack can be popped with PROFILER_POP_RECURRING_SECTION.
-#define PROFILER_PUSH_RECURRING_SECTION(profiler, name, ...) \
+#define PROFILER_PUSH_UNSAFE_RECURRING_SECTION(profiler, name, ...) \
     ::ad::renderer::ProfilerRegistry::Get(profiler).beginSection(::ad::renderer::EntryNature::Recurring, name, {__VA_ARGS__})
 
-#define PROFILER_PUSH_SINGLESHOT_SECTION(profiler, entryIdx, name, ...) \
+/// @deprecated
+#define PROFILER_PUSH_UNSAFE_SINGLESHOT_SECTION(profiler, entryIdx, name, ...) \
     auto entryIdx = ::ad::renderer::ProfilerRegistry::Get(profiler).beginSection(::ad::renderer::EntryNature::SingleShot, name, {__VA_ARGS__})
 
+/// @deprecated
 /// @brief Pops the last section on the recurring sections stack.
-#define PROFILER_POP_RECURRING_SECTION(profiler) \
+#define PROFILER_POP_UNSAFE_RECURRING_SECTION(profiler) \
     ::ad::renderer::ProfilerRegistry::Get(profiler).popCurrentSection()
 
-#define PROFILER_POP_SECTION(profiler, entryIdx) \
+/// @deprecated
+#define PROFILER_POP_UNSAFE_SECTION(profiler, entryIdx) \
     ::ad::renderer::ProfilerRegistry::Get(profiler).endSection(entryIdx)
 
-// TODO Ad 2024/04/02: #profiling Should the variable be assigned directly by the client?
-// (i.e. remove everything left-of and including the '=')
-// Also, this might replace the PUSH_RECURRING, as long as POP_SECTION can take the scoping variable
+//
+// Scope-safe macros
+// The used is intending to be able to terminate the sections before the end of the scope
+// Yet the section would be automatically closed at scope exit
+//
+#define PROFILER_BEGIN_RECURRING_SECTION(profiler, name, ...) \
+    ::ad::renderer::ProfilerRegistry::Get(profiler).scopeSection(::ad::renderer::EntryNature::Recurring, name, {__VA_ARGS__})
+
+#define PROFILER_BEGIN_SINGLESHOT_SECTION(profiler, entryIdx, name, ...) \
+    ::ad::renderer::ProfilerRegistry::Get(profiler).scopeSection(::ad::renderer::EntryNature::SingleShot, name, {__VA_ARGS__})
+
+#define PROFILER_END_SECTION(sectionGuard) \
+    assert(sectionGuard.mProfiler != nullptr && "Likely double end-section."); \
+    { auto expiringGuard{std::move(sectionGuard)}; } \
+    /*request final ;*/assert(true)
+
+// With this variant of the API, the user explicitly requests scoped lifetime of section
+// so we do not (easily) return the guard to them.
 #define PROFILER_SCOPE_RECURRING_SECTION(profiler, name, ...) \
     const auto profilerScopedSection_ ## __LINE__ = ::ad::renderer::ProfilerRegistry::Get(profiler).scopeSection(::ad::renderer::EntryNature::Recurring, name, {__VA_ARGS__})
 

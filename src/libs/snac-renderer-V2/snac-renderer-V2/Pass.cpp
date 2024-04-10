@@ -284,9 +284,9 @@ void draw(const PassCache & aPassCache,
         // Only change what is necessary, instead of rebiding everything each time.
         // Since we sorted our draw calls, it is very likely that program remain the same, and VAO changes.
         {
-            PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "bind_VAO", CpuTime);
+            auto bindVaoProfiling = PROFILER_BEGIN_RECURRING_SECTION(gRenderProfiler, "bind_VAO", CpuTime);
             graphics::ScopedBind vaoScope{vao};
-            PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
+            PROFILER_END_SECTION(bindVaoProfiling);
             
             {
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
@@ -312,9 +312,9 @@ void draw(const PassCache & aPassCache,
                 setTextures(selectedProgram, textureRepo);
             }
 
-            PROFILER_PUSH_RECURRING_SECTION(gRenderProfiler, "bind_program", CpuTime);
+            auto bindProgramProfiling = PROFILER_BEGIN_RECURRING_SECTION(gRenderProfiler, "bind_program", CpuTime);
             graphics::ScopedBind programScope{selectedProgram};
-            PROFILER_POP_RECURRING_SECTION(gRenderProfiler);
+            PROFILER_END_SECTION(bindProgramProfiling);
 
             {
                 // TODO Ad 2023/08/23: Measuring GPU time here has a x2 impact on cpu performance
