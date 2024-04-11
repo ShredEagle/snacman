@@ -246,6 +246,8 @@ struct Pose
 {
     // TODO change to math::Position ?
     math::Vec<3, float> mPosition;
+    // TODO #scaling #skew Should we allow non-uniform (3D) scaling? 
+    // That would allow skewing, making decomposition unpractical
     float mUniformScale{1.f};
     math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
 

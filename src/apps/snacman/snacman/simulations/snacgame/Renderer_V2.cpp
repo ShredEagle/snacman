@@ -50,6 +50,20 @@ namespace ad {
 namespace snacgame {
 
 
+namespace {
+
+    // A low-hanging optimization to prepend non-uniform scaling to a Pose
+    math::AffineMatrix<4, float> poseTransformMatrix(math::Size<3, float> aScaling,
+                                                     const renderer::Pose & aPose)
+    {
+        return math::trans3d::scale(aScaling * aPose.mUniformScale) 
+            * aPose.mOrientation.toRotationMatrix()
+            * math::trans3d::translate(aPose.mPosition);
+    }
+
+} // unnamed namespace
+
+
 renderer::PassCache SnacGraph::preparePass(renderer::StringKey aPass, 
                                            const PartList & aPartList,
                                            renderer::Storage & aStorage)
@@ -242,7 +256,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
 
         sortedModels[object].push_back(
             SnacGraph::EntityData{
-                .mModelTransform = static_cast<math::AffineMatrix<4, float>>(entity.mInstance.mPose),
+                .mModelTransform = poseTransformMatrix(entity.mInstanceScaling, entity.mInstance.mPose),
                 // TODO #RV2: No need to go to SDR, we can directly stream hdr floats
                 .mColorFactor = entity.mColor,
                 .mMatrixPaletteOffset = matrixPaletteOffset,

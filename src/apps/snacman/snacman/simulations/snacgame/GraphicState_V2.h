@@ -31,6 +31,9 @@ struct Entity
     math::hdr::Rgba_f mColor;
     // Note: the Pose is embedded in the Instance
     renderer::Instance mInstance;
+    // Potentially non-uniform scaling, that cannot induce skewing
+    // because the Entity are leaves (they cannot have children in a scene graph)
+    math::Size<3, GLfloat> mInstanceScaling;
 
     // TODO #animation would be better to interpolate the animation time (Parameter)
     // between each GPU frame, instead of providing fixed parameter value
@@ -56,6 +59,7 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
         Entity result{
             math::lerp(aLeftEntity.mColor, aRightEntity.mColor, aInterpolant),
             aRightEntity.mInstance,
+            math::lerp(aLeftEntity.mInstanceScaling, aRightEntity.mInstanceScaling, aInterpolant),
             aRightEntity.mAnimationState,
         };
         result.mInstance.mPose = interpolate(aLeftEntity.mInstance.mPose, aRightEntity.mInstance.mPose, aInterpolant);
