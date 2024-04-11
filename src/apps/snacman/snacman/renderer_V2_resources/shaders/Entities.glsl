@@ -8,7 +8,7 @@ struct EntityData
     // Will be required if we were to support non-uniform scaling.
     //layout(location=10) in mat4 in_LocalToWorldInverseTranspose;
     
-    // TODO: albedo?
+    vec4 colorFactor;
 
     // Note: Having this member present even if RIGGING is not defined is a drawback
     // of moving this value from an instance attribute (which could be defined in Rigging.glsl)

@@ -5,15 +5,13 @@
 in vec3 ex_Position_c;
 in vec3 ex_Normal_c;
 in vec4 ex_Tangent_c;
-in vec4 ex_BaseColorFactor;
+in flat vec4 ex_ColorFactor;
 
 in flat uint ex_MaterialIdx;
 
 #ifdef TEXTURES
 in vec2[4] ex_Uvs;
 #endif
-
-in vec4 ex_Color;
 
 #ifdef SHADOW
 in vec4 ex_Position_lightClip;
@@ -23,14 +21,14 @@ in vec4 ex_Position_lightClip;
 struct Light
 {
     vec3 position_c;
-    vec3 color;// = vec3(0.8, 0.0, 0.8); // could be split between diffuse and specular itensities
+    vec3 color; // could be split between diffuse and specular itensities
 };
 
 
 layout(std140, binding = 4) uniform LightingBlock
 {
     // Traditionnally, a single term accounting for all lights in the scene
-    vec3 ub_AmbientColor;// = vec3(0.2, 0.0, 0.2);
+    vec3 ub_AmbientColor;
     Light ub_Light;
 };
 
@@ -91,14 +89,13 @@ void main(void)
     vec3 h_c = normalize(view_c + light_c);
     
     vec4 albedo =
-        ex_Color
-        * ex_BaseColorFactor // Note: should probably go away
+        ex_ColorFactor // (equivalent to multiplying implicit white by this color factor)
 #ifdef TEXTURES
         * texture(u_DiffuseTexture, vec3(ex_Uvs[material.diffuseUvChannel], material.diffuseTextureIndex))
 #endif
         ;
 
-    // TODO: enable alpha testing (atm)
+    // TODO #alphatest enable alpha testing (atm)
     // Implement "cut-out" transparency: everything below 50% opacity is discarded (i.e. no depth write).
     //if(albedo.a < 0.5)
     //{

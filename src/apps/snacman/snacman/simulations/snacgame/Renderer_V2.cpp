@@ -244,7 +244,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
             SnacGraph::EntityData{
                 .mModelTransform = static_cast<math::AffineMatrix<4, float>>(entity.mInstance.mPose),
                 // TODO #RV2: No need to go to SDR, we can directly stream hdr floats
-                //.mAlbedo = to_sdr(entity.mColor),
+                .mColorFactor = entity.mColor,
                 .mMatrixPaletteOffset = matrixPaletteOffset,
             });
     }

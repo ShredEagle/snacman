@@ -70,8 +70,7 @@ struct SnacGraph
         // and then the elements are accessed via a std140 uniform block 
 
         math::AffineMatrix<4, GLfloat> mModelTransform;
-        // TODO Do we use an entity-level color?
-        //math::sdr::Rgba mAlbedo;
+        math::hdr::Rgba_f mColorFactor;
         GLuint mMatrixPaletteOffset; // offset to the first joint of this instance in the buffer of joints.
     };
     
@@ -81,7 +80,7 @@ struct SnacGraph
     struct alignas(16) LightingData
     {
         alignas(16) math::hdr::Rgb<GLfloat> mAmbientColor;
-        alignas(16) math::Position<3, GLfloat>   mLightPosition_c;
+        alignas(16) math::Position<3, GLfloat> mLightPosition_c;
         alignas(16) math::hdr::Rgb<GLfloat> mLightColor;
     };
 
@@ -116,10 +115,10 @@ struct SnacGraph
                                            const PartList & aPartList,
                                            renderer::Storage & aStorage);
 
-    static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage, std::size_t aInstanceCount)
+    static renderer::GenericStream makeInstanceStream(renderer::Storage & aStorage)
     {
         renderer::BufferView vboView = renderer::makeBufferGetView(sizeof(InstanceData),
-                                                                   aInstanceCount,
+                                                                   0, // Do not allocate storage space
                                                                    1, // intance divisor
                                                                    GL_STREAM_DRAW,
                                                                    aStorage);
@@ -160,10 +159,10 @@ struct SnacGraph
     /// @param aBaseInstance The base instance in the current instance buffer.
     /// @param aInstancesCount Number of instances, for each Part of the Object.
     void drawInstancedDirect(const renderer::Object & aObject,
-                              unsigned int & aBaseInstance,
-                              const GLsizei aInstancesCount,
-                              renderer::StringKey aPass,
-                              renderer::Storage & aStorage);
+                             unsigned int & aBaseInstance,
+                             const GLsizei aInstancesCount,
+                             renderer::StringKey aPass,
+                             renderer::Storage & aStorage);
 
     void renderFrame(const visu_V2::GraphicState & aState, renderer::Storage & aStorage);
 
@@ -200,14 +199,9 @@ using Resources_V2 = renderer::Loader;
 // TODO Ad 2024/04/11: Why did I add this separate class? Is it of any use?
 struct Impl_V2
 {
-    // TODO Ad 2024/02/14: We need a better approach:
-    // * Dynamic buffer size?
-    // * Something clever?
-    static constexpr std::size_t gMaxInstances = 1024;
-
     renderer::Storage mStorage;
     SnacGraph mRenderGraph{
-        .mInstanceStream = SnacGraph::makeInstanceStream(mStorage, gMaxInstances),
+        .mInstanceStream = SnacGraph::makeInstanceStream(mStorage),
     };
 
 };
