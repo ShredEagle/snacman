@@ -155,15 +155,26 @@ struct SnacGraph
         };
     }
 
-    // TODO #RV2: This class should be implementing the frame rendering of models, instead of 
-    // having it inline in Renderer_V2::render()
-    //void renderFrame()
+    /// @brief Non-multi, direct, instanced drawing approach.
+    /// @param aObject The object that will be rendered (each part via a separated instanced draw call)
+    /// @param aBaseInstance The base instance in the current instance buffer.
+    /// @param aInstancesCount Number of instances, for each Part of the Object.
+    void drawInstancedDirect(const renderer::Object & aObject,
+                              unsigned int & aBaseInstance,
+                              const GLsizei aInstancesCount,
+                              renderer::StringKey aPass,
+                              renderer::Storage & aStorage);
+
+    void renderFrame(const visu_V2::GraphicState & aState, renderer::Storage & aStorage);
+
+    static constexpr bool gMultiIndirectDraw = true;
 
     // List and describes the buffer views used for per-instance vertex attributes
     renderer::GenericStream mInstanceStream;
 
     graphics::Buffer<graphics::BufferType::DrawIndirect> mIndirectBuffer;
 
+    // TODO find a more descriptive name
     struct GraphUbos
     {
         // TODO should they be hosted in renderer::Storage instead of this class?
@@ -178,11 +189,15 @@ struct SnacGraph
         };
     } mGraphUbos;
 
+    // Intended for function-local storage, made a member so its reuses the allocated memory between frames.
+    std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
+    std::vector<SnacGraph::InstanceData> mInstanceBuffer;
 };
 
 using Resources_V2 = renderer::Loader;
 
 // TODO Ad 2024/02/13: #RV2 Let it organically emerge, then move that type to a dedicated file
+// TODO Ad 2024/04/11: Why did I add this separate class? Is it of any use?
 struct Impl_V2
 {
     // TODO Ad 2024/02/14: We need a better approach:
@@ -262,10 +277,6 @@ private:
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
     snac::DebugRenderer mDebugRenderer;
-
-    // Intended for function-local storage, made a member so its reuses the allocated memory between frames.
-    std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
-    std::vector<SnacGraph::InstanceData> mInstanceBuffer;
 };
 
 
