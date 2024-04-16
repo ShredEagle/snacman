@@ -85,16 +85,16 @@ namespace {
     }};
 
 
-    template <class T_Maker>
+    template <class T_maker>
     std::vector<EntryVertex> prepareShapeVertices()
     {
         std::vector<EntryVertex> result;
-        result.reserve(T_Maker::gVertexCount);
+        result.reserve(T_maker::gVertexCount);
 
-        for(unsigned int idx = 0; idx != T_Maker::gVertexCount; ++idx)
+        for(unsigned int idx = 0; idx != T_maker::gVertexCount; ++idx)
         {
             result.push_back(EntryVertex{
-                .mPosition = T_Maker::getPosition(idx),
+                .mPosition = T_maker::getPosition(idx),
             });
         }
 
@@ -121,36 +121,38 @@ namespace {
     }
 
 
-    Part setupBox(Storage & aStorage,
-                  Handle<const graphics::BufferAny> aInstanceBuffer)
+    template <class T_maker>
+    Part setupInstancedShape(std::string aName, 
+                             Storage & aStorage,
+                             Handle<const graphics::BufferAny> aInstanceBuffer)
     {
-        Handle<VertexStream> result = setupVertexStream(aStorage,
-                                                        gInstanceAttributes, 
-                                                        1, // Instance attribute
-                                                        sizeof(snac::DebugDrawer::Entry),
-                                                        aInstanceBuffer);
+        Handle<VertexStream> vertexStream = setupVertexStream(aStorage,
+                                                              gInstanceAttributes, 
+                                                              1, // Instance attribute
+                                                              sizeof(EntryInstance),
+                                                              aInstanceBuffer);
 
-        auto boxVertices = prepareShapeVertices<cube::Maker>();
+        auto vertices = prepareShapeVertices<T_maker>();
 
         // Both call are partially redundant, the API should be better.
         Handle<graphics::BufferAny> vertexBuffer = 
-            makeBuffer(sizeof(EntryVertex), boxVertices.size(), GL_STATIC_DRAW, aStorage);
-        proto::load(*vertexBuffer, std::span{boxVertices}, graphics::BufferHint::StaticDraw);
+            makeBuffer(sizeof(EntryVertex), vertices.size(), GL_STATIC_DRAW, aStorage);
+        proto::load(*vertexBuffer, std::span{vertices}, graphics::BufferHint::StaticDraw);
 
         addInterleavedAttributes(
-            result,
+            vertexStream,
             sizeof(EntryVertex),
             gEntryVertexAttributes,
             vertexBuffer,
-            (unsigned int)boxVertices.size(),
+            (unsigned int)vertices.size(),
             0 // Vertex attribute
         );
 
         return Part{
-            .mName = "DebugBox",
-            .mVertexStream = std::move(result),
-            .mPrimitiveMode = GL_TRIANGLES,
-            .mVertexCount = (GLuint)boxVertices.size(),
+            .mName = std::move(aName),
+            .mVertexStream = std::move(vertexStream),
+            .mPrimitiveMode = T_maker::gPrimitiveMode,
+            .mVertexCount = (GLuint)vertices.size(),
         };
     }
 
@@ -170,8 +172,9 @@ DebugRenderer::DebugRenderer(Storage & aStorage, const Loader & aLoader) :
     },
     mLineProgram{storeConfiguredProgram(aLoader.loadProgram("shaders/DebugDraw.prog"), aStorage)},
     mEntryInstanceBuffer{makeBuffer(0, 0, GL_STREAM_DRAW, aStorage)},
-    mBox{setupBox(aStorage, mEntryInstanceBuffer)},
-    mEntryProgram{storeConfiguredProgram(aLoader.loadProgram("shaders/DebugDrawModelTransform.prog"), aStorage)}
+    mEntryProgram{storeConfiguredProgram(aLoader.loadProgram("shaders/DebugDrawModelTransform.prog"), aStorage)},
+    mBox{setupInstancedShape<cube::Maker>("DebugBox", aStorage, mEntryInstanceBuffer)},
+    mArrow{setupInstancedShape<arrow::Maker>("DebugArrow", aStorage, mEntryInstanceBuffer)}
 {
 
 }
@@ -184,7 +187,12 @@ void DebugRenderer::render(snac::DebugDrawer::DrawList aDrawList,
     gl.PolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     drawLines(aDrawList.mCommands->mLineVertices, aUboRepository, aStorage);
-    drawPosedEntry(aDrawList.mCommands->mBoxes, aUboRepository, aStorage);
+    drawPosedEntry({
+                        {&mBox, aDrawList.mCommands->mBoxes}, 
+                        {&mArrow, aDrawList.mCommands->mArrows},
+                   },
+                   aUboRepository, 
+                   aStorage);
 
     gl.Enable(GL_DEPTH_TEST);
     gl.PolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -207,43 +215,52 @@ void DebugRenderer::drawLines(std::span<snac::DebugDrawer::LineVertex> aLines,
     // or at least optimized (the binding points of the UBO might be changed client side, by other code)
     setBufferBackedBlocks(mLineProgram->mProgram, aUboRepository);
 
-    gl.Disable(GL_DEPTH_TEST);
-
     gl.DrawArrays(mLines.mPrimitiveMode, 0, (GLsizei)aLines.size());
 }
 
 
-void DebugRenderer::drawPosedEntry(std::span<snac::DebugDrawer::Entry> aEntries,
+void DebugRenderer::drawPosedEntry(const std::vector<std::pair<Part *, std::span<snac::DebugDrawer::Entry>>> & aEntries,
                                    const RepositoryUbo & aUboRepository,
                                    Storage & aStorage)
 {
+    // TODO should be kept between frames, no need to reallocate each time...
+    // on the other hand, when we will push poses directly, we will not need this intermediary storage anymore
     std::vector<EntryInstance> instances;
-    instances.reserve(aEntries.size());
-    for (const auto & entry : aEntries)
+    for (const auto & [_part, entries] : aEntries)
     {
-        instances.push_back(EntryInstance{
-            .mModelTransform = math::trans3d::scale(entry.mScaling)
-                                * entry.mOrientation.toRotationMatrix()
-                                * math::trans3d::translate(
-                                    entry.mPosition.as<math::Vec>()),
-            .mColor = entry.mColor,
-        });
+        for (const auto & entry : entries)
+        {
+            instances.push_back(EntryInstance{
+                .mModelTransform = math::trans3d::scale(entry.mScaling)
+                                    * entry.mOrientation.toRotationMatrix()
+                                    * math::trans3d::translate(
+                                        entry.mPosition.as<math::Vec>()),
+                .mColor = entry.mColor,
+            });
+        }
     }
     proto::load(*mEntryInstanceBuffer, std::span{instances}, graphics::BufferHint::StreamDraw);
 
-    // The VAO might actually be cached as a data member, since it will be constant during runtime
-    Handle<graphics::VertexArrayObject> vao = getVao(*mEntryProgram, mBox, aStorage);
-    graphics::ScopedBind vaoScope{*vao};
     graphics::ScopedBind programScope{mEntryProgram->mProgram};
 
-    // TODO this looks like something that could be done only once (will not change program side)
-    // or at least optimized (the binding points of the UBO might be changed client side, by other code)
-    setBufferBackedBlocks(mLineProgram->mProgram, aUboRepository);
+    GLuint baseInstance = 0;
+    for (const auto & [part, entries] : aEntries)
+    {
+        // The VAO might actually be cached as a data member, since it will be constant during runtime
+        Handle<graphics::VertexArrayObject> vao = getVao(*mEntryProgram, *part, aStorage);
+        graphics::ScopedBind vaoScope{*vao};
 
-    gl.DrawArraysInstanced(mBox.mPrimitiveMode,
-                           0,
-                           mBox.mVertexCount,
-                           (GLsizei)instances.size());
+        // TODO this looks like something that could be done only once (will not change program side)
+        // or at least optimized (the binding points of the UBO might be changed client side, by other code)
+        setBufferBackedBlocks(mEntryProgram->mProgram, aUboRepository);
+
+        gl.DrawArraysInstancedBaseInstance(part->mPrimitiveMode,
+                                           0,
+                                           part->mVertexCount,
+                                           (GLsizei)entries.size(),
+                                           baseInstance);
+        baseInstance += (GLuint)entries.size();
+    }
 }
 
 

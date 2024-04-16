@@ -131,6 +131,8 @@ namespace cube {
 
     struct Maker
     {
+        static constexpr GLenum gPrimitiveMode = GL_TRIANGLES;
+
         // The expanded cube, where each face has a flat normal.
         static constexpr unsigned int gVertexCount = (unsigned int)gIndices.size();
 
@@ -160,6 +162,8 @@ namespace triangle {
 
     struct Maker
     {
+        static constexpr GLenum gPrimitiveMode = GL_TRIANGLES;
+
         static constexpr unsigned int gVertexCount = 3;
 
         static math::Position<3, float> getPosition(unsigned int aIdx)
@@ -174,6 +178,42 @@ namespace triangle {
     };
 
 } // namespace triangle
+
+
+namespace arrow {
+
+    constexpr std::array<math::Position<3, float>, 10> gPositions{
+        // Tail
+       math::Position<3, float>{0.f, 0.f, 0.f},
+       math::Position<3, float>{0.f, 1.f, 0.f},
+
+        // Heads
+       math::Position<3, float>{0.f, 1.f, 0.f},
+       math::Position<3, float>{0.f, 0.75f, 0.15f},
+
+       math::Position<3, float>{0.f, 1.f, 0.f},
+       math::Position<3, float>{0.f, 0.75f, -0.15f},
+
+       math::Position<3, float>{0.f, 1.f, 0.f},
+       math::Position<3, float>{0.15f, 0.75f, 0.f},
+
+       math::Position<3, float>{0.f, 1.f, 0.f},
+       math::Position<3, float>{-0.15f, 0.75f, 0.f},
+    };
+
+    struct Maker
+    {
+        static constexpr GLenum gPrimitiveMode = GL_LINES;
+
+        static constexpr unsigned int gVertexCount = (unsigned int)gPositions.size();
+
+        static math::Position<3, float> getPosition(unsigned int aIdx)
+        {
+            return gPositions[aIdx];
+        }
+    };
+
+} // namespace arrow
 
 
 inline std::vector<math::Position<3, float>> getExpandedCubePositions()
@@ -208,29 +248,6 @@ template <>
 inline std::vector<math::Position<3, float>> getExpandedCubeVertices()
 {
     return getExpandedCubePositions();
-}
-
-inline const std::array<math::Position<3, float>, 10> & getArrowVertices()
-{
-    using Pos = math::Position<3, float>;
-    static std::array<Pos, 10> gVertices{
-        // Tail
-        Pos{0.f, 0.f, 0.f},
-        Pos{0.f, 1.f, 0.f},
-        // Heads
-        Pos{0.f, 1.f, 0.f},
-        Pos{0.f, 0.75f, 0.15f},
-
-        Pos{0.f, 1.f, 0.f},
-        Pos{0.f, 0.75f, -0.15f},
-
-        Pos{0.f, 1.f, 0.f},
-        Pos{0.15f, 0.75f, 0.f},
-
-        Pos{0.f, 1.f, 0.f},
-        Pos{-0.15f, 0.75f, 0.f},
-    };
-    return gVertices;
 }
 
 

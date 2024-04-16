@@ -44,8 +44,10 @@ public:
     void Disable(GLenum cap);
     void DrawArrays(GLenum mode, GLint first, GLsizei count);
     void DrawArraysInstanced(GLenum mode, GLint first, GLsizei count, GLsizei instancecount);
+    void DrawArraysInstancedBaseInstance(GLenum mode, GLint first, GLsizei count, GLsizei instancecount, GLuint baseinstance);
     void DrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices);
     void DrawElementsInstanced(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount);
+    void DrawElementsInstancedBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLuint baseinstance);
     void DrawElementsInstancedBaseVertex(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex);
     void DrawElementsInstancedBaseVertexBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex, GLuint baseinstance);
     void Enable(GLenum cap);
@@ -159,6 +161,15 @@ inline void GlApi::DrawArraysInstanced(GLenum mode, GLint first, GLsizei count, 
 }
 
 
+inline void GlApi::DrawArraysInstancedBaseInstance(GLenum mode, GLint first, GLsizei count, GLsizei instancecount, GLuint baseinstance)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawArraysInstancedBaseInstance(mode, first, count, instancecount, baseinstance); 
+}
+
+
 inline void GlApi::DrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices)
 {
 #if defined(SE_INSTRUMENT_GL)
@@ -174,6 +185,15 @@ inline void GlApi::DrawElementsInstanced(GLenum mode, GLsizei count, GLenum type
     ++v().mDrawCount;
 #endif
     return glDrawElementsInstanced(mode, count, type, indices, instancecount);
+}
+
+
+inline void GlApi::DrawElementsInstancedBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLuint baseinstance)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawElementsInstancedBaseInstance(mode, count, type, indices, instancecount, baseinstance);
 }
 
 

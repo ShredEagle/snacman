@@ -29,7 +29,7 @@ private:
                    const RepositoryUbo & aUboRepository,
                    Storage & aStorage);
 
-    void drawPosedEntry(std::span<snac::DebugDrawer::Entry> aEntries,
+    void drawPosedEntry(const std::vector<std::pair<Part *, std::span<snac::DebugDrawer::Entry>>> & aEntries,
                         const RepositoryUbo & aUboRepository,
                         Storage & aStorage);
 
@@ -38,8 +38,9 @@ private:
     Handle<ConfiguredProgram> mLineProgram;
 
     Handle<const graphics::BufferAny> mEntryInstanceBuffer;
-    Part mBox;
     Handle<ConfiguredProgram> mEntryProgram;
+    Part mBox;
+    Part mArrow;
 };
 
 } // namespace ad::renderer
