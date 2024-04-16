@@ -123,17 +123,18 @@ void addVertexAttribute(Handle<VertexStream> aVertexStream,
 }
 
 
-void addInterleavedVertexAttributes(Handle<VertexStream> aVertexStream, 
-                                    GLsizei aElementStride,
-                                    std::span<const std::pair<AttributeDescription, size_t>> aAttributesAndOffsets,
-                                    Handle<const graphics::BufferAny> aVertexBuffer,
-                                    unsigned int aVerticesCount,
-                                    GLintptr aBufferOffset)
+void addInterleavedAttributes(Handle<VertexStream> aVertexStream, 
+                              GLsizei aElementStride,
+                              std::span<const InterleavedAttributeDescription> aAttributesAndOffsets,
+                              Handle<const graphics::BufferAny> aVertexBuffer,
+                              unsigned int aVerticesCount,
+                              GLuint aInstanceDivisor,
+                              GLintptr aBufferOffset)
 {
     BufferView attributeView = makeBufferView(aVertexBuffer,
                                               aElementStride,
                                               aVerticesCount,
-                                              0, // This is a per vertex attribute, divisor is 0
+                                              aInstanceDivisor,
                                               aBufferOffset);
 
     for(const auto & [attribute, offset] : aAttributesAndOffsets)

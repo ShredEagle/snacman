@@ -64,7 +64,7 @@ constexpr float gCubeSize = 2.f;
 namespace cube {
 
     // The cube from [-1, -1, -1] to [1, 1, 1]
-    constexpr std::array<math::Position<3, float>, 8> gVertices{
+    constexpr std::array<math::Position<3, float>, 8> gPositions{
         math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2, -gCubeSize / 2},
         math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2,  gCubeSize / 2},
         math::Position<3, float>{-gCubeSize / 2,  gCubeSize / 2, -gCubeSize / 2},
@@ -129,6 +129,24 @@ namespace cube {
         };
     }
 
+    struct Maker
+    {
+        // The expanded cube, where each face has a flat normal.
+        static constexpr unsigned int gVertexCount = (unsigned int)gIndices.size();
+
+        static constexpr math::Position<3, float> getPosition(unsigned int aIdx)
+        {
+            assert(aIdx < gVertexCount);
+            return gPositions[gIndices[aIdx]];
+        }
+
+        static constexpr math::Vec<3, float> getNormal(unsigned int aIdx)
+        {
+            assert(aIdx < gVertexCount);
+            return gNormals[aIdx / 6];
+        }
+    };
+
 } // namespace cube
 
 
@@ -164,7 +182,7 @@ inline std::vector<math::Position<3, float>> getExpandedCubePositions()
     result.reserve(36);
     for (int i = 0; i < 36; i++) 
     {
-        result.push_back(cube::gVertices[cube::gIndices[i]]);
+        result.push_back(cube::gPositions[cube::gIndices[i]]);
     }
     return result;
 }
@@ -231,7 +249,7 @@ inline std::vector<PositionNormal> getExpandedCubeVertices()
     for (int i = 0; i < 36; i++) 
     {
         result.push_back(PositionNormal{
-            .position = cube::gVertices[cube::gIndices[i]],
+            .position = cube::gPositions[cube::gIndices[i]],
             .normal = cube::gNormals[i / 6]
         });
     }

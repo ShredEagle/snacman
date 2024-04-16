@@ -9,6 +9,7 @@ namespace semantic
     #define SEM(s) const Semantic g ## s{#s}
 
     const Semantic gPosition{"Position"};
+    SEM(ModelTransform);
     const Semantic gNormal{"Normal"};
     const Semantic gTangent{"Tangent"};
     const Semantic gColor{"Color"};

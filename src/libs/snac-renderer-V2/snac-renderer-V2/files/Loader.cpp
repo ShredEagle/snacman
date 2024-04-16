@@ -796,7 +796,7 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
         verticesCount,
         GL_STATIC_DRAW,
         aStorage);
-    addInterleavedVertexAttributes(
+    addInterleavedAttributes(
         consolidatedStream,
         sizeof(VertexJointData),
         gInterleavedJointAttributes,

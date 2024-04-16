@@ -1,11 +1,11 @@
 #version 420
 
 in vec3 ve_Position_l;
-in vec4 ve_Color;
+in vec4 a_Color;
 in vec2 ve_TextureCoords0;
 
 #ifdef MODEL_MATRIX
-in mat4 in_LocalToWorld;
+in mat4 in_ModelTransform;
 #endif
 
 #ifdef RIGGING
@@ -27,7 +27,7 @@ void main(void)
     gl_Position = 
         viewingProjection  
 #ifdef MODEL_MATRIX
-        * in_LocalToWorld
+        * in_ModelTransform
 #endif
 #ifdef RIGGING
         * assembleSkinningMatrix()
@@ -35,6 +35,6 @@ void main(void)
         * vec4(ve_Position_l, 1.f)
         ;
 
-    ex_Color = ve_Color;
+    ex_Color = a_Color;
     ex_TextureCoords = ve_TextureCoords0;
 }
