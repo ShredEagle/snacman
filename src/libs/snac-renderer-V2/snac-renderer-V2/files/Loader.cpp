@@ -561,13 +561,13 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
     }
 
     // The vertex streams are separate
-    Handle<VertexStream> triangleStream = primeVertexStream(aStream, aStorage);
+    Handle<VertexStream> triangleStream = primeVertexStream(aStorage, aStream);
     setIndexBuffer(triangleStream, 
                    graphics::MappedGL_v<IndexType>,
                    indexBuffer,
                    (GLuint)triangleIndices.size(),
                    0/*offset*/);
-    Handle<VertexStream> cubeStream = primeVertexStream(aStream, aStorage);
+    Handle<VertexStream> cubeStream = primeVertexStream(aStorage, aStream);
     setIndexBuffer(cubeStream,
                    graphics::MappedGL_v<IndexType>,
                    indexBuffer,

@@ -42,10 +42,12 @@ Handle<ConfiguredProgram> storeConfiguredProgram(IntrospectProgram aProgram, Sto
  * Mid-level functions to manage VertexStreams
  */
 
-/// @brief Add a new VertexStream to storage, initializing it with the view and attributes from `aGenericStream`.
+/// @brief Add a new VertexStream to storage, optionally initializing it 
+/// with the view and attributes from `aGenericStream`.
 /// @param aGenericStream is intended to provide a stream containing per instance data.
-Handle<VertexStream> primeVertexStream(const GenericStream & aGenericStream, 
-                                       Storage & aStorage);
+Handle<VertexStream> primeVertexStream(Storage & aStorage,
+                                       const GenericStream & aGenericStream = {}); 
+
 
 
 /// @brief Set the index buffer for `aStream`.

@@ -21,6 +21,7 @@ namespace ad::renderer {
 // while still allowing client code to directly use the (wrapped) gl functions (surch as glBufferData).
 
 // Note: re-implement renderer lib functionalities that wrap gl calls, but with call to our custom gl abstraction
+// TODO Ad 2024/04/16: The binds are non reimplemented, which is a problem to count them
 namespace proto {
 
     template <class T_data, std::size_t N_extent, graphics::BufferType N_type>

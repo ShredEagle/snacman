@@ -29,9 +29,8 @@ private:
                    const RepositoryUbo & aUboRepository,
                    Storage & aStorage);
 
+    Handle<const graphics::BufferAny> mLineVertexBuffer;
     Part mLines;
-    const graphics::BufferAny * mLinePositionBuffer;
-    const graphics::BufferAny * mLineColorBuffer;
     Handle<ConfiguredProgram> mLineProgram;
 };
 

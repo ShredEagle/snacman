@@ -68,8 +68,7 @@ BufferView makeBufferGetView(GLsizei aElementSize,
 };
 
 
-Handle<VertexStream> primeVertexStream(const GenericStream & aGenericStream, 
-                                       Storage & aStorage)
+Handle<VertexStream> primeVertexStream(Storage & aStorage, const GenericStream & aGenericStream)
 {
 
     aStorage.mVertexStreams.push_back({
