@@ -7,13 +7,11 @@
 #include <handy/AtomicVariations.h>
 
 // TODO Ad 2024/02/13: #RV2 Remove all V1 stuff
-#include <snac-renderer-V1/Camera.h>
-#include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/Render.h>
 #include <snac-renderer-V1/text/TextRenderer.h>
-#include <snac-renderer-V1/UniformParameters.h>
 
 // V2: the good stuff
+#include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/VertexStreamUtilities.h>
@@ -182,11 +180,13 @@ struct SnacGraph
         graphics::UniformBufferObject mJointMatricesUbo;
         graphics::UniformBufferObject mEntitiesUbo;
         graphics::UniformBufferObject mLightingUbo;
+        graphics::UniformBufferObject mViewingProjectionUbo;
 
         renderer::RepositoryUbo mUboRepository{
             {semantic::gJointMatrices, &mJointMatricesUbo},
             {semantic::gEntities, &mEntitiesUbo},
             {semantic::gLighting, &mLightingUbo},
+            {semantic::gViewProjection, &mViewingProjectionUbo},
         };
     } mGraphUbos;
 
@@ -271,10 +271,7 @@ private:
     graphics::AppInterface & mAppInterface;
     snac::Renderer mRendererToDecomission; // TODO #RV2 Remove this data member
     Impl_V2 mRendererToKeep;
-    // TODO use the new V2 Camera class
-    //renderer::Camera mCamera;
-    snac::Camera mCamera;
-    snac::CameraBuffer mCameraBuffer;
+    renderer::Camera mCamera;
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
 };

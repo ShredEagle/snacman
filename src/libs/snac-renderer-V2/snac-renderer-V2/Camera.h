@@ -39,6 +39,9 @@ public:
     const math::Matrix<4, 4, float> & getProjection() const
     { return mProjection; }
 
+    math::Matrix<4, 4, float> assembleViewProjection() const
+    { return mParentToCamera * mProjection; }
+
     const std::variant<OrthographicParameters, PerspectiveParameters> & getProjectionParameters() const
     { return mProjectionParameters; }
 

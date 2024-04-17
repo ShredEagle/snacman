@@ -450,13 +450,15 @@ Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
     // but we need to address the resource management design issue to know what to do instead...
     // (This is a hack to port snacgame to DebugRenderer V2.)
     // Hopefully it gets replaced by a more sane approach to resource management after V1 is entirely decomissionned.
-    mRendererToKeep{renderer::Loader{.mFinder = aResourcesFinder}},
-    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults}
+    mRendererToKeep{renderer::Loader{.mFinder = aResourcesFinder}}
 {
-    // TODO Ad 2024/04/09: This is a bit smelly.
-    // Add the viewing block to the graph ubo repo.
-    mRendererToKeep.mRenderGraph.mGraphUbos.mUboRepository[semantic::gViewProjection] = 
-        &mCameraBuffer.mViewing;
+    const graphics::PerspectiveParameters initialPerspective{
+        .mAspectRatio = math::getRatio<float>(mAppInterface.getWindowSize()),
+        .mVerticalFov = math::Degree<float>{45.f},
+        .mNearZ = -0.01f,
+        .mFarZ = -100.f,
+    };
+    mCamera.setupPerspectiveProjection(initialPerspective);
 }
 
 
@@ -574,7 +576,13 @@ void Renderer_V2::render(const GraphicState_t & aState)
     // Position camera
     // TODO #camera The Camera instance should come from the graphic state directly
     mCamera.setPose(aState.mCamera.mWorldToCamera);
-    mCameraBuffer.set(mCamera);
+
+    // TODO move that up into the specialized classes
+    // Load the viewing projection data
+    renderer::proto::loadSingle(
+        mRendererToKeep.mRenderGraph.mGraphUbos.mViewingProjectionUbo,
+        renderer::GpuViewProjectionBlock{mCamera},
+        graphics::BufferHint::StreamDraw);
 
     if (mControl.mRenderModels)
     {
@@ -582,16 +590,6 @@ void Renderer_V2::render(const GraphicState_t & aState)
     }
 
     const math::Size<2, int> framebufferSize = mAppInterface.getFramebufferSize();
-
-    snac::ProgramSetup programSetup{
-        .mUniforms{
-            {snac::Semantic::FramebufferResolution, framebufferSize},
-            {snac::Semantic::ViewingMatrix, mCamera.assembleViewMatrix()}
-        },
-        .mUniformBlocks{
-            {snac::BlockSemantic::Viewing, &mCameraBuffer.mViewing},
-        }
-    };
 
     //
     // Text
@@ -601,27 +599,30 @@ void Renderer_V2::render(const GraphicState_t & aState)
         // because we currently have to explicity instrument the draw calls (making it easy to miss some)
         TIME_RECURRING_GL("Draw_texts", renderer::DrawCalls);
 
-        // 3D world text
-        if (mControl.mRenderText)
-        {
-            // This text should be occluded by geometry in front of it.
-            // WARNING: (smelly) the text rendering disable depth writes,
-            //          so it must be drawn last to occlude other visuals in the 3D world.
-            auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
-            renderText(aState.mTextWorldEntities, programSetup);
-        }
+        //// 3D world text
+        //if (mControl.mRenderText)
+        //{
+        //    // This text should be occluded by geometry in front of it.
+        //    // WARNING: (smelly) the text rendering disable depth writes,
+        //    //          so it must be drawn last to occlude other visuals in the 3D world.
+        //    auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
+        //    renderText(aState.mTextWorldEntities, programSetup);
+        //}
 
         // For the screen space text, the viewing transform is composed as follows:
         // The world-to-camera is identity
         // The projection is orthographic, mapping framebuffer resolution (with origin at screen center) to NDC.
-        auto scope = programSetup.mUniforms.push(
-            snac::Semantic::ViewingMatrix,
-            math::trans3d::orthographicProjection(
-                math::Box<float>{
-                    {-static_cast<math::Position<2, float>>(framebufferSize) / 2, -1.f},
-                    {static_cast<math::Size<2, float>>(framebufferSize), 2.f}
-                })
-        );
+        snac::ProgramSetup programSetup{
+            .mUniforms{
+                {
+                    snac::Semantic::ViewingMatrix,
+                    math::trans3d::orthographicProjection(
+                        math::Box<float>{
+                            {-static_cast<math::Position<2, float>>(framebufferSize) / 2, -1.f},
+                            {static_cast<math::Size<2, float>>(framebufferSize), 2.f}
+                        })
+                }}
+        };
 
         if (mControl.mRenderText)
         {
