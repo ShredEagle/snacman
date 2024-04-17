@@ -1,4 +1,0 @@
-{
-    "vertex": "SimplePositionTransform.vert",
-    "fragment": "Solid.frag"
-}

@@ -201,10 +201,14 @@ cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsErro
 
 cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
+get_target_property(RENDERER_SOURCE_DIR ad::snac-renderer-V2 SOURCE_DIR)
+
 file(GENERATE 
      OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
-     # Uses dedicated shaders and effects, designed for renderer V2
-     CONTENT "{\"prefixes\": [\"${CMAKE_CURRENT_LIST_DIR}/renderer_V2_resources/\",
+     # TODO: should we remove the snacman local V2_resources folder?
+     #       for the moment we cannot, we have dedicated custom shaders for snacman (not the base renderer versions)
+     CONTENT "{\"prefixes\": [\"${RENDERER_SOURCE_DIR}/resources/\",
+                              \"${CMAKE_CURRENT_LIST_DIR}/renderer_V2_resources/\",
                               \"${REPO_FOLDER}/../snac-assets/\"]}")
 
 
