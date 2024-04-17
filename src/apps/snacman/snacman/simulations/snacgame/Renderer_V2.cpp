@@ -351,7 +351,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
     math::Position<3, GLfloat> lightPosition_cam = 
         (math::homogeneous::makePosition(math::Position<3, GLfloat>::Zero()) // light position in light space is the origin
         * worldToLight.inverse()
-        * aState.mCamera.mWorldToCamera).xyz();
+        * aState.mCamera.getParentToCamera()).xyz();
 
     math::hdr::Rgb_f lightColor = to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.4f, 0.4f, 0.4f};
@@ -451,15 +451,7 @@ Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
     // (This is a hack to port snacgame to DebugRenderer V2.)
     // Hopefully it gets replaced by a more sane approach to resource management after V1 is entirely decomissionned.
     mRendererToKeep{renderer::Loader{.mFinder = aResourcesFinder}}
-{
-    const graphics::PerspectiveParameters initialPerspective{
-        .mAspectRatio = math::getRatio<float>(mAppInterface.getWindowSize()),
-        .mVerticalFov = math::Degree<float>{45.f},
-        .mNearZ = -0.01f,
-        .mFarZ = -100.f,
-    };
-    mCamera.setupPerspectiveProjection(initialPerspective);
-}
+{}
 
 
 renderer::Handle<const renderer::Object> Renderer_V2::loadModel(filesystem::path aModel,
@@ -573,15 +565,11 @@ void Renderer_V2::render(const GraphicState_t & aState)
 
     TIME_RECURRING_GL("Render", renderer::GpuPrimitiveGen, renderer::DrawCalls);
 
-    // Position camera
-    // TODO #camera The Camera instance should come from the graphic state directly
-    mCamera.setPose(aState.mCamera.mWorldToCamera);
-
     // TODO move that up into the specialized classes
     // Load the viewing projection data
     renderer::proto::loadSingle(
         mRendererToKeep.mRenderGraph.mGraphUbos.mViewingProjectionUbo,
-        renderer::GpuViewProjectionBlock{mCamera},
+        renderer::GpuViewProjectionBlock{aState.mCamera},
         graphics::BufferHint::StreamDraw);
 
     if (mControl.mRenderModels)

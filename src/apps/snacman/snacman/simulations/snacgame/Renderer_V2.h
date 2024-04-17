@@ -271,7 +271,6 @@ private:
     graphics::AppInterface & mAppInterface;
     snac::Renderer mRendererToDecomission; // TODO #RV2 Remove this data member
     Impl_V2 mRendererToKeep;
-    renderer::Camera mCamera;
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
 };

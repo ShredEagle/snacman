@@ -11,19 +11,13 @@ namespace ad {
 namespace ad::snacgame {
 
 
-namespace visu_V1 {
-    struct Camera;
-} // namespace visu_V1 
-
-/// @brief Controls an orbital from RawInput
+/// @brief Controls an Orbital from RawInput
 struct OrbitalControlInput
 {
     void update(const RawInput & aInput,
                 math::Radian<float> aVerticalFov,
                 int aWindowHeight_screen);
     
-
-    visu_V1::Camera getCameraState();
 
     renderer::Orbital mOrbital;
 

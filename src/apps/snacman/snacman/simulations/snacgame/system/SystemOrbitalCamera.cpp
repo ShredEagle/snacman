@@ -12,7 +12,9 @@ namespace ad {
 namespace snacgame {
 namespace system {
 
-OrbitalCamera::OrbitalCamera(ent::EntityManager & aWorld) :
+OrbitalCamera::OrbitalCamera(ent::EntityManager & aWorld, 
+                             float aAspectRatio) :
+    mCamera{aWorld},
     mControl{aWorld,
              OrbitalControlInput{
                 .mOrbital = {
@@ -21,9 +23,18 @@ OrbitalCamera::OrbitalCamera(ent::EntityManager & aWorld) :
                     gInitialCameraSpherical.azimuthal()
                 }
              }}
-{}
+{
+    const graphics::PerspectiveParameters initialPerspective{
+        .mAspectRatio = aAspectRatio,
+        .mVerticalFov = math::Degree<float>{45.f},
+        .mNearZ = -0.01f,
+        .mFarZ = -100.f,
+    };
+    mCamera->setupPerspectiveProjection(initialPerspective);
+}
 
 
+// TODO should be able to update aspect ratio when window is resized
 void OrbitalCamera::update(const RawInput & aInput,
                            math::Radian<float> aVerticalFov,
                            int aWindowHeight_screen)
@@ -32,9 +43,10 @@ void OrbitalCamera::update(const RawInput & aInput,
 }
 
 
-visu_V1::Camera OrbitalCamera::getCamera() const
+renderer::Camera OrbitalCamera::getCamera() const
 {
-    return mControl->getCameraState();
+    mCamera->setPose(mControl->mOrbital.getParentToLocal());
+    return *mCamera;
 }
 
 

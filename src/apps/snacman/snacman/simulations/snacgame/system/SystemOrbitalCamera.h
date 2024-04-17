@@ -11,14 +11,16 @@
 #include <snac-renderer-V1/Camera.h>
 
 namespace ad {
+
+
+namespace renderer {
+
+    class Camera;
+
+} // namespace renderer
+
+
 namespace snacgame {
-
-
-namespace visu_V1 {
-
-    struct Camera;
-
-} // namespace visu_V1
 
 
 namespace component {
@@ -33,15 +35,17 @@ namespace system {
 class OrbitalCamera
 {
 public:
-    OrbitalCamera(ent::EntityManager & aWorld);
+    OrbitalCamera(ent::EntityManager & aWorld, 
+                  float aAspectRatio);
 
     void update(const RawInput & aInput,
                 math::Radian<float> aVerticalFov,
                 int aWindowHeight_screen);
 
-    visu_V1::Camera getCamera() const;
+    renderer::Camera getCamera() const;
 
 private:
+    EntityWrap<renderer::Camera> mCamera;
     EntityWrap<OrbitalControlInput> mControl;
 };
 

@@ -15,6 +15,8 @@
 #include <snac-renderer-V1/DebugDrawer.h>
 #include <snac-renderer-V1/text/Text.h>
 
+#include <snac-renderer-V2/Camera.h>
+#include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Rigging.h>
 
 #include <functional>
@@ -98,17 +100,6 @@ inline Text interpolate(const Text & aLeftEntity, const Text & aRightEntity, flo
 }
 
 
-// TODO #camera can we use a complete snac::Camera instead?
-//      This way the Renderer gets the complete camera each frame.
-struct Camera
-{
-    // TODO #pose replace with position and orientation
-    math::AffineMatrix<4, float> mWorldToCamera{math::AffineMatrix<4, float>::Identity()};
-
-    //math::Position<3, float> mPosition_world;
-};
-
-
 } // namespace visu_V1
 
 
@@ -121,7 +112,8 @@ struct GraphicState
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
     snac::SparseSet<visu_V1::Text, MaxEntityId> mTextWorldEntities;
-    visu_V1::Camera mCamera; 
+    // TODO #interpolation Interpolate the camera pose
+    renderer::Camera mCamera; 
 
     snac::SparseSet<visu_V1::Text, MaxEntityId> mTextScreenEntities;
 

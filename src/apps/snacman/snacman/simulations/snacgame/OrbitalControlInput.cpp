@@ -31,12 +31,4 @@ void OrbitalControlInput::update(const RawInput & aInput,
 }
 
 
-visu_V1::Camera OrbitalControlInput::getCameraState()
-{
-    return {
-        .mWorldToCamera = mOrbital.getParentToLocal(),
-    };
-}
-
-
 } // namespace ad::snacgame
