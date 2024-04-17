@@ -25,7 +25,7 @@ class SnacmanConan(ConanFile):
         ("entity/401d8462ac@adnn/develop"),
         ("graphics/b26cc7e19b@adnn/develop"),
         ("handy/3658039b72@adnn/develop"),
-        ("math/4c3fcbd2f5@adnn/develop"),
+        ("math/6fca8ae437@adnn/develop"),
         ("MarkovJunior.cpp/443432fad3@adnn/develop"),
 
         # Waiting for my PR on conan-center for assimp to get merged in
