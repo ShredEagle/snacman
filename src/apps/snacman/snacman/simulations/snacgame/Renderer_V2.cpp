@@ -258,7 +258,6 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
         sortedModels[object].push_back(
             SnacGraph::EntityData{
                 .mModelTransform = poseTransformMatrix(entity.mInstanceScaling, entity.mInstance.mPose),
-                // TODO #RV2: No need to go to SDR, we can directly stream hdr floats
                 .mColorFactor = entity.mColor,
                 .mMatrixPaletteOffset = matrixPaletteOffset,
             });

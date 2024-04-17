@@ -917,8 +917,7 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
             {
                 aDefines_temp.push_back(std::move(macro));
             }
-            // TODO Ad 2024/02/15: #RV2 raise level to warning
-            SELOG(info)("'{}' program has 'defines', which are not recommended with V2.", aProgFile.string());
+            SELOG(warn)("'{}' program has 'defines', which are not recommended with V2.", aProgFile.string());
             continue;
         }
         else if(shaderStage == "vertex")

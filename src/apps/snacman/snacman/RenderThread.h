@@ -16,7 +16,6 @@
 #include <resource/ResourceFinder.h>
 
 // TODO Ad 2024/02/14: #RV2 Remove V1 includes
-#include <snac-renderer-V1/Camera.h>
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/text/Text.h>
 
