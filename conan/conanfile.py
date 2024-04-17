@@ -22,11 +22,11 @@ class SnacmanConan(ConanFile):
     }
 
     requires = (
-        ("entity/401d8462ac@adnn/develop"),
-        ("graphics/b26cc7e19b@adnn/develop"),
-        ("handy/3658039b72@adnn/develop"),
+        ("entity/38ecfecf59@adnn/develop"),
+        ("graphics/81ddaabf8c@adnn/develop"),
+        ("handy/6b4b83f370@adnn/develop"),
         ("math/6fca8ae437@adnn/develop"),
-        ("MarkovJunior.cpp/443432fad3@adnn/develop"),
+        ("MarkovJunior.cpp/86f542db56@adnn/develop"),
 
         # Waiting for my PR on conan-center for assimp to get merged in
         # see: https://github.com/conan-io/conan-center-index/pull/20185
