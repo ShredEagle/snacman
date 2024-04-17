@@ -266,6 +266,8 @@ private:
     // TODO Is it the correct place to host the pipeline instance?
     // This notably force to instantiate it with the Renderer (before the Resources manager is available).
     snac::ForwardShadows mPipelineShadows;
+    // TODO use the new V2 Camera class
+    //renderer::Camera mCamera;
     snac::Camera mCamera;
     snac::CameraBuffer mCameraBuffer;
     snac::TextRenderer mTextRenderer;

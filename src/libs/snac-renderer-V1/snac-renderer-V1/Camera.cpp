@@ -59,7 +59,8 @@ void Camera::setPerspectiveProjection(float aAspectRatio, Parameters aParameters
 
 CameraBuffer::CameraBuffer()
 {
-    const std::array<math::Matrix<4, 4, float>, 2> identities{
+    const std::array<math::Matrix<4, 4, float>, 3> identities{
+        math::Matrix<4, 4, float>::Identity(),
         math::Matrix<4, 4, float>::Identity(),
         math::Matrix<4, 4, float>::Identity(),
     };
@@ -78,6 +79,13 @@ void CameraBuffer::set(Camera aCamera)
 {
     setWorldToCamera(aCamera.mWorldToCamera);
     setProjection(aCamera.mProjection);
+
+    auto matrixSize = sizeof(math::Matrix<4, 4, float>);
+    graphics::ScopedBind bound{mViewing};
+    glBufferSubData(GL_UNIFORM_BUFFER, 
+                    2 * matrixSize,
+                    matrixSize,
+                    (aCamera.mWorldToCamera * aCamera.mProjection).data());
 }
 
 
