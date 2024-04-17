@@ -59,7 +59,7 @@ public:
                                   filesystem::path aEffect = "effects/Text.sefx");
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
-    // TODO Ad 2024/03/28: #RV2 Finishing porting to V2 resources (not even sure we need a this as a public function)
+    // TODO Ad 2024/03/28: #RV2 #decommissionRV1 Finish porting to V2 resources (not even sure we need a this anymore)
     std::shared_ptr<Effect> getShaderEffect(filesystem::path aEffect);
 
     auto find(const filesystem::path & aPath) const

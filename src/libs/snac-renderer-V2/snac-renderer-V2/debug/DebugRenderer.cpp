@@ -101,6 +101,33 @@ namespace {
         return result;
     }
 
+    // To allow specialization of prepareShapeVertices
+    struct BoxTag
+    {
+        static constexpr GLenum gPrimitiveMode = cube::Maker::gPrimitiveMode;
+    };
+
+
+    // TODO Ad 2024/04/17: #shapes This is symptomatic of now having a good design for basic shapes
+    // Since we do not want the default cube [-1, 1]^3, we made a specialization of 
+    // prepareShapeVertices for the box [0, 1]^3.
+    // This mostly repeats the base implementation...
+    template <>
+    std::vector<EntryVertex> prepareShapeVertices<BoxTag>()
+    {
+        std::vector<EntryVertex> result;
+        result.reserve(cube::Maker::gVertexCount);
+        constexpr math::Box<float> box{{0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}};
+
+        for(unsigned int idx = 0; idx != cube::Maker::gVertexCount; ++idx)
+        {
+            result.push_back(EntryVertex{
+                .mPosition = cube::Maker::getPosition(idx, box),
+            });
+        }
+
+        return result;
+    }
 
     Handle<VertexStream> setupVertexStream(Storage & aStorage,
                                            const std::span<const InterleavedAttributeDescription> aAttributes,
@@ -173,17 +200,18 @@ DebugRenderer::DebugRenderer(Storage & aStorage, const Loader & aLoader) :
     mLineProgram{storeConfiguredProgram(aLoader.loadProgram("shaders/DebugDraw.prog"), aStorage)},
     mEntryInstanceBuffer{makeBuffer(0, 0, GL_STREAM_DRAW, aStorage)},
     mEntryProgram{storeConfiguredProgram(aLoader.loadProgram("shaders/DebugDrawModelTransform.prog"), aStorage)},
-    mBox{setupInstancedShape<cube::Maker>("DebugBox", aStorage, mEntryInstanceBuffer)},
+    mBox{setupInstancedShape<BoxTag>("DebugBox", aStorage, mEntryInstanceBuffer)},
     mArrow{setupInstancedShape<arrow::Maker>("DebugArrow", aStorage, mEntryInstanceBuffer)}
 {
 
 }
 
-void DebugRenderer::render(snac::DebugDrawer::DrawList aDrawList,
+void DebugRenderer::render(const snac::DebugDrawer::DrawList & aDrawList,
                            const RepositoryUbo & aUboRepository,
                            Storage & aStorage)
 {
     gl.Disable(GL_DEPTH_TEST);
+    gl.Disable(GL_CULL_FACE);
     gl.PolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     drawLines(aDrawList.mCommands->mLineVertices, aUboRepository, aStorage);
@@ -194,9 +222,9 @@ void DebugRenderer::render(snac::DebugDrawer::DrawList aDrawList,
                    aUboRepository, 
                    aStorage);
 
-    gl.Enable(GL_DEPTH_TEST);
     gl.PolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
+    gl.Enable(GL_CULL_FACE);
+    gl.Enable(GL_DEPTH_TEST);
 }
 
 

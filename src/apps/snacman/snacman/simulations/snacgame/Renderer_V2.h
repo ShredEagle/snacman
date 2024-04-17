@@ -4,20 +4,20 @@
 #include "GraphicState_V2.h"
 #include "Handle_V2.h"
 
+#include <handy/AtomicVariations.h>
+
 // TODO Ad 2024/02/13: #RV2 Remove all V1 stuff
 #include <snac-renderer-V1/Camera.h>
-#include <snac-renderer-V1/DebugRenderer.h>
-#include <snac-renderer-V1/LoadInterface.h>
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/Render.h>
 #include <snac-renderer-V1/text/TextRenderer.h>
 #include <snac-renderer-V1/UniformParameters.h>
-#include <snac-renderer-V1/pipelines/ForwardShadows.h>
 
 // V2: the good stuff
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/VertexStreamUtilities.h>
+#include <snac-renderer-V2/debug/DebugRenderer.h>
 #include <snac-renderer-V2/files/Loader.h>
 
 #include <filesystem>
@@ -166,6 +166,8 @@ struct SnacGraph
 
     void renderFrame(const visu_V2::GraphicState & aState, renderer::Storage & aStorage);
 
+    void renderDebugFrame(const snac::DebugDrawer::DrawList & aDrawList, renderer::Storage & aStorage);
+
     static constexpr bool gMultiIndirectDraw = true;
 
     // List and describes the buffer views used for per-instance vertex attributes
@@ -191,6 +193,8 @@ struct SnacGraph
     // Intended for function-local storage, made a member so its reuses the allocated memory between frames.
     std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
     std::vector<SnacGraph::InstanceData> mInstanceBuffer;
+
+    renderer::DebugRenderer mDebugRenderer;
 };
 
 using Resources_V2 = renderer::Loader;
@@ -199,11 +203,15 @@ using Resources_V2 = renderer::Loader;
 // TODO Ad 2024/04/11: Why did I add this separate class? Is it of any use?
 struct Impl_V2
 {
-    renderer::Storage mStorage;
-    SnacGraph mRenderGraph{
-        .mInstanceStream = SnacGraph::makeInstanceStream(mStorage),
-    };
+    Impl_V2(const renderer::Loader & aLoader) :
+        mRenderGraph{
+            .mInstanceStream = SnacGraph::makeInstanceStream(mStorage),
+            .mDebugRenderer = renderer::DebugRenderer{mStorage, aLoader},
+        }
+    {}
 
+    renderer::Storage mStorage;
+    SnacGraph mRenderGraph;
 };
 
 
@@ -232,7 +240,7 @@ public:
     using Handle_t = renderer::Handle<T_resource>;
 
     Renderer_V2(graphics::AppInterface & aAppInterface,
-                snac::Load<snac::Technique> & aTechniqueAccess,
+                resource::ResourceFinder & aResourcesFinder,
                 arte::FontFace aDebugFontFace);
 
     //void resetProjection(float aAspectRatio, snac::Camera::Parameters aParameters);
@@ -263,16 +271,12 @@ private:
     graphics::AppInterface & mAppInterface;
     snac::Renderer mRendererToDecomission; // TODO #RV2 Remove this data member
     Impl_V2 mRendererToKeep;
-    // TODO Is it the correct place to host the pipeline instance?
-    // This notably force to instantiate it with the Renderer (before the Resources manager is available).
-    snac::ForwardShadows mPipelineShadows;
     // TODO use the new V2 Camera class
     //renderer::Camera mCamera;
     snac::Camera mCamera;
     snac::CameraBuffer mCameraBuffer;
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
-    snac::DebugRenderer mDebugRenderer;
 };
 
 

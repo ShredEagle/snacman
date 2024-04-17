@@ -20,7 +20,7 @@ class DebugRenderer
 public:
     DebugRenderer(Storage & aStorage, const Loader & aLoader);
 
-    void render(snac::DebugDrawer::DrawList aDrawList,
+    void render(const snac::DebugDrawer::DrawList & aDrawList,
                 const RepositoryUbo & aUboRepository,
                 Storage & aStorage);
 

@@ -27,7 +27,7 @@ namespace semantic
     #define BLOCK_SEM(s) const BlockSemantic g ## s{#s}
 
     const BlockSemantic gFrame{"Frame"};
-    const BlockSemantic gView{"View"};
+    BLOCK_SEM(ViewProjection);
     const BlockSemantic gMaterials{"Materials"};
     const BlockSemantic gLocalToWorld{"LocalToWorld"};
     BLOCK_SEM(JointMatrices);

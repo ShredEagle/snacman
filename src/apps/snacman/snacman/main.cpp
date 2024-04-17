@@ -144,13 +144,9 @@ void runApplication()
     // Initialize rendering subsystem
     //
 
-    // Initialize the renderer
-    // TODO we provide a Load<Technique> so the shadow pipeline can use it to load the effects for its cube.
-    // this complicates the interface a lot, and since it does not use the ResourceManager those effects are not hot-recompilable.
-    snac::TechniqueLoader techniqueLoader{finder};
     snacgame::Renderer_t renderer{
         *glfwApp.getAppInterface(),
-         techniqueLoader,
+         finder,
          freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))
     };
 

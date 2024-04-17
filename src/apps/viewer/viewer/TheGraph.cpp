@@ -26,28 +26,6 @@ constexpr std::size_t gMaxDrawInstances = 2048;
 namespace {
 
 
-    /// @brief Layout compatible with the shader's `ViewBlock`
-    struct GpuViewBlock
-    {
-        GpuViewBlock(
-            math::AffineMatrix<4, GLfloat> aWorldToCamera,
-            math::Matrix<4, 4, GLfloat> aProjection 
-        ) :
-            mWorldToCamera{aWorldToCamera},
-            mProjection{aProjection},
-            mViewingProjection{aWorldToCamera * aProjection}
-        {}
-
-        GpuViewBlock(const Camera & aCamera) :
-            GpuViewBlock{aCamera.getParentToCamera(), aCamera.getProjection()}
-        {}
-
-        math::AffineMatrix<4, GLfloat> mWorldToCamera; 
-        math::Matrix<4, 4, GLfloat> mProjection; 
-        math::Matrix<4, 4, GLfloat> mViewingProjection;
-    };
-
-
     void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
     {
         GLfloat time =
@@ -59,7 +37,7 @@ namespace {
 
     void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
     {
-        proto::loadSingle(aUbo, GpuViewBlock{aCamera}, graphics::BufferHint::DynamicDraw);
+        proto::loadSingle(aUbo, GpuViewProjectionBlock{aCamera}, graphics::BufferHint::DynamicDraw);
     }
 
 
@@ -77,7 +55,7 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
 
     aStorage.mUbos.emplace_back();
     mViewingUbo = &aStorage.mUbos.back();
-    mUboRepository.emplace(semantic::gView, mViewingUbo);
+    mUboRepository.emplace(semantic::gViewProjection, mViewingUbo);
 
     aStorage.mUbos.emplace_back();
     mModelTransformUbo = &aStorage.mUbos.back();

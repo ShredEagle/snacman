@@ -67,6 +67,29 @@ void changeOrthographicViewportHeight(Camera & aCamera, float aNewHeight);
 std::pair<float/*near*/, float/*far*/> getNearFarPlanes(const Camera & aCamera);
 
 
+/// @brief Layout compatible with shader's `ViewProjectionBlock`
+struct GpuViewProjectionBlock
+{
+    GpuViewProjectionBlock(
+        math::AffineMatrix<4, GLfloat> aWorldToCamera,
+        math::Matrix<4, 4, GLfloat> aProjection 
+    ) :
+        mWorldToCamera{aWorldToCamera},
+        mProjection{aProjection},
+        mViewingProjection{aWorldToCamera * aProjection}
+    {}
+
+    GpuViewProjectionBlock(const Camera & aCamera) :
+        GpuViewProjectionBlock{aCamera.getParentToCamera(), aCamera.getProjection()}
+    {}
+
+    math::AffineMatrix<4, GLfloat> mWorldToCamera; 
+    math::Matrix<4, 4, GLfloat> mProjection; 
+    math::Matrix<4, 4, GLfloat> mViewingProjection;
+};
+
+
+
 // TODO factorize, this is more general than purely camera movements.
 
 /// @brief `Orbital` represent a position on a spherical orbit around an origin.

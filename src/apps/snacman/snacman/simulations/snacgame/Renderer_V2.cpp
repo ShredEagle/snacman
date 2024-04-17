@@ -4,12 +4,15 @@
 
 #include <graphics/AppInterface.h>
 
+#include <imguiui/ImguiUi.h> 
 #include <imguiui/Widgets.h> 
 
 #include <math/Transformations.h>
 #include <math/VectorUtilities.h>
 
 #include <platform/Filesystem.h>
+
+#include <profiler/GlApi.h>
 
 #include <renderer/BufferLoad.h>
 #include <renderer/Uniforms.h>
@@ -21,8 +24,6 @@
 #include <snac-renderer-V1/Render.h>
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/ResourceLoad.h>
-
-#include <profiler/GlApi.h>
 
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/RendererReimplement.h>
@@ -425,25 +426,33 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
 
         static const renderer::RepositoryTexture gDummyTextureRepository;
 
-        //DISABLE_PROFILING_GL;
+        DISABLE_PROFILING_GL;
         renderer::draw(passCache,
-                    mGraphUbos.mUboRepository,
-                    gDummyTextureRepository);
-        //ENABLE_PROFILING_GL;
+                       mGraphUbos.mUboRepository,
+                       gDummyTextureRepository);
+        ENABLE_PROFILING_GL;
     }
 }
 
 
-Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
-                   snac::Load<snac::Technique> & aTechniqueAccess,
-                   arte::FontFace aDebugFontFace) :
-    mAppInterface{aAppInterface},
-    mPipelineShadows{aAppInterface, aTechniqueAccess},
-    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults},
-    mDebugRenderer{aTechniqueAccess, std::move(aDebugFontFace)}
+void SnacGraph::renderDebugFrame(const snac::DebugDrawer::DrawList & aDrawList,
+                                 renderer::Storage & aStorage)
 {
-    mPipelineShadows.getControls().mShadowBias = 0.0005f;
+    mDebugRenderer.render(aDrawList, mGraphUbos.mUboRepository, aStorage);
+}
 
+
+Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
+                         resource::ResourceFinder & aResourcesFinder,
+                         arte::FontFace aDebugFontFace) :
+    mAppInterface{aAppInterface},
+    // TODO Ad 2024/04/17: #decomissionRV1 #resources This temporary Loader "just to get it to work" is smelly
+    // but we need to address the resource management design issue to know what to do instead...
+    // (This is a hack to port snacgame to DebugRenderer V2.)
+    // Hopefully it gets replaced by a more sane approach to resource management after V1 is entirely decomissionned.
+    mRendererToKeep{renderer::Loader{.mFinder = aResourcesFinder}},
+    mCamera{math::getRatio<float>(mAppInterface.getWindowSize()), snac::Camera::gDefaults}
+{
     // TODO Ad 2024/04/09: This is a bit smelly.
     // Add the viewing block to the graph ubo repo.
     mRendererToKeep.mRenderGraph.mGraphUbos.mUboRepository[semantic::gViewProjection] = 
@@ -521,7 +530,9 @@ void Renderer_V2::continueGui()
     ImGui::Checkbox("Show shadow controls", &mControl.mShowShadowControls);
     if (mControl.mShowShadowControls)
     {
-        mPipelineShadows.drawGui();
+        ImGui::Begin("ForwardShadow");
+        ImGui::Text("TODO for Renderer V2");
+        ImGui::End();
     }
 }
 
@@ -621,7 +632,7 @@ void Renderer_V2::render(const GraphicState_t & aState)
     if (mControl.mRenderDebug)
     {
         TIME_RECURRING_GL("Draw_debug", renderer::DrawCalls);
-        mDebugRenderer.render(aState.mDebugDrawList, mRendererToDecomission, programSetup);
+        mRendererToKeep.mRenderGraph.renderDebugFrame(aState.mDebugDrawList, mRendererToKeep.mStorage);
     }
 }
 

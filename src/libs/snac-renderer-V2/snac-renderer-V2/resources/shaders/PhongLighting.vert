@@ -10,7 +10,7 @@ in uint in_MaterialIdx;
 
 // WARNING: for some reason, the GLSL compiler assigns the same implicit binding
 // index to both uniform blocks if we do not set it explicitly.
-layout(std140, binding = 0) uniform ViewBlock
+layout(std140, binding = 0) uniform ViewProjectionBlock
 {
     mat4 worldToCamera;
     mat4 projection;

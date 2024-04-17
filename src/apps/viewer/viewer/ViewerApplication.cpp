@@ -39,7 +39,7 @@ const char * gVertexShader = R"#(
 
     in uint in_ModelTransformIdx;
 
-    layout(std140, binding = 1) uniform ViewBlock
+    layout(std140, binding = 1) uniform ViewProjectionBlock
     {
         mat4 worldToCamera;
         mat4 projection;

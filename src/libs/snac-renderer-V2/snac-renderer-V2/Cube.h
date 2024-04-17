@@ -142,6 +142,14 @@ namespace cube {
             return gPositions[gIndices[aIdx]];
         }
 
+        // TODO constexpr
+        static math::Position<3, float> getPosition(unsigned int aIdx, math::Box<float> aBox)
+        {
+            assert(aIdx < gVertexCount);
+            auto positions = getBoxVertices(aBox);
+            return positions[gIndices[aIdx]];
+        }
+
         static constexpr math::Vec<3, float> getNormal(unsigned int aIdx)
         {
             assert(aIdx < gVertexCount);

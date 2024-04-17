@@ -7,6 +7,8 @@
 #include <snacman/simulations/snacgame/GraphicState.h>
 #include <snacman/simulations/snacgame/ImguiInhibiter.h>
 
+#include <imguiui/ImguiUi.h>
+
 
 namespace ad {
 struct RawInput;
