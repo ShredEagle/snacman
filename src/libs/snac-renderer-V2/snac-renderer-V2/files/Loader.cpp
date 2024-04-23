@@ -460,7 +460,7 @@ namespace {
             semantic::gNormalTexture,
         };
         RepositoryTexture textureRepo;
-        for (const Semantic texSemantic : semanticSequence)
+        for (Semantic texSemantic : semanticSequence)
         {
             if(graphics::Texture * texture = loadTextures())
             {

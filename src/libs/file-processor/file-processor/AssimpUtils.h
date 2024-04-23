@@ -14,7 +14,7 @@
 namespace ad::renderer {
 
 
-inline [[maybe_unused]] bool hasTrianglesOnly(aiMesh * aMesh)
+inline bool hasTrianglesOnly(aiMesh * aMesh)
 {
     //TODO Ad 2023/07/21: Understand what is this NGON encoding flag for.
     return (aMesh->mPrimitiveTypes = (aiPrimitiveType_TRIANGLE | aiPrimitiveType_NGONEncodingFlag));

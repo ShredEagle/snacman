@@ -39,21 +39,21 @@ struct NodeTree
                                           NodeTree &/*tree*/)>;
 
     /// @param aParent if set to invalid index, the call adds a root node.
-    Node::Index addNode(Node::Index aParent, T_Pose aPose);
+    typename Node::Index addNode(typename Node::Index aParent, T_Pose aPose);
 
-    bool hasParent(Node::Index aNode) const
+    bool hasParent(typename Node::Index aNode) const
     { return mHierarchy[aNode].mParent != Node::gInvalidIndex; }
 
-    bool hasChild(Node::Index aNode) const
+    bool hasChild(typename Node::Index aNode) const
     { return mHierarchy[aNode].mFirstChild != Node::gInvalidIndex; }
 
-    bool hasName(Node::Index aNode) const
+    bool hasName(typename Node::Index aNode) const
     { return mNodeNames.find(aNode) != mNodeNames.end(); }
 
-    Node & operator[](Node::Index aNodeIdx)
+    Node & operator[](typename Node::Index aNodeIdx)
     { return mHierarchy[aNodeIdx]; }
 
-    const Node & operator[](Node::Index aNodeIdx) const
+    const Node & operator[](typename Node::Index aNodeIdx) const
     { return mHierarchy[aNodeIdx]; }
 
     std::size_t size() const
@@ -67,7 +67,7 @@ struct NodeTree
     }
 
     std::vector<Node> mHierarchy;
-    Node::Index mFirstRoot = Node::gInvalidIndex;
+    typename Node::Index mFirstRoot = Node::gInvalidIndex;
 
     // TODO can we do without storing the local pose for skeletal animation?
     // (might not be the case when interpolating between several animations)
@@ -91,7 +91,7 @@ void traverseDepth(NodeTree<T_pose> & aTree,
                    const typename NodeTree<T_pose>::Callback_t & aCallback,
                    typename NodeTree<T_pose>::Node::Index aNodeIdx)
 {
-    using Node = NodeTree<T_pose>::Node;
+    using Node = typename NodeTree<T_pose>::Node;
 
     aCallback(aNodeIdx, aTree);
 
@@ -248,9 +248,9 @@ T_outputIt Rig::computeJointMatrices(T_outputIt aOutFirst, const FuturePose_type
 template <class T_Pose>
 std::ostream & operator<<(std::ostream & aOut, const NodeTree<T_Pose> & aTree)
 {
-    using Node = NodeTree<T_Pose>::Node;
+    using Node = typename NodeTree<T_Pose>::Node;
 
-    std::function<void(typename Node::Index)> dump = [&aOut, &aTree, &dump](Node::Index aIdx)
+    std::function<void(typename Node::Index)> dump = [&aOut, &aTree, &dump](typename Node::Index aIdx)
     {
         static const std::string gDefaultName{"<UNNAMED>"};
 
@@ -285,7 +285,7 @@ std::ostream & operator<<(std::ostream & aOut, const NodeTree<T_Pose> & aTree)
 }
 
 template <class T_Pose>
-NodeTree<T_Pose>::Node::Index NodeTree<T_Pose>::addNode(Node::Index aParent, T_Pose aPose)
+typename NodeTree<T_Pose>::Node::Index NodeTree<T_Pose>::addNode(typename Node::Index aParent, T_Pose aPose)
 {
     typename Node::Index thisIndex = mHierarchy.size();
 

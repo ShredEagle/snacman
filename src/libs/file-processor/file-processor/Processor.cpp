@@ -24,6 +24,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <span>
 
 
@@ -477,7 +478,6 @@ namespace {
     void dumpAnimations(const aiScene * aScene, const NodeRig & aExtractedRig, FileWriter & aWriter)
     {
         using Node = NodeTree<Rig::Pose>::Node;
-        const NodeTree<Rig::Pose> & nodeTree = aExtractedRig.mRig.mJointTree;
 
         std::vector<RigAnimation> animations;
 

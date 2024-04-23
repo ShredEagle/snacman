@@ -43,10 +43,6 @@
 // outside.
 
 
-static constexpr unsigned int gMaxBones = 32;
-static constexpr unsigned int gMaxRiggedInstances = 16;
-
-
 namespace ad {
 namespace snacgame {
 
