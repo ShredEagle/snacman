@@ -12,7 +12,7 @@
 #include <profiler/GlApi.h>
 #include <profiler/Profiler.h> // Internals are used to measure frame duration
 
-#include <snac-renderer-V2/Debug/DebugDrawing.h>
+#include <snac-renderer-V2/debug/DebugDrawing.h>
 #include <snac-renderer-V2/Profiling.h>
 
 #include <utilities/Time.h>
