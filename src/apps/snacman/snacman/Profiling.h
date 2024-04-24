@@ -97,13 +97,6 @@ inline std::string remove_signature(std::string_view aStr)
     return std::string{aStr.substr(0, pos)};
 }
 
-// Unused
-//#define BEGIN_SINGLE(profiler, name, var) \
-//    auto var = std::make_optional(snac::getProfiler(::ad::snac::Profiler::profiler).timeSingle(name))
-//
-//#define END_SINGLE(var) \
-//    var.reset()
-
 #define TIME_SINGLE(profiler, name) \
     auto profilerSingleScoped = snac::getProfiler(::ad::snac::Profiler::profiler).timeSingle(name); \
     PROFILER_SCOPE_SINGLESHOT_SECTION(::ad::snac::ProfilerMap_V2::profiler, name, ::ad::renderer::CpuTime)
