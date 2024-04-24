@@ -9,7 +9,11 @@
 
 #include <build_info.h>
 
+#include "simulations/sandbox/ModelLoader.h"
+
+#include "simulations/snacgame/ImguiInhibiter.h"
 #include "simulations/snacgame/SnacGame.h"
+#include "simulations/snacgame/Renderer.h"
 
 // TODO we should not include something from detail.
 // So either move it out of detail, either use nholmann directly
@@ -23,7 +27,13 @@
 
 #include <resource/ResourceFinder.h>
 
+// TODO remove
 #include <snac-renderer-V1/ResourceLoad.h>
+
+// For fine-tuning the log-levels.
+#include <snac-renderer-V2/Logging-channels.h>
+// TODO replace by an include not scoped to renderer-V2
+#include <snac-renderer-V2/Profiling.h>
 
 #include <fstream>
 
@@ -33,6 +43,10 @@ using namespace ad::snac;
 
 // TODO find a better place than global
 constexpr bool gWaitByBusyLoop = true;
+
+
+using Simulation_t = snacgame::SnacGame;
+//using Simulation_t = snacgame::ModelLoader;
 
 
 resource::ResourceFinder makeResourceFinder()
@@ -103,6 +117,9 @@ void runApplication()
         { {GLFW_SAMPLES, 4} },
     };
 
+    // Must be scoped below the GL context.
+    auto mainProfilerScope = SCOPE_PROFILER(gMainProfiler, renderer::Profiler::Providers::CpuOnly);
+
     // Ensures the messages are sent synchronously with the event triggering them
     // This makes debug stepping much more feasible.
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -127,13 +144,9 @@ void runApplication()
     // Initialize rendering subsystem
     //
 
-    // Initialize the renderer
-    // TODO we provide a Load<Technique> so the shadow pipeline can use it to load the effects for its cube.
-    // this complicates the interface a lot, and since it does not use the ResourceManager those effects are not hot-recompilable.
-    snac::TechniqueLoader techniqueLoader{finder};
-    snacgame::Renderer renderer{
+    snacgame::Renderer_t renderer{
         *glfwApp.getAppInterface(),
-         techniqueLoader,
+         finder,
          freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))
     };
 
@@ -141,7 +154,7 @@ void runApplication()
     // the render thread.
     glfwApp.removeCurrentContext();
 
-    GraphicStateFifo<snacgame::Renderer> graphicStates;
+    GraphicStateFifo<snacgame::Renderer_t> graphicStates;
     RenderThread renderingThread{
         glfwApp,
         graphicStates,
@@ -160,7 +173,7 @@ void runApplication()
     //
     // Initialize scene
     //
-    snacgame::SnacGame simulation{
+    Simulation_t simulation{
         *glfwApp.getAppInterface(),
         renderingThread,
         imguiUi,
@@ -181,13 +194,21 @@ void runApplication()
 
     while (glfwApp.handleEvents())
     {
+        // TODO Ad 2024/04/02: #profilerv1 Remove the old profiler frame guard
         Guard stepProfiling = profileFrame(getProfiler(snac::Profiler::Main));
+        
+        auto v2PrintScope = BEGIN_RECURRING_V1(Main, "profiler_v2_print");
+        // With profiler V2, we cannot print the results while inside a profiler's frame.
+        std::ostringstream profilerOutput;
+        PROFILER_PRINT_TO_STREAM(snac::gMainProfiler, profilerOutput);
+        END_RECURRING_V1(v2PrintScope);
 
-        BEGIN_RECURRING(Main, "Step", stepRecurringScope);
+        Guard scopedMainFrameProfiling = renderer::scopeProfilerFrame(gMainProfiler);
+        auto stepRecurringScope = BEGIN_RECURRING(Main, "Step");
 
         if constexpr(isDevmode())
         {
-            simulation.drawDebugUi(configurableSettings, inhibiter, input);
+            simulation.drawDebugUi(configurableSettings, inhibiter, input, profilerOutput.str());
         }
         else
         {
@@ -289,6 +310,9 @@ int main(int argc, char * argv[])
     {
         snac::detail::initializeLogging();
         spdlog::set_level(spdlog::level::debug);
+
+        // Opportunity to control the default log-level per-logger
+        //spdlog::get(renderer::gPipelineDiag)->set_level(spdlog::level::critical);
     }
     catch (std::exception & aException)
     {

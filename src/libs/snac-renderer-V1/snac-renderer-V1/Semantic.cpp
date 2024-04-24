@@ -54,6 +54,8 @@ std::string to_string(Semantic aSemantic)
         MAPPING(MetallicRoughnessTexture)
         MAPPING(ShadowMap)
         MAPPING(FontAtlas)
+        MAPPING(EntityIdx)
+        MAPPING(MaterialIdx)
         default:
         {
             auto value = static_cast<std::underlying_type_t<Semantic>>(aSemantic);
@@ -118,6 +120,8 @@ Semantic to_semantic(std::string_view aResourceName)
     MAPPING(MetallicRoughnessTexture)
     MAPPING(ShadowMap)
     MAPPING(FontAtlas)
+    MAPPING(EntityIdx)
+    MAPPING(MaterialIdx)
     else
     {
         throw std::logic_error{
@@ -149,6 +153,8 @@ bool isNormalized(Semantic aSemantic)
         case Semantic::BoundingBox:
         case Semantic::Bearing:
         case Semantic::GlyphIndex:
+        case Semantic::EntityIdx:
+        case Semantic::MaterialIdx:
         {
             return false;
         }
@@ -195,6 +201,7 @@ std::string to_string(BlockSemantic aBlockSemantic)
         MAPPING(Viewing)
         MAPPING(GlyphMetrics)
         MAPPING(JointMatrices)
+        MAPPING(Entities)
         default:
         {
             auto value = static_cast<std::underlying_type_t<Semantic>>(aBlockSemantic);
@@ -222,6 +229,7 @@ BlockSemantic to_blockSemantic(std::string_view aBlockName)
     MAPPING(Viewing)
     MAPPING(GlyphMetrics)
     MAPPING(JointMatrices)
+    MAPPING(Entities)
     else
     {
         if (aBlockName.ends_with(']'))

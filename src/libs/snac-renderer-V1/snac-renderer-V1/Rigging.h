@@ -64,7 +64,7 @@ struct NodeTree
 // TODO rename (clarify the fact it is not the animation of just a single node)
 struct NodeAnimation
 {
-    // TODO #anim hosting the NodeTree in the Rig instanc" is a problem,
+    // TODO #anim hosting the NodeTree in the Rig instance is a problem,
     // notably because this function mutates the node tree directly.
     // see also todo (a48c8) 
     // Maybe the Rig should host a read only hierarchy (no transformation) of joints (no whole scene)
@@ -73,6 +73,7 @@ struct NodeAnimation
 
     // The sequence of node indices that are animated.
     // (This is the order in which node pose data is provided.)
+    // Note: these are the indices of node entries in animate()'s `aNodeTree`.
     std::vector<Node::Index> mNodes;
 
     // Ideally, keyframes would be on a constant period, instead of an of time points.

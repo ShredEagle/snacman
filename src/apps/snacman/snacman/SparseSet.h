@@ -17,6 +17,7 @@ namespace snac {
 #define TMP   T_value, N_universeSize, T_index
 
 
+// TODO Ad 2024/02/13: Move to Handy library
 template <TMA_D>
 class SparseSet
 {
@@ -66,6 +67,9 @@ public:
     T_value & operator[](T_index aIndex);
     const T_value & operator[](T_index aIndex) const;
 
+    T_index size() const
+    { assert(mSize == mDense.size()); return mSize; }
+
     Iterator begin()
     { return mDense.begin(); }
     Iterator end()
@@ -81,6 +85,8 @@ public:
     { return end(); }
 
 private:
+    // Is this member required, is not it equivalent to mDense.size()? 
+    // (Maybe intended to ease moving away to anothe dense store.)
     T_index mSize{0};
     std::array<T_index, N_universeSize> mSparse;
     std::vector<DenseValue> mDense;

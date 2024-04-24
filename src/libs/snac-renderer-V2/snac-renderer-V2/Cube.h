@@ -64,7 +64,7 @@ constexpr float gCubeSize = 2.f;
 namespace cube {
 
     // The cube from [-1, -1, -1] to [1, 1, 1]
-    constexpr std::array<math::Position<3, float>, 8> gVertices{
+    constexpr std::array<math::Position<3, float>, 8> gPositions{
         math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2, -gCubeSize / 2},
         math::Position<3, float>{-gCubeSize / 2, -gCubeSize / 2,  gCubeSize / 2},
         math::Position<3, float>{-gCubeSize / 2,  gCubeSize / 2, -gCubeSize / 2},
@@ -129,6 +129,34 @@ namespace cube {
         };
     }
 
+    struct Maker
+    {
+        static constexpr GLenum gPrimitiveMode = GL_TRIANGLES;
+
+        // The expanded cube, where each face has a flat normal.
+        static constexpr unsigned int gVertexCount = (unsigned int)gIndices.size();
+
+        static constexpr math::Position<3, float> getPosition(unsigned int aIdx)
+        {
+            assert(aIdx < gVertexCount);
+            return gPositions[gIndices[aIdx]];
+        }
+
+        // TODO constexpr
+        static math::Position<3, float> getPosition(unsigned int aIdx, math::Box<float> aBox)
+        {
+            assert(aIdx < gVertexCount);
+            auto positions = getBoxVertices(aBox);
+            return positions[gIndices[aIdx]];
+        }
+
+        static constexpr math::Vec<3, float> getNormal(unsigned int aIdx)
+        {
+            assert(aIdx < gVertexCount);
+            return gNormals[aIdx / 6];
+        }
+    };
+
 } // namespace cube
 
 
@@ -142,6 +170,8 @@ namespace triangle {
 
     struct Maker
     {
+        static constexpr GLenum gPrimitiveMode = GL_TRIANGLES;
+
         static constexpr unsigned int gVertexCount = 3;
 
         static math::Position<3, float> getPosition(unsigned int aIdx)
@@ -158,13 +188,49 @@ namespace triangle {
 } // namespace triangle
 
 
+namespace arrow {
+
+    constexpr std::array<math::Position<3, float>, 10> gPositions{
+        // Tail
+       math::Position<3, float>{0.f, 0.f, 0.f},
+       math::Position<3, float>{0.f, 1.f, 0.f},
+
+        // Heads
+       math::Position<3, float>{0.f, 1.f, 0.f},
+       math::Position<3, float>{0.f, 0.75f, 0.15f},
+
+       math::Position<3, float>{0.f, 1.f, 0.f},
+       math::Position<3, float>{0.f, 0.75f, -0.15f},
+
+       math::Position<3, float>{0.f, 1.f, 0.f},
+       math::Position<3, float>{0.15f, 0.75f, 0.f},
+
+       math::Position<3, float>{0.f, 1.f, 0.f},
+       math::Position<3, float>{-0.15f, 0.75f, 0.f},
+    };
+
+    struct Maker
+    {
+        static constexpr GLenum gPrimitiveMode = GL_LINES;
+
+        static constexpr unsigned int gVertexCount = (unsigned int)gPositions.size();
+
+        static math::Position<3, float> getPosition(unsigned int aIdx)
+        {
+            return gPositions[aIdx];
+        }
+    };
+
+} // namespace arrow
+
+
 inline std::vector<math::Position<3, float>> getExpandedCubePositions()
 {
     std::vector<math::Position<3, float>> result;
     result.reserve(36);
     for (int i = 0; i < 36; i++) 
     {
-        result.push_back(cube::gVertices[cube::gIndices[i]]);
+        result.push_back(cube::gPositions[cube::gIndices[i]]);
     }
     return result;
 }
@@ -192,29 +258,6 @@ inline std::vector<math::Position<3, float>> getExpandedCubeVertices()
     return getExpandedCubePositions();
 }
 
-inline const std::array<math::Position<3, float>, 10> & getArrowVertices()
-{
-    using Pos = math::Position<3, float>;
-    static std::array<Pos, 10> gVertices{
-        // Tail
-        Pos{0.f, 0.f, 0.f},
-        Pos{0.f, 1.f, 0.f},
-        // Heads
-        Pos{0.f, 1.f, 0.f},
-        Pos{0.f, 0.75f, 0.15f},
-
-        Pos{0.f, 1.f, 0.f},
-        Pos{0.f, 0.75f, -0.15f},
-
-        Pos{0.f, 1.f, 0.f},
-        Pos{0.15f, 0.75f, 0.f},
-
-        Pos{0.f, 1.f, 0.f},
-        Pos{-0.15f, 0.75f, 0.f},
-    };
-    return gVertices;
-}
-
 
 //  TODO use PositionNormalUV instead
 struct PositionNormal
@@ -231,7 +274,7 @@ inline std::vector<PositionNormal> getExpandedCubeVertices()
     for (int i = 0; i < 36; i++) 
     {
         result.push_back(PositionNormal{
-            .position = cube::gVertices[cube::gIndices[i]],
+            .position = cube::gPositions[cube::gIndices[i]],
             .normal = cube::gNormals[i / 6]
         });
     }

@@ -9,6 +9,7 @@
 
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Repositories.h>
+#include <snac-renderer-V2/debug/DebugRenderer.h>
 
 
 namespace ad::renderer {
@@ -16,14 +17,9 @@ namespace ad::renderer {
 
 class Camera;
 struct Loader;
-struct PartList;
-struct PassCache;
+struct ViewerPartList;
+struct ViewerPassCache;
 struct Storage;
-
-
-void draw(const PassCache & aPassCache,
-          const RepositoryUbo & aUboRepository,
-          const RepositoryTexture & aTextureRepository);
 
 
 struct HardcodedUbos
@@ -34,6 +30,8 @@ struct HardcodedUbos
     graphics::UniformBufferObject * mFrameUbo;
     graphics::UniformBufferObject * mViewingUbo;
     graphics::UniformBufferObject * mModelTransformUbo;
+
+    graphics::UniformBufferObject * mJointMatrixPaletteUbo;
 };
 
 
@@ -44,15 +42,19 @@ struct TheGraph
              Storage & aStorage,
              const Loader & aLoader);
 
-    void renderFrame(const PartList & aPartList, const Camera & aCamera, Storage & aStorage);
+    void renderFrame(const ViewerPartList & aPartList, 
+                     const Camera & aCamera,
+                     Storage & aStorage);
+
+    void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
-    void passOpaqueDepth(const PartList & aPartList, Storage & mStorage);
-    void passForward(const PartList & aPartList, Storage & mStorage);
-    void passTransparencyAccumulation(const PartList & aPartList, Storage & mStorage);
-    void passTransparencyResolve(const PartList & aPartList, Storage & mStorage);
+    void passOpaqueDepth(const ViewerPartList & aPartList, Storage & mStorage);
+    void passForward(const ViewerPartList & aPartList, Storage & mStorage);
+    void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
+    void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
 
-    void loadDrawBuffers(const PartList & aPartList, const PassCache & aPassCache);
+    void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache);
 
     void showTexture(const graphics::Texture & aTexture,
                      unsigned int aStackPosition,
@@ -84,6 +86,9 @@ struct TheGraph
     QuadDrawer mTransparencyResolver;
     static const GLint gAccumTextureUnit{0};
     static const GLint gRevealageTextureUnit{1};
+
+    // Debug rendering
+    DebugRenderer mDebugRenderer;
 };
 
 

@@ -8,6 +8,8 @@
 #include <ratio>
 #include <vector>
 
+#include <cassert>
+
 
 // Implementation notes:
 // A profiler is one of those features that seem trivial, until you try to implement one.
@@ -146,10 +148,29 @@ public:
     static constexpr std::uint32_t CountSubframes()
     { return gFrameDelay + 1; };
 
-    Profiler();
+    // TODO Ad 2024/04/04: Might be better as a bitwise flag to pick features, but for the moment we are
+    // very rigid with the index each provider is allowed to have (see hardcoded list in Profiling.h)
+    enum class Providers
+    {
+        CpuOnly,
+        All,
+    };
+
+    Profiler(Providers aProviderFeatures);
 
     void beginFrame();
     void endFrame();
+
+    enum class SectionProfiling
+    {
+        Disabled,
+        Enabled,
+    };
+    void control(SectionProfiling aState)
+    { 
+        assert(mEnabled != static_cast<bool>(aState));
+        mEnabled = (aState == SectionProfiling::Enabled); 
+    }
 
     EntryIndex beginSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders);
     void endSection(EntryIndex aIndex);
@@ -162,9 +183,39 @@ public:
 
     struct [[nodiscard]] SectionGuard
     {
+        SectionGuard(Profiler * aProfiler, EntryIndex aEntry) :
+            mProfiler{aProfiler},
+            mEntry{aEntry}
+        {
+            assert(mProfiler != nullptr);
+        }
+
         ~SectionGuard()
         {
-            mProfiler->endSection(mEntry);
+            if(mProfiler != nullptr)
+            {
+                mProfiler->endSection(mEntry);
+            }
+        }
+
+        // Not copyable
+        SectionGuard(const SectionGuard &) = delete;
+        SectionGuard & operator = (const SectionGuard &) = delete;
+
+        // Movable
+        SectionGuard(SectionGuard && aRhs) :
+            mProfiler{aRhs.mProfiler},
+            mEntry{aRhs.mEntry}
+        {
+            aRhs.mProfiler = nullptr; // to disable the call to endSection() in dtor
+        }
+
+        SectionGuard & operator = (SectionGuard && aRhs)
+        {
+            mProfiler = aRhs.mProfiler;
+            mEntry = aRhs.mEntry;
+            aRhs.mProfiler = nullptr; // to disable the call to endSection() in dtor
+            return *this;
         }
 
         Profiler * mProfiler;
@@ -174,8 +225,8 @@ public:
     SectionGuard scopeSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders)
     { 
         return {
-            .mProfiler = this,
-            .mEntry = beginSection(aNature, aName, std::move(aProviders))
+            this,
+            beginSection(aNature, aName, std::move(aProviders))
         };
     }
 
@@ -342,6 +393,7 @@ private:
     };
 
 
+    bool mEnabled = true;
     std::vector<Entry> mEntries; // Initial size handled in constructor
     std::vector<SingleShotRecord> mSingleShots;
     std::vector<std::unique_ptr<ProviderInterface>> mMetricProviders;

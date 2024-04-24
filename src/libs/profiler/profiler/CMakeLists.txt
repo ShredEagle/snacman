@@ -5,6 +5,7 @@ set(${TARGET_NAME}_HEADERS
     Logging.h
     Logging-init.h
     Profiler.h
+    ProfilerRegistry.h
 
     providers/ProviderApi.h
     providers/ProviderCpu.h
@@ -15,6 +16,8 @@ set(${TARGET_NAME}_HEADERS
 set(${TARGET_NAME}_SOURCES
     Logging-init.cpp
     Profiler.cpp
+    ProfilerRegistry.cpp
+    Profiling.h
 
     providers/ProviderCpu.cpp
     providers/ProviderGL.cpp
@@ -50,6 +53,7 @@ if(MSVC)
     # Otherwise big object files might error with:
     # "fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj"
     target_compile_options(${TARGET_NAME} PRIVATE "/bigobj")
+    target_compile_definitions(${TARGET_NAME} PUBLIC NOMINMAX)
 endif()
 
 cmc_target_current_include_directory(${TARGET_NAME})
@@ -71,6 +75,7 @@ cmc_find_dependencies()
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
+        ad::handy
         ad::renderer
         ad::utilities
 

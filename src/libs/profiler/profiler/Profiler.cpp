@@ -52,7 +52,8 @@ void Profiler::Entry::setProviders(T_iterator aFirstProviderIdx, T_iterator aLas
     {
         ProviderIndex providerIndex = *providerIdxIt;
         // Provider indices must always be sorted (this is notably an assumption in LogicalSection::accountForChildSection)
-        assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex);
+        assert(previousProvider == std::numeric_limits<ProviderIndex>::max() || previousProvider < providerIndex
+            && "Provider indices must given in ascending order.");
         previousProvider = providerIndex;
 
         mMetrics.at(mActiveMetrics++) = Metric<Sample_t>{
@@ -74,17 +75,20 @@ void Profiler::Entry::resetValues()
 }
 
 
-Profiler::Profiler()
+Profiler::Profiler(Providers aProviderFeatures)
 {
 //#if defined(_WIN32)
 //    mMetricProviders.push_back(std::make_unique<ProviderCpuPerformanceCounter>());
 //#else
     mMetricProviders.push_back(std::make_unique<ProviderCpuRdtsc>());
     //mMetricProviders.push_back(std::make_unique<ProviderCPUTime>());
-    mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
-    mMetricProviders.push_back(std::make_unique<ProviderGL>());
-    mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::drawCount>>("draw", ""));
-    mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::bufferMemoryWritten>>("buffer w", "B"));
+    if(aProviderFeatures == Providers::All)
+    {
+        mMetricProviders.push_back(std::make_unique<ProviderGLTime>());
+        mMetricProviders.push_back(std::make_unique<ProviderGL>());
+        mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::drawCount>>("draw", ""));
+        mMetricProviders.push_back(std::make_unique<ProviderApi<&GlApi::Metrics::bufferMemoryWritten>>("buffer w", "B"));
+    }
 
     resize(gInitialEntries);
 }
@@ -209,6 +213,8 @@ void Profiler::beginFrame()
 
 void Profiler::endFrame()
 {
+    assert(mEnabled 
+        && "The disable mechanism is only intended to inhibit sections of frame profiling.");
     assert(mFrameState.areAllSectionsClosed());
 
     // TODO Ad 2023/11/15: I do not like this explicit reset of all values at the end of the frame if a reset occurred:
@@ -253,6 +259,11 @@ void Profiler::endFrame()
 
 Profiler::EntryIndex Profiler::beginSection(EntryNature aNature, const char * aName, std::initializer_list<ProviderIndex> aProviders)
 {
+    if(!mEnabled)
+    {
+        return Entry::gInvalidEntry;
+    }
+    
     // TODO Section identity is much more subtle than that
     // It should be robust to changing the structure of sections (loop variance, and logical structure)
     // and handle change in providers somehow.
@@ -292,14 +303,25 @@ Profiler::EntryIndex Profiler::beginSection(EntryNature aNature, const char * aN
 
 void Profiler::endSection(EntryIndex aIndex)
 {
+    if(!mEnabled)
+    {
+        // Otherwise, there is likely a mismatch in disabled sections
+        assert(aIndex == Entry::gInvalidEntry);
+        return;
+    }
+
     Entry & entry = mEntries.at(aIndex);
     std::uint32_t subframe = currentSubframe(entry.getNature());
     for (std::size_t i = 0; i != entry.mActiveMetrics; ++i)
     {
         getProvider(entry.mMetrics[i]).endSection(aIndex, subframe);
     }
-    mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
-    --mFrameState.mCurrentLevel;
+
+    if(entry.getNature() == EntryNature::Recurring)
+    {
+        mFrameState.mCurrentParent = entry.mId.mParentIdx; // restore this Entry parent as the current parent
+        --mFrameState.mCurrentLevel;
+    }
 }
 
 
@@ -384,6 +406,7 @@ struct LogicalSection
             if(mValues[thisMetricIdx].mProviderIndex == aNested.mValues[childMetricIdx].mProviderIndex)
             {
                 mAccountedFor[thisMetricIdx] += aNested.mValues[childMetricIdx].mValues.average();
+                ++mAccountedChildren[thisMetricIdx];
                 ++thisMetricIdx;
                 ++childMetricIdx;
             }
@@ -396,6 +419,13 @@ struct LogicalSection
                 ++childMetricIdx;
             }
         }
+    }
+
+    /// @brief Returns wether this LogicalSection has accounted children samples for metric `aMetrixIdx`.
+    /// (Otherwise, it is expected that the accounted total will be zero, providing no valuable information for display)
+    bool hasAccountedChildrenFor(std::size_t aMetricIdx) const
+    { 
+        return mAccountedChildren[aMetricIdx] != 0; 
     }
 
     /// @brief Identity that determines the belonging of an Entry to this logical Section.
@@ -413,7 +443,8 @@ struct LogicalSection
 
     /// @brief Keep track of the samples accounted for by sub-sections 
     /// (thus allowing to know what has not been accounted for)
-    std::array<Profiler::Sample_t, Profiler::gMaxMetricsPerSection> mAccountedFor{0}; 
+    std::array<Profiler::Sample_t, Profiler::gMaxMetricsPerSection> mAccountedFor{}; // request value-initialization
+    std::array<unsigned int, Profiler::gMaxMetricsPerSection> mAccountedChildren{};
 };
 
 
@@ -512,8 +543,15 @@ void Profiler::prettyPrint(std::ostream & aOut) const
             aOut << " " << provider.mQuantityName << " " 
                 << provider.scale(metric.mValues.average())
                 // Show what has not been accounted for by child sections in between parenthesis
-                << " (" << provider.scale(metric.mValues.average() - aSection.mAccountedFor[valueIdx]) << ")"
-                << " " << provider.mUnit << ","
+                ;
+
+            if(aSection.hasAccountedChildrenFor(valueIdx))
+            {
+                aOut << " (" << provider.scale(metric.mValues.average() - aSection.mAccountedFor[valueIdx]) << ")"
+                    ;
+            }
+
+            aOut << " " << provider.mUnit << ","
                 ;
         }
 
@@ -569,6 +607,7 @@ void Profiler::prettyPrint(std::ostream & aOut) const
     for(EntryIndex entryIdx : mSingleShots)
     {
         printSingleEntry(aOut, mEntries[entryIdx]);
+        aOut << "\n";
     }
 }
 

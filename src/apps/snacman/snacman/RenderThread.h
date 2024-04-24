@@ -5,6 +5,7 @@
 #include "Logging.h"
 #include "LoopSettings.h"
 #include "Profiling.h"
+#include "Profiling_V2.h"
 #include "ProfilingGPU.h"
 #include "Timing.h"
 
@@ -14,9 +15,11 @@
 
 #include <resource/ResourceFinder.h>
 
-#include <snac-renderer-V1/Camera.h>
+// TODO Ad 2024/02/14: #RV2 Remove V1 includes
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/text/Text.h>
+
+#include <snac-renderer-V2/Model.h>
 
 #include <future>
 #include <queue>
@@ -54,6 +57,7 @@ class EntryBuffer
 
 public:
     static constexpr std::size_t BufferDepth = 2;
+    static_assert(BufferDepth == 2, "Current implementation is limited to double buffering.");
 
     /// \brief Construct the buffer, block until it could initialize all its
     /// entries.
@@ -174,9 +178,10 @@ public:
     //    });
     //}
 
-    std::future<std::shared_ptr<snac::Model>> loadModel(filesystem::path aModel, 
-                                                        filesystem::path aEffect, 
-                                                        Resources & aResources)
+    std::future<typename T_renderer::template Handle_t<const renderer::Object>> 
+    loadModel(filesystem::path aModel, 
+              filesystem::path aEffect, 
+              typename T_renderer::Resources_t & aResources)
     {
         // Almost certainly a programming error:
         // There is a risk the calling code will block on the future completion
@@ -185,14 +190,15 @@ public:
 
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
-        auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Model>>>();
-        std::future<std::shared_ptr<snac::Model>> future = promise->get_future();
+        using Handle_t = typename T_renderer::template Handle_t<const renderer::Object>;
+        auto promise = std::make_shared<std::promise<Handle_t>>();
+        std::future<Handle_t> future = promise->get_future();
         push([promise = std::move(promise), shape = std::move(aModel), effect = std::move(aEffect), &aResources]
              (T_renderer & aRenderer) 
              {
                 try
                 {
-                    promise->set_value(aRenderer.LoadModel(shape, effect, aResources));
+                    promise->set_value(aRenderer.loadModel(shape, effect, aResources));
                 }
                 catch(...)
                 {
@@ -272,6 +278,7 @@ public:
 
     void checkRethrow()
     {
+        // Should check from another thread, not the render thread.
         assert(std::this_thread::get_id() != mThread.get_id());
 
         if (mThrew)
@@ -313,7 +320,7 @@ private:
             }
             catch(...)
             {
-                SELOG(critical)("Render thread main loop stopping due to non-exception.");
+                SELOG(critical)("Render thread main loop stopping after throwing a non-std::exception.");
             }
             mThreadException = std::current_exception();
             mThrew = true;
@@ -352,6 +359,7 @@ private:
     {
         SELOG(info)("Render thread started");
 
+// TODO Ad 2024/02/13: Abstract thread naming for all platforms in platform lib.
 #if defined(_WIN32)
         HRESULT r;
         r = SetThreadDescription(GetCurrentThread(), L"Render Thread");
@@ -361,6 +369,9 @@ private:
         // functions.
         mApplication.makeContextCurrent();
 
+        // Now that the GL context is active on this thread,
+        // we can scope a profiler with GL features enabled under it.
+        Guard mRenderProfilerScope = SCOPE_PROFILER(renderer::gRenderProfiler, renderer::Profiler::Providers::All);
 
         // Used by non-interpolating path, to decide if frame is dirty.
         Clock::time_point renderedPushTime;
@@ -386,104 +397,114 @@ private:
 
         while (!mStop)
         {
+            // The V1 profiler does not require the frame ot be ended before writting its output.
             Guard frameProfiling = profileFrame(getProfilerGL());
 
-            // Without the swap buffer
-            BEGIN_RECURRING_GL("Iteration", iterationScope);
-
-            // Service all queued operations first.
+            // NOTE: The artificial scope below is to help with profiler V2
+            // At the moment, we must end the frame before calling the print to ostream
             {
-                TIME_RECURRING(Render, "Service_operations");
-                serviceOperations(*mRenderer);
-            }
+                Guard frameProfiling_v2 = renderer::scopeProfilerFrame(renderer::gRenderProfiler);
 
-            // TODO simulate delay in the render thread:
-            // * Thread iteration time (simulate what CPU compuations run on the
-            // thread, e.g. visibility).
-            // * GPU load, i.e. rendering time. This might be harder to
-            // simulate.
-            // std::this_thread::sleep_for(ms{8});
+                // Without the swap buffer
+                auto iterationProfileEntry = BEGIN_RECURRING_GL("Iteration");
 
-            // Get new latest state, if any
-            {
-                TIME_RECURRING(Render, "Consume_available_states");
-                entries->consume(aStates);
-            }
-
-            //
-            // Interpolate (or pick the current state if interpolation is
-            // disabled)
-            //
-            typename T_renderer::GraphicState_t state;
-            if (mControls.mInterpolate)
-            {
-                TIME_RECURRING(Render, "Interpolation");
-
-                const auto & previous = entries->previous();
-                const auto & latest = entries->current();
-
-                // TODO Is it better to use difference in push times, or the
-                // fixed simulation delta as denominator? Note: using the
-                // difference in push time smoothly "slows" the game if push
-                // occurs less frequently than the simulation period would
-                // require.
-                float interpolant =
-                    float((Clock::now() - latest.pushTime).count())
-                    / (latest.pushTime - previous.pushTime).count();
-                SELOG(trace)
-                ("Render thread: Interpolant is {}, delta between entries is "
-                 "{}ms.",
-                 interpolant,
-                 duration_cast<ms>(latest.pushTime - previous.pushTime)
-                     .count());
-
-                state =
-                    interpolate(*previous.state, *latest.state, interpolant);
-            }
-            else
-            {
-                const auto & latest = entries->current();
-                if (latest.pushTime != renderedPushTime)
+                // Service all queued operations first.
                 {
-                    state = *latest.state;
-                    renderedPushTime = latest.pushTime;
+                    TIME_RECURRING(Render, "Service_operations");
+                    serviceOperations(*mRenderer);
+                }
+
+                // TODO simulate delay in the render thread:
+                // * Thread iteration time (simulate what CPU compuations run on the
+                // thread, e.g. visibility).
+                // * GPU load, i.e. rendering time. This might be harder to
+                // simulate.
+                // std::this_thread::sleep_for(ms{8});
+
+                // Get new latest state, if any
+                {
+                    TIME_RECURRING(Render, "Consume_available_states");
+                    entries->consume(aStates);
+                }
+
+                //
+                // Interpolate (or pick the current state if interpolation is
+                // disabled)
+                //
+                typename T_renderer::GraphicState_t state;
+                if (mControls.mInterpolate)
+                {
+                    TIME_RECURRING(Render, "Interpolation");
+
+                    const auto & previous = entries->previous();
+                    const auto & latest = entries->current();
+
+                    // TODO Is it better to use difference in push times, or the
+                    // fixed simulation delta as denominator? Note: using the
+                    // difference in push time smoothly "slows" the game if push
+                    // occurs less frequently than the simulation period would
+                    // require.
+                    float interpolant =
+                        float((Clock::now() - latest.pushTime).count())
+                        / (latest.pushTime - previous.pushTime).count();
+                    SELOG(trace)
+                    ("Render thread: Interpolant is {}, delta between entries is "
+                    "{}ms.",
+                    interpolant,
+                    duration_cast<ms>(latest.pushTime - previous.pushTime)
+                        .count());
+
+                    state =
+                        interpolate(*previous.state, *latest.state, interpolant);
                 }
                 else
                 {
-                    // The last frame rendered is still for the latest state,
-                    // non need to render.
-                    continue;
+                    const auto & latest = entries->current();
+                    if (latest.pushTime != renderedPushTime)
+                    {
+                        state = *latest.state;
+                        renderedPushTime = latest.pushTime;
+                    }
+                    else
+                    {
+                        // The last frame rendered is still for the latest state,
+                        // non need to render.
+                        continue;
+                    }
+                }
+
+                //
+                // Render
+                //
+                auto frameProfileEntry = BEGIN_RECURRING_GL("Frame");
+                    
+                mApplication.getAppInterface()->clear();
+
+                mRenderer->render(state);
+                SELOG(trace)("Render thread: Frame sent to GPU.");
+
+                {
+                    TIME_RECURRING_GL( "ImGui::renderBackend");
+                    mImguiUi.renderBackend();
+                }
+
+                END_RECURRING_GL(frameProfileEntry);
+                END_RECURRING_GL(iterationProfileEntry);
+
+                {
+                    TIME_RECURRING_GL("Swap buffers");
+                    mApplication.swapBuffers();
                 }
             }
 
-            //
-            // Render
-            //
-            BEGIN_RECURRING_GL("Frame", frameProfilerScope);
-                
-            mApplication.getAppInterface()->clear();
-
-            mRenderer->render(state);
-            SELOG(trace)("Render thread: Frame sent to GPU.");
-
+            // Now that the profiler V2 frame scope has ended, we can print its results. 
             {
-                TIME_RECURRING_GL( "ImGui::renderBackend");
-                mImguiUi.renderBackend();
-            }
-
-            END_RECURRING_GL(frameProfilerScope);
-            END_RECURRING_GL(iterationScope);
-
-            {
-                TIME_RECURRING_GL("Swap buffers");
-                mApplication.swapBuffers();
-            }
-
-            {
-                TIME_RECURRING(Render, "RenderThread_Profiler_dump");
+                TIME_RECURRING_V1(Render, "RenderThread_Profiler_dump");
                 getRenderProfilerPrint().print();
+                v2::getRenderProfilerPrint().print();
             }
         }
+
         // This is smelly, but a consequence of the need to access it from both main and render thread
         // while the destruction should occur on the render thread (where the GL context is)
         mRenderer.reset(); // destruct on clean exit.
@@ -500,8 +521,8 @@ private:
     // Yet, it was limiting, so we could either:
     // * forward variadic ctor args
     // * forward a factory function
-    // * move a fully constructed Renderer here (constructed in main thread,
-    // before releasing GL context) We currently use the 3rd approach.
+    // * move an already constructed Renderer (constructed in main thread, before it releases GL context)
+    // We currently use the 3rd approach.
     // Important: It was moved into a **local copy** scoped to run_impl, so dtor is called on the
     // render thread, where GL context is active.
     // This ensured that even in the case of exception cleaning occured on the RenderThread.

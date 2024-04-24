@@ -1,14 +1,20 @@
 #include "Logging.h"
+#include "Timing.h"
 #include "ViewerApplication.h"
 
 #include <build_info.h>
 
 #include <graphics/ApplicationGlfw.h>
+
 #include <imguiui/ImguiUi.h>
 #include <imguiui/Widgets.h>
+
 #include <profiler/GlApi.h>
 #include <profiler/Profiler.h> // Internals are used to measure frame duration
+
+#include <snac-renderer-V2/debug/DebugDrawing.h>
 #include <snac-renderer-V2/Profiling.h>
+
 #include <utilities/Time.h>
 
 #include <iostream>
@@ -17,6 +23,7 @@
 using namespace ad;
 using namespace se;
 
+using renderer::gRenderProfiler;
 
 std::filesystem::path handleArguments(int argc, char * argv[])
 {
@@ -44,15 +51,16 @@ std::filesystem::path handleArguments(int argc, char * argv[])
 
 void showGui(imguiui::ImguiUi & imguiUi,
              renderer::ViewerApplication & aApplication,
-             const std::string & aProfilerOutput)
+             const std::string & aProfilerOutput,
+             const renderer::Timing & aTime)
 {
-    PROFILER_SCOPE_RECURRING_SECTION("imgui ui", renderer::CpuTime, renderer::GpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "imgui ui", renderer::CpuTime, renderer::GpuTime);
 
     imguiUi.newFrame();
 
     ImGui::Begin("Main control");
     {
-        static bool showProfiler = true;
+        static bool showProfiler = false;
         if(imguiui::addCheckbox("Profiler", showProfiler))
         {
             ImGui::Begin("Profiler");
@@ -79,7 +87,7 @@ void showGui(imguiui::ImguiUi & imguiUi,
         static bool showSceneTree = true;
         if(imguiui::addCheckbox("Scene tree", showSceneTree))
         {
-            aApplication.drawUi();
+            aApplication.drawUi(aTime);
         }
 
         static bool showDemo = false;
@@ -99,6 +107,8 @@ void runApplication(int argc, char * argv[])
 {
     SELOG(info)("Starting application '{}'.", gApplicationName);
 
+    renderer::initializeDebugDrawers();
+
     // Application and window initialization
     graphics::ApplicationFlag glfwFlags = graphics::ApplicationFlag::None;
     graphics::ApplicationGlfw glfwApp{
@@ -115,15 +125,17 @@ void runApplication(int argc, char * argv[])
 
     imguiui::ImguiUi imguiUi{glfwApp};
 
-    SCOPE_GLOBAL_PROFILER(scopeProfiler);
+    auto renderProfilerScope = SCOPE_PROFILER(gRenderProfiler, renderer::Profiler::Providers::All);
 
-    PROFILER_PUSH_SINGLESHOT_SECTION(loadingSection, "rendergraph_loading", renderer::CpuTime);
+    auto loadingSection = PROFILER_BEGIN_SINGLESHOT_SECTION(gRenderProfiler, , "rendergraph_loading", renderer::CpuTime);
     renderer::ViewerApplication application{
         glfwApp.getAppInterface(),
         handleArguments(argc, argv),
         imguiUi,
     };
-    PROFILER_POP_SECTION(loadingSection);
+    PROFILER_END_SECTION(loadingSection);
+
+    renderer::Timing timing;
 
     renderer::Profiler::Values<std::uint64_t> frameDuration;
     Clock::time_point previousFrame = Clock::now();
@@ -135,11 +147,11 @@ void runApplication(int argc, char * argv[])
 
     while (glfwApp.handleEvents())
     {
-        PROFILER_BEGIN_FRAME;
-        PROFILER_PUSH_RECURRING_SECTION("frame", renderer::CpuTime, renderer::GpuTime);
+        PROFILER_BEGIN_FRAME(gRenderProfiler);
+        auto frameSection = PROFILER_BEGIN_RECURRING_SECTION(gRenderProfiler, "frame", renderer::CpuTime, renderer::GpuTime);
 
         {
-            PROFILER_SCOPE_RECURRING_SECTION("fps_counter", renderer::CpuTime);
+            PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "fps_counter", renderer::CpuTime);
             {
                 // TODO this could be integrated into the Profiler::beginFrame()
                 // Currently measure the real frame time (not just the time between beginFrame()/endFrame())
@@ -161,22 +173,22 @@ void runApplication(int argc, char * argv[])
             }
         }
 
-        application.update(stepDuration);
+        application.update(timing.advance(stepDuration));
         application.render();
 
         // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
         // would be better to show current frame 
         // (but this implies to end the profiler frame earlier, thus not profiling ImGui UI)
-        showGui(imguiUi, application, profilerOut.str());
+        showGui(imguiUi, application, profilerOut.str(), timing);
 
         glfwApp.swapBuffers();
 
-        PROFILER_POP_RECURRING_SECTION; // frame
-        PROFILER_END_FRAME;
+        PROFILER_END_SECTION(frameSection);
+        PROFILER_END_FRAME(gRenderProfiler);
 
         // Note: the printing of the profiler content happens out of the frame, so its time is excluded from profiler's frame time
         profilerOut.str("");
-        PROFILER_PRINT_TO_STREAM(profilerOut);
+        PROFILER_PRINT_TO_STREAM(gRenderProfiler, profilerOut);
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
 }

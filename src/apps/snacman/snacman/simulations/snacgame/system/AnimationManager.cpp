@@ -36,13 +36,12 @@ void AnimationManager::update()
 
         component::RigAnimation & playerAnim = aRoundData.mModel.get(animPhase)->get<component::RigAnimation>();
 
-        if (newAnimName != playerAnim.mAnimName)
+        if (newAnimName != playerAnim.mAnimation->mName)
         {
-            playerAnim.mAnimation = &playerAnim.mAnimationMap->at(newAnimName);
-            playerAnim.mAnimName = newAnimName;
+            playerAnim.mAnimation = &playerAnim.mAnimatedRig->mNameToAnimation.at(newAnimName);
             playerAnim.mStartTime = snac::Clock::now();
             playerAnim.mParameter = decltype(component::RigAnimation::mParameter){
-                playerAnim.mAnimation->mEndTime,
+                playerAnim.mAnimation->mDuration,
                 animSpeed
             };
         }

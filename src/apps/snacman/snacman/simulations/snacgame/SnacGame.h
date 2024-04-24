@@ -2,7 +2,7 @@
 
 #include "EntityWrap.h"
 #include "GameContext.h"
-#include "Renderer.h"
+#include "Renderer_V2.h"
 #include "ImguiSceneEditor.h"
 
 #include "component/PlayerSlot.h"
@@ -33,6 +33,8 @@ template <class T_renderer> class RenderThread;
 }
 
 namespace snacgame {
+
+class ImguiInhibiter;
 
 namespace component {
 struct GlobalPose;
@@ -85,37 +87,10 @@ struct ImguiDisplays
         ImGui::End();
     }
 };
-/// \brief Implement HidManager's Inhibiter protocol, for Imgui.
-/// Allowing the app to discard input events that are handled by DearImgui.
-class ImguiInhibiter : public snac::HidManager::Inhibiter
-{
-public:
-    enum WantCapture
-    {
-        Null,
-        Mouse = 1 << 0,
-        Keyboard = 1 << 1,
-    };
-
-    void resetCapture(WantCapture aCaptures) { mCaptures = aCaptures; }
-    bool isCapturingMouse() const override
-    {
-        return (mCaptures & Mouse) == Mouse;
-    }
-    bool isCapturingKeyboard() const override
-    {
-        return (mCaptures & Keyboard) == Keyboard;
-    }
-
-private:
-    std::uint8_t mCaptures{0};
-};
 
 class SnacGame
 {
 public:
-    using Renderer_t = Renderer;
-
     /// \brief Initialize the scene;
     SnacGame(graphics::AppInterface & aAppInterface,
              snac::RenderThread<Renderer_t> & aRenderThread,
@@ -128,9 +103,10 @@ public:
 
     void drawDebugUi(snac::ConfigurableSettings & aSettings,
                      ImguiInhibiter & aInhibiter,
-                     RawInput & aInput);
+                     RawInput & aInput,
+                     const std::string & aProfilerResults);
 
-    std::unique_ptr<visu::GraphicState> makeGraphicState();
+    std::unique_ptr<Renderer_t::GraphicState_t> makeGraphicState();
 
 private:
     graphics::AppInterface * mAppInterface;

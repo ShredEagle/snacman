@@ -1,50 +1,52 @@
 #include "SystemOrbitalCamera.h"
-#include "snacman/simulations/snacgame/GameParameters.h"
+
+#include "../GraphicState_V2.h"
+#include "../GameParameters.h"
 
 #include "../component/Geometry.h"
 
 #include <entity/EntityManager.h>
 
+
 namespace ad {
 namespace snacgame {
 namespace system {
 
-OrbitalCamera::OrbitalCamera(ent::EntityManager & aWorld) :
-    mCamera{aWorld, gInitialCameraSpherical.radius(),
-            gInitialCameraSpherical.polar(),
-            gInitialCameraSpherical.azimuthal()}
-{}
+OrbitalCamera::OrbitalCamera(ent::EntityManager & aWorld, 
+                             float aAspectRatio) :
+    mCamera{aWorld},
+    mControl{aWorld,
+             OrbitalControlInput{
+                .mOrbital = {
+                    gInitialCameraSpherical.radius(),
+                    gInitialCameraSpherical.polar(),
+                    gInitialCameraSpherical.azimuthal()
+                }
+             }}
+{
+    const graphics::PerspectiveParameters initialPerspective{
+        .mAspectRatio = aAspectRatio,
+        .mVerticalFov = math::Degree<float>{45.f},
+        .mNearZ = -0.01f,
+        .mFarZ = -100.f,
+    };
+    mCamera->setupPerspectiveProjection(initialPerspective);
+}
 
 
+// TODO should be able to update aspect ratio when window is resized
 void OrbitalCamera::update(const RawInput & aInput,
                            math::Radian<float> aVerticalFov,
                            int aWindowHeight_screen)
 {
-    if(aInput.mMouse.get(MouseButton::Left))
-    {
-        // Orbiting
-        mCamera->incrementOrbitRadians(-aInput.mMouse.mCursorDisplacement.cwMul(gMouseControlFactor));              
-    }
-    else if(aInput.mMouse.get(MouseButton::Middle))
-    {
-        // Panning
-        snac::Orbital & orbital = *mCamera;
-        float viewedHeightOrbitPlane_world = 2 * tan(aVerticalFov / 2) * std::abs(orbital.radius());
-        float factor = viewedHeightOrbitPlane_world / (float)aWindowHeight_screen;
-        orbital.pan(aInput.mMouse.mCursorDisplacement * factor);              
-    }
-
-    // Mouse scroll
-    float factor = (1 - aInput.mMouse.mScrollOffset.y() * gScrollFactor);
-    mCamera->radius() *= factor;
+    mControl->update(aInput, aVerticalFov, aWindowHeight_screen);
 }
 
 
-visu::Camera OrbitalCamera::getCamera() const
+renderer::Camera OrbitalCamera::getCamera() const
 {
-    return {
-        .mWorldToCamera = mCamera->getParentToLocal(),
-    };
+    mCamera->setPose(mControl->mOrbital.getParentToLocal());
+    return *mCamera;
 }
 
 

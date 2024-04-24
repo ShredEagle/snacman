@@ -1,17 +1,10 @@
 #pragma once
 
 
+#include "Logging-channels.h"
+
 #include <spdlog/spdlog.h>
 #include <fmt/ostream.h>
-
-
-namespace ad::renderer {
-
-
-inline constexpr const char * gMainLogger = "renderer";
-
-
-} // namespace ad::renderer
 
 
 #define SELOG_LG(logger, severity) spdlog::get(logger)->severity

@@ -2,9 +2,11 @@
 
 
 #include "Commons.h" 
+#include "Handle.h"
 #include "IntrospectProgram.h" 
 #include "Material.h"
 #include "Repositories.h"
+#include "Rigging.h"
 
 #include <renderer/Texture.h>
 #include <renderer/UniformBuffer.h>
@@ -13,7 +15,7 @@
 #include <math/Box.h>
 #include <math/Vector.h>
 
-// TODO this is a bit of heavy includes for the general Model file.
+// TODO #compiletime this is a bit of heavy includes for the general Model file.
 #include <list>
 #include <map>
 #include <optional>
@@ -29,27 +31,21 @@ namespace ad::renderer {
 // I feel maybe there is a more data-oriented design lurking here...
 using Name = std::string;
 
-// TODO Ad 2023/08/04: #handle Define a Handle wrapper which makes sense.
-// Note that a central question will be whether we have a "global" storage 
-// (thus handle can be dereferenced without a storage param / without storing a pointer to storage) or not?
-template <class T>
-using Handle = T *;
-
-static constexpr auto gNullHandle = nullptr;
-
 //
 // GL coupled (low level)
 //
 
 // Note: Represent an "homogeneous" chunck in a buffer, for example an array of per-vertex or per-instance data
 // (with a shared stride and instance divisor).
+// (NB: A buffer can thus store heterogenous data, each addressed by distinct views)
 // If we allow to store distinct logical objects in the same view, we can then use the view (or VertexStream) 
 // as an identifier to match VAOs (while batching).
 // This implies that a Part will need an offset into its buffer views.
 // This offset in implemented by the Part m*First and m*Count members.
 struct BufferView
 {
-    graphics::BufferAny * mGLBuffer;
+    // TODO Ad 2024/03/05: This should probably be a direct GL name (probably via a Handle), not a pointer.
+    const graphics::BufferAny * mGLBuffer;
     // The stride is at the view level (not buffer).
     // This way the buffer can store heterogeneous sections, accessed by distinct views.
     GLsizei mStride;
@@ -81,8 +77,8 @@ struct ProgramConfig
         // TODO: When moving to VAB (separate format), reuse the VAO for distinct buffers
         // all buffer sets with the same format (attribute size, component type, relative offset) can share a VAO.
         // (and the buffer would be bound to the VAO)
-        Handle<const VertexStream> mVertexStream;
-        Handle<graphics::VertexArrayObject> mVao;
+        Handle<const VertexStream> mVertexStream; // The lookup key
+        Handle<graphics::VertexArrayObject> mVao; // The cached VAO
     };
     // Note: The cache is implemented as a vector, lookup is made by visiting elements and comparing VertexStream handles.
     std::vector<Entry> mEntries;
@@ -125,6 +121,9 @@ struct Effect
 struct MaterialContext
 {
     RepositoryUbo mUboRepo;
+
+    // Probably would become useless if we went down the bindless-textures route.
+    // (i.e. the variance in MaterialContext would get lower, which means less context changes == better at AZDO)
     RepositoryTexture mTextureRepo;
 };
 
@@ -135,6 +134,9 @@ struct Material
     // later on, it should allow for different types of parameters (that will have to match the different shader program expectations)
     // TODO Ad 2023/10/12: Review how this index is passed: we should make that generic so materials can index into
     // user defined buffers easily, not hardcoding Phong model. 
+    //   Note: The MaterialContext could be used to point to the "SurfaceProperties" array (UBO) applied to this material
+    //         (each array might be of a different type of SurfaceProperty)
+    //          Then the index would index into this array.
     // (The material context is already generic, so complete the job)
     std::size_t mPhongMaterialIdx = (std::size_t)-1;
 
@@ -142,7 +144,7 @@ struct Material
     std::size_t mNameArrayOffset = (std::size_t)-1;
 
     // Allow sorting on the Handle, if the MaterialContext are consolidated.
-    // (lookup for an existing MaterialContext should be done by consolidation when the material in instantiated,
+    // (lookup for an existing MaterialContext should be done by consolidation when the material is instantiated,
     // not each frame)
     Handle<MaterialContext> mContext = gNullHandle;
 
@@ -170,6 +172,7 @@ struct GenericStream
 
 
 // Not using inheritance, since it does allow designated initializers
+// Important: Used as the lookup key for ProgramConfig VAOs
 struct VertexStream /*: public SemanticBufferViews*/
 {
     SEMANTIC_BUFFER_MEMBERS                 
@@ -178,6 +181,24 @@ struct VertexStream /*: public SemanticBufferViews*/
 };
 
 #undef SEMANTIC_BUFFER_MEMBERS
+
+/// @brief Helper to retrieve the `BufferView` associated to a `Semantic`
+/// @attention I am not convinced this is a good idea to provide such methods,
+/// since clients should probably cache this info (not really on calling this each frame).
+inline const renderer::BufferView & getBufferView(const VertexStream & aVertexStream,
+                                                  Semantic aSemantic)
+{
+    return aVertexStream.mVertexBufferViews[
+        aVertexStream.mSemanticToAttribute.at(aSemantic).mBufferViewIndex];
+}
+
+
+inline const renderer::BufferView & getBufferView(const GenericStream & aStream,
+                                                  Semantic aSemantic)
+{
+    return aStream.mVertexBufferViews[
+        aStream.mSemanticToAttribute.at(aSemantic).mBufferViewIndex];
+}
 
 //// TODO might be better as a binary flag, but this still should allow for user extension
 //// (anyway, feature order should not be important)
@@ -194,9 +215,10 @@ struct Part
     Handle<const VertexStream> mVertexStream;
     GLenum mPrimitiveMode = 0;
     // GLuint because it is the type used in the Draw Indirect buffer
-    GLuint mVertexFirst = 0; // The offset of this part into the buffer view(s)
+    GLuint mVertexFirst = 0; // The offset (as a count of vertices) of this part into the vertex attributes buffer view(s)
+                             // (This is the basevertex in OpenGL lingua)
     GLuint mVertexCount = 0;
-    GLuint mIndexFirst = 0;
+    GLuint mIndexFirst = 0; // The offset (as a count of indices) of this part indices into the index buffer view
     GLuint mIndicesCount = 0;
     math::Box<GLfloat> mAabb;
     //FeatureSet mFeatures;
@@ -207,6 +229,12 @@ struct Object
 {
     std::vector<Part> mParts;
     math::Box<GLfloat> mAabb;
+    // TODO #animation should we only store the Rig?
+    // Storing both is convenient to enumerate in the viewer GUI.
+    // Yet the pure animation feature only require the Rig data.
+    // (and it would make sense that even the Viewer has its data-model wrapping this Model,
+    //  to store its client data such as animation lists for Rigs, animation state of Objects, etc...)
+    Handle<AnimatedRig> mAnimatedRig = gNullHandle;
 };
 
 
@@ -216,15 +244,54 @@ struct Object
 
 struct Pose
 {
+    // TODO change to math::Position ?
     math::Vec<3, float> mPosition;
+    // TODO #scaling #skew Should we allow non-uniform (3D) scaling? 
+    // That would allow skewing, making decomposition unpractical
     float mUniformScale{1.f};
+    math::Quaternion<float> mOrientation = math::Quaternion<float>::Identity();
 
+    // Assuming `this` Pose represents a Pose in space A (i.e., local-to-A transform, from `this` perspective).
+    // Given the Pose of a child Node (from the child perspective, its local-to-parent),
+    // this functions returns the child Pose in space A  (i.e. local-to-A transform, from the child perspective).
+    // If space A is canonical, it allows to recursively get aboslute Pose for each Node in a tree.
     Pose transform(Pose aNested) const
     {
-        aNested.mPosition += mPosition;
+        // TODO #math Is it correct? When it is, this should be moved to the math library
+        aNested.mPosition = mPosition + mOrientation.rotate(mUniformScale * aNested.mPosition);
         aNested.mUniformScale *= mUniformScale;
+        aNested.mOrientation = mOrientation * aNested.mOrientation;
         return aNested;
     }
+
+    explicit operator math::AffineMatrix<4, float> () const;
+};
+
+
+Pose interpolate(const Pose & aLeft, const Pose & aRight, float aInterpolant);
+
+
+// TODO Ad 2024/03/20 #animation: After implementing the viewer skeletal animation
+// I do not like having this AnimationState represented in the generic data model.
+// In its current states, it mixes something that is purely clients responsibility (the selected animation and its start time)
+// with something usefull for the rendrer (the posed rig)
+// At a higher level, this poses the problem of scalability of this model regarding features
+// and the ability for clients to implement such techniques without touching the renderer's model.
+// I suspect there might be some cleaner generic approach, allowing clients to populate buffer blocks on their own
+// while allowing them to provide semantic indexes into them as part of the instance stream.
+struct AnimationState
+{
+    // TODO we probably want to store an handle to the RigAnimation directly
+    // instead of a key to the animation (note: that is what we ended up doing here, hence the comment)
+    //StringKey mAnimationKey;
+
+    // TODO get rid of those data, it seems they should really live in the client representation of the instances.
+    const RigAnimation * mAnimation;
+    double mStartTimepoint;
+
+    // Actually, we do not know what we are doing with the design of the rigging system in Model
+    // What the renderer actually needs is a NodeTree "pose", so let us give it that.
+    NodeTree<Rig::Pose> mPosedTree;
 };
 
 
@@ -232,14 +299,27 @@ struct Pose
 /// Equivalent to a "Shape" in the shape list from AZDO talks.
 struct Instance
 {
-    Object * mObject;
+    // The object handle might be the null handle, which might be the case for "pure group" nodes
+    Handle<const Object> mObject;
+    // The local-to-parent Pose of this instance. (Note that parent might be the canonical space.)
     Pose mPose;
     // TODO #matref
     std::optional<Material> mMaterialOverride;
+    // TODO Ad 2024/03/19: Redesign the whole hierarchy data-model with DOD.
+    // This will allow to get rid of those optionals, and to unify the Rig joint tree with the general scene tree.
+    // (SOA NodeTree is a good candidate, with hashmap for optionals).
+    // Note: This is a bad design: Instances without an Object cannot have animation.
+    // Yet this model would allow it.
+    std::optional<AnimationState> mAnimationState; 
     Name mName;
 };
 
 
+// Note: (#flaw_593) A complication with this design is in the presence of a Node which has geometry 
+//       (i.e. non null Object*) and also children.
+//       If clients are expected to provide a list of Instances, it means they need to 
+//       visit the hierarchy to provide the distinct Instances-with-Object in the sub-tree.
+//       It also potentially means that distinct "nested" objects could use the same rig / animation state.
 struct Node
 {
     Instance mInstance;
@@ -268,6 +348,7 @@ struct Storage
     std::list<ProgramConfig> mProgramConfigs;
     std::list<graphics::VertexArrayObject> mVaos;
     std::list<MaterialContext> mMaterialContexts;
+    std::list<AnimatedRig> mAnimatedRigs;
     // Used for random access (DOD)
     std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, so the name at index zero can be used when there are no material parameters
 };

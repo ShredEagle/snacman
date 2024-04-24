@@ -9,8 +9,8 @@
 namespace ad {
 namespace snacgame {
 
-GameContext::GameContext(snac::Resources aResources, snac::RenderThread<Renderer> & aRenderThread) :
-    mResources{aResources},
+GameContext::GameContext(snac::Resources aResources, snac::RenderThread<Renderer_t> & aRenderThread) :
+    mResources{std::move(aResources)},
     mRenderThread{aRenderThread},
     mSceneStack{mWorld},
     mSceneRoot{mWorld.addEntity()},

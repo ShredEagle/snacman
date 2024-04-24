@@ -31,15 +31,28 @@ public:
         std::size_t bufferMemoryWritten() const
         { return mBufferMemory.mWritten ; }
 
+        unsigned int mBufferBindCount{0};
         unsigned int mDrawCount{0};
         Memory mBufferMemory;
         Memory mTextureMemory;
     };
 
+    void BindBuffer(GLenum target, GLuint buffer);
     void BufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
     void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
     void Clear(GLbitfield mask);
+    void Disable(GLenum cap);
+    void DrawArrays(GLenum mode, GLint first, GLsizei count);
+    void DrawArraysInstanced(GLenum mode, GLint first, GLsizei count, GLsizei instancecount);
+    void DrawArraysInstancedBaseInstance(GLenum mode, GLint first, GLsizei count, GLsizei instancecount, GLuint baseinstance);
+    void DrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices);
+    void DrawElementsInstanced(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount);
+    void DrawElementsInstancedBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLuint baseinstance);
+    void DrawElementsInstancedBaseVertex(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex);
+    void DrawElementsInstancedBaseVertexBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex, GLuint baseinstance);
+    void Enable(GLenum cap);
     void MultiDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect, GLsizei drawcount, GLsizei stride);
+    void PolygonMode(GLenum face, GLenum mode);
     void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
     void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
 
@@ -71,6 +84,15 @@ inline GlApi gl;
 //
 // Inline implementations    
 //
+inline void GlApi::BindBuffer(GLenum target, GLuint buffer)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mBufferBindCount;
+#endif
+    glBindBuffer(target, buffer);
+}
+
+
 inline void GlApi::BufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage)
 {
 #if defined(SE_INSTRUMENT_GL)
@@ -103,7 +125,93 @@ inline void GlApi::BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size
 
 inline void GlApi::Clear(GLbitfield mask)
 {
+    // TODO: instrument
     glClear(mask);
+}
+
+
+inline void GlApi::Disable(GLenum cap)
+{
+    // TODO: instrument
+    glDisable(cap);
+}
+
+
+inline void GlApi::Enable(GLenum cap)
+{
+    // TODO: instrument
+    glEnable(cap);
+}
+
+inline void GlApi::DrawArrays(GLenum mode, GLint first, GLsizei count)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawArrays(mode, first, count); 
+}
+
+
+inline void GlApi::DrawArraysInstanced(GLenum mode, GLint first, GLsizei count, GLsizei instancecount)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawArraysInstanced(mode, first, count, instancecount); 
+}
+
+
+inline void GlApi::DrawArraysInstancedBaseInstance(GLenum mode, GLint first, GLsizei count, GLsizei instancecount, GLuint baseinstance)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawArraysInstancedBaseInstance(mode, first, count, instancecount, baseinstance); 
+}
+
+
+inline void GlApi::DrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawElements(mode, count, type, indices);
+}
+
+
+inline void GlApi::DrawElementsInstanced(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawElementsInstanced(mode, count, type, indices, instancecount);
+}
+
+
+inline void GlApi::DrawElementsInstancedBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLuint baseinstance)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawElementsInstancedBaseInstance(mode, count, type, indices, instancecount, baseinstance);
+}
+
+
+inline void GlApi::DrawElementsInstancedBaseVertex(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawElementsInstancedBaseVertex(mode, count, type, indices, instancecount, basevertex);
+}
+
+
+inline void GlApi::DrawElementsInstancedBaseVertexBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex, GLuint baseinstance)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glDrawElementsInstancedBaseVertexBaseInstance(mode, count, type, indices, instancecount, basevertex, baseinstance);
 }
 
 
@@ -113,6 +221,13 @@ inline void GlApi::MultiDrawElementsIndirect(GLenum mode, GLenum type, const voi
     ++v().mDrawCount;
 #endif
     return glMultiDrawElementsIndirect(mode, type, indirect, drawcount, stride);
+}
+
+
+inline void GlApi::PolygonMode(GLenum face, GLenum mode)
+{
+    // TODO instrument
+    glPolygonMode(face, mode);
 }
 
 

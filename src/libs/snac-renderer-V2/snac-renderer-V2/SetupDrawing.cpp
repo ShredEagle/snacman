@@ -42,7 +42,7 @@ namespace {
             // We allow the primary dimension of the vertex attribute to mismatch the provided vertex data, but warn.
             else if (aClientAttribute.mDimension[0] != aShaderAttribute.dimension()[0])
             {
-                SELOG(warn)(
+                SELOG_LG(gPipelineDiag, warn)(
                     "{}: Program '{}' attribute '{}'({}) of dimension {} is to be attached to vertex data of dimension {}.",
                     __func__,
                     aProgramName,
@@ -98,7 +98,7 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
         }
         else
         {
-            SELOG(warn)(
+            SELOG_LG(gPipelineDiag, warn)(
                 "{}: Could not find an a vertex array buffer for semantic '{}' in program '{}'.", 
                 __func__,
                 to_string(shaderAttribute.mSemantic),
@@ -126,7 +126,7 @@ void setBufferBackedBlocks(const IntrospectProgram & aProgram,
         {
             // TODO since this function is currently called before each draw
             // this is much too verbose for a warning...
-            SELOG(warn)(
+            SELOG_LG(gPipelineDiag, warn)(
                 "{}: Could not find an a block uniform for block semantic '{}' in program '{}'.", 
                 __func__,
                 to_string(shaderBlock.mSemantic),
@@ -149,7 +149,7 @@ void setTextures(const IntrospectProgram & aProgram,
             {
                 if (shaderUniform.mArraySize != 1)
                 {
-                    SELOG(error)(
+                    SELOG_LG(gPipelineDiag, error)(
                         "{}: '{}' program uniform '{}'({}) is a sampler array of size {}, setting uniform arrays is not supported.",
                         __func__,
                         aProgram.name(),
@@ -175,8 +175,8 @@ void setTextures(const IntrospectProgram & aProgram,
                 // this is much to verbose for a warning...
                 // In the case of samplers thought this is likely an error:
                 // the sampler being available means it is probably used.
-                SELOG(error)(
-                    "{}: Could not find an a texture for semantic '{}' in program '{}'.", 
+                SELOG_LG(gPipelineDiag, error)(
+                    "{}: Could not find a texture for semantic '{}' in program '{}'.", 
                     __func__,
                     to_string(shaderUniform.mSemantic),
                     aProgram.name());

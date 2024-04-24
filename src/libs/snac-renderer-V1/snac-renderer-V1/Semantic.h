@@ -52,6 +52,12 @@ enum class Semantic
     FontAtlas, // TODO should it just be atlas, used for both sprites and fonts?
     //SpriteAtlas,
 
+    //
+    // Added while decommissioning away from renderer V1
+    //
+    EntityIdx, 
+    MaterialIdx,
+
     _End/* Must be last
 */
 };
@@ -66,6 +72,11 @@ enum class BlockSemantic
     Viewing, // camera pose and projection
     GlyphMetrics, // metrics for the glyphs found in the glyph atlas
     JointMatrices,
+
+    //
+    // Added while decommissioning away from renderer V1
+    //
+    Entities,
 };
 
 

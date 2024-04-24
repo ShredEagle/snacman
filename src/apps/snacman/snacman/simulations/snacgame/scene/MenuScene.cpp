@@ -3,6 +3,11 @@
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/simulations/snacgame/system/MenuManager.h"
 
+#include "../Entities.h"
+#include "../GameParameters.h"
+#include "../InputCommandConverter.h"
+#include "../OrbitalControlInput.h"
+
 #include "../component/Context.h"
 #include "../component/Controller.h"
 #include "../component/Geometry.h"
@@ -15,9 +20,6 @@
 #include "../component/SceneNode.h"
 #include "../component/Tags.h"
 #include "../component/Text.h"
-#include "../Entities.h"
-#include "../GameParameters.h"
-#include "../InputCommandConverter.h"
 #include "../scene/DataScene.h"
 #include "../scene/GameScene.h"
 #include "../scene/JoinGameScene.h"
@@ -76,8 +78,8 @@ MenuScene::MenuScene(GameContext & aGameContext,
     insertEntityInScene(background, mGameContext.mSceneRoot);
 
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
-    snac::Orbital & camOrbital = snac::getComponent<snac::Orbital>(camera);
-    camOrbital.mSpherical = gInitialCameraSpherical;
+    OrbitalControlInput & orbitalControl = snac::getComponent<OrbitalControlInput>(camera);
+    orbitalControl.mOrbital.mSpherical = gInitialCameraSpherical;
 }
 
 void MenuScene::onEnter(Transition aTransition) {}

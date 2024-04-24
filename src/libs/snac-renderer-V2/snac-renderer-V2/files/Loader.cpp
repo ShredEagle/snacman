@@ -1,12 +1,16 @@
 #include "Loader.h"
 
 #include "BinaryArchive.h" 
+#include "Flags.h" 
+#include "Versioning.h" 
 
 #include "../Cube.h"
 #include "../Json.h"
 #include "../Logging.h"
 #include "../RendererReimplement.h"
+#include "../Rigging.h"
 #include "../Semantics.h"
+#include "../VertexStreamUtilities.h"
 
 #include <arte/Image.h>
 
@@ -17,7 +21,8 @@
 #include <renderer/Texture.h>
 #include <renderer/utilities/FileLookup.h>
 
-#include <profiler/GlApi.h>
+#include <cassert>
+
 
 namespace ad::renderer {
 
@@ -33,9 +38,10 @@ namespace {
         return diff <= (maxMagnitude * aRelativeTolerance);
     }
 
-    // TODO move to a more generic library (graphics?)
+    // TODO #math #linearalgebra move to a more generic library (graphics?)
     Pose decompose(const math::AffineMatrix<4, GLfloat> & aTransformation)
     {
+        // TODO Ad 2024/03/27: #pose Also get the rotation part!
         Pose result {
             .mPosition = aTransformation.getAffine(),
         };
@@ -51,67 +57,32 @@ namespace {
             rows[2].getNorm(),
         };
 
-        // TODO we will need to introduce some tolerance here
-        assert(isWithinTolerance(scale[0], 1.f, 1E-6f));
-        assert(isWithinTolerance(scale[1], 1.f, 1E-6f));
-        assert(isWithinTolerance(scale[2], 1.f, 1E-6f));
-        result.mUniformScale = 1;
+        assert(isWithinTolerance(scale[1], scale[0], 1E-6f));
+        assert(isWithinTolerance(scale[2], scale[0], 1E-6f));
         //assert(scale[0] == scale[1] && scale[0] == scale[2]);
-        //result.mUniformScale = scale[0];
+        result.mUniformScale = scale[0];
 
         return result;
     }
 
-
-    /// @brief Create a GL buffer of specified size (without loading data into it).
-    /// @return Buffer view to the buffer.
-    BufferView createBuffer(GLsizei aElementSize,
-                            GLsizeiptr aElementCount,
-                            GLuint aInstanceDivisor,
-                            GLenum aHint,
-                            Storage & aStorage)
+    template <class T_value>
+    T_value readAs(BinaryInArchive & aIn)
     {
-        graphics::BufferAny glBuffer; // glGenBuffers()
-        // Note: Using a random target, the underlying buffer objects are all identical.
-        constexpr auto target = graphics::BufferType::Array;
-        graphics::ScopedBind boundBuffer{glBuffer, target}; // glBind()
+        T_value v;
+        aIn.read(v);
+        return v;
+    }
 
-        const GLsizeiptr bufferSize = aElementSize * aElementCount;
-
-        gl.BufferData(
-            static_cast<GLenum>(target),
-            bufferSize,
-            nullptr,
-            aHint);
-
-        aStorage.mBuffers.push_back(std::move(glBuffer));
-        graphics::BufferAny * buffer = &aStorage.mBuffers.back();
-
-        return BufferView{
-            .mGLBuffer = buffer,
-            .mStride = aElementSize,
-            .mInstanceDivisor = aInstanceDivisor,
-            .mOffset = 0,
-            .mSize = bufferSize, // The view has access to the whole buffer ATM
-        };
-    };
-
-    BufferView makeBufferView(graphics::BufferAny * aBuffer,
-                              GLsizei aElementSize,
-                              GLsizeiptr aElementCount,
-                              GLuint aInstanceDivisor,
-                              GLintptr aOffsetIntoBuffer)
+    template <class T_element>
+    std::vector<T_element> readAsVector(BinaryInArchive & aIn,
+                                        std::size_t aElementCount,
+                                        T_element aDefaultValue = {})
     {
-        const GLsizeiptr bufferSize = aElementSize * aElementCount;
+        std::vector<T_element> result(aElementCount, aDefaultValue);
+        aIn.read(std::span{result});
+        return result;
+    }
 
-        return BufferView{
-            .mGLBuffer = aBuffer,
-            .mStride = aElementSize,
-            .mInstanceDivisor = aInstanceDivisor,
-            .mOffset = aOffsetIntoBuffer,
-            .mSize = bufferSize, // The view has access to the provided range of elements
-        };
-    };
 
     /// @brief Load data into an existing buffer, with offset aElementFirst.
     template <class T_element>
@@ -136,98 +107,11 @@ namespace {
     // TODO Ad 2023/10/11: #loader Get rid of those hardcoded types when the binary streams are dynamic.
     constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
     constexpr auto gNormalSize = gPositionSize;
+    constexpr auto gTangentSize = gPositionSize;
     constexpr auto gUvSize = 2 * sizeof(float);
     constexpr auto gColorSize = 4 * sizeof(float);
     constexpr auto gIndexSize = sizeof(unsigned int);
-
-    struct AttributeDescription
-    {
-        Semantic mSemantic;
-        // To replace wih graphics::ClientAttribute if we support interleaved buffers (i.e. with offset)
-        graphics::AttributeDimension mDimension;
-        GLenum mComponentType;   // data individual components' type.
-    };
-
-    /// @note Provide a distinct buffer for each attribute stream at the moment (i.e. no interleaving).
-    /// @param aVertexStream If not nullptr, create views into this vertex stream buffers instead of creating
-    /// new buffers.
-    Handle<VertexStream> makeVertexStream(unsigned int aVerticesCount,
-                                          unsigned int aIndicesCount,
-                                          std::span<const AttributeDescription> aBufferedStreams,
-                                          Storage & aStorage,
-                                          const GenericStream & aStream,
-                                          // This is probably only useful to create debug data buffers
-                                          // (as there is little sense to not reuse the existing views)
-                                          const VertexStream * aVertexStream = nullptr)
-    {
-        // TODO Ad 2023/10/11: Should we support smaller index types.
-        using Index_t = GLuint;
-        BufferView iboView = [&]()
-        {
-            if(aVertexStream)
-            {
-                const BufferView & previousIndexBufferView = aVertexStream->mIndexBufferView;
-                GLintptr indexOffset = previousIndexBufferView.mSize;
-                graphics::BufferAny * existingBuffer = aVertexStream->mIndexBufferView.mGLBuffer;
-                return makeBufferView(existingBuffer, sizeof(Index_t), aIndicesCount, 0, indexOffset);
-            }
-            else
-            {
-                return createBuffer(sizeof(Index_t), aIndicesCount, 0, GL_STATIC_DRAW, aStorage);
-            }
-        }();
-
-        // The consolidated vertex stream
-        aStorage.mVertexStreams.push_back({
-            .mVertexBufferViews{aStream.mVertexBufferViews},
-            .mSemanticToAttribute{aStream.mSemanticToAttribute},
-            .mIndexBufferView = iboView,
-            .mIndicesType = graphics::MappedGL_v<Index_t>,
-        });
-
-        VertexStream & vertexStream = aStorage.mVertexStreams.back();
-
-        for(const auto & attribute : aBufferedStreams)
-        {
-            const GLsizei attributeSize = 
-                attribute.mDimension.countComponents() * graphics::getByteSize(attribute.mComponentType);
-
-            BufferView attributeView = [&]()
-            {
-                if(aVertexStream)
-                {
-                    // Will throw if there is no buffer for the attribute's semantic in the source VertexStream.
-                    const BufferView & previousBufferView = 
-                        aVertexStream->mVertexBufferViews.at(
-                            aVertexStream->mSemanticToAttribute.at(attribute.mSemantic).mBufferViewIndex);
-                    graphics::BufferAny * attributeBuffer = previousBufferView.mGLBuffer;
-
-                    return makeBufferView(attributeBuffer, attributeSize, aVerticesCount, 0, previousBufferView.mSize);
-                }
-                else
-                {
-                    return createBuffer(attributeSize, aVerticesCount, 0, GL_STATIC_DRAW, aStorage);
-                }
-            }();
-
-            vertexStream.mSemanticToAttribute.emplace(
-                attribute.mSemantic,
-                AttributeAccessor{
-                    .mBufferViewIndex = vertexStream.mVertexBufferViews.size(), // view is added next
-                    .mClientDataFormat{
-                        .mDimension = attribute.mDimension,
-                        .mOffset = 0,
-                        .mComponentType = attribute.mComponentType,
-                    },
-                }
-            );
-
-            vertexStream.mVertexBufferViews.push_back(attributeView);
-        }
-
-        return &vertexStream;
-    }
-
+    constexpr auto gJointDataSize = sizeof(VertexJointData);
 
     // TODO Do we want attribute interleaving, or are we content with one distinct buffer per attribute ?
     // (the attribute interleaving should then be done on the exporter side).
@@ -236,11 +120,11 @@ namespace {
                   // TODO #inout replace this inout by something more sane
                   GLuint & aVertexFirst,
                   GLuint & aIndexFirst,
-                  Material aPartsMaterial)
+                  Material aPartsMaterial /*makes a copy, to edit for this specific part*/)
     {
         // Load data into an existing buffer, with offset aElementFirst.
         auto loadBufferFromArchive = 
-            [&aIn](graphics::BufferAny & aBuffer, 
+            [&aIn](const graphics::BufferAny & aBuffer, 
                    GLuint aElementFirst,
                    GLsizei aElementSize,
                    std::size_t aElementCount)
@@ -251,16 +135,23 @@ namespace {
             };
 
         // TODO #loader Those hardcoded indices are smelly, hard-coupled to the attribute streams structure in the binary.
-        graphics::BufferAny & positionBuffer = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
-        graphics::BufferAny & normalBuffer = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
-        graphics::BufferAny & colorBuffer = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
-        graphics::BufferAny & uvBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
-        graphics::BufferAny & indexBuffer = *(aVertexStream.mIndexBufferView.mGLBuffer);
+        const graphics::BufferAny & positionBuffer  = *(aVertexStream.mVertexBufferViews.end() - 6)->mGLBuffer;
+        const graphics::BufferAny & normalBuffer    = *(aVertexStream.mVertexBufferViews.end() - 5)->mGLBuffer;
+        const graphics::BufferAny & tangentBuffer   = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
+        const graphics::BufferAny & colorBuffer     = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
+        const graphics::BufferAny & uvBuffer        = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
+        const graphics::BufferAny & jointDataBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
+        const graphics::BufferAny & indexBuffer     = *(aVertexStream.mIndexBufferView.mGLBuffer);
 
         const std::string meshName = aIn.readString();
 
         unsigned int materialIndex;
         aIn.read(materialIndex);
+
+        unsigned int vertexAttributesFlags;
+        aIn.read(vertexAttributesFlags);
+        assert(has(vertexAttributesFlags, gVertexPosition));
+        assert(has(vertexAttributesFlags, gVertexNormal));
 
         unsigned int verticesCount;
         aIn.read(verticesCount);
@@ -269,6 +160,14 @@ namespace {
         loadBufferFromArchive(positionBuffer, aVertexFirst, gPositionSize, verticesCount);
         // load normals
         loadBufferFromArchive(normalBuffer, aVertexFirst, gNormalSize, verticesCount);
+        // load tangents, if present
+        // #assetprocessor This assert should go away if we start supporting dynamic list of attributes
+        assert(has(vertexAttributesFlags, gVertexTangent));
+        // Has to be true atm
+        if(has(vertexAttributesFlags, gVertexTangent)) 
+        {
+            loadBufferFromArchive(tangentBuffer, aVertexFirst, gTangentSize, verticesCount);
+        }
 
         unsigned int colorChannelsCount;
         aIn.read(colorChannelsCount);
@@ -295,6 +194,16 @@ namespace {
         const unsigned int indicesCount = 3 * primitiveCount;
         loadBufferFromArchive(indexBuffer, aIndexFirst, gIndexSize, indicesCount);
 
+        {
+            unsigned int bonesCount;
+            aIn.read(bonesCount);
+
+            if(bonesCount != 0)
+            {
+                loadBufferFromArchive(jointDataBuffer, aVertexFirst, gJointDataSize, verticesCount);
+            }
+        }
+
         // Assign the part material index to the otherwise common material
         aPartsMaterial.mPhongMaterialIdx = materialIndex;
         Part part{
@@ -316,7 +225,7 @@ namespace {
     }
 
 
-    Object * addObject(Storage & aStorage)
+    Handle<Object> addObject(Storage & aStorage)
     {
         aStorage.mObjects.emplace_back();
         return &aStorage.mObjects.back();
@@ -325,7 +234,7 @@ namespace {
 
     Node loadNode(BinaryInArchive & aIn,
                   Storage & aStorage,
-                  const Material aDefaultMaterial,
+                  const Material & aBaseMaterial, // Common values are set, not the specific phong material index (it is set by each part)
                   const VertexStream & aVertexStream,
                   // TODO #inout replace this inout by something more sane
                   GLuint & aVertexFirst,
@@ -340,36 +249,121 @@ namespace {
         math::Matrix<4, 3, GLfloat> localTransformation;
         aIn.read(localTransformation);
 
+        Handle<Object> object = [&]()
+        {
+            Handle<Object> result = (meshesCount > 0) ? addObject(aStorage) : gNullHandle;
+
+            for(std::size_t meshIdx = 0; meshIdx != meshesCount; ++meshIdx)
+            {
+                result->mParts.push_back(
+                    loadMesh(aIn, aVertexStream, aVertexFirst, aIndexFirst, aBaseMaterial)
+                );
+            }
+
+            return result;
+        }();
+
         Node node{
             .mInstance{
-                .mObject = (meshesCount > 0) ? addObject(aStorage) : nullptr,
+                .mObject = object,
                 .mPose = decompose(math::AffineMatrix<4, GLfloat>{localTransformation}),
                 .mName = std::move(name),
             },
         };
 
-        for(std::size_t meshIdx = 0; meshIdx != meshesCount; ++meshIdx)
-        {
-            node.mInstance.mObject->mParts.push_back(
-                loadMesh(aIn, aVertexStream, aVertexFirst, aIndexFirst, aDefaultMaterial)
-            );
-        }
         
+        // Rig of the Node
+        unsigned int rigCount;
+        aIn.read(rigCount);
+        // Only one rig at most for the moment
+        assert(rigCount <= 1);
+        if(rigCount == 1)
+        {
+            // A Rig is assigned to an Object
+            assert(node.mInstance.mObject != nullptr);
+
+            // Joint tree
+            unsigned int treeEntries;
+            aIn.read(treeEntries);
+
+            Rig rig{
+                .mJointTree = NodeTree<Rig::Pose>{
+                    .mHierarchy  = readAsVector<NodeTree<Rig::Pose>::Node>(aIn, treeEntries),
+                    .mFirstRoot  = readAs<NodeTree<Rig::Pose>::Node::Index>(aIn),
+                    .mLocalPose  = readAsVector<Rig::Pose>(aIn, treeEntries, Rig::Pose::Identity()),
+                    .mGlobalPose = readAsVector<Rig::Pose>(aIn, treeEntries, Rig::Pose::Identity()),
+                    .mNodeNames  = readAs<decltype(NodeTree<Rig::Pose>::mNodeNames)>(aIn),
+                }
+            };
+
+            // Joint data
+            {
+                unsigned int jointCount;
+                aIn.read(jointCount);
+                rig.mJoints = Rig::JointData{
+                    .mIndices = readAsVector<NodeTree<Rig::Pose>::Node::Index>(aIn, jointCount),
+                    .mInverseBindMatrices = readAsVector<Rig::Ibm>(aIn, jointCount, Rig::Ibm::Identity()),
+                };
+            }
+
+            // Name
+            rig.mArmatureName = aIn.readString();
+
+            aStorage.mAnimatedRigs.push_back({.mRig = std::move(rig)});
+            object->mAnimatedRig = &aStorage.mAnimatedRigs.back();
+        }
+
+
         math::Box<float> objectAabb;
         aIn.read(objectAabb);
         if(node.mInstance.mObject != nullptr)
         {
-            node.mInstance.mObject->mAabb = objectAabb;
+            object->mAabb = objectAabb;
         }
 
         for(std::size_t childIdx = 0; childIdx != childrenCount; ++childIdx)
         {
-            node.mChildren.push_back(loadNode(aIn, aStorage, aDefaultMaterial, aVertexStream, aVertexFirst, aIndexFirst));
+            node.mChildren.push_back(loadNode(aIn, aStorage, aBaseMaterial, aVertexStream, aVertexFirst, aIndexFirst));
         }
 
         aIn.read(node.mAabb);
 
         return node;
+    }
+
+
+    std::vector<RigAnimation> loadAnimations(BinaryInArchive & aIn)
+    {
+        auto animationsCount = readAs<unsigned int>(aIn);
+
+        std::vector<RigAnimation> result;
+        result.reserve(animationsCount);
+
+        for(unsigned int animIdx = 0; animIdx != animationsCount; ++animIdx)
+        {
+            RigAnimation & rigAnimation = result.emplace_back(RigAnimation{
+                .mName = aIn.readString(),
+                .mDuration = readAs<float>(aIn),
+            });
+
+            auto keyframesCount = readAs<unsigned int>(aIn);
+            rigAnimation.mTimepoints = readAsVector<float>(aIn, keyframesCount);
+
+            auto nodesCount = readAs<unsigned int>(aIn);
+            rigAnimation.mNodes = readAsVector<NodeTree<Rig::Pose>::Node::Index>(aIn, nodesCount);
+
+            for(unsigned int nodeIdx = 0; nodeIdx != nodesCount; ++nodeIdx)
+            {
+                rigAnimation.mKeyframes.emplace_back(RigAnimation::NodeKeyframes{
+                    .mTranslations = readAsVector<math::Vec<3, float>>(aIn, keyframesCount),
+                    .mRotations = readAsVector<math::Quaternion<float>>(
+                        aIn, keyframesCount, math::Quaternion<float>::Identity()),
+                    .mScales = readAsVector<math::Vec<3, float>>(aIn, keyframesCount),
+                });
+            }
+        }
+
+        return result;
     }
 
 
@@ -390,19 +384,17 @@ namespace {
 
     // TODO Ad 2023/08/01: 
     // Review how the effects (the programs) are provided to the parts (currently hardcoded)
-    void loadMaterials(BinaryInArchive & aIn,
-                       graphics::UniformBufferObject & aDestinationUbo,
-                       graphics::Texture & aDestinationTexture,
-                       std::vector<Name> & aDestinationNames)
+    MaterialContext loadMaterials(BinaryInArchive & aIn, Storage & aStorage)
     {
         unsigned int materialsCount;
         aIn.read(materialsCount);
 
+        graphics::UniformBufferObject & ubo = aStorage.mUbos.emplace_back();
         {
             std::vector<PhongMaterial> materials{materialsCount};
             aIn.read(std::span{materials});
 
-            graphics::load(aDestinationUbo, std::span{materials}, graphics::BufferHint::StaticDraw);
+            graphics::load(ubo, std::span{materials}, graphics::BufferHint::StaticDraw);
         }
 
         { // load material names
@@ -410,53 +402,76 @@ namespace {
             aIn.read(namesCount);
             assert(namesCount == materialsCount);
 
-            aDestinationNames.reserve(aDestinationNames.size() + materialsCount);
+            auto & materialNames = aStorage.mMaterialNames;
+            materialNames.reserve(materialNames.size() + materialsCount);
             for(unsigned int nameIdx = 0; nameIdx != materialsCount; ++nameIdx)
             {
-                aDestinationNames.push_back(aIn.readString());
+                materialNames.push_back(aIn.readString());
             }
         }
 
-        math::Size<2, int> imageSize;        
-        aIn.read(imageSize);
-
-        unsigned int pathsCount;
-        aIn.read(pathsCount);
-
-        if(pathsCount > 0)
+        auto loadTextures = [&aIn, &aStorage]() -> graphics::Texture *
         {
-            assert(imageSize.width() > 0 && imageSize.height() > 1);
+            math::Size<2, int> imageSize;        
+            aIn.read(imageSize);
 
-            graphics::Texture textureArray{GL_TEXTURE_2D_ARRAY};
-            graphics::ScopedBind boundTextureArray{textureArray};
-            gl.TexStorage3D(textureArray.mTarget, 
-                            graphics::countCompleteMipmaps(imageSize),
-                            graphics::MappedSizedPixel_v<math::sdr::Rgba>,
-                            imageSize.width(), imageSize.height(), pathsCount);
-            { // scoping `isSuccess`
-                GLint isSuccess;
-                glGetTexParameteriv(textureArray.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);
-                if(!isSuccess)
-                {
-                    SELOG(error)("Cannot create immutable storage for textures array.");
-                    throw std::runtime_error{"Error creating immutable storage for textures."};
-                }
-            }
+            unsigned int pathsCount;
+            aIn.read(pathsCount);
 
-            for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
+            if(pathsCount > 0)
             {
-                std::string path = aIn.readString();
-                loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize);
+                assert(imageSize.width() > 0 && imageSize.height() > 1);
+
+                graphics::Texture & textureArray = aStorage.mTextures.emplace_back(GL_TEXTURE_2D_ARRAY);
+                graphics::ScopedBind boundTextureArray{textureArray};
+                gl.TexStorage3D(textureArray.mTarget, 
+                                graphics::countCompleteMipmaps(imageSize),
+                                graphics::MappedSizedPixel_v<math::sdr::Rgba>,
+                                imageSize.width(), imageSize.height(), pathsCount);
+                { // scoping `isSuccess`
+                    GLint isSuccess;
+                    glGetTexParameteriv(textureArray.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);
+                    if(!isSuccess)
+                    {
+                        SELOG(error)("Cannot create immutable storage for textures array.");
+                        throw std::runtime_error{"Error creating immutable storage for textures."};
+                    }
+                }
+
+                for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
+                {
+                    std::string path = aIn.readString();
+                    loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize);
+                }
+
+                glGenerateMipmap(textureArray.mTarget);
+
+                return &textureArray;
             }
+            else
+            {
+                return nullptr;
+            }
+        };
 
-            glGenerateMipmap(textureArray.mTarget);
-
-            aDestinationTexture = std::move(textureArray);
-        }
-        else
+        // IMPORTANT: This sequence is in the exact order of texture types in a binary.
+        static const Semantic semanticSequence[] = {
+            semantic::gDiffuseTexture,
+            semantic::gNormalTexture,
+        };
+        RepositoryTexture textureRepo;
+        for (Semantic texSemantic : semanticSequence)
         {
-            aDestinationTexture = graphics::Texture{GL_TEXTURE_2D_ARRAY, graphics::Texture::NullTag{}};
+            if(graphics::Texture * texture = loadTextures())
+            {
+                textureRepo.emplace(texSemantic, texture);
+            }
         }
+
+        return MaterialContext{
+            .mUboRepo = {{semantic::gMaterials, &ubo}},
+            .mTextureRepo = std::move(textureRepo),
+        };
     }
 
 
@@ -486,6 +501,11 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
         },
     };
 
+    using IndexType = GLuint;
+
+    //
+    // Populate the vertex attributes values, client side
+    //
     std::vector<math::Position<3, GLfloat>> trianglePositions;
     std::vector<math::Vec<3, GLfloat>> triangleNormals;
     std::vector<math::hdr::Rgba_f> triangleColors{
@@ -500,7 +520,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
         trianglePositions.push_back(triangle::Maker::getPosition(vertex) + math::Vec<3, GLfloat>{0.f, 0.f, -1.1f});
         triangleNormals.push_back(triangle::Maker::getNormal(vertex));
     }
-    std::vector<GLuint> triangleIndices{0, 1, 2};
+    std::vector<IndexType> triangleIndices{0, 1, 2};
 
     auto cubePositions = getExpandedCubePositions();
     auto cubeNormals = getExpandedCubeNormals();
@@ -508,48 +528,64 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
     assert(cubePositions.size() == cubeNormals.size());
 
     //TODO handle non-indexed geometry in draw(), so we can get rid of the sequential indices.
-    std::vector<GLuint> cubeIndices(cubePositions.size());
+    std::vector<IndexType> cubeIndices(cubePositions.size());
     std::iota(cubeIndices.begin(), cubeIndices.end(), 0);
 
     const unsigned int verticesCount = (unsigned int)(trianglePositions.size() + cubePositions.size());
     const unsigned int indicesCount = (unsigned int)(triangleIndices.size() + cubeIndices.size());
 
-    // Prepare the common buffer storage for the whole binary (one buffer / attribute)
-    Handle<VertexStream> triangleStream = makeVertexStream(
-        verticesCount,
+    //
+    // Prepare the buffers and vertex streams
+    // Note: The buffers are shared by both shapes,
+    //       but we want each shape to use distinct BufferViews (so distinct VertexStream).
+    //       This tests BufferView offsets.
+
+    // The buffers are for both shapes, so we use the cumulative vertices and indices counts
+    Handle<graphics::BufferAny> indexBuffer = makeBuffer(
+        sizeof(IndexType),
         indicesCount,
-        gAttributeStreamsInBinary,
-        aStorage,
-        aStream);
-    
-    
-    // This is the pendant of hardcoded vertex attributes description, and must be kept in sync
-    // (which is a code smell, we should do better)
-    // The buffer views from aStream have been added at the beginning of the vertex buffer views
-    // so we fetch back from the end.
-    BufferView & positionBufferView = *(triangleStream->mVertexBufferViews.end() - 3);
-    BufferView & normalBufferView   = *(triangleStream->mVertexBufferViews.end() - 2);
-    BufferView & colorBufferView    = *(triangleStream->mVertexBufferViews.end() - 1);
-    BufferView & indexBufferView    = triangleStream->mIndexBufferView;
+        GL_STATIC_DRAW,
+        aStorage
+    );
 
-    // We want each shape to use distinct BufferViews (so distinct VertexStream)
-    // to test BufferView offsets.
-    // Manually get there.
-    positionBufferView.mSize = sizeof(GLfloat) * 3 * trianglePositions.size();
-    normalBufferView.mSize   = sizeof(GLfloat) * 3 * trianglePositions.size();
-    colorBufferView.mSize    = sizeof(GLfloat) * 4 * trianglePositions.size();
-    indexBufferView.mSize    = sizeof(GLuint) * triangleIndices.size();
+    std::vector<Handle<graphics::BufferAny>> attributeBuffers;
+    for(auto attribute : gAttributeStreamsInBinary)
+    {
+        attributeBuffers.push_back(
+            makeBuffer(
+                getByteSize(attribute),
+                verticesCount,
+                GL_STATIC_DRAW,
+                aStorage
+            ));
+    }
 
-    Handle<VertexStream> cubeStream = makeVertexStream(
-        (GLuint)cubePositions.size(),
-        (GLuint)cubeIndices.size(),
-        gAttributeStreamsInBinary,
-        aStorage,
-        aStream,
-        triangleStream);
+    // The vertex streams are separate
+    Handle<VertexStream> triangleStream = primeVertexStream(aStorage, aStream);
+    setIndexBuffer(triangleStream, 
+                   graphics::MappedGL_v<IndexType>,
+                   indexBuffer,
+                   (GLuint)triangleIndices.size(),
+                   0/*offset*/);
+    Handle<VertexStream> cubeStream = primeVertexStream(aStorage, aStream);
+    setIndexBuffer(cubeStream,
+                   graphics::MappedGL_v<IndexType>,
+                   indexBuffer,
+                   (GLuint)cubeIndices.size(),
+                   sizeof(IndexType) * triangleIndices.size());
 
-    // Load the buffers of the vertex streams
+    for(unsigned int idx = 0; idx != gAttributeStreamsInBinary.size(); ++idx)
+    {
+        const auto & attribute = gAttributeStreamsInBinary[idx];
+        const auto & buffer = attributeBuffers[idx];
 
+        addVertexAttribute(triangleStream, attribute, buffer, (GLuint)trianglePositions.size(), 0/*offset*/);
+        addVertexAttribute(cubeStream,     attribute, buffer, (GLuint)cubePositions.size(),     getByteSize(attribute) * trianglePositions.size());
+    }
+
+    //
+    // Load data into the buffers of the vertex streams
+    //
     auto load =
         [](Handle<VertexStream>  aStream,
            GLuint aFirstIndex,  // write offset
@@ -573,7 +609,7 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
     load(cubeStream, cubeFirstVertex, cubeIndices, cubePositions, cubeNormals, cubeColors);
 
     //
-    // Push the objects
+    // Push the objects in storage, return their Nodes.
     //
 
     // Triangle
@@ -652,22 +688,43 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
 }
 
 
-// TODO should not take a default material, but have a way to get the actual effect to use 
+// TODO should not take a default effect, but have a way to get the actual effect to use 
 // (maybe directly from the binary file)
-Node loadBinary(const std::filesystem::path & aBinaryFile,
-                Storage & aStorage,
-                Effect * aPartsEffect,
-                const GenericStream & aStream)
+std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBinaryFile,
+                                             Storage & aStorage,
+                                             Effect * aPartsEffect,
+                                             const GenericStream & aStream)
 {
+    if(aBinaryFile.extension() != ".seum")
+    {
+        SELOG(error)("Files with extension '{}' are not supported.",
+                     aBinaryFile.extension().string());
+        return SeumErrorCode::UnsupportedFormat;
+    }
+
     BinaryInArchive in{
         .mIn{std::ifstream{aBinaryFile, std::ios::binary}},
         .mParentPath{aBinaryFile.parent_path()},
     };
 
     // TODO we need a unified design where the load code does not duplicate the type of the write.
+    std::uint16_t magicValue{0};
+    in.read(magicValue);
+    if(magicValue != gSeumMagic)
+    {
+        SELOG(error)("The seum magic preamble is not matching.");
+        return SeumErrorCode::InvalidMagicPreamble;
+    }
+
     unsigned int version;
     in.read(version);
-    assert(version == 1);
+    assert(version <= gSeumVersion);
+    if(version != gSeumVersion)
+    {
+        SELOG(warn)("The provided binary has version {}, but current version of the format is {}.", 
+                    version, gSeumVersion);
+        return SeumErrorCode::OutdatedVersion;
+    }
 
     unsigned int verticesCount = 0;
     unsigned int indicesCount = 0;
@@ -677,7 +734,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
 
     // Binary attributes descriptions
     // TODO Ad 2023/10/11: #loader Support dynamic set of attributes in the binary
-    static const std::array<AttributeDescription, 4> gAttributeStreamsInBinary {
+    static const std::array<AttributeDescription, 5> gAttributeStreamsInBinary {
         AttributeDescription{
             .mSemantic = semantic::gPosition,
             .mDimension = 3,
@@ -685,6 +742,11 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
         },
         AttributeDescription{
             .mSemantic = semantic::gNormal,
+            .mDimension = 3,
+            .mComponentType = GL_FLOAT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gTangent,
             .mDimension = 3,
             .mComponentType = GL_FLOAT,
         },
@@ -700,41 +762,94 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
         },
     };
 
+    static const std::array<std::pair<AttributeDescription, std::size_t>, 2> gInterleavedJointAttributes {{
+        {
+            AttributeDescription{
+                .mSemantic = semantic::gJoints0,
+                .mDimension = VertexJointData::gMaxBones,
+                .mComponentType = GL_UNSIGNED_INT,
+            },
+            offsetof(VertexJointData, mBoneIndices),
+        },
+        {
+            AttributeDescription{
+                .mSemantic = semantic::gWeights0,
+                .mDimension = VertexJointData::gMaxBones,
+                .mComponentType = GL_FLOAT,
+            },
+            offsetof(VertexJointData, mBoneWeights),
+        }
+    }};
+
     // Prepare the single buffer storage for the whole binary
     VertexStream * consolidatedStream = makeVertexStream(
         verticesCount,
         indicesCount,
+        GL_UNSIGNED_INT,
         gAttributeStreamsInBinary,
         aStorage,
         aStream);
 
-    // Prepare a MaterialContext for the whole binary, 
-    // I.e. in a scene, each entry (each binary) gets its own material UBO and its own Texture array.
-    // TODO #azdo #perf we could load textures and materials in a single buffer for a whole scene to further consolidate
-    // TODO #assetprocessor If materials were loaded first, then loadMaterials could directly create the UBO and Texture
-    //    * no need to add a texture if the model does not use them.
-    {
-        aStorage.mUbos.emplace_back();
-        aStorage.mTextures.emplace_back(GL_TEXTURE_2D_ARRAY); // Will be overwritten anyway
+    // Add the interleaved joint attributes to the vertex stream
+    Handle<graphics::BufferAny> vertexJointDataBuffer = makeBuffer(
+        sizeof(VertexJointData),
+        verticesCount,
+        GL_STATIC_DRAW,
+        aStorage);
+    addInterleavedAttributes(
+        consolidatedStream,
+        sizeof(VertexJointData),
+        gInterleavedJointAttributes,
+        vertexJointDataBuffer,
+        verticesCount);
 
-        aStorage.mMaterialContexts.push_back(MaterialContext{
-            .mUboRepo = {{semantic::gMaterials, &aStorage.mUbos.back()}},
-            .mTextureRepo = {{semantic::gDiffuseTexture, &aStorage.mTextures.back()}},
-        });
-    }
-    Material partsMaterial{
+    // Prepare a MaterialContext for the whole binary, 
+    // I.e. in a scene, each entry (each distinct binary) gets its own material UBO and its own Texture array.
+    // TODO #azdo #perf we could load textures and materials in a single buffer for a whole scene to further consolidate
+    MaterialContext & aCommonMaterialContext = aStorage.mMaterialContexts.emplace_back();
+    
+    // Set the common values shared by all parts in this binary.
+    // (The actual phong material index will be set later, by each part)
+    Material baseMaterial{
         // The material names is a single array for all binaries
         // the binary-local material index needs to be offset to index into the common name array.
         .mNameArrayOffset = aStorage.mMaterialNames.size(),
-        .mContext = &aStorage.mMaterialContexts.back(),
+        .mContext = &aCommonMaterialContext,
         .mEffect = aPartsEffect,
     };
 
     GLuint vertexFirst = 0;
     GLuint indexFirst = 0;
-    Node result = loadNode(in, aStorage, partsMaterial, *consolidatedStream, vertexFirst, indexFirst);
 
-    loadMaterials(in, aStorage.mUbos.back(), aStorage.mTextures.back(), aStorage.mMaterialNames);
+    // TODO Ad 2024/03/07: Find a cleaner (more direct and explicit) way to handle rigs and their animations
+    // Currently compares the number of AnimatedRigs before and after loading then node, to see if one was added
+    std::size_t rigsCount = aStorage.mAnimatedRigs.size();
+    Node result = loadNode(in, aStorage, baseMaterial, *consolidatedStream, vertexFirst, indexFirst);
+    rigsCount = aStorage.mAnimatedRigs.size() - rigsCount;
+
+    // Hackish way to add the RigAnimations into the AnimateRig
+    {
+        std::vector<RigAnimation> animations = loadAnimations(in);
+        
+        if(animations.empty())
+        {
+            assert(rigsCount == 0);
+        }
+        else
+        {
+            assert(rigsCount == 1);
+            auto & nameToAnim = aStorage.mAnimatedRigs.back().mNameToAnimation;
+            for(RigAnimation & anim : animations)
+            {
+                nameToAnim.emplace(anim.mName, std::move(anim));
+            }
+        }
+    }
+    
+
+    // TODO #assetprocessor If materials were loaded first, then the empty context 
+    // Then we could directly instantiate the MaterialContext with this value.
+    aCommonMaterialContext = loadMaterials(in, aStorage);
 
     return result;
 }
@@ -742,7 +857,7 @@ Node loadBinary(const std::filesystem::path & aBinaryFile,
 
 Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
                             Storage & aStorage,
-                            const std::vector<std::string> & aDefines_temp)
+                            const std::vector<std::string> & aDefines_temp) const
 {
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
@@ -751,14 +866,9 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
     Json effect = Json::parse(std::ifstream{mFinder.pathFor(aEffectFile)});
     for (const auto & technique : effect.at("techniques"))
     {
-        aStorage.mPrograms.push_back(ConfiguredProgram{
-            .mProgram = loadProgram(technique.at("programfile"), aDefines_temp),
-            // TODO Share Configs between programs that are compatibles (i.e., same input semantic and type at same attribute index)
-            // (For simplicity, we create one Config per program at the moment).
-            .mConfig = (aStorage.mProgramConfigs.emplace_back(), &aStorage.mProgramConfigs.back()),
-        });
         result.mTechniques.push_back(Technique{
-            .mConfiguredProgram = &aStorage.mPrograms.back(),
+            .mConfiguredProgram =
+                storeConfiguredProgram(loadProgram(technique.at("programfile"), aDefines_temp), aStorage),
         });
 
         if(technique.contains("annotations"))
@@ -775,7 +885,7 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
 
 
 IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
-                                      const std::vector<std::string> & aDefines_temp)
+                                      std::vector<std::string> aDefines_temp) const
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 
@@ -800,9 +910,14 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
     for (auto [shaderStage, shaderFile] : program.items())
     {
         GLenum stageEnumerator;
-        if(shaderStage == "features")
+        if(shaderStage == "defines")
         {
             // Special case, not a shader stage
+            for (std::string macro : shaderFile)
+            {
+                aDefines_temp.push_back(std::move(macro));
+            }
+            SELOG(warn)("'{}' program has 'defines', which are not recommended with V2.", aProgFile.string());
             continue;
         }
         else if(shaderStage == "vertex")
@@ -839,11 +954,11 @@ graphics::ShaderSource Loader::loadShader(const filesystem::path & aShaderFile) 
 
 GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
 {
-    BufferView vboView = createBuffer(sizeof(InstanceData),
-                                      aInstanceCount,
-                                      1,
-                                      GL_STREAM_DRAW,
-                                      aStorage);
+    BufferView vboView = makeBufferGetView(sizeof(InstanceData),
+                                           aInstanceCount,
+                                           1,
+                                           GL_STREAM_DRAW,
+                                           aStorage);
 
     return GenericStream{
         .mVertexBufferViews = { vboView, },
@@ -870,6 +985,17 @@ GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
                     },
                 }
             },
+            {
+                semantic::gMatrixPaletteOffset,
+                AttributeAccessor{
+                    .mBufferViewIndex = 0, // view is added above
+                    .mClientDataFormat{
+                        .mDimension = 1,
+                        .mOffset = offsetof(InstanceData, mMatrixPaletteOffset),
+                        .mComponentType = GL_UNSIGNED_INT,
+                    },
+                }
+            }
         }
     };
 }

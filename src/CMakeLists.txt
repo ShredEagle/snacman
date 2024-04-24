@@ -2,6 +2,7 @@ add_subdirectory(libs/utilities/utilities)
 add_subdirectory(libs/profiler/profiler)
 add_subdirectory(libs/snac-renderer-V1/snac-renderer-V1)
 add_subdirectory(libs/snac-renderer-V2/snac-renderer-V2)
+add_subdirectory(libs/file-processor/file-processor)
 
 #add_subdirectory(apps/snac-viewer/snac-viewer)
 add_subdirectory(apps/snacman/snacman)

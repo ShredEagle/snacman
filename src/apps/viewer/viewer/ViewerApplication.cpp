@@ -2,6 +2,7 @@
 
 #include "Json.h"
 #include "Logging.h"
+#include "PassViewer.h"
 
 
 #include <handy/vector_utils.h>
@@ -17,11 +18,10 @@
 #include <profiler/GlApi.h>
 
 #include <snac-renderer-V2/Cube.h>
-#include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/Profiling.h>
+#include <snac-renderer-V2/debug/DebugDrawing.h>
 
 // TODO #nvtx This should be handled cleanly by the profiler
-#define NOMINMAX
 #include "../../../libs/snac-renderer-V1/snac-renderer-V1/3rdparty/nvtx/include/nvtx3/nvtx3.hpp"
 
 #include <array>
@@ -39,7 +39,7 @@ const char * gVertexShader = R"#(
 
     in uint in_ModelTransformIdx;
 
-    layout(std140, binding = 1) uniform ViewBlock
+    layout(std140, binding = 1) uniform ViewProjectionBlock
     {
         mat4 worldToCamera;
         mat4 projection;
@@ -167,20 +167,44 @@ namespace {
     }
 
 
-    void populatePartList(PartList & aPartList, const Node & aNode, const Pose & aParentPose, const Material * aMaterialOverride)
+    void populatePartList(ViewerPartList & aPartList,
+                          const Node & aNode,
+                          const Pose & aParentAbsolutePose,
+                          const Material * aMaterialOverride)
     {
         const Instance & instance = aNode.mInstance;
         const Pose & localPose = instance.mPose;
-        Pose absolutePose = aParentPose.transform(localPose);
+        Pose absolutePose = aParentAbsolutePose.transform(localPose);
 
         if(instance.mMaterialOverride)
         {
             aMaterialOverride = &*instance.mMaterialOverride;
         }
 
-        if(Object * object = aNode.mInstance.mObject;
+        if(const Object * object = aNode.mInstance.mObject;
            object != nullptr)
         {
+            // the default value (i.e. not rigged)
+            GLsizei paletteOffset = ViewerPartList::gInvalidIdx;
+
+            if(auto animatedRig = object->mAnimatedRig)
+            {
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "compute_joint_matrices", CpuTime);
+
+                // TODO Ad 2024/03/20 #perf #animation:
+                // We could share the matrix palette for all no-animation (i.e. default rig pose),
+                // or even for "static animations" (i.e. single keyframe, defining a static pose)
+                // instead of currently always producing a matrix palette for each object with a rig.
+                paletteOffset = (GLsizei)aPartList.mRiggingPalettes.size();
+
+                const Rig & rig = animatedRig->mRig;
+                aPartList.mRiggingPalettes.reserve(aPartList.mRiggingPalettes.size() + rig.countJoints());
+                rig.computeJointMatrices(
+                        std::back_inserter(aPartList.mRiggingPalettes), 
+                        aNode.mInstance.mAnimationState ? aNode.mInstance.mAnimationState->mPosedTree 
+                                                   : animatedRig->mRig.mJointTree);
+            }
+
             for(const Part & part: object->mParts)
             {
                 const Material * material =
@@ -190,6 +214,7 @@ namespace {
                 aPartList.mMaterials.push_back(material);
                 // pushed after
                 aPartList.mTransformIdx.push_back((GLsizei)aPartList.mInstanceTransforms.size());
+                aPartList.mPaletteOffset.push_back(paletteOffset);
             }
 
             aPartList.mInstanceTransforms.push_back(
@@ -207,13 +232,17 @@ namespace {
 } // unnamed namespace
 
 
-PartList Scene::populatePartList() const
+ViewerPartList Scene::populatePartList() const
 {
-    PROFILER_SCOPE_RECURRING_SECTION("populate_draw_list", CpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "populate_part_list", CpuTime);
 
-    PartList partList;
-    renderer::populatePartList(partList, mRoot, mRoot.mInstance.mPose, 
-                               mRoot.mInstance.mMaterialOverride ? &*mRoot.mInstance.mMaterialOverride : nullptr);
+    ViewerPartList partList;
+    renderer::populatePartList(partList,
+                               mRoot,
+                               Pose{}, // Identity pose, because it represents
+                                       // the pose of the canonical space in the canonical space
+                               mRoot.mInstance.mMaterialOverride ? &*mRoot.mInstance.mMaterialOverride 
+                                                                   : nullptr);
     return partList;
 }
 
@@ -290,8 +319,8 @@ void registerGlfwCallbacks(graphics::AppInterface & aAppInterface,
 
 
 ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
-                         const std::filesystem::path & aSceneFile,
-                         const imguiui::ImguiUi & aImguiUi) :
+                                     const std::filesystem::path & aSceneFile,
+                                     const imguiui::ImguiUi & aImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
@@ -305,7 +334,15 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close, &aImguiUi);
     registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
 
-    mScene = loadScene(aSceneFile, mGraph.mInstanceStream, mLoader, mStorage);
+    if(aSceneFile.extension() == ".sew")
+    {
+        mScene = loadScene(aSceneFile, mGraph.mInstanceStream, mLoader, mStorage);
+    }
+    else
+    {
+        throw std::invalid_argument{"Unsupported filetype: " + aSceneFile.extension().string()};
+    }
+
     /*const*/Node & model = mScene.mRoot.mChildren.front();
 
     // TODO Ad 2023/10/03: Sort out this bit of logic: remove hardcoded sections,
@@ -349,10 +386,93 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
 }
 
 
-void ViewerApplication::update(float aDeltaTime)
+constexpr std::array<math::hdr::Rgba<float>, 4> gColorRotation
 {
-    PROFILER_SCOPE_RECURRING_SECTION("ViewerApplication::update()", CpuTime);
-    mFirstPersonControl.update(aDeltaTime);
+    math::hdr::gCyan<float>,
+    math::hdr::gMagenta<float>,
+    math::hdr::gGreen<float>,
+    math::hdr::gYellow<float>,
+};
+
+void drawJointTree(const NodeTree<Rig::Pose> & aRigTree,
+                   NodeTree<Rig::Pose>::Node::Index aNodeIdx,
+                   const Rig::FuturePose_type & aPose,
+                   math::AffineMatrix<4, float> aModelTransform,
+                   std::size_t aColorIdx = 0,
+                   std::optional<math::Position<3, float>> aParentPosition = std::nullopt)
+{
+    using Node = NodeTree<Rig::Pose>::Node;
+
+    const Node & node = aRigTree.mHierarchy[aNodeIdx];
+    math::Position<3, float> position =
+        (aPose.mGlobalPose[aNodeIdx] * aModelTransform).getAffine().as<math::Position>();
+
+    if(aParentPosition)
+    {
+        DBGDRAW_INFO(drawer::gRig).addLine(*aParentPosition, position, gColorRotation[aColorIdx % gColorRotation.size()]);
+    }
+
+    if(aRigTree.hasChild(aNodeIdx))
+    {
+        drawJointTree(aRigTree, node.mFirstChild, aPose, aModelTransform, aColorIdx + 1, position);
+    }
+
+    if(node.mNextSibling != Node::gInvalidIndex)
+    {
+        drawJointTree(aRigTree, node.mNextSibling, aPose, aModelTransform, aColorIdx, aParentPosition);
+    }
+}
+
+
+void handleAnimations(Node & aNode,
+                      const Timing & aTime,
+                      Pose aParentPose = {})
+{
+    Pose pose = aParentPose.transform(aNode.mInstance.mPose);
+    if(const Object * object = aNode.mInstance.mObject)
+    {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "handle_animations", CpuTime);
+        if(auto & animationState = aNode.mInstance.mAnimationState)
+        {
+            assert(object->mAnimatedRig);
+            const RigAnimation & animation = *animationState->mAnimation;
+            animationState->mPosedTree = animate(
+                animation,
+                (float)std::fmod(aTime.mSimulationTimepoint - animationState->mStartTimepoint, (double)animation.mDuration),
+                object->mAnimatedRig->mRig.mJointTree);
+        }
+
+        // Draw the rig (potentially posed by animation)
+        if(object->mAnimatedRig)
+        {
+            const Rig & rig = object->mAnimatedRig->mRig;
+            drawJointTree(rig.mJointTree,
+                            rig.mJointTree.mFirstRoot,
+                            aNode.mInstance.mAnimationState ? aNode.mInstance.mAnimationState->mPosedTree
+                                                        : rig.mJointTree,
+                            static_cast<math::AffineMatrix<4, float>>(pose));
+        }
+
+    }
+
+    for(Node & child : aNode.mChildren)
+    {
+        handleAnimations(child, aTime, pose);
+    }
+}
+
+
+void ViewerApplication::update(const Timing & aTime)
+{
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "ViewerApplication::update()", CpuTime);
+
+    snac::DebugDrawer::StartFrame();
+
+    // Draw the Rigs joints / bones using DebugDrawer
+    // Animate the rigs
+    handleAnimations(mScene.mRoot, aTime);
+
+    mFirstPersonControl.update(aTime.mDeltaDuration);
 
     // TODO #camera: handle this when necessary
     // Update camera to match current values in orbital control.
@@ -367,23 +487,25 @@ void ViewerApplication::update(float aDeltaTime)
 }
 
 
-void ViewerApplication::drawUi()
+void ViewerApplication::drawUi(const renderer::Timing & aTime)
 {
-    mSceneGui.present(mScene);
+    mSceneGui.present(mScene, aTime);
 }
 
 
 void ViewerApplication::render()
 {
-    PROFILER_SCOPE_RECURRING_SECTION("ViewerApplication::render()", CpuTime, GpuTime, BufferMemoryWritten);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "ViewerApplication::render()", CpuTime, GpuTime, BufferMemoryWritten);
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
     // TODO: How to handle material/program selection while generating the part list,
     // if the camera (or pass itself?) might override the materials?
     // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
-    PartList partList = mScene.populatePartList();
+    ViewerPartList partList = mScene.populatePartList();
     mGraph.renderFrame(partList, mCamera, mStorage);
+
+    mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
 }
 
 

@@ -14,26 +14,35 @@ set(${TARGET_NAME}_HEADERS
     Input.h
     Logging.h
     LoopSettings.h
-    QueryManipulation.h
     Profiling.h
+    Profiling_V2.h
     ProfilingGPU.h
+    QueryManipulation.h
     RenderThread.h
     Resources.h
     SparseSet.h
+    TemporaryRendererHelpers.h # TODO should be removed, this was a hack waiting to host Object instead of Node in VisualModel
     Timing.h
+
+    simulations/sandbox/ModelLoader.h
 
     simulations/snacgame/EntityWrap.h
     simulations/snacgame/Entities.h
     simulations/snacgame/GameContext.h
     simulations/snacgame/GameParameters.h
     simulations/snacgame/GraphicState.h
+    simulations/snacgame/GraphicState_V2.h
+    simulations/snacgame/ImguiInhibiter.h
     simulations/snacgame/ImguiSceneEditor.h
     simulations/snacgame/InputConstants.h
     simulations/snacgame/InputCommandConverter.h
     simulations/snacgame/LevelHelper.h
     simulations/snacgame/ModelInfos.h
+    simulations/snacgame/OrbitalControlInput.h
     simulations/snacgame/PlayerSlotManager.h
     simulations/snacgame/Renderer.h
+    simulations/snacgame/Renderer_V1.h
+    simulations/snacgame/Renderer_V2.h
     simulations/snacgame/SceneGraph.h
     simulations/snacgame/SnacGame.h
     simulations/snacgame/SimulationControl.h
@@ -106,11 +115,15 @@ set(${TARGET_NAME}_SOURCES
     RenderThread.cpp
     Resources.cpp
 
+    simulations/sandbox/ModelLoader.cpp
+
     simulations/snacgame/Entities.cpp
     simulations/snacgame/GameContext.cpp
     simulations/snacgame/ImguiSceneEditor.cpp
+    simulations/snacgame/OrbitalControlInput.cpp
     simulations/snacgame/PlayerSlotManager.cpp
-    simulations/snacgame/Renderer.cpp
+    simulations/snacgame/Renderer_V1.cpp
+    simulations/snacgame/Renderer_V2.cpp
     simulations/snacgame/SnacGame.cpp
     simulations/snacgame/SimulationControl.cpp
     simulations/snacgame/SceneGraph.cpp
@@ -188,9 +201,14 @@ cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsErro
 
 cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
+get_target_property(RENDERER_SOURCE_DIR ad::snac-renderer-V2 SOURCE_DIR)
+
 file(GENERATE 
      OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
-     CONTENT "{\"prefixes\": [\"${REPO_FOLDER}/src/libs/snac-renderer-V1/snac-renderer-V1/\",
+     # TODO: should we remove the snacman local V2_resources folder?
+     #       for the moment we cannot, we have dedicated custom shaders for snacman (not the base renderer versions)
+     CONTENT "{\"prefixes\": [\"${RENDERER_SOURCE_DIR}/resources/\",
+                              \"${CMAKE_CURRENT_LIST_DIR}/renderer_V2_resources/\",
                               \"${REPO_FOLDER}/../snac-assets/\"]}")
 
 
@@ -209,7 +227,10 @@ find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
-        ad::snac-renderer-V1
+        ad::file-processor
+        ad::profiler
+        ad::snac-renderer-V1 # TODO #RV2 remove
+        ad::snac-renderer-V2
 
         ad::arte
         ad::entity

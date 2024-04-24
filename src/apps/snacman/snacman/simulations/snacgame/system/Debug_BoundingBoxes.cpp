@@ -47,7 +47,7 @@ void Debug_BoundingBoxes::update()
                     .mScaling = aGlobalPose.mInstanceScaling * aGlobalPose.mScaling,
                     .mOrientation = aGlobalPose.mOrientation,
                 },
-                aModel.mModel->mBoundingBox
+                aModel.mModel->mAabb
             );
         };
 

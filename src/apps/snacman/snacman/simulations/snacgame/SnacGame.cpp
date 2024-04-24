@@ -1,5 +1,7 @@
 #include "SnacGame.h"
 
+#include "ImguiInhibiter.h"
+
 #include "component/AllowedMovement.h"
 #include "component/Context.h"
 #include "component/Controller.h"
@@ -33,6 +35,8 @@
 #include "system/SystemOrbitalCamera.h"
 #include "typedef.h"
 
+#include <snacman/TemporaryRendererHelpers.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -50,12 +54,15 @@
 #include <snacman/ImguiUtilities.h>
 #include <snacman/LoopSettings.h>
 #include <snacman/Profiling.h>
+#include <snacman/Profiling_V2.h>
 #include <snacman/QueryManipulation.h>
 #include <snacman/RenderThread.h>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#include <cassert>
 
 namespace ad {
 struct RawInput;
@@ -79,7 +86,9 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         snac::Resources{std::move(aResourceFinder), aFreetype, aRenderThread},
         aRenderThread),
     mMappingContext{mGameContext.mWorld, mGameContext.mResources},
-    mSystemOrbitalCamera{mGameContext.mWorld, mGameContext.mWorld},
+    mSystemOrbitalCamera{mGameContext.mWorld,
+                         mGameContext.mWorld,
+                         math::getRatio<float>(mAppInterface->getWindowSize())},
     mQueryRenderable{mGameContext.mWorld, mGameContext.mWorld},
     mQueryTextWorld{mGameContext.mWorld, mGameContext.mWorld},
     mQueryTextScreen{mGameContext.mWorld, mGameContext.mWorld},
@@ -101,7 +110,8 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                            ImguiInhibiter & aInhibiter,
-                           RawInput & aInput)
+                           RawInput & aInput,
+                           const std::string & aProfilerResults)
 {
     TIME_RECURRING_FUNC(Main);
 
@@ -288,10 +298,16 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
 
         if (mImguiDisplays.mShowMainProfiler)
         {
-            ImGui::Begin("Main profiler", &mImguiDisplays.mShowMainProfiler);
-            std::string str;
-            snac::getProfiler(snac::Profiler::Main).print(str);
-            ImGui::TextUnformatted(str.c_str());
+            {
+                ImGui::Begin("Main profiler", &mImguiDisplays.mShowMainProfiler);
+                std::string str;
+                snac::getProfiler(snac::Profiler::Main).print(str);
+                ImGui::TextUnformatted(str.c_str());
+                ImGui::End();
+            }
+
+            ImGui::Begin("Main profiler V2", &mImguiDisplays.mShowMainProfiler);
+            ImGui::TextUnformatted(aProfilerResults.c_str());
             ImGui::End();
         }
         if (mImguiDisplays.mShowRenderProfiler)
@@ -300,6 +316,12 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                          &mImguiDisplays.mShowRenderProfiler);
             ImGui::TextUnformatted(
                 snac::getRenderProfilerPrint().get().c_str());
+            ImGui::End();
+
+            ImGui::Begin("Render profiler V2",
+                         &mImguiDisplays.mShowRenderProfiler);
+            ImGui::TextUnformatted(
+                snac::v2::getRenderProfilerPrint().get().c_str());
             ImGui::End();
         }
         if (mImguiDisplays.mShowRenderControls)
@@ -337,6 +359,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 {
                     Phase pathfinding;
                     Entity pEntity = *pathfinder.get(pathfinding);
+                    assert(false && "Sorry, I removed support for cube special case");
                     addMeshGeoNode(mGameContext, pEntity, "CUBE",
                                    "effects/Mesh.sefx", {7.f, 7.f, gPillHeight},
                                    1.f, {0.5f, 0.5f, 0.5f});
@@ -408,11 +431,12 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
     return false;
 }
 
-std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
+
+std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
 {
     TIME_RECURRING_FUNC(Main);
 
-    auto state = std::make_unique<visu::GraphicState>();
+    auto state = std::make_unique<Renderer_t::GraphicState_t>();
 
     ent::Phase nomutation;
 
@@ -431,26 +455,32 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
         // but we do not want to handle VisualModel the same way depending on
         // the presence of RigAnimation (and we do not have "negation" on
         // Queries, to separately get VisualModels without RigAnimation)
-        visu::Entity::SkeletalAnimation skeletal;
+        visu_V2::Entity::SkeletalAnimation skeletal;
         if (auto entity = *aHandle.get(); entity.has<component::RigAnimation>())
         {
             const auto & rigAnimation =
                 aHandle.get()->get<component::RigAnimation>();
-            skeletal = visu::Entity::SkeletalAnimation{
-                .mRig = &aVisualModel.mModel->mRig,
+            skeletal = visu_V2::Entity::SkeletalAnimation{
                 .mAnimation = rigAnimation.mAnimation,
                 .mParameterValue = rigAnimation.mParameterValue,
             };
         }
+
         state->mEntities.insert(
             aHandle.id(),
-            visu::Entity{
-                .mPosition_world = aGlobPose.mPosition,
-                .mScaling = aGlobPose.mInstanceScaling * aGlobPose.mScaling,
-                .mOrientation = aGlobPose.mOrientation,
+            visu_V2::Entity{
                 .mColor = aGlobPose.mColor,
-                .mModel = aVisualModel.mModel,
-                .mRigging = std::move(skeletal),
+                .mInstance = renderer::Instance{
+                    .mObject = aVisualModel.mModel,
+                    .mPose = renderer::Pose{
+                        .mPosition = aGlobPose.mPosition.as<math::Vec>(),
+                        .mUniformScale = aGlobPose.mScaling,
+                        .mOrientation = aGlobPose.mOrientation,
+                    },
+                    .mName = aHandle.name(),
+                },
+                .mInstanceScaling = aGlobPose.mInstanceScaling,
+                .mAnimationState = std::move(skeletal),
                 .mDisableInterpolation = aVisualModel.mDisableInterpolation,
             });
         // Note: Although it does not feel correct, this is a convenient place
@@ -468,7 +498,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
             {
         state->mTextWorldEntities.insert(
             aHandle.id(),
-            visu::Text{
+            visu_V1::Text{
                 .mPosition_world = aGlobPose.mPosition,
                 // TODO remove the hardcoded value of 100
                 // Note hardcoded 100 scale down. Because I'd like a value of 1
@@ -502,7 +532,7 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
 
         state->mTextScreenEntities.insert(
             aHandle.id(),
-            visu::Text{
+            visu_V1::Text{
                 .mPosition_world = position_screenPix,
                 .mScaling = math::Size<3, float>{aPose.mScale, 1.f},
                 .mOrientation =
@@ -515,9 +545,6 @@ std::unique_ptr<visu::GraphicState> SnacGame::makeGraphicState()
                 .mColor = aText.mColor,
             });
         });
-
-    auto font =
-        mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf", 120);
 
     state->mCamera = mSystemOrbitalCamera->getCamera();
 
