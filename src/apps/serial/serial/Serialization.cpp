@@ -56,7 +56,7 @@ void to_json(ad::ent::Handle<ad::ent::Entity> & aHandle, json & aData)
 {
     json & components = aData["components"];
 
-    for (std::type_index type : aHandle.getComponentsInfo())
+    for (std::type_index type : aHandle.getTypeSet())
     {
         reflexion::indexedTypedConstrutorInstance().at(type)->serialize(
             components, aHandle);
