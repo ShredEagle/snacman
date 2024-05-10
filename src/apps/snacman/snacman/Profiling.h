@@ -19,7 +19,7 @@ enum class Profiler
     Render,
 };
 
-const std::string gMainProfiler = "Main";
+inline const std::string gMainProfiler = "Main";
 
 struct ProfilerMap_V2
 {
