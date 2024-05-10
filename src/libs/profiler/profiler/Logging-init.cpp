@@ -2,27 +2,26 @@
 
 #include "Logging.h"
 
+#include <iostream>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 
 namespace ad::profiler {
 
 
-LoggerInitialization::LoggerInitialization()
+std::shared_ptr<spdlog::logger> initializeLogger()
 {
-    spdlog::stdout_color_mt(gMainLogger);
+    return spdlog::stdout_color_mt(gMainLogger);
 }
-
-
-const LoggerInitialization LoggerInitialization::gInitialized;
 
 
 } // namespace ad::profiler
 
 
-void ad_profiler_loggerinitialization()
-{
-    // The hack to keep the symbol `LoggerInitialization::gInitialized`
-    // works even though we are not accessing it.
-    //std::cout << ::ad::profiler::LoggerInitialization::gInitialized.i;
-}
+// void ad_profiler_loggerinitialization()
+// {
+//     // The hack to keep the symbol `LoggerInitialization::gInitialized`
+//     // works even though we are not accessing it.
+//     //std::cout << ::ad::profiler::LoggerInitialization::gInitialized.i;
+//     std::cout << ad::profiler::LoggerInitialization::gInitialized.i;
+// }

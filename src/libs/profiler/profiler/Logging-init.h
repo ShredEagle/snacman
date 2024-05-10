@@ -1,22 +1,21 @@
 #pragma once
 
+#include <memory>
+#include <spdlog/logger.h>
 
 namespace ad::profiler {
 
+std::shared_ptr<spdlog::logger> initializeLogger();
 
-class LoggerInitialization
+struct LoggerInitialization
 {
-private:
-    // __declspec is not forcing the export for static libs, apparently.
-    /*__declspec(dllexport)*/ static const LoggerInitialization gInitialized;
-    LoggerInitialization();
+    inline static const std::shared_ptr<spdlog::logger> logger =
+        initializeLogger();
 };
-
 
 } // namespace ad::profiler
 
-
 extern "C"
 {
-void ad_profiler_loggerinitialization();
+    void ad_profiler_loggerinitialization();
 }

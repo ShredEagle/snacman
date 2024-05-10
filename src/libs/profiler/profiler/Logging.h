@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Logging-init.h"
 
 #include <spdlog/spdlog.h>
 #include <fmt/ostream.h>

@@ -1,21 +1,21 @@
 #pragma once
 
+#include <memory>
+#include <spdlog/logger.h>
 
 namespace ad::processor {
 
+std::shared_ptr<spdlog::logger> initializeLogger();
 
-class LoggerInitialization
+struct LoggerInitialization
 {
-private:
-    static const LoggerInitialization gInitialized;
-    LoggerInitialization();
+    inline static const std::shared_ptr<spdlog::logger> logger =
+        initializeLogger();
 };
-
 
 } // namespace ad::processor
 
-
 extern "C"
 {
-void ad_processor_loggerinitialization();
+    void ad_processor_loggerinitialization();
 }
