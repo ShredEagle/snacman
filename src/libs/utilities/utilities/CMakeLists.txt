@@ -34,8 +34,6 @@ set_target_properties(${TARGET_NAME} PROPERTIES
 
 #cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsError})
 
-cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
-
 
 ##
 ## Dependencies
