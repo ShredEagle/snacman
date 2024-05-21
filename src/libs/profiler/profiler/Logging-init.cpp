@@ -16,12 +16,3 @@ std::shared_ptr<spdlog::logger> initializeLogger()
 
 
 } // namespace ad::profiler
-
-
-// void ad_profiler_loggerinitialization()
-// {
-//     // The hack to keep the symbol `LoggerInitialization::gInitialized`
-//     // works even though we are not accessing it.
-//     //std::cout << ::ad::profiler::LoggerInitialization::gInitialized.i;
-//     std::cout << ad::profiler::LoggerInitialization::gInitialized.i;
-// }

@@ -5,6 +5,7 @@
 
 namespace ad::profiler {
 
+
 std::shared_ptr<spdlog::logger> initializeLogger();
 
 struct LoggerInitialization
@@ -13,9 +14,5 @@ struct LoggerInitialization
         initializeLogger();
 };
 
-} // namespace ad::profiler
 
-extern "C"
-{
-    void ad_profiler_loggerinitialization();
-}
+} // namespace ad::profiler

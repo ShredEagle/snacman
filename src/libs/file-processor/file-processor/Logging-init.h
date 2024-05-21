@@ -5,7 +5,9 @@
 
 namespace ad::processor {
 
+
 std::shared_ptr<spdlog::logger> initializeLogger();
+
 
 struct LoggerInitialization
 {
@@ -13,9 +15,5 @@ struct LoggerInitialization
         initializeLogger();
 };
 
-} // namespace ad::processor
 
-extern "C"
-{
-    void ad_processor_loggerinitialization();
-}
+} // namespace ad::processor
