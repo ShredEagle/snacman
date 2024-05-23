@@ -36,6 +36,10 @@ void ad_renderer_loggerinitialization();
 #include <spdlog/logger.h>
 #include <utility>
 
+
+namespace ad::renderer {
+
+
 std::pair<std::shared_ptr<spdlog::logger>, std::shared_ptr<spdlog::logger>>
 initializeLogger();
 
@@ -45,5 +49,8 @@ struct LoggerInitialization
                                 std::shared_ptr<spdlog::logger>>
         logger = initializeLogger();
 };
+
+
+} // namespace ad::renderer
 
 #endif
