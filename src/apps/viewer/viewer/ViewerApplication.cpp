@@ -381,8 +381,9 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // Add basic shapes to the the scene
     Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
     auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mGraph.mInstanceStream);
-    mScene.addToRoot(triangle);
-    mScene.addToRoot(cube);
+    // Toggle the triangle and cube in the scene
+    //mScene.addToRoot(triangle);
+    //mScene.addToRoot(cube);
 }
 
 
