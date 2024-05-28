@@ -1,12 +1,12 @@
 #pragma once
 
 
+#include "CameraSystem.h"
 #include "GraphGui.h"
 #include "Scene.h"
 #include "SceneGui.h"
 #include "TheGraph.h"
 
-#include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/files/Loader.h>
 
@@ -43,11 +43,8 @@ struct ViewerApplication
     SceneGui mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage};
     GraphGui mGraphGui;
 
-    Camera mCamera;
-    
-    // TODO #camera allow both control modes, ideally via DearImgui
-    OrbitalControl mCameraControl;
-    FirstPersonControl mFirstPersonControl;
+    CameraSystem mCameraSystem;
+    CameraSystemGui mCameraGui;
 
     TheGraph mGraph;
 };

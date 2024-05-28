@@ -24,7 +24,7 @@ public:
         mStorage{aStorage}
     {}
 
-    void present(Scene & aScene, const Timing & aTime);
+    void presentSection(Scene & aScene, const Timing & aTime);
 
 private:
     /// @return Hovered node

@@ -49,6 +49,7 @@ public:
     { return std::holds_alternative<OrthographicParameters>(mProjectionParameters); }
 
 private:
+    // TODO Ad 2024/05/28: #interpolation The camera pose should be expressed as a TRS to interpolate
     math::AffineMatrix<4, float> mParentToCamera = math::AffineMatrix<4, float>::Identity(); 
     math::Matrix<4, 4, float> mProjection = graphics::makeProjection(OrthographicParameters{
             .mAspectRatio = 1,
@@ -92,6 +93,9 @@ struct GpuViewProjectionBlock
 };
 
 
+//
+// Poses
+//
 
 // TODO factorize, this is more general than purely camera movements.
 
@@ -124,6 +128,24 @@ struct Orbital
 };
 
 
+/// \brief Position and orientation as Euler angles
+struct SolidEulerPose
+{
+    math::AffineMatrix<4, float> getParentToLocal() const;
+
+    // TODO Ad 2023/08/10: Implement conversions to math::Frame
+    // Then use the Frame with math::trans3d::canonicaToFrame to implement getParentToLocal()
+    /// @brief The position in the parent frame.
+    math::Position<3, float> mPosition;
+    /// @brief The orientation in the parent frame.
+    math::EulerAngles<float> mOrientation;
+};
+
+
+//
+// Controls over pose
+//
+
 //TODO Ad 2023/07/27: 
 // This should be abstracted away from being used purely for rendering cameras, removing
 // knowledge of window size and vertical FOV. Yet this cause au complication for _panning_ movements.
@@ -150,7 +172,7 @@ struct OrbitalControl
     void callbackKeyboard(int key, int scancode, int action, int mods)
     {}
 
-    /// \brief Return the view height in world coordinates, for a view plan place at the Orbital origin.
+    /// \brief Return the view height in world coordinates, for a view plan placed at the Orbital origin.
     /// Computation is based on the currently set Fov and Oribtal radius, even if the actual projection
     /// in use is orthographic. Thus, it can be used to transit from perspective to orthographic while
     /// conserving the apparent size of object at orbital center.
@@ -191,17 +213,9 @@ struct FirstPersonControl
     void callbackScroll(double xoffset, double yoffset);
     void callbackKeyboard(int key, int scancode, int action, int mods);
 
-    math::AffineMatrix<4, float> getParentToLocal() const;
-
     void update(float aDeltaTime);
 
-
-    // TODO Ad 2023/08/10: Consolidate that in a notion of Pose, and implement conversions to math::Frame
-    // Then use the Frame with math::trans3d::canonicaToFrame to implement getParentToLocal()
-    /// @brief The position in the parent frame.
-    math::Position<3, float> mPosition;
-    /// @brief The orientation in the parent frame.
-    math::EulerAngles<float> mOrientation;
+    SolidEulerPose mPose;
 
 private:
     enum class ControlMode

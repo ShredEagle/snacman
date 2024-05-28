@@ -84,11 +84,7 @@ void showGui(imguiui::ImguiUi & imguiUi,
             ImGui::End();
         }
 
-        static bool showSceneTree = true;
-        if(imguiui::addCheckbox("Scene tree", showSceneTree))
-        {
-            aApplication.drawUi(aTime);
-        }
+        aApplication.drawUi(aTime);
 
         static bool showDemo = false;
         if(imguiui::addCheckbox("ImGui demo", showDemo))

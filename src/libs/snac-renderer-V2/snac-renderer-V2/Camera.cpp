@@ -105,6 +105,16 @@ math::AffineMatrix<4, float> Orbital::getParentToLocal() const
 }
 
 
+math::AffineMatrix<4, float> SolidEulerPose::getParentToLocal() const
+{
+    // Translate the world by negated camera position, then rotate by inverse camera orientation
+    return math::trans3d::translate(-mPosition.as<math::Vec>()) 
+        * math::toQuaternion(mOrientation).inverse().toRotationMatrix();
+        // It is equivalent to:
+        //* dummyToRotationMatrixInverse(mOrientation);
+}
+
+
 ////////
 // OrbitalControl
 ////////
@@ -212,15 +222,15 @@ void FirstPersonControl::callbackCursorPosition(double xpos, double ypos)
     if(mControlMode == ControlMode::Aiming)
     {
         auto angularIncrements = (cursorPosition - mPreviousCursorPosition).cwMul(gMouseControlFactor);
-        mOrientation.x.data() -= angularIncrements.y(); // mouse down -> +Y -> negative roation around X (to look down)
-        mOrientation.y.data() -= angularIncrements.x(); // mouse right -> +X -> negative rotation around Y (to look right)
+        mPose.mOrientation.x.data() -= angularIncrements.y(); // mouse down -> +Y -> negative roation around X (to look down)
+        mPose.mOrientation.y.data() -= angularIncrements.x(); // mouse right -> +X -> negative rotation around Y (to look right)
 
         // First clamp the vertical orientation (around X axis), then reduce
         static constexpr float quarterRevolution = math::Turn<float>{1.f/4.f}.as<math::Radian>().value();
-        auto & x = mOrientation.x.data();
+        auto & x = mPose.mOrientation.x.data();
         x = std::clamp(x, -quarterRevolution, quarterRevolution);
 
-        mOrientation = reduce(mOrientation);
+        mPose.mOrientation = reduce(mPose.mOrientation);
     }
 
     mPreviousCursorPosition = cursorPosition;
@@ -267,6 +277,7 @@ math::LinearMatrix<3, 3, float> dummyToRotationMatrix(math::EulerAngles<float> a
         * math::trans3d::rotateZ(aEuler.z);
 }
 
+
 /// @brief A Change of basis from parent to local.
 /// Or as an active transformation: rotate the EulerAngle basis to align it to its parent frame.
 math::LinearMatrix<3, 3, float> dummyToRotationMatrixInverse(math::EulerAngles<float> aEuler)
@@ -278,30 +289,22 @@ math::LinearMatrix<3, 3, float> dummyToRotationMatrixInverse(math::EulerAngles<f
         * math::trans3d::rotateX(-aEuler.x);
 }
 
+
 void FirstPersonControl::update(float aDeltaTime)
 {
     float movement = aDeltaTime * gSpeed;
     // This is the rotation matrix in parent frame:
     // its rows are the base vectors of the camera frame, expressed in canonical coordinates.
-    math::LinearMatrix<3, 3, float> rotation = toQuaternion(mOrientation).toRotationMatrix();
+    math::LinearMatrix<3, 3, float> rotation = toQuaternion(mPose.mOrientation).toRotationMatrix();
     // It is equivalent to:
     //math::LinearMatrix<3, 3, float> rotation = dummyToRotationMatrix(mOrientation);
     math::Vec<3, float> backward{rotation[2]}; // camera looks in -Z, so +Z is the backward vector
     math::Vec<3, float> right{rotation[0]};
-    if(mF) mPosition -= backward * movement;
-    if(mB) mPosition += backward * movement;
-    if(mL) mPosition -= right * movement;
-    if(mR) mPosition += right * movement;
+    if(mF) mPose.mPosition -= backward * movement;
+    if(mB) mPose.mPosition += backward * movement;
+    if(mL) mPose.mPosition -= right * movement;
+    if(mR) mPose.mPosition += right * movement;
 }
 
-
-math::AffineMatrix<4, float> FirstPersonControl::getParentToLocal() const
-{
-    // Translate the world by negated camera position, then rotate by inverse camera orientation
-    return math::trans3d::translate(-mPosition.as<math::Vec>()) 
-        * math::toQuaternion(mOrientation).inverse().toRotationMatrix();
-        // It is equivalent to:
-        //* dummyToRotationMatrixInverse(mOrientation);
-}
 
 } // namespace ad::renderer
