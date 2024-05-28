@@ -63,7 +63,21 @@ struct TheGraph
     void showDepthTexture(const graphics::Texture & aTexture,
                           float aNearZ, float aFarZ,
                           unsigned int aStackPosition = 0);
+                        
+    void drawUi();
+
 // Data members:
+    struct Controls
+    {
+        inline static const std::vector<StringKey> gForwardKeys{
+            "forward",
+            "forward_debug",
+        };
+
+        std::vector<StringKey>::const_iterator mForwardPassKey = gForwardKeys.begin();
+    };
+    Controls mControls;
+
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
 
     HardcodedUbos mUbos;
@@ -89,6 +103,7 @@ struct TheGraph
 
     // Debug rendering
     DebugRenderer mDebugRenderer;
+
 };
 
 

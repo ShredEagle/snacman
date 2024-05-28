@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "GraphGui.h"
 #include "Scene.h"
 #include "SceneGui.h"
 #include "TheGraph.h"
@@ -40,6 +41,7 @@ struct ViewerApplication
     Scene mScene;
     Loader mLoader;
     SceneGui mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage};
+    GraphGui mGraphGui;
 
     Camera mCamera;
     

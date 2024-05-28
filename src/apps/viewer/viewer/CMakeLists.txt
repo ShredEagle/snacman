@@ -6,6 +6,7 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     DrawQuad.h
+    GraphGui.h
     Json.h
     Logging.h
     PassViewer.cpp
@@ -19,6 +20,7 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     DrawQuad.cpp
+    GraphGui.cpp
     Logging.cpp
     PassViewer.cpp
     Scene.cpp

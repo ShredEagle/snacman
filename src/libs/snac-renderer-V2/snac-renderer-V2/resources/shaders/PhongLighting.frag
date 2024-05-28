@@ -74,6 +74,6 @@ void main()
 
     vec3 phongColor = albedo.rgb * (lightColor * (diffuse + specular) + lightAmbientColor * ambient);
     //out_Color = vec4(ex_Uv, 0., 1.);
-    //out_Color = vec4(normal_cam, 1.);
+    //out_Color = vec4((normal_cam + vec3(1.)) / 2, 1.);
     out_Color = correctGamma(vec4(phongColor, albedo.a * material.diffuseColor.a));
 }

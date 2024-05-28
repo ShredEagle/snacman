@@ -490,6 +490,7 @@ void ViewerApplication::update(const Timing & aTime)
 void ViewerApplication::drawUi(const renderer::Timing & aTime)
 {
     mSceneGui.present(mScene, aTime);
+    mGraphGui.present(mGraph);
 }
 
 

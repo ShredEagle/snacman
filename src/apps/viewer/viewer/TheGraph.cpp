@@ -305,7 +305,7 @@ void TheGraph::passForward(const ViewerPartList & aPartList, Storage & mStorage)
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_forward", CpuTime, GpuTime);
 
     // Can be done once for distinct camera, if there is no culling
-    ViewerPassCache passCache = prepareViewerPass("forward", aPartList, mStorage);
+    ViewerPassCache passCache = prepareViewerPass(*mControls.mForwardPassKey, aPartList, mStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
