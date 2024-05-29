@@ -13,6 +13,12 @@ namespace {
     constexpr float gNearZ{-0.1f};
     constexpr float gMinFarZ{-25.f};
 
+    // GUI related values
+    constexpr float gMinZ{-0.01f};
+    constexpr float gMaxZ{-1000.f};
+    constexpr float gMinViewHeight{0.01f};
+    constexpr float gMaxViewHeight{1000.f};
+
 } // unnamed namespace
 
 
@@ -130,19 +136,114 @@ void CameraSystemGui::presentSection(CameraSystem & aCameraSystem)
 {
     if (ImGui::CollapsingHeader("Camera"))
     {
-        int mode = static_cast<int>(aCameraSystem.mActive);
-        bool changed = ImGui::RadioButton("First-person",
-                                          &mode,
-                                          static_cast<int>(CameraSystem::Control::FirstPerson));
-        ImGui::SameLine();
-        changed |= ImGui::RadioButton("Orbital", 
-                                      &mode,
-                                      static_cast<int>(CameraSystem::Control::Orbital));
-
-        if(changed)
+        // Camera control
         {
-            aCameraSystem.setControlMode(static_cast<CameraSystem::Control>(mode));
+            int mode = static_cast<int>(aCameraSystem.mActive);
+            bool changed = ImGui::RadioButton("First-person",
+                                            &mode,
+                                            static_cast<int>(CameraSystem::Control::FirstPerson));
+            ImGui::SameLine();
+            changed |= ImGui::RadioButton("Orbital", 
+                                        &mode,
+                                        static_cast<int>(CameraSystem::Control::Orbital));
+
+            if(changed)
+            {
+                aCameraSystem.setControlMode(static_cast<CameraSystem::Control>(mode));
+            }
         }
+
+        // Projection
+        {
+            auto projectionParams = aCameraSystem.mCamera.getProjectionParameters();
+
+            // local semantic only: 0 Orthographic, 1 Perspective
+            enum Projection
+            {
+                Orthographic = 0,
+                Perspective = 1,
+            };
+            int projectionId = std::holds_alternative<graphics::OrthographicParameters>(projectionParams) ?
+                Orthographic : Perspective;
+
+            bool changed = ImGui::RadioButton("Orthographic",
+                                              &projectionId,
+                                              Orthographic);
+            ImGui::SameLine();
+            changed |= ImGui::RadioButton("Perspective",
+                                          &projectionId,
+                                          Perspective);
+
+            // If a change occured, convert from one projection parameter type to the other
+            if(changed)
+            {
+                // Even if this is not the active control mode, we use orbital to determine the plane distance
+                const float radius = aCameraSystem.mOrbitalControl.mOrbital.mSpherical.radius();
+
+                switch(projectionId)
+                {
+                    case Orthographic:
+                    {
+                        // Was perspective
+                        graphics::PerspectiveParameters perspective =
+                            std::get<graphics::PerspectiveParameters>(projectionParams);
+                        projectionParams = toOrthographic(
+                                perspective,
+                                graphics::computePlaneHeightt(radius, perspective.mVerticalFov));
+                        break;
+                    }
+                    case Perspective:
+                    {
+                        // Was orthograhic
+                        graphics::OrthographicParameters ortho = 
+                            std::get<graphics::OrthographicParameters>(projectionParams);
+
+                        projectionParams = toPerspective(
+                            ortho,
+                            graphics::computeVerticalFov(radius, ortho.mViewHeight));
+                        break;
+                    }
+                }
+            }
+
+            // Allow to edit the parameter values
+            // Note that using the same boolean to detect change ensure the camera projection will be
+            // setup whether the projection type or just parameter values changed.
+            std::visit([& changed, & camera = aCameraSystem.mCamera](auto && params)
+            {
+                using T = std::decay_t<decltype(params)>;
+                if constexpr(std::is_same_v<T, graphics::OrthographicParameters>)
+                {
+                    ImGui::Text("Aspect ratio: %f", params.mAspectRatio);
+                    // Note: Cannot put it in a single instruction 
+                    // because shortcut evaluation would stop drawing subsequent widgets
+                    changed |= ImGui::InputFloat("View height", &params.mViewHeight, 0.1f, 1.f, "%.2f");
+                    changed |= ImGui::InputFloat("Near Z", &params.mNearZ, 0.01f, .5f, "%.2f");
+                    changed |= ImGui::InputFloat("Far Z", &params.mFarZ, 0.01f, .5f, "%.2f");
+                    if(changed)
+                    {
+                        params.mViewHeight = std::clamp(params.mViewHeight, gMinViewHeight, gMaxViewHeight); 
+                        params.mNearZ = std::clamp(params.mNearZ, gMaxZ - gMinZ, gMinZ); 
+                        params.mFarZ = std::clamp(params.mFarZ, gMaxZ, params.mNearZ + gMinZ); 
+                        camera.setupOrthographicProjection(params);
+                    }
+                }
+                else if constexpr(std::is_same_v<T, graphics::PerspectiveParameters>)
+                {
+                    ImGui::Text("Aspect ratio: %f", params.mAspectRatio);
+                    changed |= ImGui::SliderAngle("Vertical FOV", &params.mVerticalFov.data(), 1.f, 180.f);
+                    changed |= ImGui::InputFloat("Near Z", &params.mNearZ, 0.01f, .5f, "%.2f");
+                    changed |= ImGui::InputFloat("Far Z", &params.mFarZ, 0.01f, .5f, "%.2f");
+                    if(changed)
+                    {
+                        params.mNearZ = std::clamp(params.mNearZ, gMaxZ - gMinZ, gMinZ); 
+                        params.mFarZ = std::clamp(params.mFarZ, gMaxZ, params.mNearZ + gMinZ); 
+                        camera.setupPerspectiveProjection(params);
+                    }
+                }
+            }, projectionParams);
+        }
+
     }
 
 }

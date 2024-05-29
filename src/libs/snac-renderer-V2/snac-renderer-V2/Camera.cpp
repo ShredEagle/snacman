@@ -124,7 +124,7 @@ float OrbitalControl::getViewHeightAtOrbitalCenter() const
 
     // View height in the plane of the polar origin (plane perpendicular to the view vector)
     // (the view height depends on the "plane distance" in the perspective case).
-    return 2 * tan(mVerticalFov / 2) * std::abs(mOrbital.radius());
+    return graphics::computePlaneHeightt(mOrbital.radius(), mVerticalFov);
 }
 
 

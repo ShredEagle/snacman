@@ -198,6 +198,8 @@ private:
     static constexpr float gScrollFactor = 0.05f;
 
     math::Size<2, int> mWindowSize;
+    // Note: the Vertical FOV data member is a bit smelly, as it duplicates the perspective projection vertical FOV
+    // (or has no real meaning, in the case of an orthographic projection)
     math::Radian<float> mVerticalFov;
 
     ControlMode mControlMode{ControlMode::None};
