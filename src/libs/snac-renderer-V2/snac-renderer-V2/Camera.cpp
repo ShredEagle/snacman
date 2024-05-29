@@ -68,6 +68,7 @@ void Orbital::incrementOrbit(math::Radian<float> aAzimuthal, math::Radian<float>
     using Radian = math::Radian<float>;
     mSpherical.polar() += aPolar;
     mSpherical.azimuthal() += aAzimuthal;
+    mSpherical.azimuthal() = reduce(mSpherical.azimuthal());
     mSpherical.polar() = std::max(Radian{0},
                                   std::min(Radian{math::pi<float>},
                                            mSpherical.polar()));
