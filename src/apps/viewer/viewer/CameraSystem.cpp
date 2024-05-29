@@ -157,23 +157,97 @@ void CameraSystemGui::presentSection(CameraSystem & aCameraSystem)
     {
         // Camera control
         {
+            ImGui::SeparatorText("Camera control");
+
             int mode = static_cast<int>(aCameraSystem.mActive);
             bool changed = ImGui::RadioButton("First-person",
-                                            &mode,
-                                            static_cast<int>(CameraSystem::Control::FirstPerson));
+                                              &mode,
+                                              static_cast<int>(CameraSystem::Control::FirstPerson));
             ImGui::SameLine();
             changed |= ImGui::RadioButton("Orbital", 
-                                        &mode,
-                                        static_cast<int>(CameraSystem::Control::Orbital));
+                                          &mode,
+                                          static_cast<int>(CameraSystem::Control::Orbital));
 
             if(changed)
             {
                 aCameraSystem.setControlMode(static_cast<CameraSystem::Control>(mode));
             }
+
+            switch(aCameraSystem.mActive)
+            {
+                case CameraSystem::Control::FirstPerson:
+                {
+                    const SolidEulerPose & pose = aCameraSystem.mFirstPersonControl.mPose;
+                    if (ImGui::BeginTable("fp_pose", 3))
+                    {
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Position");
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%.2f, %.2f, %.2f", pose.mPosition.x(), pose.mPosition.y(), pose.mPosition.z());
+
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Yaw");
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%.2f°", pose.mOrientation.y.as<math::Degree>().value());
+
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Pitch");
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%.2f°", pose.mOrientation.x.as<math::Degree>().value());
+
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Roll");
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%.2f°", pose.mOrientation.z.as<math::Degree>().value());
+
+                        ImGui::EndTable();
+                    }
+                    break;
+                }
+                case CameraSystem::Control::Orbital:
+                {
+                    const Orbital & orbital = aCameraSystem.mOrbitalControl.mOrbital;
+                    if (ImGui::BeginTable("fp_pose", 3))
+                    {
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Origin");
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%.2f, %.2f, %.2f", orbital.mSphericalOrigin.x(), orbital.mSphericalOrigin.y(), orbital.mSphericalOrigin.z());
+
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Radius");
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%.3f", orbital.radius());
+
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Polar");
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%.2f°", orbital.mSpherical.polar().as<math::Degree>().value());
+
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Azimuthal");
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%.2f°", orbital.mSpherical.azimuthal().as<math::Degree>().value());
+
+                        ImGui::EndTable();
+                    }
+                    break;
+                }
+            }
         }
 
         // Projection
         {
+            ImGui::SeparatorText("Projection");
+
             auto projectionParams = aCameraSystem.mCamera.getProjectionParameters();
 
             // local semantic only: 0 Orthographic, 1 Perspective
