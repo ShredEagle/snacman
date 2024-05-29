@@ -46,6 +46,8 @@ struct CameraSystem
     Control mActive{Control::FirstPerson}; 
     OrbitalControl mOrbitalControl;
     FirstPersonControl mFirstPersonControl;
+    // Hackish member, saving the last orbital radius to be able to recompute equivalent FOV for orthographic zoom.
+    float mPreviousRadius;
 };
 
 

@@ -34,7 +34,8 @@ CameraSystem::CameraSystem(std::shared_ptr<graphics::AppInterface> aAppInterface
     mAppInterface{std::move(aAppInterface)},
     mImguiUi{aImguiUi},
     mActive{aMode},
-    mOrbitalControl{Orbital{gInitialRadius}}
+    mOrbitalControl{Orbital{gInitialRadius}},
+    mPreviousRadius{gInitialRadius}
 {
         setControlMode(mActive);
 
@@ -76,13 +77,18 @@ void CameraSystem::setControlMode(Control aMode)
     if(aMode == Control::Orbital)
     {
         if(mActive == Control::FirstPerson)
-        {}
+        {/* TODO conversion */}
         graphics::registerGlfwCallbacks(*mAppInterface, mOrbitalControl, graphics::EscKeyBehaviour::Close, mImguiUi);
     }
     else if(aMode == Control::FirstPerson)
     {
         if(mActive == Control::Orbital)
-        {}
+        {
+            /* TODO conversion */
+            // In case we would otherwise miss a change.
+            // This kind of logic confirms that the member is a hack.
+            mPreviousRadius = mOrbitalControl.mOrbital.radius();
+        }
         graphics::registerGlfwCallbacks(*mAppInterface, mFirstPersonControl, graphics::EscKeyBehaviour::Close, mImguiUi);
     }
     mActive = aMode;
@@ -91,22 +97,27 @@ void CameraSystem::setControlMode(Control aMode)
 
 void CameraSystem::update(float aDeltaTime)
 {
-    //// TODO #camera: handle this when necessary
-    //// Update camera to match current values in orbital control.
-    //mCamera.setPose(mOribtalControl.mOrbital.getParentToLocal());
-    //if(mCamera.isProjectionOrthographic())
-    //{
-    //    // Note: to allow "zooming" in the orthographic case, we change the viewed height of the ortho projection.
-    //    // An alternative would be to apply a scale factor to the camera Pose transformation.
-    //    changeOrthographicViewportHeight(mCamera, mOribtalControl.getViewHeightAtOrbitalCenter());
-    //}
-    
     switch(mActive)
     {
         case Control::Orbital:
         {
             mOrbitalControl.update(getViewHeight(), mAppInterface->getWindowSize().height());
+            float currentRadius = mOrbitalControl.mOrbital.radius();
+            // If the radius changed and the projection is orthographic,
+            // the projection view height should be changed to implement a zoom effect.
+            if(mCamera.isProjectionOrthographic()
+                 && mPreviousRadius != currentRadius)
+            {
+                auto orthographic = 
+                    std::get<graphics::OrthographicParameters>(mCamera.getProjectionParameters());
+
+                // The previous radius allows us to recompute the original FOV of the equivalent perspective projection
+                auto verticalFov = graphics::computeVerticalFov(mPreviousRadius, orthographic.mViewHeight);
+                changeOrthographicViewportHeight(mCamera,
+                                                 graphics::computePlaneHeight(currentRadius, verticalFov));
+            }
             mCamera.setPose(mOrbitalControl.mOrbital.getParentToLocal());
+            mPreviousRadius = currentRadius;
             break;
         }
         case Control::FirstPerson:
@@ -134,7 +145,7 @@ float CameraSystem::getViewHeight() const
             // Compute each time for the time being.
             // View height in the plane of the polar origin (plane perpendicular to the view vector)
             // (the view height depends on the "plane distance" in the perspective case).
-            return graphics::computePlaneHeightt(orbital.radius(), params.mVerticalFov);
+            return graphics::computePlaneHeight(orbital.radius(), params.mVerticalFov);
         }
     }, mCamera.getProjectionParameters());
 }
@@ -197,7 +208,7 @@ void CameraSystemGui::presentSection(CameraSystem & aCameraSystem)
                             std::get<graphics::PerspectiveParameters>(projectionParams);
                         projectionParams = toOrthographic(
                                 perspective,
-                                graphics::computePlaneHeightt(radius, perspective.mVerticalFov));
+                                graphics::computePlaneHeight(radius, perspective.mVerticalFov));
                         break;
                     }
                     case Perspective:

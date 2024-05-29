@@ -37,10 +37,9 @@ void changeOrthographicViewportHeight(Camera & aCamera, float aNewHeight)
                 aParams.mViewHeight = aNewHeight;
                 return aParams;
             }
-            else
+            else if constexpr(std::is_same_v<T_param, graphics::PerspectiveParameters>)
             {
-                // TODO
-                throw std::logic_error{"Not implemented yet."};
+                return graphics::toOrthographic(aParams, aNewHeight);
             }
         },
         aCamera.getProjectionParameters());
