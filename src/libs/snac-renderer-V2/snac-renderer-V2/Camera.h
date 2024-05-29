@@ -146,9 +146,9 @@ struct SolidEulerPose
 // Controls over pose
 //
 
+//
 //TODO Ad 2023/07/27: 
-// This should be abstracted away from being used purely for rendering cameras, removing
-// knowledge of window size and vertical FOV. Yet this cause au complication for _panning_ movements.
+// This should be abstracted away from being used purely for rendering cameras
 
 // TODO Ad 2024/02/16:
 // OrbitalControl should be renamed and become a glfw-callback wrapper around some "OrbitalControl_raw".
@@ -156,13 +156,8 @@ struct SolidEulerPose
 /// @brief Controls an Orbital position with mouse movements (movements of an usual orbital camera).
 struct OrbitalControl
 {
-    template <class T_unitTag>
-    OrbitalControl(math::Size<2, int> aWindowSize,
-                   math::Angle<float, T_unitTag> aVerticalFov,
-                   Orbital aInitialPose) :
-        mOrbital{aInitialPose},
-        mWindowSize{aWindowSize},
-        mVerticalFov{aVerticalFov}
+    explicit OrbitalControl(Orbital aInitialPose) :
+        mOrbital{aInitialPose}
     {}
 
     // Glfw compatible callbacks
@@ -172,17 +167,12 @@ struct OrbitalControl
     void callbackKeyboard(int key, int scancode, int action, int mods)
     {}
 
-    /// \brief Return the view height in world coordinates, for a view plan placed at the Orbital origin.
-    /// Computation is based on the currently set Fov and Oribtal radius, even if the actual projection
-    /// in use is orthographic. Thus, it can be used to transit from perspective to orthographic while
-    /// conserving the apparent size of object at orbital center.
-    float getViewHeightAtOrbitalCenter() const;
-
-    template <class T_unitTag>
-    void setVerticalFov(math::Angle<float, T_unitTag> aFov)
-    {
-        mVerticalFov(aFov);
-    }
+    // Note: Initially, this class was storing a copy of the VFOV,
+    // and thus could do panning directly in the cursor position callback.
+    // Yet this copy violated DRY, and was only behaving well with perspective projection.
+    // Note: As an alternative to taking the window size, the class could store a pointer to the appinterface
+    // and query when needed.
+    void update(float aViewHeightInWorld, int aWindowHeight);
 
     Orbital mOrbital;
 
@@ -197,11 +187,9 @@ private:
     static constexpr math::Vec<2, float> gMouseControlFactor{1/700.f, 1/700.f};
     static constexpr float gScrollFactor = 0.05f;
 
-    math::Size<2, int> mWindowSize;
-    // Note: the Vertical FOV data member is a bit smelly, as it duplicates the perspective projection vertical FOV
-    // (or has no real meaning, in the case of an orthographic projection)
-    math::Radian<float> mVerticalFov;
-
+    // The drag quantity in cursor unit (usually pixels)
+    // This allow deferring the actual panning until update(), which can convert this quantity to world unit.
+    math::Vec<2, float> mDragVector_cursor;
     ControlMode mControlMode{ControlMode::None};
     math::Position<2, float> mPreviousDragPosition{0.f, 0.f};
 };

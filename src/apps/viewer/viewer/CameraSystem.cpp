@@ -34,21 +34,11 @@ CameraSystem::CameraSystem(std::shared_ptr<graphics::AppInterface> aAppInterface
     mAppInterface{std::move(aAppInterface)},
     mImguiUi{aImguiUi},
     mActive{aMode},
-    mOrbitalControl{mAppInterface->getWindowSize(),
-                    gInitialVFov,
-                    Orbital{gInitialRadius}}
+    mOrbitalControl{Orbital{gInitialRadius}}
 {
         setControlMode(mActive);
 
-        // TODO #camera do the projection setup only on each projection change
-        // Ideally, the far plane would be proportional to model depth
-        mCamera.setupOrthographicProjection({
-            .mAspectRatio = math::getRatio<GLfloat>(mAppInterface->getWindowSize()),
-            .mViewHeight = mOrbitalControl.getViewHeightAtOrbitalCenter(),
-            .mNearZ = gNearZ,
-            .mFarZ = gMinFarZ,
-        });
-
+        // TODO Ideally, the far plane would be proportional to model depth
         mCamera.setupPerspectiveProjection({
             .mAspectRatio = math::getRatio<GLfloat>(mAppInterface->getWindowSize()),
             .mVerticalFov = gInitialVFov,
@@ -101,13 +91,8 @@ void CameraSystem::setControlMode(Control aMode)
 
 void CameraSystem::update(float aDeltaTime)
 {
-    if(mActive == Control::FirstPerson)
-    {
-        mFirstPersonControl.update(aDeltaTime);
-    }
-
-    // TODO #camera: handle this when necessary
-    // Update camera to match current values in orbital control.
+    //// TODO #camera: handle this when necessary
+    //// Update camera to match current values in orbital control.
     //mCamera.setPose(mOribtalControl.mOrbital.getParentToLocal());
     //if(mCamera.isProjectionOrthographic())
     //{
@@ -120,15 +105,38 @@ void CameraSystem::update(float aDeltaTime)
     {
         case Control::Orbital:
         {
+            mOrbitalControl.update(getViewHeight(), mAppInterface->getWindowSize().height());
             mCamera.setPose(mOrbitalControl.mOrbital.getParentToLocal());
             break;
         }
         case Control::FirstPerson:
         {
+            mFirstPersonControl.update(aDeltaTime);
             mCamera.setPose(mFirstPersonControl.mPose.getParentToLocal());
             break;
         }
     }
+}
+
+
+float CameraSystem::getViewHeight() const
+{
+    return std::visit([& orbital = mOrbitalControl.mOrbital](auto && params)
+    {
+        using T = std::decay_t<decltype(params)>;
+        if constexpr(std::is_same_v<T, graphics::OrthographicParameters>)
+        {
+            return params.mViewHeight;
+        }
+        else if constexpr(std::is_same_v<T, graphics::PerspectiveParameters>)
+        {
+            // Note: the plane height might be cached, but this would violate DRY.
+            // Compute each time for the time being.
+            // View height in the plane of the polar origin (plane perpendicular to the view vector)
+            // (the view height depends on the "plane distance" in the perspective case).
+            return graphics::computePlaneHeightt(orbital.radius(), params.mVerticalFov);
+        }
+    }, mCamera.getProjectionParameters());
 }
 
 

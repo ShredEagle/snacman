@@ -78,7 +78,7 @@ void Orbital::incrementOrbit(math::Radian<float> aAzimuthal, math::Radian<float>
 void Orbital::pan(math::Vec<2, float> aPanning)
 {
     math::OrthonormalBase<3, float> tangent = mSpherical.computeTangentFrame().base;
-    mSphericalOrigin -= aPanning.x() * tangent.u().normalize() - aPanning.y() * tangent.v();
+    mSphericalOrigin -= aPanning.x() * tangent.u() - aPanning.y() * tangent.v();
 }
 
 
@@ -119,15 +119,6 @@ math::AffineMatrix<4, float> SolidEulerPose::getParentToLocal() const
 // OrbitalControl
 ////////
 
-float OrbitalControl::getViewHeightAtOrbitalCenter() const
-{
-
-    // View height in the plane of the polar origin (plane perpendicular to the view vector)
-    // (the view height depends on the "plane distance" in the perspective case).
-    return graphics::computePlaneHeightt(mOrbital.radius(), mVerticalFov);
-}
-
-
 void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
 {
     using Radian = math::Radian<float>;
@@ -147,15 +138,7 @@ void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
         }
         case ControlMode::Pan:
         {
-            auto dragVector{cursorPosition - mPreviousDragPosition};
-
-            // TODO handle both perspective and ortho case here
-            // View height in the plane of the polar origin (plane perpendicular to the view vector)
-            // (the view height depends on the "plane distance" in the perspective case).
-            //float viewHeight_world = 2 * tan(mVerticalFov / 2) * std::abs(mOrbital.radius());
-            dragVector *=  getViewHeightAtOrbitalCenter() / mWindowSize.height();
-
-            mOrbital.pan(dragVector);
+            mDragVector_cursor = cursorPosition - mPreviousDragPosition;
             break;
         }
         default:
@@ -165,6 +148,13 @@ void OrbitalControl::callbackCursorPosition(double xpos, double ypos)
     }
 
     mPreviousDragPosition = cursorPosition;
+}
+
+
+void OrbitalControl::update(float aViewHeightInWorld, int aWindowHeight)
+{
+    mOrbital.pan(mDragVector_cursor * aViewHeightInWorld / aWindowHeight);
+    mDragVector_cursor = {0.f, 0.f};
 }
 
 
