@@ -106,7 +106,7 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
         }
     }
 
-    SELOG(info)("Configured a new VAO.");
+    SELOG(debug)("Configured a new VAO.");
 
     return vertexArray;
 }
