@@ -251,8 +251,8 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
     mLoader{makeResourceFinder()},
-    mGraph{mGlfwAppInterface, mStorage, mLoader},
-    mCameraSystem{mGlfwAppInterface, &aImguiUi, CameraSystem::Control::FirstPerson}
+    mCameraSystem{mGlfwAppInterface, &aImguiUi, CameraSystem::Control::FirstPerson},
+    mGraph{mGlfwAppInterface, mStorage, mLoader}
 {
     if(aSceneFile.extension() == ".sew")
     {
