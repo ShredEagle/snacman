@@ -42,6 +42,8 @@ struct CameraSystem
     /// (even orbital control is not currently active).
     float getViewHeight() const;
 
+    void onFramebufferResize(math::Size<2, int> aNewSize);
+
     std::shared_ptr<graphics::AppInterface> mAppInterface;
     const imguiui::ImguiUi * mImguiUi; //for inhibiters
     Camera mCamera;
@@ -49,6 +51,7 @@ struct CameraSystem
     Orbital mOrbitalHome; // Record the orbital pose considered home.
     OrbitalControl mOrbitalControl;
     FirstPersonControl mFirstPersonControl;
+    std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
     // Hackish member, saving the last orbital radius to be able to recompute equivalent FOV for orthographic zoom.
     float mPreviousRadius;
 };

@@ -33,6 +33,12 @@ public:
 
     void setupPerspectiveProjection(PerspectiveParameters aParams);
 
+    void setupProjection(OrthographicParameters aParams)
+    { return setupOrthographicProjection(aParams); }
+
+    void setupProjection(PerspectiveParameters aParams)
+    { return setupPerspectiveProjection(aParams); }
+
     const math::AffineMatrix<4, float> & getParentToCamera() const
     { return mParentToCamera; }
 

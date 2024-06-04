@@ -36,6 +36,9 @@ CameraSystem::CameraSystem(std::shared_ptr<graphics::AppInterface> aAppInterface
     mActive{aMode},
     mOrbitalHome{gInitialRadius},
     mOrbitalControl{mOrbitalHome},
+    mFramebufferSizeListener{mAppInterface->listenFramebufferResize(
+        std::bind(&CameraSystem::onFramebufferResize, this, std::placeholders::_1))
+    },
     mPreviousRadius{gInitialRadius}
 {
         setControlMode(mActive);
@@ -167,6 +170,16 @@ float CameraSystem::getViewHeight() const
             // (the view height depends on the "plane distance" in the perspective case).
             return graphics::computePlaneHeight(orbital.radius(), params.mVerticalFov);
         }
+    }, mCamera.getProjectionParameters());
+}
+
+
+void CameraSystem::onFramebufferResize(math::Size<2, int> aNewSize)
+{
+    std::visit([aNewSize, this](auto params)
+    {
+        params.mAspectRatio = math::getRatio<GLfloat>(aNewSize);
+        this->mCamera.setupProjection(params);
     }, mCamera.getProjectionParameters());
 }
 
