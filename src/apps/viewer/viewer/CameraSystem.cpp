@@ -34,7 +34,8 @@ CameraSystem::CameraSystem(std::shared_ptr<graphics::AppInterface> aAppInterface
     mAppInterface{std::move(aAppInterface)},
     mImguiUi{aImguiUi},
     mActive{aMode},
-    mOrbitalControl{Orbital{gInitialRadius}},
+    mOrbitalHome{gInitialRadius},
+    mOrbitalControl{mOrbitalHome},
     mPreviousRadius{gInitialRadius}
 {
         setControlMode(mActive);
@@ -52,10 +53,10 @@ CameraSystem::CameraSystem(std::shared_ptr<graphics::AppInterface> aAppInterface
 
 void CameraSystem::setupAsModelViewer(math::Box<float> aModelAabb)
 {
-    mOrbitalControl.mOrbital.mSphericalOrigin = aModelAabb.center();
+    mOrbitalHome.mSphericalOrigin = aModelAabb.center();
 
     // Move the orbital camera away, depending on the model size
-    mOrbitalControl.mOrbital.mSpherical.radius() = 
+    mOrbitalHome.mSpherical.radius() = 
         std::max(mOrbitalControl.mOrbital.mSpherical.radius(),
                  gRadialDistancingFactor * (*aModelAabb.mDimension.getMaxMagnitudeElement()));
 
@@ -69,6 +70,7 @@ void CameraSystem::setupAsModelViewer(math::Box<float> aModelAabb)
     });
 
     setControlMode(CameraSystem::Control::Orbital);
+    resetCamera();
 }
 
 
@@ -92,6 +94,24 @@ void CameraSystem::setControlMode(Control aMode)
         graphics::registerGlfwCallbacks(*mAppInterface, mFirstPersonControl, graphics::EscKeyBehaviour::Close, mImguiUi);
     }
     mActive = aMode;
+}
+
+
+void CameraSystem::resetCamera()
+{
+    switch(mActive)
+    {
+        case Control::Orbital:
+        {
+            mOrbitalControl.mOrbital = mOrbitalHome;
+            break;
+        }
+        case Control::FirstPerson:
+        {
+            mFirstPersonControl.mPose = {};
+            break;
+        }
+    }
 }
 
 
@@ -171,6 +191,11 @@ void CameraSystemGui::presentSection(CameraSystem & aCameraSystem)
             if(changed)
             {
                 aCameraSystem.setControlMode(static_cast<CameraSystem::Control>(mode));
+            }
+
+            if(ImGui::Button("Home"))
+            {
+                aCameraSystem.resetCamera();
             }
 
             switch(aCameraSystem.mActive)

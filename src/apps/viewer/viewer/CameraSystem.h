@@ -32,6 +32,8 @@ struct CameraSystem
 
     void setControlMode(Control aMode);
 
+    void resetCamera();
+
     void update(float aDeltaTime);
 
     /// @brief The view height in world coordinates.
@@ -44,6 +46,7 @@ struct CameraSystem
     const imguiui::ImguiUi * mImguiUi; //for inhibiters
     Camera mCamera;
     Control mActive{Control::FirstPerson}; 
+    Orbital mOrbitalHome; // Record the orbital pose considered home.
     OrbitalControl mOrbitalControl;
     FirstPersonControl mFirstPersonControl;
     // Hackish member, saving the last orbital radius to be able to recompute equivalent FOV for orthographic zoom.
