@@ -22,6 +22,8 @@
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/debug/DebugDrawing.h>
 
+#include <utilities/Time.h>
+
 // TODO #nvtx This should be handled cleanly by the profiler
 #include "../../../libs/snac-renderer-V1/snac-renderer-V1/3rdparty/nvtx/include/nvtx3/nvtx3.hpp"
 
@@ -155,6 +157,8 @@ namespace {
             .mName = "simple-effect",
         };
         aStorage.mEffects.push_back(std::move(effect));
+
+        aStorage.mEffectLoadInfo.push_back(Storage::gNullLoadInfo);
 
         return &aStorage.mEffects.back();
     }
@@ -367,8 +371,21 @@ void ViewerApplication::update(const Timing & aTime)
 
 void ViewerApplication::drawUi(const renderer::Timing & aTime)
 {
-    mGraphGui.present(mGraph);
+    if(ImGui::Button("Recompile effects"))
+    {
+        LapTimer timer;
+        if(recompileEffects(mLoader, mStorage))
+        {
+            SELOG(info)("Successfully recompiled effect, took {:.3f}s.",
+                        asFractionalSeconds(timer.mark()));
+        }
+        else
+        {
+            SELOG(error)("Could not recompile all effects.");
+        }
+    }
 
+    mGraphGui.present(mGraph);
 
     static bool gShowScene = false;
     if(imguiui::addCheckbox("Scene", gShowScene))

@@ -60,6 +60,8 @@ void showGui(imguiui::ImguiUi & imguiUi,
 
     ImGui::Begin("Main control");
     {
+        aApplication.drawUi(aTime);
+
         static bool showProfiler = false;
         if(imguiui::addCheckbox("Profiler", showProfiler))
         {
@@ -83,8 +85,6 @@ void showGui(imguiui::ImguiUi & imguiUi,
             ImGui::Text("%s", metricsOs.str().c_str());
             ImGui::End();
         }
-
-        aApplication.drawUi(aTime);
 
         static bool showDemo = false;
         if(imguiui::addCheckbox("ImGui demo", showDemo))

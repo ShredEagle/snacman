@@ -40,7 +40,7 @@ class Resources;
 
 
 // Compilation firewall: required because Resources include RenderThread.h,
-// so we cannot access Resources defintion from the header.
+// so we cannot access Resources definition from the header.
 void recompilePrograms(Resources & aResources);
 
 
