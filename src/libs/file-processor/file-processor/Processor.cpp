@@ -908,6 +908,32 @@ void processModel(const std::filesystem::path & aFile)
         return;
     }
 
+    // Uncomment to get a list of all metadata keys and their type
+    //const auto & md = *scene->mMetaData;
+    //for(unsigned int i = 0; i != md.mNumProperties; ++i)
+    //{
+    //    int type = md.mValues[i].mType;
+    //    SELOG(info)("Prop name: {} of type {}.", md.mKeys[i].C_Str(), type);
+
+    //    //// To get the values, have to declare v of the correct type
+    //    //int v = -1000;
+    //    //bool getResult = md.Get(md.mKeys[i], v);
+    //    //SELOG(warn)("Prop name [{}]:  {} -> {} of type {}.", getResult, md.mKeys[i].C_Str(), v, type);
+    //}
+
+    // Note: we have a problem with the FBX scaling, it seems the model vertices position are expressed in centimeters
+    // The debug output of the importer state "Debug, T45804: UpdateImporterScale scale set: 0.01"
+    // but "UnitScaleFactor" seems to be 1.
+    float unitScaleFactor = 1.f;
+    if(!scene->mMetaData->Get("UnitScaleFactor", unitScaleFactor))
+    {
+        SELOG(info)("Could not read 'UnitScaleFactor' metadata.");
+    }
+    else if(unitScaleFactor != 1.)
+    {
+        SELOG(warn)("Unit scale factor is {}.", unitScaleFactor);
+    }
+
     std::filesystem::path output = aFile.parent_path() / aFile.stem().replace_extension(".seum");
     FileWriter writer{output};
 

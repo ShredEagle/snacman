@@ -42,6 +42,12 @@ struct TheGraph
              Storage & aStorage,
              const Loader & aLoader);
 
+    void onFramebufferResize(math::Size<2, int> aNewSize);
+
+    void allocateTextures(math::Size<2, int> aSize);
+
+    void setupTextures();
+
     void renderFrame(const ViewerPartList & aPartList, 
                      const Camera & aCamera,
                      Storage & aStorage);
@@ -63,7 +69,21 @@ struct TheGraph
     void showDepthTexture(const graphics::Texture & aTexture,
                           float aNearZ, float aFarZ,
                           unsigned int aStackPosition = 0);
+                        
+    void drawUi();
+
 // Data members:
+    struct Controls
+    {
+        inline static const std::vector<StringKey> gForwardKeys{
+            "forward",
+            "forward_debug",
+        };
+
+        std::vector<StringKey>::const_iterator mForwardPassKey = gForwardKeys.begin();
+    };
+    Controls mControls;
+
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
 
     HardcodedUbos mUbos;
@@ -73,13 +93,18 @@ struct TheGraph
 
     graphics::BufferAny mIndirectBuffer;
 
+    std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
+
     math::Size<2, int> mRenderSize;
 
     // Note Ad 2023/11/28: Might become a RenderTarger for optimal access if it is never sampled
     graphics::Texture mDepthMap{GL_TEXTURE_2D};
     graphics::FrameBuffer mDepthFbo;
 
-    // Transparency
+    //
+    // Blended Order Independent Transparency
+    // see: https://casual-effects.blogspot.com/2015/03/implemented-weighted-blended-order.html
+    //
     graphics::Texture mTransparencyAccum{GL_TEXTURE_2D};
     graphics::Texture mTransparencyRevealage{GL_TEXTURE_2D};
     graphics::FrameBuffer mTransparencyFbo;
@@ -89,6 +114,7 @@ struct TheGraph
 
     // Debug rendering
     DebugRenderer mDebugRenderer;
+
 };
 
 

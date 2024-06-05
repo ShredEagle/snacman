@@ -76,11 +76,52 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
     mUbos{aStorage},
     mInstanceStream{makeInstanceStream(aStorage, gMaxDrawInstances)},
-    mRenderSize{mGlfwAppInterface->getFramebufferSize()}, // TODO Ad 2023/11/28: Listen to framebuffer resize
+    mFramebufferSizeListener{mGlfwAppInterface->listenFramebufferResize(
+        std::bind(&TheGraph::onFramebufferResize, this, std::placeholders::_1))
+    },
+    mRenderSize{mGlfwAppInterface->getFramebufferSize()},
     mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")},
     mDebugRenderer{aStorage, aLoader}
 {
-    graphics::allocateStorage(mDepthMap, GL_DEPTH_COMPONENT24, mRenderSize);
+    allocateTextures(mRenderSize);
+    setupTextures();
+
+    // Assign permanent texture units to glsl samplers used for the 2D transparency compositing.
+    {
+        graphics::setUniform(mTransparencyResolver.mProgram, "u_AccumTexture", gAccumTextureUnit);
+        graphics::setUniform(mTransparencyResolver.mProgram, "u_RevealageTexture", gRevealageTextureUnit);
+    }
+}
+
+
+void TheGraph::onFramebufferResize(math::Size<2, int> aNewSize)
+{
+    // Note: for the moment, we keep the render size in sync with the framebuffer size
+    // (this is not necessarily true in renderers where the rendered image is blitted to the default framebuffer)
+    mRenderSize = aNewSize;
+
+    // Re-initialize textures (because of immutable storage allocation)
+    mDepthMap = graphics::Texture{GL_TEXTURE_2D};
+    mTransparencyAccum = graphics::Texture{GL_TEXTURE_2D};
+    mTransparencyRevealage = graphics::Texture{GL_TEXTURE_2D};
+
+    allocateTextures(mRenderSize);
+
+    // Since the texture were re-initialized, they have to be setup
+    setupTextures();
+}
+
+
+void TheGraph::allocateTextures(math::Size<2, int> aSize)
+{
+    graphics::allocateStorage(mDepthMap, GL_DEPTH_COMPONENT24, aSize);
+    graphics::allocateStorage(mTransparencyAccum, GL_RGBA16F, aSize);
+    graphics::allocateStorage(mTransparencyRevealage, GL_R8, aSize);
+}
+
+
+void TheGraph::setupTextures()
+{
     [this](GLenum aFiltering)
     {
         graphics::ScopedBind boundDepthMap{mDepthMap};
@@ -107,13 +148,8 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
     }
 
     //
-    // Blended Order Independent Transparency
-    // see: https://casual-effects.blogspot.com/2015/03/implemented-weighted-blended-order.html
+    // Setup transparency framebuffer
     //
-    graphics::allocateStorage(mTransparencyAccum, GL_RGBA16F, mRenderSize);
-    graphics::allocateStorage(mTransparencyRevealage, GL_R8, mRenderSize);
-
-    // Setup Framebuffer
     {
         graphics::ScopedBind boundFbo{mTransparencyFbo};
         // Reuse existing opaque depth buffer
@@ -125,12 +161,6 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
         glDrawBuffers(2, buffers);
 
         assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-    }
-
-    // Assign permanent texture units to glsl samplers used for the 2D transparency compositing.
-    {
-        graphics::setUniform(mTransparencyResolver.mProgram, "u_AccumTexture", gAccumTextureUnit);
-        graphics::setUniform(mTransparencyResolver.mProgram, "u_RevealageTexture", gRevealageTextureUnit);
     }
 }
 
@@ -229,7 +259,7 @@ void TheGraph::showTexture(const graphics::Texture & aTexture,
         glDepthMask(GL_FALSE);
     }
 
-    math::Size<2, int> fbSize = mGlfwAppInterface->getFramebufferSize();
+    math::Size<2, int> fbSize = mRenderSize;
 
     glViewport(0,
                aStackPosition * fbSize.height() / 4,
@@ -305,7 +335,7 @@ void TheGraph::passForward(const ViewerPartList & aPartList, Storage & mStorage)
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_forward", CpuTime, GpuTime);
 
     // Can be done once for distinct camera, if there is no culling
-    ViewerPassCache passCache = prepareViewerPass("forward", aPartList, mStorage);
+    ViewerPassCache passCache = prepareViewerPass(*mControls.mForwardPassKey, aPartList, mStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -333,9 +363,7 @@ void TheGraph::passForward(const ViewerPartList & aPartList, Storage & mStorage)
     //for(whatever dimension)
     {
         // TODO should be done once per viewport
-        glViewport(0, 0,
-                    mGlfwAppInterface->getFramebufferSize().width(),
-                    mGlfwAppInterface->getFramebufferSize().height());
+        glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
 
         // Reset texture bindings (to make sure that texturing does not work by "accident")
         // this could be extended to reset everything in the context.

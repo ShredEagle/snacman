@@ -50,7 +50,6 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
 // (not even sure we want the library to propose an instance stream format at all)
 GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount);
 
-
 struct Loader
 {
     /// @brief Load an effect file (.sefx), store it in `aStorage` and return its handle.
@@ -68,6 +67,16 @@ struct Loader
 
     resource::ResourceFinder mFinder;
 };
+
+
+/// @brief Recompile all techniques of Effects available in `aStorage`.
+/// @return `true` if all compilations were successfull, `false` otherwise.
+/// 
+/// In case of compilation error, the function will leave all the techniques
+/// of the provoking Effect unchanged.
+/// It means that only Effects for which all techniques successfully compile
+/// will be reloaded.
+bool recompileEffects(const Loader & aLoader, Storage & aStorage);
 
 
 } // namespace ad::renderer

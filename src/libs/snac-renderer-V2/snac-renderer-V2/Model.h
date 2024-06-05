@@ -336,11 +336,26 @@ struct Node
 // and storage of graphics API level objects (i.e. names of textures, buffers, ...)
 struct Storage
 {
+    /// @brief Aims to capture all information required to compile the effect.
+    ///
+    /// This is notably usefull for hot-reloading.
+    struct EffectLoadInfo
+    {
+        filesystem::path mPath;
+        std::vector<std::string> mDefines;
+
+        bool operator==(const EffectLoadInfo &) const = default;
+    };
+    /// @brief Used to indicate that the corresponding effect cannot be reloaded.
+    /// (e.g. assembled raw string literals).
+    inline static const EffectLoadInfo gNullLoadInfo{};
+
     // Uses list as much as possible to avoid invalidating "Handle" on insertion.
     // Some are actually used for random access though, so this class needs a deep refactoring anyway
     std::list<graphics::BufferAny> mBuffers;
     std::list<Object> mObjects;
     std::list<Effect> mEffects;
+    std::list<EffectLoadInfo> mEffectLoadInfo;
     std::list<ConfiguredProgram> mPrograms;
     std::list<graphics::Texture> mTextures;
     std::list<graphics::UniformBufferObject> mUbos;

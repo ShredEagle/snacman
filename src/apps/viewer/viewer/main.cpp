@@ -60,6 +60,8 @@ void showGui(imguiui::ImguiUi & imguiUi,
 
     ImGui::Begin("Main control");
     {
+        aApplication.drawUi(aTime);
+
         static bool showProfiler = false;
         if(imguiui::addCheckbox("Profiler", showProfiler))
         {
@@ -82,12 +84,6 @@ void showGui(imguiui::ImguiUi & imguiUi,
                 ;
             ImGui::Text("%s", metricsOs.str().c_str());
             ImGui::End();
-        }
-
-        static bool showSceneTree = true;
-        if(imguiui::addCheckbox("Scene tree", showSceneTree))
-        {
-            aApplication.drawUi(aTime);
         }
 
         static bool showDemo = false;

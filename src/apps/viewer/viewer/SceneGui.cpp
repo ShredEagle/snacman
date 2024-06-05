@@ -47,9 +47,8 @@ const ImGuiTreeNodeFlags SceneGui::gPartFlags =
     | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
 
 
-void SceneGui::present(Scene & aScene, const Timing & aTime)
+void SceneGui::presentSection(Scene & aScene, const Timing & aTime)
 {
-    ImGui::Begin("Scene tree", nullptr, ImGuiWindowFlags_MenuBar);
     if(ImGui::BeginMenuBar())
     {
         if(ImGui::BeginMenu("Options"))
@@ -59,11 +58,14 @@ void SceneGui::present(Scene & aScene, const Timing & aTime)
         }
         ImGui::EndMenuBar();
     }
-    Node * hovered = presentNodeTree(aScene.mRoot, 0, aTime);
-    ImGui::End();
 
-    handleHighlight(hovered);
-    presentSelection();
+    if (ImGui::CollapsingHeader("Scene Tree"))
+    {
+        Node * hovered = presentNodeTree(aScene.mRoot, 0, aTime);
+
+        handleHighlight(hovered);
+        presentSelection();
+    }
 }
 
 

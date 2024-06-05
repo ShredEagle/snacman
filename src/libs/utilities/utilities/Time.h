@@ -26,4 +26,23 @@ constexpr double asFractionalSeconds(Clock::duration aDuration)
 }
 
 
+class LapTimer
+{
+public:
+    LapTimer() :
+        mMarked{Clock::now()}
+    {}
+
+    Clock::duration mark()
+    {
+        Clock::time_point prev = mMarked;
+        mMarked = Clock::now();
+        return mMarked - prev;
+    }
+
+private:
+    Clock::time_point mMarked;
+};
+
+
 } // namespace ad

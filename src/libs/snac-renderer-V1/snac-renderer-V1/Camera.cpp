@@ -27,7 +27,7 @@ math::Matrix<4, 4, float> makePerspectiveProjection(math::Radian<float> aVertica
     math::Size<2, float> nearPlaneSize = math::makeSizeFromHeight(nearHeight, aAspectRatio);
 
 
-    return math::trans3d::perspective(aZNear, aZFar)
+    return math::trans3d::perspectiveNegated(aZNear, aZFar)
            * 
            (math::trans3d::orthographicProjection(math::Box<float>{
                {-nearPlaneSize.as<math::Position>() / 2, aZFar},

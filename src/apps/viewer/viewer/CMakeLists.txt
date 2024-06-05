@@ -5,7 +5,9 @@ set(REPO_FOLDER ${PROJECT_SOURCE_DIR})
 configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
+    CameraSystem.h
     DrawQuad.h
+    GraphGui.h
     Json.h
     Logging.h
     PassViewer.cpp
@@ -18,7 +20,9 @@ set(${TARGET_NAME}_HEADERS
 set(${TARGET_NAME}_SOURCES
     main.cpp
 
+    CameraSystem.cpp
     DrawQuad.cpp
+    GraphGui.cpp
     Logging.cpp
     PassViewer.cpp
     Scene.cpp

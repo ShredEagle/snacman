@@ -8,6 +8,7 @@
 #include <handy/vector_utils.h>
 
 #include <imguiui/ImguiUi.h>
+#include <imguiui/Widgets.h>
 
 #include <math/Transformations.h>
 #include <math/Vector.h>
@@ -20,6 +21,8 @@
 #include <snac-renderer-V2/Cube.h>
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/debug/DebugDrawing.h>
+
+#include <utilities/Time.h>
 
 // TODO #nvtx This should be handled cleanly by the profiler
 #include "../../../libs/snac-renderer-V1/snac-renderer-V1/3rdparty/nvtx/include/nvtx3/nvtx3.hpp"
@@ -83,14 +86,6 @@ const char * gFragmentShader = R"#(
     }
 )#";
 
-constexpr math::Degree<float> gInitialVFov{50.f};
-constexpr float gNearZ{-0.1f};
-constexpr float gMinFarZ{-25.f};
-
-/// @brief The orbitalcamera is moved away by the largest model dimension times this factor.
-[[maybe_unused]] constexpr float gRadialDistancingFactor{1.5f};
-/// @brief The far plane will be at least at this factor times the model depth.
-constexpr float gDepthFactor{20.f};
 
 namespace {
 
@@ -162,6 +157,8 @@ namespace {
             .mName = "simple-effect",
         };
         aStorage.mEffects.push_back(std::move(effect));
+
+        aStorage.mEffectLoadInfo.push_back(Storage::gNullLoadInfo);
 
         return &aStorage.mEffects.back();
     }
@@ -247,77 +244,6 @@ ViewerPartList Scene::populatePartList() const
 }
 
 
-enum class EscKeyBehaviour
-{
-    Ignore,
-    Close,
-};
-
-//TODO Ad 2023/07/26: Move to the glfw app library,
-// only register the subset actually provided by T_callbackProvider (so it does not need to implement them all)
-template <class T_callbackProvider>
-void registerGlfwCallbacks(graphics::AppInterface & aAppInterface,
-                           T_callbackProvider & aProvider,
-                           EscKeyBehaviour aEscBehaviour,
-                           const imguiui::ImguiUi * aImguiUi)
-{
-    using namespace std::placeholders;
-
-    aAppInterface.registerMouseButtonCallback(
-        [aImguiUi, &aProvider](int button, int action, int mods, double xpos, double ypos)
-        {
-            if(!aImguiUi->isCapturingMouse())
-            {
-                aProvider.callbackMouseButton(button, action, mods, xpos, ypos);
-            }
-        });
-    aAppInterface.registerCursorPositionCallback(
-        [aImguiUi, &aProvider](double xpos, double ypos)
-        {
-            if(!aImguiUi->isCapturingMouse())
-            {
-                aProvider.callbackCursorPosition(xpos, ypos);
-            }
-        });
-    aAppInterface.registerScrollCallback(
-        [aImguiUi, &aProvider](double xoffset, double yoffset)
-        {
-            if(!aImguiUi->isCapturingMouse())
-            {
-                aProvider.callbackScroll(xoffset, yoffset);
-            }
-        });
-
-    switch(aEscBehaviour)
-    {
-        case EscKeyBehaviour::Ignore:
-            aAppInterface.registerKeyCallback([aImguiUi, &aProvider](int key, int scancode, int action, int mods)
-            {
-                if(!aImguiUi->isCapturingKeyboard())
-                {
-                    aProvider.callbackKeyboard(key, scancode, action, mods);
-                }
-            });
-            break;
-        case EscKeyBehaviour::Close:
-            aAppInterface.registerKeyCallback(
-                [&aAppInterface, &aProvider, aImguiUi](int key, int scancode, int action, int mods)
-                {
-                    if(!aImguiUi->isCapturingKeyboard())
-                    {
-                        // TODO would be cleaner to factorize that and the ApplicationGlfw::default_key_callback
-                        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-                        {
-                            aAppInterface.requestCloseApplication();
-                        }
-                        aProvider.callbackKeyboard(key, scancode, action, mods);
-                    }
-                });
-            break;
-    }
-}
-
-
 ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
                                      const std::filesystem::path & aSceneFile,
                                      const imguiui::ImguiUi & aImguiUi) :
@@ -325,15 +251,9 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
     mLoader{makeResourceFinder()},
-    mCameraControl{mGlfwAppInterface->getWindowSize(),
-                   gInitialVFov,
-                   Orbital{2/*initial radius*/}
-    },
+    mCameraSystem{mGlfwAppInterface, &aImguiUi, CameraSystem::Control::FirstPerson},
     mGraph{mGlfwAppInterface, mStorage, mLoader}
 {
-    registerGlfwCallbacks(*mGlfwAppInterface, mCameraControl, EscKeyBehaviour::Close, &aImguiUi);
-    registerGlfwCallbacks(*mGlfwAppInterface, mFirstPersonControl, EscKeyBehaviour::Close, &aImguiUi);
-
     if(aSceneFile.extension() == ".sew")
     {
         mScene = loadScene(aSceneFile, mGraph.mInstanceStream, mLoader, mStorage);
@@ -343,46 +263,19 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
         throw std::invalid_argument{"Unsupported filetype: " + aSceneFile.extension().string()};
     }
 
-    /*const*/Node & model = mScene.mRoot.mChildren.front();
-
-    // TODO Ad 2023/10/03: Sort out this bit of logic: remove hardcoded sections,
-    // better handle camera placement / projections scene wide
-    // Setup instance and camera poses
+    if(const auto & children = mScene.mRoot.mChildren;
+       children.size() == 1)
     {
-        // TODO For a "Model viewer mode", automatically handle scaling via model bounding box.
-        // Note that visually this has the same effect as moving the radial camera away
-        // (it is much harder when loading and navigating inside an environment)
-
-        // move the orbital camera away, depending on the model size
-        //mCameraControl.mOrbital.mSpherical.radius() = 
-        //    std::max(mCameraControl.mOrbital.mSpherical.radius(),
-        //             gRadialDistancingFactor * (*model.mAabb.mDimension.getMaxMagnitudeElement()));
-
-
-        // TODO #camera do this only the correct setup, on each projection change
-        // We waited to load the model before setting up the projection,
-        // in order to set the far plane based on the model depth.
-        mCamera.setupOrthographicProjection({
-            .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
-            // TODO #camera
-            .mViewHeight = mCameraControl.getViewHeightAtOrbitalCenter(),
-            .mNearZ = gNearZ,
-            .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
-        });
-
-        mCamera.setupPerspectiveProjection({
-            .mAspectRatio = math::getRatio<GLfloat>(mGlfwAppInterface->getWindowSize()),
-            .mVerticalFov = gInitialVFov,
-            .mNearZ = gNearZ,
-            .mFarZ = std::min(gMinFarZ, -gDepthFactor * model.mAabb.depth())
-        });
+        SELOG(info)("Model viewer mode (inferred from single node)");
+        mCameraSystem.setupAsModelViewer(children.front().mAabb);
     }
 
     // Add basic shapes to the the scene
     Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
     auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mGraph.mInstanceStream);
-    mScene.addToRoot(triangle);
-    mScene.addToRoot(cube);
+    // Toggle the triangle and cube in the scene
+    //mScene.addToRoot(triangle);
+    //mScene.addToRoot(cube);
 }
 
 
@@ -472,24 +365,38 @@ void ViewerApplication::update(const Timing & aTime)
     // Animate the rigs
     handleAnimations(mScene.mRoot, aTime);
 
-    mFirstPersonControl.update(aTime.mDeltaDuration);
-
-    // TODO #camera: handle this when necessary
-    // Update camera to match current values in orbital control.
-    //mCamera.setPose(mCameraControl.mOrbital.getParentToLocal());
-    //if(mCamera.isProjectionOrthographic())
-    //{
-    //    // Note: to allow "zooming" in the orthographic case, we change the viewed height of the ortho projection.
-    //    // An alternative would be to apply a scale factor to the camera Pose transformation.
-    //    changeOrthographicViewportHeight(mCamera, mCameraControl.getViewHeightAtOrbitalCenter());
-    //}
-    mCamera.setPose(mFirstPersonControl.getParentToLocal());
+    mCameraSystem.update(aTime.mDeltaDuration);
 }
 
 
 void ViewerApplication::drawUi(const renderer::Timing & aTime)
 {
-    mSceneGui.present(mScene, aTime);
+    if(ImGui::Button("Recompile effects"))
+    {
+        LapTimer timer;
+        if(recompileEffects(mLoader, mStorage))
+        {
+            SELOG(info)("Successfully recompiled effect, took {:.3f}s.",
+                        asFractionalSeconds(timer.mark()));
+        }
+        else
+        {
+            SELOG(error)("Could not recompile all effects.");
+        }
+    }
+
+    mGraphGui.present(mGraph);
+
+    static bool gShowScene = false;
+    if(imguiui::addCheckbox("Scene", gShowScene))
+    {
+        ImGui::Begin("Scene", nullptr, ImGuiWindowFlags_MenuBar);
+
+        mCameraGui.presentSection(mCameraSystem);
+        mSceneGui.presentSection(mScene, aTime);
+
+        ImGui::End();
+    }
 }
 
 
@@ -503,7 +410,7 @@ void ViewerApplication::render()
     // if the camera (or pass itself?) might override the materials?
     // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
     ViewerPartList partList = mScene.populatePartList();
-    mGraph.renderFrame(partList, mCamera, mStorage);
+    mGraph.renderFrame(partList, mCameraSystem.mCamera, mStorage);
 
     mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
 }

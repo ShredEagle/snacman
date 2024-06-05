@@ -855,6 +855,67 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
 }
 
 
+// todo move in uns or private member of Loader
+std::vector<Technique> populateTechniques(const Loader & aLoader,
+                                          const filesystem::path & aEffectPath,
+                                          Storage & aStorage,
+                                          const std::vector<std::string> & aDefines)
+{
+    std::vector<Technique> result;
+    Json effect = Json::parse(std::ifstream{aEffectPath});
+
+    for (const auto & technique : effect.at("techniques"))
+    {
+        result.push_back(Technique{
+            .mConfiguredProgram =
+                storeConfiguredProgram(aLoader.loadProgram(technique.at("programfile"), aDefines), aStorage),
+        });
+
+        if(technique.contains("annotations"))
+        {
+            Technique & inserted = result.back();
+            for(auto [category, value] : technique.at("annotations").items())
+            {
+                inserted.mAnnotations.emplace(category, value.get<std::string>());
+            }
+        }
+    }
+
+    return result;
+}
+
+
+bool recompileEffects(const Loader & aLoader, Storage & aStorage)
+{
+    assert(aStorage.mEffectLoadInfo.size() == aStorage.mEffects.size());
+
+    bool success = true;
+
+    //for(unsigned int effectIdx = 0; effectIdx != aStorage.mEffectPaths.size(); ++effectIdx)
+    auto effectIt = aStorage.mEffects.begin();
+    for(const auto & loadInfo : aStorage.mEffectLoadInfo)
+    {
+        try
+        {
+            if(loadInfo != Storage::gNullLoadInfo)
+            {
+                effectIt->mTechniques = populateTechniques(aLoader, loadInfo.mPath, aStorage, loadInfo.mDefines);
+            }
+        }
+        catch(const std::exception& aException)
+        {
+            SELOG(error)
+            ("Exception thrown while compiling techniques:\n{}", aException.what());
+            success = false;
+        }
+        
+        ++effectIt;
+    }
+
+    return success;
+}
+
+
 Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
                             Storage & aStorage,
                             const std::vector<std::string> & aDefines_temp) const
@@ -863,23 +924,14 @@ Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
     Effect & result = aStorage.mEffects.back();
     result.mName = aEffectFile.string();
 
-    Json effect = Json::parse(std::ifstream{mFinder.pathFor(aEffectFile)});
-    for (const auto & technique : effect.at("techniques"))
-    {
-        result.mTechniques.push_back(Technique{
-            .mConfiguredProgram =
-                storeConfiguredProgram(loadProgram(technique.at("programfile"), aDefines_temp), aStorage),
-        });
+    filesystem::path effectPath = mFinder.pathFor(aEffectFile);
+    aStorage.mEffectLoadInfo.push_back({
+        .mPath = effectPath,
+        .mDefines = aDefines_temp,
+    });
 
-        if(technique.contains("annotations"))
-        {
-            Technique & inserted = result.mTechniques.back();
-            for(auto [category, value] : technique.at("annotations").items())
-            {
-                inserted.mAnnotations.emplace(category, value.get<std::string>());
-            }
-        }
-    }
+    result.mTechniques = populateTechniques(*this, effectPath, aStorage, aDefines_temp);
+
     return &result;
 }
 
