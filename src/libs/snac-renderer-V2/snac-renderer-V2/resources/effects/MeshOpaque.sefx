@@ -4,7 +4,7 @@
             "annotations": {
                 "pass": "forward"
             },
-            "programfile": "shaders/ForwardPhongLighting.prog"
+            "programfile": "shaders/ForwardBlinnPhongLighting.prog"
         },
         {
             "annotations": {

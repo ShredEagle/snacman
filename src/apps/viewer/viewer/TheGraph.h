@@ -16,6 +16,7 @@ namespace ad::renderer {
 
 
 class Camera;
+struct LightsData;
 struct Loader;
 struct ViewerPartList;
 struct ViewerPassCache;
@@ -32,6 +33,7 @@ struct HardcodedUbos
     graphics::UniformBufferObject * mModelTransformUbo;
 
     graphics::UniformBufferObject * mJointMatrixPaletteUbo;
+    graphics::UniformBufferObject * mLightsUbo;
 };
 
 
@@ -50,6 +52,7 @@ struct TheGraph
 
     void renderFrame(const ViewerPartList & aPartList, 
                      const Camera & aCamera,
+                     const LightsData & aLights,
                      Storage & aStorage);
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);

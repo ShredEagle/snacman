@@ -31,6 +31,7 @@ namespace semantic
     const BlockSemantic gMaterials{"Materials"};
     const BlockSemantic gLocalToWorld{"LocalToWorld"};
     BLOCK_SEM(JointMatrices);
+    BLOCK_SEM(Lights);
 
     #undef BLOCK_SEM
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Lights.h"
 
 #include <snac-renderer-V2/Model.h>
 
@@ -42,6 +43,29 @@ struct Scene
             .mName = "scene-root",
         },
     }; 
+
+    LightsData mLights{
+        .mDirectionalCount = 1,
+        .mPointCount = 1,
+        .mAmbientColor = math::hdr::gWhite<GLfloat> / 3.f,
+        .mDirectionalLights = {
+            DirectionalLight{
+                .mDirection = math::Vec<3, GLfloat>{0.f, 0.2f, 1.f}.normalize(),
+                .mDiffuseColor = math::hdr::gWhite<GLfloat> / 2.f,
+                .mSpecularColor = math::hdr::gWhite<GLfloat> / 3.f,
+            },
+        },
+        .mPointLights = {
+            PointLight{
+                .mPosition = {2.f, 0.f, 0.f},
+                .mRadius = {
+                    .mMin = 1.f,
+                    .mMax = 10.f,
+                },
+                .mDiffuseColor = math::hdr::gYellow<GLfloat>,
+            },
+        },
+    };
 };
 
 

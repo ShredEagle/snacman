@@ -49,7 +49,7 @@ void main()
 #endif
 
 #ifdef TEXTURED
-    albedo = albedo * texture(u_DiffuseTexture, vec3(ex_Uv[material.diffuseUvChannel], material.textureIndex));
+    albedo = albedo * texture(u_DiffuseTexture, vec3(ex_Uv[material.diffuseUvChannel], material.diffuseTextureIndex));
 #endif
 
     // Implement "cut-out" transparency: everything below 50% opacity is discarded (i.e. no depth write).
@@ -61,10 +61,14 @@ void main()
     // TODO take the light(s) as UBO input
     vec3 lightAmbientColor = vec3(0.5, 0.5, 0.5);
     vec3 lightColor = vec3(1., 1., 1.);
-    vec3 lightDir_cam = normalize(vec3(-0.5, 0., 1.));
+    vec3 lightDir_cam = normalize(vec3(0., 0.25, 1.));
 
     // Phong reflection model
+#if WRONG_VIEW
     vec3 view_cam = vec3(0., 0., 1.);
+#else
+    vec3 view_cam = -normalize(ex_Position_cam).xyz;
+#endif
     vec3 h_cam = normalize(view_cam + lightDir_cam);
     vec3 normal_cam = normalize(ex_Normal_cam);
 

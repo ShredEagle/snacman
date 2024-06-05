@@ -410,7 +410,7 @@ void ViewerApplication::render()
     // if the camera (or pass itself?) might override the materials?
     // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
     ViewerPartList partList = mScene.populatePartList();
-    mGraph.renderFrame(partList, mCameraSystem.mCamera, mStorage);
+    mGraph.renderFrame(partList, mCameraSystem.mCamera, mScene.mLights, mStorage);
 
     mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
 }

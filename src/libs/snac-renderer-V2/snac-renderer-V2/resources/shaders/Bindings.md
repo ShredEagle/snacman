@@ -1,0 +1,7 @@
+Waiting for a better solution, here are our hardcoded bindings
+
+## UBOs
+
+* 2: PhongMaterial
+* 3: JointMatrices
+* 4: Lights
