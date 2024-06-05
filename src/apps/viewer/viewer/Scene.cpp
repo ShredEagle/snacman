@@ -67,7 +67,7 @@ Scene loadScene(const filesystem::path & aSceneFile,
         Node modelPoser{
             .mInstance = Instance{
                 .mPose = pose,
-                .mName = entry.at("name").get<std::string>(),
+                .mName = entry.at("name").get<std::string>() + "-entry",
             },
             .mChildren = {std::move(model)},
             .mAabb = poserAabb,
