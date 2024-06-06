@@ -18,6 +18,7 @@ set(${TARGET_NAME}_HEADERS
     ViewerApplication.h
 
     runtime_reflect/DearImguiVisitor.h
+    runtime_reflect/ReflectHelpers.h
 )
 
 set(${TARGET_NAME}_SOURCES

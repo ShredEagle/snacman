@@ -1,9 +1,14 @@
 #pragma once
 
+
+#include "runtime_reflect/ReflectHelpers.h"
+
 #include <math/Color.h>
 #include <math/Vector.h>
 
 #include <renderer/GL_Loader.h>
+
+#include <span>
 
 
 namespace ad::renderer {
@@ -26,9 +31,9 @@ struct DirectionalLight
 template <class T_visitor>
 void r(T_visitor & aV, DirectionalLight & aLight)
 {
-    r(aV, aLight.mDirection, "direction");
-    r(aV, aLight.mDiffuseColor, "diffuse color");
-    r(aV, aLight.mSpecularColor, "specular color");
+    give(aV, aLight.mDirection, "direction");
+    give(aV, aLight.mDiffuseColor, "diffuse color");
+    give(aV, aLight.mSpecularColor, "specular color");
 }
 
 
@@ -45,10 +50,10 @@ struct Radius
 
 
 template <class T_visitor>
-void r(T_visitor & aV, Radius & aRadius, const char *)
+void r(T_visitor & aV, Radius & aRadius)
 {
-    r(aV, aRadius.mMin, "min");
-    r(aV, aRadius.mMax, "max");
+    give(aV, aRadius.mMin, "min");
+    give(aV, aRadius.mMax, "max");
 }
 
 
@@ -66,11 +71,12 @@ struct PointLight
 template <class T_visitor>
 void r(T_visitor & aV, PointLight & aLight)
 {
-    r(aV, aLight.mPosition, "position");
-    r(aV, aLight.mRadius, "Radius");
-    r(aV, aLight.mDiffuseColor, "diffuse color");
-    r(aV, aLight.mSpecularColor, "specular color");
+    give(aV, aLight.mPosition, "position");
+    give(aV, aLight.mRadius, "Radius");
+    give(aV, aLight.mDiffuseColor, "diffuse color");
+    give(aV, aLight.mSpecularColor, "specular color");
 }
+
 
 struct LightsData
 {
@@ -83,6 +89,19 @@ struct LightsData
     std::array<DirectionalLight, gMaxLights> mDirectionalLights;
     std::array<PointLight, gMaxLights> mPointLights;
 };
+
+
+template <class T_visitor>
+void r(T_visitor & aV, LightsData & aLights)
+{
+    give(aV, aLights.mAmbientColor, "ambient color");
+
+    give(aV, Clamped<GLuint>{aLights.mDirectionalCount, 0, gMaxLights}, "directional count");
+    give(aV, std::span{aLights.mDirectionalLights.data(), aLights.mDirectionalCount}, "directional lights");
+
+    give(aV, Clamped<GLuint>{aLights.mPointCount, 0, gMaxLights}, "point count");
+    give(aV, std::span{aLights.mPointLights.data(), aLights.mPointCount}, "point lights");
+}
 
 
 } // namespace ad::renderer
