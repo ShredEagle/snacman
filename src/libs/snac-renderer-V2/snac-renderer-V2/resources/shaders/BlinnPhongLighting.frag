@@ -49,10 +49,9 @@ void main()
 
     // We consider the eye is at the origin in cam space
     vec3 view_cam = -normalize(ex_Position_cam.xyz);
-
     vec3 normal_cam = normalize(ex_Normal_cam);
 
-    // Accumulators
+    // Accumulators for the lights contributions
     vec3 diffuseAccum = vec3(0.);
     vec3 specularAccum = vec3(0.);
 

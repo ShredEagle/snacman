@@ -84,6 +84,14 @@ struct TheGraph
         };
 
         std::vector<StringKey>::const_iterator mForwardPassKey = gForwardKeys.begin();
+
+        inline static const std::array<GLenum, 3> gPolygonModes{
+            GL_POINT,
+            GL_LINE,
+            GL_FILL,
+        };
+
+        std::array<GLenum, 3>::const_iterator mForwardPolygonMode = gPolygonModes.begin() + 2;
     };
     Controls mControls;
 

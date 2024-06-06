@@ -368,7 +368,9 @@ void TheGraph::passForward(const ViewerPartList & aPartList, Storage & mStorage)
 
         // We implemented alpha testing (cut-out), no blending.
         glDisable(GL_BLEND);
+
     }
+    auto scopedPolygonMode = graphics::scopePolygonMode(*mControls.mForwardPolygonMode);
 
     gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
