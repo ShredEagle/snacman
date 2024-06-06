@@ -86,7 +86,9 @@ LightsData Scene::getLightsInCamera(const Camera & aCamera) const
     const math::AffineMatrix<4, float> & transform = aCamera.getParentToCamera();
     for(auto & light : result.mDirectionalLights)
     {
-        light.mDirection = (math::homogeneous::makeVec(light.mDirection) * transform).xyz();
+        // might be unecessary to re-normalize, unless the transform scales
+        light.mDirection = math::UnitVec<3, GLfloat>{
+            (math::homogeneous::makeVec(light.mDirection) * transform).xyz()};
     }
     for(auto & light : result.mPointLights)
     {

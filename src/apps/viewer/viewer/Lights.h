@@ -16,7 +16,8 @@ constexpr unsigned int gMaxLights = 16;
 
 struct DirectionalLight
 {
-    alignas(16) math::Vec<3, GLfloat> mDirection;
+    // Needs to be default constructible
+    alignas(16) math::UnitVec<3, GLfloat> mDirection{{0.f, 0.f, 1.f}};
     alignas(16) math::hdr::Rgb<GLfloat> mDiffuseColor = math::hdr::gWhite<GLfloat>;
     alignas(16) math::hdr::Rgb<GLfloat> mSpecularColor = math::hdr::gWhite<GLfloat>;
 };
