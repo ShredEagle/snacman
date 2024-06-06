@@ -7,6 +7,7 @@
 
 namespace ad::renderer {
 
+class Camera;
 struct Loader;
 struct ViewerPartList;
 
@@ -38,20 +39,23 @@ struct Scene
 
     ViewerPartList populatePartList() const;
 
+    LightsData getLightsInCamera(const Camera & aCamera) const;
+
     Node mRoot{
         .mInstance = {
             .mName = "scene-root",
         },
     }; 
 
-    LightsData mLights{
+    
+    LightsData mLights_world{
         .mDirectionalCount = 1,
         .mPointCount = 1,
         .mAmbientColor = math::hdr::gWhite<GLfloat> / 3.f,
         .mDirectionalLights = {
             DirectionalLight{
                 .mDirection = math::Vec<3, GLfloat>{0.f, 0.2f, 1.f}.normalize(),
-                .mDiffuseColor = math::hdr::gWhite<GLfloat> / 2.f,
+                .mDiffuseColor = math::hdr::gRed<GLfloat> / 2.f,
                 .mSpecularColor = math::hdr::gWhite<GLfloat> / 3.f,
             },
         },
@@ -62,7 +66,7 @@ struct Scene
                     .mMin = 1.f,
                     .mMax = 10.f,
                 },
-                .mDiffuseColor = math::hdr::gYellow<GLfloat>,
+                .mDiffuseColor = math::hdr::gGreen<GLfloat>,
             },
         },
     };

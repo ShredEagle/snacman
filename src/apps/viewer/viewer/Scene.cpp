@@ -9,6 +9,7 @@
 #include <math/Transformations.h>
 
 #include <snac-renderer-V2/files/Loader.h>
+#include <snac-renderer-V2/Camera.h>
 
 #include <fstream>
 
@@ -78,6 +79,21 @@ Scene loadScene(const filesystem::path & aSceneFile,
     return scene;
 }
 
+
+LightsData Scene::getLightsInCamera(const Camera & aCamera) const
+{
+    LightsData result{mLights_world};
+    const math::AffineMatrix<4, float> & transform = aCamera.getParentToCamera();
+    for(auto & light : result.mDirectionalLights)
+    {
+        light.mDirection = (math::homogeneous::makeVec(light.mDirection) * transform).xyz();
+    }
+    for(auto & light : result.mPointLights)
+    {
+        light.mPosition = (math::homogeneous::makePosition(light.mPosition) * transform).xyz();
+    }
+    return result;
+}
 
 
 } // namespace ad::renderer

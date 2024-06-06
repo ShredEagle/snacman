@@ -52,7 +52,7 @@ struct TheGraph
 
     void renderFrame(const ViewerPartList & aPartList, 
                      const Camera & aCamera,
-                     const LightsData & aLights,
+                     const LightsData & aLights_camera,
                      Storage & aStorage);
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);

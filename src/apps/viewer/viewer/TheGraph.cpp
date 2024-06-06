@@ -204,7 +204,7 @@ void TheGraph::loadDrawBuffers(const ViewerPartList & aPartList,
 
 void TheGraph::renderFrame(const ViewerPartList & aPartList, 
                            const Camera & aCamera,
-                           const LightsData & aLights,
+                           const LightsData & aLights_camera,
                            Storage & aStorage)
 {
     {
@@ -213,7 +213,7 @@ void TheGraph::renderFrame(const ViewerPartList & aPartList,
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, aCamera);
 
-        loadLightsUbo(*mUbos.mLightsUbo, aLights);
+        loadLightsUbo(*mUbos.mLightsUbo, aLights_camera);
 
         proto::load(*mUbos.mJointMatrixPaletteUbo, std::span{aPartList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
     }
