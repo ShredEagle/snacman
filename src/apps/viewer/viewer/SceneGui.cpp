@@ -1,5 +1,6 @@
 #include "SceneGui.h"
 
+#include "runtime_reflect/DearImguiVisitor.h"
 #include "Scene.h"
 
 #include <imgui.h>
@@ -65,6 +66,21 @@ void SceneGui::presentSection(Scene & aScene, const Timing & aTime)
 
         handleHighlight(hovered);
         presentSelection();
+    }
+
+    if (ImGui::CollapsingHeader("Lights"))
+    {
+        //presentLights(aScene.mRoot, 0, aTime);
+        DearImguiVisitor v;
+        LightsData & lights = aScene.mLights_world;
+        for(std::size_t idx = 0; idx != lights.mDirectionalCount; ++idx)
+        {
+            r(v, lights.mDirectionalLights[idx]);
+        }
+        for(std::size_t idx = 0; idx != lights.mPointCount; ++idx)
+        {
+            r(v, lights.mPointLights[idx]);
+        }
     }
 }
 

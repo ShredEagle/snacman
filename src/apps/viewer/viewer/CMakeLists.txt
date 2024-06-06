@@ -16,6 +16,8 @@ set(${TARGET_NAME}_HEADERS
     SceneGui.h
     TheGraph.h
     ViewerApplication.h
+
+    runtime_reflect/DearImguiVisitor.h
 )
 
 set(${TARGET_NAME}_SOURCES

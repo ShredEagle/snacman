@@ -23,6 +23,15 @@ struct DirectionalLight
 };
 
 
+template <class T_visitor>
+void r(T_visitor & aV, DirectionalLight & aLight)
+{
+    r(aV, aLight.mDirection, "direction");
+    r(aV, aLight.mDiffuseColor, "diffuse color");
+    r(aV, aLight.mSpecularColor, "specular color");
+}
+
+
 struct Radius
 {
     // see rtr 4th p111
@@ -34,6 +43,15 @@ struct Radius
     GLfloat mMax;
 };
 
+
+template <class T_visitor>
+void r(T_visitor & aV, Radius & aRadius, const char *)
+{
+    r(aV, aRadius.mMin, "min");
+    r(aV, aRadius.mMax, "max");
+}
+
+
 struct PointLight
 {
     alignas(16) math::Position<3, GLfloat> mPosition;
@@ -44,6 +62,15 @@ struct PointLight
     alignas(16) math::hdr::Rgb<GLfloat> mSpecularColor = math::hdr::gWhite<GLfloat>;
 };
 
+
+template <class T_visitor>
+void r(T_visitor & aV, PointLight & aLight)
+{
+    r(aV, aLight.mPosition, "position");
+    r(aV, aLight.mRadius, "Radius");
+    r(aV, aLight.mDiffuseColor, "diffuse color");
+    r(aV, aLight.mSpecularColor, "specular color");
+}
 
 struct LightsData
 {
