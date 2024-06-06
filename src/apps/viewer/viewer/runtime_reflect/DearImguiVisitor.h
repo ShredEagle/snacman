@@ -24,15 +24,17 @@ void give(DearImguiVisitor & aV, T_value & aValue, const char * aName)
 template <class T, std::size_t Extent>
 void give(DearImguiVisitor & aV, const std::span<T, Extent> & aSpan, const char * aName)
 {
+    ImGui::Indent();
     for(std::size_t idx = 0; idx != aSpan.size(); ++idx)
     {
         std::string label = aName + (" #" + std::to_string(idx));
-        ImGui::Text(label.c_str());
+        ImGui::SeparatorText(label.c_str());
         // We have to push an explicit ID on the stack, to distinguish below widgets.
         ImGui::PushID(label.c_str());
         r(aV, aSpan[idx]);
         ImGui::PopID();
     }
+    ImGui::Unindent();
 }
 
 
