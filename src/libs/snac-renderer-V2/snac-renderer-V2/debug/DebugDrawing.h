@@ -7,6 +7,7 @@ namespace ad::renderer {
 
 namespace drawer
 {
+    constexpr const char * gLight = "light";
     constexpr const char * gRig = "rig";
 }
 

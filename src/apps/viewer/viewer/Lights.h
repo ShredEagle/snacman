@@ -88,6 +88,21 @@ struct LightsData
     alignas(16) math::hdr::Rgb<GLfloat> mAmbientColor;
     std::array<DirectionalLight, gMaxLights> mDirectionalLights;
     std::array<PointLight, gMaxLights> mPointLights;
+
+    //
+    // Helpers
+    //
+    std::span<DirectionalLight> spanDirectionalLights()
+    { return std::span{mDirectionalLights.data(), mDirectionalCount}; }
+
+    std::span<const DirectionalLight> spanDirectionalLights() const
+    { return std::span{mDirectionalLights.data(), mDirectionalCount}; }
+
+    std::span<PointLight> spanPointLights()
+    { return std::span{mPointLights.data(), mPointCount}; }
+
+    std::span<const PointLight> spanPointLights() const
+    { return std::span{mPointLights.data(), mPointCount}; }
 };
 
 
@@ -97,10 +112,10 @@ void r(T_visitor & aV, LightsData & aLights)
     give(aV, aLights.mAmbientColor, "ambient color");
 
     give(aV, Clamped<GLuint>{aLights.mDirectionalCount, 0, gMaxLights}, "directional count");
-    give(aV, std::span{aLights.mDirectionalLights.data(), aLights.mDirectionalCount}, "directional lights");
+    give(aV, aLights.spanDirectionalLights(), "directional lights");
 
     give(aV, Clamped<GLuint>{aLights.mPointCount, 0, gMaxLights}, "point count");
-    give(aV, std::span{aLights.mPointLights.data(), aLights.mPointCount}, "point lights");
+    give(aV, aLights.spanPointLights(), "point lights");
 }
 
 

@@ -193,6 +193,7 @@ void SceneGui::presentAnimations(Handle<AnimatedRig> mAnimatedRig,
 
 void SceneGui::presentLights(LightsData & aLightsData)
 {
+    ImGui::Checkbox("Show point lights", &mOptions.mShowPointLights);
     DearImguiVisitor v;
     r(v, aLightsData);
 }

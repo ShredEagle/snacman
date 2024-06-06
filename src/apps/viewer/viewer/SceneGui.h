@@ -53,6 +53,9 @@ private:
     struct Options
     {
         bool mHighlightObjects = false;
+        // Not sure it should be located here: the scene gui will offer the checkbox,
+        // but it is unlikely to handle the actual rendering of light positions.
+        bool mShowPointLights = true;
     };
     
     Options mOptions;

@@ -89,6 +89,8 @@ const char * gFragmentShader = R"#(
 
 namespace {
 
+    constexpr math::Size<3, float> gLightCubeSize{0.2f, 0.2f, 0.2f};
+
     resource::ResourceFinder makeResourceFinder()
     {
         filesystem::path assetConfig = platform::getExecutableFileDirectory() / "assets.json";
@@ -355,6 +357,20 @@ void handleAnimations(Node & aNode,
 }
 
 
+void showPointLights(const LightsData & aLights)
+{
+    for(const auto & pointLight : aLights.spanPointLights())
+    {
+        DBGDRAW_INFO(drawer::gLight).addBox(
+            {
+                .mPosition = pointLight.mPosition,
+                .mColor = pointLight.mDiffuseColor,
+            },
+            math::Box<float>{gLightCubeSize.as<math::Position>() / 2.f, gLightCubeSize});
+    }
+}
+
+
 void ViewerApplication::update(const Timing & aTime)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "ViewerApplication::update()", CpuTime);
@@ -364,6 +380,12 @@ void ViewerApplication::update(const Timing & aTime)
     // Draw the Rigs joints / bones using DebugDrawer
     // Animate the rigs
     handleAnimations(mScene.mRoot, aTime);
+
+    // handle lights
+    if(mSceneGui.mOptions.mShowPointLights)
+    {
+        showPointLights(mScene.mLights_world);
+    }
 
     mCameraSystem.update(aTime.mDeltaDuration);
 }
