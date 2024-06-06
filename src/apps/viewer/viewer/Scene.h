@@ -54,7 +54,7 @@ struct Scene
         .mAmbientColor = math::hdr::gWhite<GLfloat> / 3.f,
         .mDirectionalLights = {
             DirectionalLight{
-                .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.f, 0.2f, 1.f}},
+                .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.f, -0.2f, -1.f}},
                 .mDiffuseColor = math::hdr::gRed<GLfloat> / 2.f,
                 .mSpecularColor = math::hdr::gWhite<GLfloat> / 3.f,
             },

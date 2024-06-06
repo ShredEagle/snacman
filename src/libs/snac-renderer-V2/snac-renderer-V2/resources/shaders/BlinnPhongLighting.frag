@@ -60,7 +60,7 @@ void main()
     for(uint directionalIdx = 0; directionalIdx != ub_DirectionalCount.x; ++directionalIdx)
     {
         DirectionalLight directional = ub_DirectionalLights[directionalIdx];
-        vec3 lightDir_cam = directional.direction.xyz;
+        vec3 lightDir_cam = -directional.direction.xyz;
         vec3 h_cam = normalize(view_cam + lightDir_cam);
 
         diffuseAccum  += dotPlus(normal_cam, lightDir_cam) 
