@@ -110,9 +110,13 @@ void main()
         vec3 lightDir_cam = -directional.direction.xyz;
         vec3 h_cam = normalize(view_cam + lightDir_cam);
 
-        diffuseAccum  += dotPlus(shadingNormal_cam, lightDir_cam) 
+        float nDotL = dot(shadingNormal_cam, lightDir_cam);
+        diffuseAccum  += max(0., nDotL)
                          * directional.diffuseColor.rgb;
-        specularAccum += pow(dotPlus(shadingNormal_cam, h_cam), material.specularExponent) 
+        // see: https://computergraphics.stackexchange.com/a/14073/11110
+        float isFacingLight = float(nDotL >= -0.);
+        specularAccum += isFacingLight 
+                         * pow(dotPlus(shadingNormal_cam, h_cam), material.specularExponent) 
                          * directional.specularColor.rgb;
     }
 
