@@ -1,8 +1,14 @@
+struct LightColors
+{
+    vec4 diffuse;
+    vec4 specular;
+};
+
+
 struct DirectionalLight
 {
     vec4 direction;
-    vec4 diffuseColor;
-    vec4 specularColor;
+    LightColors colors;
 };
 
 
@@ -10,8 +16,7 @@ struct PointLight
 {
     vec4 position;
     vec2 radius; 
-    vec4 diffuseColor;
-    vec4 specularColor;
+    LightColors colors;
 };
 
 
@@ -24,6 +29,38 @@ layout(std140, binding = 4) uniform LightsBlock
     DirectionalLight ub_DirectionalLights[MAX_LIGHTS];
     PointLight ub_PointLights[MAX_LIGHTS];
 };
+
+
+// TODO: could we somehow merge it with LightColors?
+struct LightContributions
+{
+ vec3 diffuse;
+ vec3 specular;
+};
+
+
+LightContributions applyLight(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
+                              LightColors aColors, float aSpecularExponent)
+{
+    LightContributions result;
+
+    vec3 h = normalize(aView + aLightDir);
+
+    float nDotL = dot(aShadingNormal, aLightDir);
+    result.diffuse = max(0., nDotL) 
+                     * aColors.diffuse.rgb;
+    // Eliminate specular light bleeding,
+    // see: https://computergraphics.stackexchange.com/q/14072/11110
+    // Note: this has a major drawback: it introduces an abrupt cut-off between polygons
+    // where the sign of nDotL changes, which is very disturbing for smooth surfaces.
+    // TODO: find a better solution (maybe a windowing function on the cut-off factor)
+    float isFacingLight = float(nDotL > 0.);
+    result.specular = isFacingLight 
+                      * pow(dotPlus(aShadingNormal, h), aSpecularExponent)
+                      * aColors.specular.rgb;
+
+    return result;
+}
 
 
 // Compute inverse-square light attenuation multiplied by a windowing function

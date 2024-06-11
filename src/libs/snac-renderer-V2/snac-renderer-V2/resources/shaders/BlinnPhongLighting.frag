@@ -108,16 +108,12 @@ void main()
     {
         DirectionalLight directional = ub_DirectionalLights[directionalIdx];
         vec3 lightDir_cam = -directional.direction.xyz;
-        vec3 h_cam = normalize(view_cam + lightDir_cam);
-
-        float nDotL = dot(shadingNormal_cam, lightDir_cam);
-        diffuseAccum  += max(0., nDotL)
-                         * directional.diffuseColor.rgb;
-        // see: https://computergraphics.stackexchange.com/a/14073/11110
-        float isFacingLight = float(nDotL >= -0.);
-        specularAccum += isFacingLight 
-                         * pow(dotPlus(shadingNormal_cam, h_cam), material.specularExponent) 
-                         * directional.specularColor.rgb;
+        
+        LightContributions lighting = 
+            applyLight(view_cam, lightDir_cam, shadingNormal_cam,
+                       directional.colors, material.specularExponent);
+        diffuseAccum += lighting.diffuse;
+        specularAccum += lighting.specular;
     }
 
     // Point lights
@@ -129,16 +125,14 @@ void main()
         vec3 lightRay_cam = point.position.xyz - ex_Position_cam;
         float r = sqrt(dot(lightRay_cam, lightRay_cam));
         vec3 lightDir_cam = lightRay_cam / r;
-        vec3 h_cam = normalize(view_cam + lightDir_cam);
+
+        LightContributions lighting = 
+            applyLight(view_cam, lightDir_cam, shadingNormal_cam,
+                       point.colors, material.specularExponent);
 
         float falloff = attenuatePoint(point, r);
-
-        diffuseAccum  += dotPlus(shadingNormal_cam, lightDir_cam) 
-                         * point.diffuseColor.rgb
-                         * falloff;
-        specularAccum += pow(dotPlus(shadingNormal_cam, h_cam), material.specularExponent) 
-                         * point.specularColor.rgb
-                         * falloff;
+        diffuseAccum += lighting.diffuse * falloff;
+        specularAccum += lighting.specular * falloff;
     }
 
     vec3 ambient = material.ambientColor.rgb * ub_AmbientColor.rgb;
