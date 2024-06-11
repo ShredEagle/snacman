@@ -7,6 +7,8 @@
  
 in vec3 ex_Position_cam;
 in vec3 ex_Normal_cam;
+in vec3 ex_Tangent_cam;
+in vec3 ex_Bitangent_cam;
 
 #ifdef VERTEX_COLOR
 in vec4 ex_Color;
@@ -17,6 +19,7 @@ in flat uint ex_MaterialIdx;
 
 #ifdef TEXTURED
 uniform sampler2DArray u_DiffuseTexture;
+uniform sampler2DArray u_NormalTexture;
 #endif
 
 out vec4 out_Color;
@@ -44,12 +47,48 @@ void main()
 
 
     //
+    // Normal mapping
+    //
+
+    // Fetch from normal map, and remap fro [0, 1]^3 to [-1, 1]^3.
+    vec3 normal_tbn = 
+        texture(u_NormalTexture, 
+                vec3(ex_Uv[material.normalUvChannel], material.normalTextureIndex)).xyz
+        * 2 - vec3(1);
+
+    // MikkT see: http://www.mikktspace.com/
+
+    // Despite MikkT guideline, if the tangent and normal were not normalized
+    // the result was be abherent with sample gltf assets (e.g. avocado) 
+    //vec3 normal_cam = normalize(ex_Normal_cam);
+    //vec3 tangent_cam = normalize(ex_Tangent_cam);
+
+    // Without normalization
+    vec3 normal_cam = ex_Normal_cam;
+    vec3 tangent_cam = ex_Tangent_cam;
+
+#if COMPUTE_BITANGENT
+    // TODO handle handedness, which should be -1 or 1
+    //float handedness
+    vec3 bitangent_cam = cross(normal_cam, tangent_cam) * handedness;
+#else
+    vec3 bitangent_cam = ex_Bitangent_cam;
+#endif
+
+    vec3 bumpNormal_cam = normalize(
+        normal_tbn.x * tangent_cam
+        + normal_tbn.y * bitangent_cam
+        + normal_tbn.z * normal_cam
+    );
+
+    vec3 shadingNormal_cam = bumpNormal_cam;
+
+    //
     // BlinnPhong reflection model
     //
 
     // We consider the eye is at the origin in cam space
     vec3 view_cam = -normalize(ex_Position_cam.xyz);
-    vec3 normal_cam = normalize(ex_Normal_cam);
 
     // Accumulators for the lights contributions
     vec3 diffuseAccum = vec3(0.);
@@ -62,9 +101,9 @@ void main()
         vec3 lightDir_cam = -directional.direction.xyz;
         vec3 h_cam = normalize(view_cam + lightDir_cam);
 
-        diffuseAccum  += dotPlus(normal_cam, lightDir_cam) 
+        diffuseAccum  += dotPlus(shadingNormal_cam, lightDir_cam) 
                          * directional.diffuseColor.rgb;
-        specularAccum += pow(dotPlus(normal_cam, h_cam), material.specularExponent) 
+        specularAccum += pow(dotPlus(shadingNormal_cam, h_cam), material.specularExponent) 
                          * directional.specularColor.rgb;
     }
 
@@ -81,10 +120,10 @@ void main()
 
         float falloff = attenuatePoint(point, r);
 
-        diffuseAccum  += dotPlus(normal_cam, lightDir_cam) 
+        diffuseAccum  += dotPlus(shadingNormal_cam, lightDir_cam) 
                          * point.diffuseColor.rgb
                          * falloff;
-        specularAccum += pow(dotPlus(normal_cam, h_cam), material.specularExponent) 
+        specularAccum += pow(dotPlus(shadingNormal_cam, h_cam), material.specularExponent) 
                          * point.specularColor.rgb
                          * falloff;
     }
