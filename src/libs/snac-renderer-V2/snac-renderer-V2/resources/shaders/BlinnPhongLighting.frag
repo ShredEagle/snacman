@@ -75,6 +75,8 @@ void main()
     vec3 bitangent_cam = ex_Bitangent_cam;
 #endif
 
+    //vec3 bitangent_cam = normalize(bitangent_cam);
+
     vec3 bumpNormal_cam = normalize(
         normal_tbn.x * tangent_cam
         + normal_tbn.y * bitangent_cam

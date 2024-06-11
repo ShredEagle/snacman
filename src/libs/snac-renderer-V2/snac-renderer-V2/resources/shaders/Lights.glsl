@@ -49,12 +49,14 @@ LightContributions applyLight(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
     float nDotL = dot(aShadingNormal, aLightDir);
     result.diffuse = max(0., nDotL) 
                      * aColors.diffuse.rgb;
-    // Eliminate specular light bleeding,
+    // Eliminate specular light bleeding, with a boolean multiplicative factor
     // see: https://computergraphics.stackexchange.com/q/14072/11110
     // Note: this has a major drawback: it introduces an abrupt cut-off between polygons
     // where the sign of nDotL changes, which is very disturbing for smooth surfaces.
     // TODO: find a better solution (maybe a windowing function on the cut-off factor)
-    float isFacingLight = float(nDotL > 0.);
+    //float isFacingLight = float(nDotL > 0.);
+    // Use a smoothstep windowing function instead of boolean value
+    float isFacingLight = smoothstep(0.0, 0.1, nDotL);
     result.specular = isFacingLight 
                       * pow(dotPlus(aShadingNormal, h), aSpecularExponent)
                       * aColors.specular.rgb;
