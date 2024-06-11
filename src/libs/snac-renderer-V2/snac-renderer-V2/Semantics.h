@@ -12,6 +12,7 @@ namespace semantic
     SEM(ModelTransform);
     const Semantic gNormal{"Normal"};
     const Semantic gTangent{"Tangent"};
+    SEM(Bitangent);
     const Semantic gColor{"Color"};
     const Semantic gUv{"Uv"};
     SEM(Joints0);
