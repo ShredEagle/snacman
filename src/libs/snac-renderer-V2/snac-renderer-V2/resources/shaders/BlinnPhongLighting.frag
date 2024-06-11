@@ -81,6 +81,15 @@ void main()
         + normal_tbn.z * normal_cam
     );
 
+    //out_Color = vec4(-bumpNormal_cam, 1.0);
+    //out_Color = vec4(remapToRgb(normal_cam), 1.0);
+    //out_Color = vec4(remapToRgb(tangent_cam), 1.0);
+    //out_Color = vec4(remapToRgb(bitangent_cam), 1.0);
+    //out_Color = vec4(remapToRgb(bumpNormal_cam), 1.0);
+    //out_Color = vec4(remapToRgb(normal_tbn), 1.0);
+    //out_Color = albedo;
+    //return;
+
     vec3 shadingNormal_cam = bumpNormal_cam;
 
     //
