@@ -39,7 +39,8 @@ struct Scene
 
     ViewerPartList populatePartList() const;
 
-    LightsData getLightsInCamera(const Camera & aCamera) const;
+    LightsData getLightsInCamera(const Camera & aCamera,
+                                 bool aTransformDirectionalLights) const;
 
     Node mRoot{
         .mInstance = {

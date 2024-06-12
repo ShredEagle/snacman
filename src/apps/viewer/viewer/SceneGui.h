@@ -56,6 +56,7 @@ private:
         // Not sure it should be located here: the scene gui will offer the checkbox,
         // but it is unlikely to handle the actual rendering of light positions.
         bool mShowPointLights = true;
+        bool mAreDirectionalLightsCameraSpace = false;
     };
     
     Options mOptions;

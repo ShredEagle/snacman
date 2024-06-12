@@ -80,15 +80,19 @@ Scene loadScene(const filesystem::path & aSceneFile,
 }
 
 
-LightsData Scene::getLightsInCamera(const Camera & aCamera) const
+LightsData Scene::getLightsInCamera(const Camera & aCamera,
+                                    bool aTransformDirectionalLights) const
 {
     LightsData result{mLights_world};
     const math::AffineMatrix<4, float> & transform = aCamera.getParentToCamera();
-    for(auto & light : result.mDirectionalLights)
+    if(aTransformDirectionalLights)
     {
-        // might be unecessary to re-normalize, unless the transform scales
-        light.mDirection = math::UnitVec<3, GLfloat>{
-            (math::homogeneous::makeVec(light.mDirection) * transform).xyz()};
+        for(auto & light : result.mDirectionalLights)
+        {
+            // might be unecessary to re-normalize, unless the transform scales
+            light.mDirection = math::UnitVec<3, GLfloat>{
+                (math::homogeneous::makeVec(light.mDirection) * transform).xyz()};
+        }
     }
     for(auto & light : result.mPointLights)
     {

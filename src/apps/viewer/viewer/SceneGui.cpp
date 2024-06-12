@@ -194,6 +194,8 @@ void SceneGui::presentAnimations(Handle<AnimatedRig> mAnimatedRig,
 void SceneGui::presentLights(LightsData & aLightsData)
 {
     ImGui::Checkbox("Show point lights", &mOptions.mShowPointLights);
+    ImGui::Checkbox("Directional lights in camera space", 
+                     &mOptions.mAreDirectionalLightsCameraSpace);
     DearImguiVisitor v;
     r(v, aLightsData);
 }

@@ -434,7 +434,8 @@ void ViewerApplication::render()
     ViewerPartList partList = mScene.populatePartList();
     mGraph.renderFrame(partList,
                        mCameraSystem.mCamera,
-                       mScene.getLightsInCamera(mCameraSystem.mCamera),
+                       mScene.getLightsInCamera(mCameraSystem.mCamera,
+                                                !mSceneGui.mOptions.mAreDirectionalLightsCameraSpace),
                        mStorage);
 
     mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
