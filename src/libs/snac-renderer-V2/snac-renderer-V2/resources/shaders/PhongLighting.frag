@@ -48,7 +48,7 @@ void main()
     vec3 lightDir_cam = normalize(vec3(0., 0.25, 1.));
 
     // Phong reflection model
-#if WRONG_VIEW
+#ifdef WRONG_VIEW
     vec3 view_cam = vec3(0., 0., 1.);
 #else
     vec3 view_cam = -normalize(ex_Position_cam).xyz;

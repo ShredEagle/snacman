@@ -58,16 +58,19 @@ void main()
 
     // MikkT see: http://www.mikktspace.com/
 
+//#define NORMALIZE_TBN
+#ifdef NORMALIZE_TBN
     // Despite MikkT guideline, if the tangent and normal were not normalized
     // the result was be abherent with sample gltf assets (e.g. avocado) 
-    //vec3 normal_cam = normalize(ex_Normal_cam);
-    //vec3 tangent_cam = normalize(ex_Tangent_cam);
-
+    vec3 normal_cam = normalize(ex_Normal_cam);
+    vec3 tangent_cam = normalize(ex_Tangent_cam);
+#else
     // Without normalization
     vec3 normal_cam = ex_Normal_cam;
     vec3 tangent_cam = ex_Tangent_cam;
+#endif
 
-#if COMPUTE_BITANGENT
+#ifdef COMPUTE_BITANGENT
     // TODO handle handedness, which should be -1 or 1
     //float handedness
     vec3 bitangent_cam = cross(normal_cam, tangent_cam) * handedness;
@@ -75,7 +78,9 @@ void main()
     vec3 bitangent_cam = ex_Bitangent_cam;
 #endif
 
-    //vec3 bitangent_cam = normalize(bitangent_cam);
+#ifdef NORMALIZE_TBN
+    bitangent_cam = normalize(bitangent_cam);
+#endif
 
     vec3 bumpNormal_cam = normalize(
         normal_tbn.x * tangent_cam
