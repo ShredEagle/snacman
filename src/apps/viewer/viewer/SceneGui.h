@@ -9,6 +9,7 @@
 namespace ad::renderer {
 
 
+struct LightsData;
 struct Scene;
 
 
@@ -31,6 +32,7 @@ private:
     Node * presentNodeTree(Node & aNode, unsigned int aIndex, const Timing & aTime);
     void presentObject(const Object & aObject, Instance & aInstance, const Timing & aTime);
     void presentEffect(Handle<const Effect> aEffect);
+    void presentLights(LightsData & aLightsData);
     void presentShaders(const IntrospectProgram & aIntrospectProgram);
     void presentAnimations(Handle<AnimatedRig> mAnimatedRig, Instance & aInstance, const Timing & aTime);
     static void presentJointTree(const NodeTree<Rig::Pose> & aTree,
@@ -51,6 +53,10 @@ private:
     struct Options
     {
         bool mHighlightObjects = false;
+        // Not sure it should be located here: the scene gui will offer the checkbox,
+        // but it is unlikely to handle the actual rendering of light positions.
+        bool mShowPointLights = true;
+        bool mAreDirectionalLightsCameraSpace = false;
     };
     
     Options mOptions;

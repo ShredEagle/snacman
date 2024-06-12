@@ -41,6 +41,12 @@ namespace {
     }
 
 
+    void loadLightsUbo(const graphics::UniformBufferObject & aUbo, const LightsData & aLights)
+    {
+        proto::loadSingle(aUbo, aLights, graphics::BufferHint::DynamicDraw);
+    }
+
+
 } // unnamed namespace
 
 
@@ -64,6 +70,10 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
     aStorage.mUbos.emplace_back();
     mJointMatrixPaletteUbo = &aStorage.mUbos.back();
     mUboRepository.emplace(semantic::gJointMatrices, mJointMatrixPaletteUbo);
+
+    aStorage.mUbos.emplace_back();
+    mLightsUbo = &aStorage.mUbos.back();
+    mUboRepository.emplace(semantic::gLights, mLightsUbo);
 }
 
 
@@ -194,6 +204,7 @@ void TheGraph::loadDrawBuffers(const ViewerPartList & aPartList,
 
 void TheGraph::renderFrame(const ViewerPartList & aPartList, 
                            const Camera & aCamera,
+                           const LightsData & aLights_camera,
                            Storage & aStorage)
 {
     {
@@ -201,6 +212,8 @@ void TheGraph::renderFrame(const ViewerPartList & aPartList,
         loadFrameUbo(*mUbos.mFrameUbo);
         // Note in a more realistic application, several cameras would be used per frame.
         loadCameraUbo(*mUbos.mViewingUbo, aCamera);
+
+        loadLightsUbo(*mUbos.mLightsUbo, aLights_camera);
 
         proto::load(*mUbos.mJointMatrixPaletteUbo, std::span{aPartList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
     }
@@ -355,7 +368,9 @@ void TheGraph::passForward(const ViewerPartList & aPartList, Storage & mStorage)
 
         // We implemented alpha testing (cut-out), no blending.
         glDisable(GL_BLEND);
+
     }
+    auto scopedPolygonMode = graphics::scopePolygonMode(*mControls.mForwardPolygonMode);
 
     gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

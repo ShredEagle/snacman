@@ -22,6 +22,12 @@ void GraphGui::present(TheGraph & aGraph)
             TheGraph::Controls::gForwardKeys.end(),
             [](auto aKeyIt){return *aKeyIt;});
 
+        imguiui::addCombo("Forward polygon mode",
+            aGraph.mControls.mForwardPolygonMode,
+            TheGraph::Controls::gPolygonModes.begin(),
+            TheGraph::Controls::gPolygonModes.end(),
+            [](auto aModeIt){return graphics::to_string(*aModeIt);});
+
         ImGui::End();
     }
 }

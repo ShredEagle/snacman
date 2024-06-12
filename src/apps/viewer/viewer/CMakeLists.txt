@@ -9,12 +9,16 @@ set(${TARGET_NAME}_HEADERS
     DrawQuad.h
     GraphGui.h
     Json.h
+    Lights.h
     Logging.h
     PassViewer.cpp
     Scene.h
     SceneGui.h
     TheGraph.h
     ViewerApplication.h
+
+    runtime_reflect/DearImguiVisitor.h
+    runtime_reflect/ReflectHelpers.h
 )
 
 set(${TARGET_NAME}_SOURCES

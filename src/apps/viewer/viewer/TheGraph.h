@@ -16,6 +16,7 @@ namespace ad::renderer {
 
 
 class Camera;
+struct LightsData;
 struct Loader;
 struct ViewerPartList;
 struct ViewerPassCache;
@@ -32,6 +33,7 @@ struct HardcodedUbos
     graphics::UniformBufferObject * mModelTransformUbo;
 
     graphics::UniformBufferObject * mJointMatrixPaletteUbo;
+    graphics::UniformBufferObject * mLightsUbo;
 };
 
 
@@ -50,6 +52,7 @@ struct TheGraph
 
     void renderFrame(const ViewerPartList & aPartList, 
                      const Camera & aCamera,
+                     const LightsData & aLights_camera,
                      Storage & aStorage);
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
@@ -77,10 +80,19 @@ struct TheGraph
     {
         inline static const std::vector<StringKey> gForwardKeys{
             "forward",
+            "forward_phong",
             "forward_debug",
         };
 
         std::vector<StringKey>::const_iterator mForwardPassKey = gForwardKeys.begin();
+
+        inline static const std::array<GLenum, 3> gPolygonModes{
+            GL_POINT,
+            GL_LINE,
+            GL_FILL,
+        };
+
+        std::array<GLenum, 3>::const_iterator mForwardPolygonMode = gPolygonModes.begin() + 2;
     };
     Controls mControls;
 

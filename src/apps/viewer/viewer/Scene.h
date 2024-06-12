@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Lights.h"
 
 #include <snac-renderer-V2/Model.h>
 
 
 namespace ad::renderer {
 
+class Camera;
 struct Loader;
 struct ViewerPartList;
 
@@ -37,11 +39,38 @@ struct Scene
 
     ViewerPartList populatePartList() const;
 
+    LightsData getLightsInCamera(const Camera & aCamera,
+                                 bool aTransformDirectionalLights) const;
+
     Node mRoot{
         .mInstance = {
             .mName = "scene-root",
         },
     }; 
+
+    
+    LightsData mLights_world{
+        .mDirectionalCount = 1,
+        .mPointCount = 1,
+        .mAmbientColor = math::hdr::gWhite<GLfloat> / 3.f,
+        .mDirectionalLights = {
+            DirectionalLight{
+                .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.f, -0.2f, -1.f}},
+                .mDiffuseColor = math::hdr::gWhite<GLfloat>,
+                .mSpecularColor = math::hdr::gWhite<GLfloat> / 2.f,
+            },
+        },
+        .mPointLights = {
+            PointLight{
+                .mPosition = {2.f, 0.f, 0.f},
+                .mRadius = {
+                    .mMin = 1.f,
+                    .mMax = 10.f,
+                },
+                .mDiffuseColor = math::hdr::gGreen<GLfloat>,
+            },
+        },
+    };
 };
 
 

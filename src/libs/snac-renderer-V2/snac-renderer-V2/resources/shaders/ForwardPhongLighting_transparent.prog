@@ -1,4 +1,4 @@
 {
-    "vertex": "PhongLighting.vert",
+    "vertex": "FullVertexTransform.vert",
     "fragment": "PhongLighting_transparent.frag"
 }

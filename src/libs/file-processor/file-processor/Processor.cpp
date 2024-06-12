@@ -65,6 +65,8 @@ namespace {
             mArchive.write(aMesh->mMaterialIndex);
 
             aiVector3D * tangents = aMesh->mTangents;
+            // Note that with assimp, tangents and bitangents are either both present or both absent.
+            aiVector3D * bitangents = aMesh->mBitangents;
             // positions and normals are always required
             unsigned int vertexAttributesFlags = gVertexPosition | gVertexNormal;
             // Note: For the moment, since the structure of the loader is too rigid
@@ -73,6 +75,11 @@ namespace {
             // (e.g., making tangents optional)
             assert(tangents);
             if(tangents) vertexAttributesFlags |= gVertexTangent;
+
+            assert(bitangents); // Note: we should never fail here: if tangents were presents,
+                                // assimp guarantees bitangents are present
+            if(bitangents) vertexAttributesFlags |= gVertexBitangent;
+
             mArchive.write(vertexAttributesFlags);
 
             // Vertices
@@ -85,6 +92,10 @@ namespace {
             if(tangents)
             {
                 mArchive.write(std::span{tangents, aMesh->mNumVertices});
+            }
+            if(bitangents)
+            {
+                mArchive.write(std::span{bitangents, aMesh->mNumVertices});
             }
 
             mArchive.write(aMesh->GetNumColorChannels());
@@ -232,6 +243,7 @@ namespace {
     //      [mesh.vertices(i.e. positions, 3 floats per vertex)]
     //      [mesh.normals(3 floats per vertex)]
     //      <if mesh.hasTangents>: [mesh.tangents(3 floats per vertex)]
+    //      <if mesh.hasBitangents>: [mesh.bitangents(3 floats per vertex)]
     //      mesh.numColorChannels
     //      each mesh.ColorChannel:
     //        [ColorChannel.color(4 floats per vertex)]
@@ -335,6 +347,9 @@ namespace {
                     << " with " << mesh->mNumVertices << " vertices, " << mesh->mNumFaces << " triangles"
                     << ", material '" << aScene->mMaterials[mesh->mMaterialIndex]->GetName().C_Str() 
                     << "'."
+                << "\n"
+                << std::string(2 * level + 2, ' ') << "- Normals: " << (mesh->HasNormals() ? "yes" : "no")
+                    << ", tangents & bitangents: " << (mesh->HasTangentsAndBitangents() ? "yes" : "no")
                 << "\n"
                 << std::string(2 * level + 2, ' ') << "- " << mesh->GetNumColorChannels() << " color channel(s), "
                     << mesh->GetNumUVChannels() << " UV channel(s)."

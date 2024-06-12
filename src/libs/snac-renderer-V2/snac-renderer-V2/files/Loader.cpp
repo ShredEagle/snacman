@@ -108,6 +108,7 @@ namespace {
     constexpr auto gPositionSize = 3 * sizeof(float); // TODO that is crazy coupling
     constexpr auto gNormalSize = gPositionSize;
     constexpr auto gTangentSize = gPositionSize;
+    constexpr auto gBitangentSize = gPositionSize;
     constexpr auto gUvSize = 2 * sizeof(float);
     constexpr auto gColorSize = 4 * sizeof(float);
     constexpr auto gIndexSize = sizeof(unsigned int);
@@ -135,9 +136,10 @@ namespace {
             };
 
         // TODO #loader Those hardcoded indices are smelly, hard-coupled to the attribute streams structure in the binary.
-        const graphics::BufferAny & positionBuffer  = *(aVertexStream.mVertexBufferViews.end() - 6)->mGLBuffer;
-        const graphics::BufferAny & normalBuffer    = *(aVertexStream.mVertexBufferViews.end() - 5)->mGLBuffer;
-        const graphics::BufferAny & tangentBuffer   = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
+        const graphics::BufferAny & positionBuffer  = *(aVertexStream.mVertexBufferViews.end() - 7)->mGLBuffer;
+        const graphics::BufferAny & normalBuffer    = *(aVertexStream.mVertexBufferViews.end() - 6)->mGLBuffer;
+        const graphics::BufferAny & tangentBuffer   = *(aVertexStream.mVertexBufferViews.end() - 5)->mGLBuffer;
+        const graphics::BufferAny & bitangentBuffer = *(aVertexStream.mVertexBufferViews.end() - 4)->mGLBuffer;
         const graphics::BufferAny & colorBuffer     = *(aVertexStream.mVertexBufferViews.end() - 3)->mGLBuffer;
         const graphics::BufferAny & uvBuffer        = *(aVertexStream.mVertexBufferViews.end() - 2)->mGLBuffer;
         const graphics::BufferAny & jointDataBuffer = *(aVertexStream.mVertexBufferViews.end() - 1)->mGLBuffer;
@@ -160,13 +162,19 @@ namespace {
         loadBufferFromArchive(positionBuffer, aVertexFirst, gPositionSize, verticesCount);
         // load normals
         loadBufferFromArchive(normalBuffer, aVertexFirst, gNormalSize, verticesCount);
-        // load tangents, if present
+        // load tangents & bitangents, if present
         // #assetprocessor This assert should go away if we start supporting dynamic list of attributes
         assert(has(vertexAttributesFlags, gVertexTangent));
         // Has to be true atm
         if(has(vertexAttributesFlags, gVertexTangent)) 
         {
             loadBufferFromArchive(tangentBuffer, aVertexFirst, gTangentSize, verticesCount);
+        }
+        assert(has(vertexAttributesFlags, gVertexBitangent));
+        // Has to be true atm
+        if(has(vertexAttributesFlags, gVertexBitangent)) 
+        {
+            loadBufferFromArchive(bitangentBuffer, aVertexFirst, gBitangentSize, verticesCount);
         }
 
         unsigned int colorChannelsCount;
@@ -734,7 +742,7 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
 
     // Binary attributes descriptions
     // TODO Ad 2023/10/11: #loader Support dynamic set of attributes in the binary
-    static const std::array<AttributeDescription, 5> gAttributeStreamsInBinary {
+    static const std::array<AttributeDescription, 6> gAttributeStreamsInBinary {
         AttributeDescription{
             .mSemantic = semantic::gPosition,
             .mDimension = 3,
@@ -747,6 +755,11 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
         },
         AttributeDescription{
             .mSemantic = semantic::gTangent,
+            .mDimension = 3,
+            .mComponentType = GL_FLOAT,
+        },
+        AttributeDescription{
+            .mSemantic = semantic::gBitangent,
             .mDimension = 3,
             .mComponentType = GL_FLOAT,
         },

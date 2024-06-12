@@ -9,6 +9,7 @@
 #include <math/Transformations.h>
 
 #include <snac-renderer-V2/files/Loader.h>
+#include <snac-renderer-V2/Camera.h>
 
 #include <fstream>
 
@@ -67,7 +68,7 @@ Scene loadScene(const filesystem::path & aSceneFile,
         Node modelPoser{
             .mInstance = Instance{
                 .mPose = pose,
-                .mName = entry.at("name").get<std::string>(),
+                .mName = entry.at("name").get<std::string>() + "-entry",
             },
             .mChildren = {std::move(model)},
             .mAabb = poserAabb,
@@ -78,6 +79,27 @@ Scene loadScene(const filesystem::path & aSceneFile,
     return scene;
 }
 
+
+LightsData Scene::getLightsInCamera(const Camera & aCamera,
+                                    bool aTransformDirectionalLights) const
+{
+    LightsData result{mLights_world};
+    const math::AffineMatrix<4, float> & transform = aCamera.getParentToCamera();
+    if(aTransformDirectionalLights)
+    {
+        for(auto & light : result.mDirectionalLights)
+        {
+            // might be unecessary to re-normalize, unless the transform scales
+            light.mDirection = math::UnitVec<3, GLfloat>{
+                (math::homogeneous::makeVec(light.mDirection) * transform).xyz()};
+        }
+    }
+    for(auto & light : result.mPointLights)
+    {
+        light.mPosition = (math::homogeneous::makePosition(light.mPosition) * transform).xyz();
+    }
+    return result;
+}
 
 
 } // namespace ad::renderer

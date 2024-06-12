@@ -16,3 +16,12 @@ float maxCw(vec4 v)
     vec2 pairs = max(v.xy, v.zw);
     return max(pairs.x, pairs.y);
 }
+
+
+// TODO find a better name for this operation, and its symmetrical.
+// Remaps a vector [-magniture, magnitude]^3 to [0, 1]^3.
+// Notably useful to display unit direction vectors as colors.
+vec3 remapToRgb(vec3 aInput, float aMagnitude = 1)
+{
+    return (aInput + vec3(aMagnitude)) / (2 * aMagnitude);
+}

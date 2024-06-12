@@ -1,6 +1,9 @@
 #include "SceneGui.h"
 
+
 #include "Scene.h"
+
+#include "runtime_reflect/DearImguiVisitor.h"
 
 #include <imgui.h>
 
@@ -66,6 +69,11 @@ void SceneGui::presentSection(Scene & aScene, const Timing & aTime)
         handleHighlight(hovered);
         presentSelection();
     }
+
+    if (ImGui::CollapsingHeader("Lights"))
+    {
+        presentLights(aScene.mLights_world);
+    }
 }
 
 
@@ -95,13 +103,27 @@ Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex, const Timing
     //auto & nodeTree = mSkin.mRig.mScene;
     Node * hovered = nullptr;
 
+    // Optional object associated with this node
+    const Object * object = aNode.mInstance.mObject;
+
     int flags = (aNode.mChildren.empty() && aNode.mInstance.mObject == nullptr) ? gLeafFlags : gBaseFlags;
     // TODO Ad 2023/11/09: #dod Currently, the node index is relative to the parent, not absolute regarding all nodes
     // If we ever move to a Data-oriented model, we could probably use the absolute index of the node in the data store.
     const std::string name{"<node_" + std::to_string(aIndex) + ">"};
+
+    if(object)
+    {
+        static const ImVec4 gImPink(1.0f, 0.0f, 1.0f, 1.0f);
+        ImGui::PushStyleColor(ImGuiCol_Text, gImPink);
+    }
     bool opened = ImGui::TreeNodeEx(&aNode, flags, "%s",
             // TODO Ad 2023/10/31: We have a discrepencies in our data model between how Assimp models Nodes, and our distiction between Nodes and Objects
             (aNode.mInstance.mName.empty() ? name.c_str() : aNode.mInstance.mName.c_str()));
+    if(object)
+    {
+        ImGui::PopStyleColor();
+    }
+    
 
     ImGui::PushID(&aNode);
 
@@ -117,7 +139,7 @@ Node * SceneGui::presentNodeTree(Node & aNode, unsigned int aIndex, const Timing
 
     if(opened)
     {
-        if(const Object * object = aNode.mInstance.mObject)
+        if(object)
         {
             presentObject(*object, aNode.mInstance, aTime);
         }
@@ -166,6 +188,16 @@ void SceneGui::presentAnimations(Handle<AnimatedRig> mAnimatedRig,
 
         ImGui::TreePop();
     }
+}
+
+
+void SceneGui::presentLights(LightsData & aLightsData)
+{
+    ImGui::Checkbox("Show point lights", &mOptions.mShowPointLights);
+    ImGui::Checkbox("Directional lights in camera space", 
+                     &mOptions.mAreDirectionalLightsCameraSpace);
+    DearImguiVisitor v;
+    r(v, aLightsData);
 }
 
 

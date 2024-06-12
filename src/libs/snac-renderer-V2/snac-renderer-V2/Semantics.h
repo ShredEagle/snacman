@@ -12,6 +12,7 @@ namespace semantic
     SEM(ModelTransform);
     const Semantic gNormal{"Normal"};
     const Semantic gTangent{"Tangent"};
+    SEM(Bitangent);
     const Semantic gColor{"Color"};
     const Semantic gUv{"Uv"};
     SEM(Joints0);
@@ -31,6 +32,7 @@ namespace semantic
     const BlockSemantic gMaterials{"Materials"};
     const BlockSemantic gLocalToWorld{"LocalToWorld"};
     BLOCK_SEM(JointMatrices);
+    BLOCK_SEM(Lights);
 
     #undef BLOCK_SEM
 
