@@ -466,7 +466,7 @@ namespace {
         static const Semantic semanticSequence[] = {
             semantic::gDiffuseTexture,
             semantic::gNormalTexture,
-            semantic::gMetallicRoughnessAoTextures,
+            semantic::gMetallicRoughnessAoTexture,
         };
         RepositoryTexture textureRepo;
         for (Semantic texSemantic : semanticSequence)
