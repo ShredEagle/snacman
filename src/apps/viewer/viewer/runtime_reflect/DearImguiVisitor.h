@@ -16,7 +16,7 @@ struct DearImguiVisitor
 template <class T_value>
 void give(DearImguiVisitor & aV, T_value & aValue, const char * aName)
 {
-    ImGui::Text(aName);
+    ImGui::TextUnformatted(aName);
     r(aV, aValue);
 }
 
