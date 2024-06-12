@@ -17,7 +17,7 @@ in flat uint ex_MaterialIdx;
 uniform sampler2DArray u_DiffuseTexture;
 #endif
 
-struct PhongMaterial
+struct GenericMaterial
 {
     vec4 ambientColor;
     vec4 diffuseColor;
@@ -31,7 +31,7 @@ struct PhongMaterial
 
 layout(std140, binding = 2) uniform MaterialsBlock
 {
-    PhongMaterial ub_Phong[128];
+    GenericMaterial ub_MaterialParams[128];
 };
 
 
@@ -70,7 +70,7 @@ void writePixel(vec4 premultipliedReflect, vec3 transmit, float csZ) {
 void main()
 {
     // Material
-    PhongMaterial material = ub_Phong[ex_MaterialIdx];
+    GenericMaterial material = ub_MaterialParams[ex_MaterialIdx];
 
 #ifdef VERTEX_COLOR
     vec4 albedo = ex_Color;

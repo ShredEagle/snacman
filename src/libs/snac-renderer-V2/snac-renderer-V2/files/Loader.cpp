@@ -213,7 +213,7 @@ namespace {
         }
 
         // Assign the part material index to the otherwise common material
-        aPartsMaterial.mPhongMaterialIdx = materialIndex;
+        aPartsMaterial.mMaterialParametersIdx = materialIndex;
         Part part{
             .mName = std::move(meshName),
             .mMaterial = aPartsMaterial,
@@ -399,7 +399,7 @@ namespace {
 
         graphics::UniformBufferObject & ubo = aStorage.mUbos.emplace_back();
         {
-            std::vector<PhongMaterial> materials{materialsCount};
+            std::vector<GenericMaterial> materials{materialsCount};
             aIn.read(std::span{materials});
 
             graphics::load(ubo, std::span{materials}, graphics::BufferHint::StaticDraw);
@@ -466,6 +466,7 @@ namespace {
         static const Semantic semanticSequence[] = {
             semantic::gDiffuseTexture,
             semantic::gNormalTexture,
+            semantic::gMetallicRoughnessAoTextures,
         };
         RepositoryTexture textureRepo;
         for (Semantic texSemantic : semanticSequence)
@@ -819,7 +820,7 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
     // Prepare a MaterialContext for the whole binary, 
     // I.e. in a scene, each entry (each distinct binary) gets its own material UBO and its own Texture array.
     // TODO #azdo #perf we could load textures and materials in a single buffer for a whole scene to further consolidate
-    MaterialContext & aCommonMaterialContext = aStorage.mMaterialContexts.emplace_back();
+    MaterialContext & commonMaterialContext = aStorage.mMaterialContexts.emplace_back();
     
     // Set the common values shared by all parts in this binary.
     // (The actual phong material index will be set later, by each part)
@@ -827,7 +828,7 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
         // The material names is a single array for all binaries
         // the binary-local material index needs to be offset to index into the common name array.
         .mNameArrayOffset = aStorage.mMaterialNames.size(),
-        .mContext = &aCommonMaterialContext,
+        .mContext = &commonMaterialContext,
         .mEffect = aPartsEffect,
     };
 
@@ -862,7 +863,7 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
 
     // TODO #assetprocessor If materials were loaded first, then the empty context 
     // Then we could directly instantiate the MaterialContext with this value.
-    aCommonMaterialContext = loadMaterials(in, aStorage);
+    commonMaterialContext = loadMaterials(in, aStorage);
 
     return result;
 }
@@ -1045,7 +1046,7 @@ GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
                     .mBufferViewIndex = 0, // view is added above
                     .mClientDataFormat{
                         .mDimension = 1,
-                        .mOffset = offsetof(InstanceData, mMaterialIdx),
+                        .mOffset = offsetof(InstanceData, mMaterialParametersIdx),
                         .mComponentType = GL_UNSIGNED_INT,
                     },
                 }

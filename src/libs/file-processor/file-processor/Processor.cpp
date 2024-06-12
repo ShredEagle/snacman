@@ -287,7 +287,7 @@ namespace {
     //      [keyframes.rotations (4 floats per keyframe)]
     //      [keyframes.scalings  (3 floats per keyframe)]
     //  numMaterials
-    //  raw memory dump of span<PhongMaterial>
+    //  raw memory dump of span<GenericMaterial>
     //  numMaterialNames (Note: redundant with num of materials...)
     //  each materialName: (count == numMaterials)
     //    string size
@@ -797,17 +797,18 @@ namespace {
 
     void dumpMaterials(const aiScene * aScene, FileWriter & aWriter)
     {
-        std::vector<PhongMaterial> materials;
+        std::vector<GenericMaterial> materials;
         materials.reserve(aScene->mNumMaterials);
 
         std::vector<std::string> diffuseTexturePaths;
         std::vector<std::string> normalTexturePaths;
+        std::vector<std::string> mraoTexturePaths;
         std::vector<std::string> materialNames;
 
         for(std::size_t materialIdx = 0; materialIdx != aScene->mNumMaterials; ++materialIdx)
         {
             materials.emplace_back();
-            PhongMaterial & phongMaterial = materials.back();
+            GenericMaterial & genericMaterial = materials.back();
 
             aiMaterial * material = aScene->mMaterials[materialIdx];
 
@@ -832,45 +833,49 @@ namespace {
                     material->GetName().C_Str(), material->GetTextureCount(aiTextureType_AMBIENT));
             }
 
-            setColor(phongMaterial.mDiffuseColor,  material, AI_MATKEY_COLOR_DIFFUSE);
+            setColor(genericMaterial.mDiffuseColor,  material, AI_MATKEY_COLOR_DIFFUSE);
             // Default other colors to the diffuse colors (in case they are not directly defined)
-            phongMaterial.mAmbientColor = phongMaterial.mDiffuseColor;
-            phongMaterial.mSpecularColor = phongMaterial.mDiffuseColor;
-            setColor(phongMaterial.mAmbientColor,  material, AI_MATKEY_COLOR_AMBIENT);
-            setColor(phongMaterial.mSpecularColor, material, AI_MATKEY_COLOR_SPECULAR);
+            genericMaterial.mAmbientColor = genericMaterial.mDiffuseColor;
+            genericMaterial.mSpecularColor = genericMaterial.mDiffuseColor;
+            setColor(genericMaterial.mAmbientColor,  material, AI_MATKEY_COLOR_AMBIENT);
+            setColor(genericMaterial.mSpecularColor, material, AI_MATKEY_COLOR_SPECULAR);
 
-            phongMaterial.mDiffuseMap = readTextureParameters(material, aiTextureType_DIFFUSE, diffuseTexturePaths);
-            phongMaterial.mNormalMap  = readTextureParameters(material, aiTextureType_NORMALS, normalTexturePaths);
+            genericMaterial.mDiffuseMap = readTextureParameters(material, aiTextureType_DIFFUSE, diffuseTexturePaths);
+            genericMaterial.mNormalMap  = readTextureParameters(material, aiTextureType_NORMALS, normalTexturePaths);
+            // Empirically, it seems the MRAO map corresponds to Assimp's Metalness
+            genericMaterial.mMetallicRoughnessAoMap = 
+                readTextureParameters(material, aiTextureType_METALNESS, mraoTexturePaths);
 
-            if(material->Get(AI_MATKEY_SHININESS, phongMaterial.mSpecularExponent) == AI_SUCCESS)
+            if(material->Get(AI_MATKEY_SHININESS, genericMaterial.mSpecularExponent) == AI_SUCCESS)
             {
                 // Correct the specular exponent if needed
-                if(phongMaterial.mSpecularExponent < 1)
+                if(genericMaterial.mSpecularExponent < 1)
                 {
                     SELOG(warn)("Specular exponent value '{}' is too low, setting it to '1'.",
-                                phongMaterial.mSpecularExponent);
-                    phongMaterial.mSpecularExponent = 1;
+                                genericMaterial.mSpecularExponent);
+                    genericMaterial.mSpecularExponent = 1;
                 }
-                std::cout << "  specular exponent: " << phongMaterial.mSpecularExponent << "\n";
+                std::cout << "  specular exponent: " << genericMaterial.mSpecularExponent << "\n";
             }
 
-            if(material->Get(AI_MATKEY_OPACITY, phongMaterial.mDiffuseColor.a()) == AI_SUCCESS)
+            if(material->Get(AI_MATKEY_OPACITY, genericMaterial.mDiffuseColor.a()) == AI_SUCCESS)
             {
-                std::cout << "  opacity factor: " << phongMaterial.mDiffuseColor.a() << "\n";
+                std::cout << "  opacity factor: " << genericMaterial.mDiffuseColor.a() << "\n";
             }
-            else if(material->Get(AI_MATKEY_TRANSPARENCYFACTOR, phongMaterial.mDiffuseColor.a()) == AI_SUCCESS)
+            else if(material->Get(AI_MATKEY_TRANSPARENCYFACTOR, genericMaterial.mDiffuseColor.a()) == AI_SUCCESS)
             {
-                std::cout << "  transparency factor: " << phongMaterial.mDiffuseColor.a() << "\n";
-                phongMaterial.mDiffuseColor.a() = 1 - phongMaterial.mDiffuseColor.a();
+                std::cout << "  transparency factor: " << genericMaterial.mDiffuseColor.a() << "\n";
+                genericMaterial.mDiffuseColor.a() = 1 - genericMaterial.mDiffuseColor.a();
             }
 
-            normalizeColorFactors(phongMaterial);
+            normalizeColorFactors(genericMaterial);
         }
 
         aWriter.writeRaw(std::span{materials});
         aWriter.write(materialNames);
         dumpTextures(diffuseTexturePaths, aWriter);
         dumpTextures(normalTexturePaths, aWriter);
+        dumpTextures(mraoTexturePaths, aWriter);
     }
 
 } // unnamed namespace

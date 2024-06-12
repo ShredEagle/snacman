@@ -2,7 +2,7 @@
 
 #include "Gamma.glsl"
 #include "Helpers.glsl"
-#include "PhongMaterial.glsl"
+#include "GenericMaterial.glsl"
  
 in vec3 ex_Position_cam;
 in vec3 ex_Normal_cam;
@@ -24,7 +24,7 @@ out vec4 out_Color;
 void main()
 {
     // Fetch the material
-    PhongMaterial material = ub_Phong[ex_MaterialIdx];
+    GenericMaterial material = ub_MaterialParams[ex_MaterialIdx];
 
 #ifdef VERTEX_COLOR
     vec4 albedo = ex_Color;

@@ -317,7 +317,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
                 {
                     mInstanceBuffer.push_back(SnacGraph::InstanceData{
                         .mEntityIdx = entityGlobalIdx,
-                        .mMaterialIdx = (GLuint)part.mMaterial.mPhongMaterialIdx,
+                        .mMaterialParametersIdx = (GLuint)part.mMaterial.mMaterialParametersIdx,
                     });
 
                     // In the partlist, keep track of which part correspond to which entry

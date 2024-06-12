@@ -17,7 +17,7 @@ namespace ad::renderer {
 struct InstanceData
 {
     GLuint mModelTransformIdx = (GLuint)-1;
-    GLuint mMaterialIdx = (GLuint)-1;
+    GLuint mMaterialParametersIdx = (GLuint)-1;
     GLuint mMatrixPaletteOffset = (GLuint)-1;
 };
 

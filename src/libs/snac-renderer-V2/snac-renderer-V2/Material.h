@@ -22,7 +22,8 @@ struct TextureInput
 
 // Note: 16-aligned, because it is intended to be stored as an array in a buffer object
 // and then the elements are accessed via a std140 uniform block 
-struct alignas(16) PhongMaterial 
+/// \brief Attempts to cover both Phong and Pbr materials, to simplify development
+struct alignas(16) GenericMaterial 
 {
     // 4 components, so it can be loaded directly on the GPU without alignment issues.
     math::hdr::Rgba<float> mAmbientColor  = math::hdr::gWhite<float>;
@@ -30,12 +31,13 @@ struct alignas(16) PhongMaterial
     math::hdr::Rgba<float> mSpecularColor = math::hdr::gWhite<float>;
     TextureInput mDiffuseMap; 
     TextureInput mNormalMap; 
+    TextureInput mMetallicRoughnessAoMap; 
     float mSpecularExponent = 1.f;
 };
 
 
 // Makes sure the total reflected "power" with a pure white light (1, 1, 1) does not exceed 1
-inline void normalizeColorFactors(PhongMaterial & aMaterial)
+inline void normalizeColorFactors(GenericMaterial & aMaterial)
 {
     auto sum = aMaterial.mAmbientColor + aMaterial.mDiffuseColor + aMaterial.mSpecularColor;
     auto factor = sum.getNorm();

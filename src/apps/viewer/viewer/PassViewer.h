@@ -32,7 +32,7 @@ struct ViewerPartList : public PartList
 struct ViewerDrawInstance
 {
     GLsizei mInstanceTransformIdx; // index in the instance UBO
-    GLsizei mMaterialIdx;
+    GLsizei mMaterialParametersIdx;
     GLsizei mMatrixPaletteOffset;
 };
 

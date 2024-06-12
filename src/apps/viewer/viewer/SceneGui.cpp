@@ -340,7 +340,7 @@ void SceneGui::showPartWindow(const Part & aPart)
 
     ImGui::NewLine();
 
-    // Material (i.e. PhongMaterial / material properties name)
+    // Material (i.e. GenericMaterial / material properties name)
     ImGui::Text("material: %s", getName(aPart.mMaterial, mStorage).c_str());
 
     // Effect

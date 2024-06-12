@@ -88,7 +88,7 @@ struct SnacGraph
     struct InstanceData
     {
         GLuint mEntityIdx;
-        GLuint mMaterialIdx; 
+        GLuint mMaterialParametersIdx; 
     };
 
     /// @brief The list of parts to be rendered. This might be valid for several passes (intra, or inter frame)
@@ -143,7 +143,7 @@ struct SnacGraph
                         .mBufferViewIndex = 0, // view is added above
                         .mClientDataFormat{
                             .mDimension = 1,
-                            .mOffset = offsetof(InstanceData, mMaterialIdx),
+                            .mOffset = offsetof(InstanceData, mMaterialParametersIdx),
                             .mComponentType = GL_UNSIGNED_INT,
                         },
                     }

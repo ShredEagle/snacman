@@ -73,7 +73,7 @@ ViewerPassCache prepareViewerPass(StringKey aPass,
 
         result.mDrawInstances.push_back(ViewerDrawInstance{
             .mInstanceTransformIdx = aPartList.mTransformIdx[entry.mPartListIdx],
-            .mMaterialIdx = (GLsizei)material.mPhongMaterialIdx,
+            .mMaterialParametersIdx = (GLsizei)material.mMaterialParametersIdx,
             .mMatrixPaletteOffset = aPartList.mPaletteOffset[entry.mPartListIdx],
         });
     }
