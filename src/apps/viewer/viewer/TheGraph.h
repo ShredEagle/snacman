@@ -80,6 +80,7 @@ struct TheGraph
     {
         inline static const std::vector<StringKey> gForwardKeys{
             "forward",
+            "forward_phong",
             "forward_debug",
         };
 

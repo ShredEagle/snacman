@@ -8,6 +8,12 @@
         },
         {
             "annotations": {
+                "pass": "forward_phong"
+            },
+            "programfile": "shaders/ForwardPhongLighting.prog"
+        },
+        {
+            "annotations": {
                 "pass": "forward_debug"
             },
             "programfile": "shaders/ForwardDebug.prog"
