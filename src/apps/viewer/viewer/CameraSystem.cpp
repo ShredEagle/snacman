@@ -19,6 +19,9 @@ namespace {
     constexpr float gMinViewHeight{0.01f};
     constexpr float gMaxViewHeight{1000.f};
 
+    constexpr graphics::EscKeyBehaviour gEscBehaviour =
+        graphics::EscKeyBehaviour::Ignore;
+
 } // unnamed namespace
 
 
@@ -83,7 +86,7 @@ void CameraSystem::setControlMode(Control aMode)
     {
         if(mActive == Control::FirstPerson)
         {/* TODO conversion */}
-        graphics::registerGlfwCallbacks(*mAppInterface, mOrbitalControl, graphics::EscKeyBehaviour::Close, mImguiUi);
+        graphics::registerGlfwCallbacks(*mAppInterface, mOrbitalControl, gEscBehaviour, mImguiUi);
     }
     else if(aMode == Control::FirstPerson)
     {
@@ -94,7 +97,7 @@ void CameraSystem::setControlMode(Control aMode)
             // This kind of logic confirms that the member is a hack.
             mPreviousRadius = mOrbitalControl.mOrbital.radius();
         }
-        graphics::registerGlfwCallbacks(*mAppInterface, mFirstPersonControl, graphics::EscKeyBehaviour::Close, mImguiUi);
+        graphics::registerGlfwCallbacks(*mAppInterface, mFirstPersonControl, gEscBehaviour, mImguiUi);
     }
     mActive = aMode;
 }
