@@ -1,3 +1,6 @@
+const float M_PI = 3.141592653589793;
+
+
 float dotPlus(vec3 a, vec3 b)
 {
     return max(0.f, dot(a, b));
