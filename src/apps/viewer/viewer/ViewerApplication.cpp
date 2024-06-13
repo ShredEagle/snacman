@@ -366,7 +366,7 @@ void showPointLights(const LightsData & aLights)
                 .mPosition = pointLight.mPosition,
                 .mColor = pointLight.mDiffuseColor,
             },
-            math::Box<float>{gLightCubeSize.as<math::Position>() / 2.f, gLightCubeSize});
+            math::Box<float>{-gLightCubeSize.as<math::Position>() / 2.f, gLightCubeSize});
     }
 }
 
