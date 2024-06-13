@@ -819,6 +819,7 @@ namespace {
                 << " Specular tex:" << material->GetTextureCount(aiTextureType_SPECULAR)
                 << " Ambient tex:" << material->GetTextureCount(aiTextureType_AMBIENT)
                 << " Normal map:" << material->GetTextureCount(aiTextureType_NORMALS)
+                << " Metalness map:" << material->GetTextureCount(aiTextureType_METALNESS)
                 << std::endl;
 
             // TODO Handle specular and ambient textures
@@ -851,9 +852,11 @@ namespace {
                 // Correct the specular exponent if needed
                 if(genericMaterial.mSpecularExponent < 1)
                 {
-                    SELOG(warn)("Specular exponent value '{}' is too low, setting it to '1'.",
-                                genericMaterial.mSpecularExponent);
-                    genericMaterial.mSpecularExponent = 1;
+                    const float gSpecularExponent = 10; 
+                    SELOG(warn)("Specular exponent value '{}' is too low, setting it to '{}'.",
+                                genericMaterial.mSpecularExponent,
+                                gSpecularExponent);
+                    genericMaterial.mSpecularExponent = gSpecularExponent;
                 }
                 std::cout << "  specular exponent: " << genericMaterial.mSpecularExponent << "\n";
             }
