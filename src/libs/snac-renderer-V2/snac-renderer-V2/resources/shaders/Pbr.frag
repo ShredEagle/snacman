@@ -25,6 +25,58 @@ uniform sampler2DArray u_MetallicRoughnessAoTexture;
 
 out vec4 out_Color;
 
+
+LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
+                                  float aMetallic, float aRoughness, vec3 aAlbedo, LightColors aColors)
+{
+#define GLTF_BRDF
+//#define GLTF_GGX
+
+    LightContributions result;
+
+#ifdef GLTF_BRDF
+    vec3 h = normalize(aView + aLightDir);
+    float vDotH = dotPlus(aView, h);
+    float hDotL = dotPlus(h, aLightDir);
+    float nDotL = dotPlus(aShadingNormal, aLightDir);
+    float nDotV = dotPlus(aShadingNormal, aView);
+    float nDotH = dotPlus(aShadingNormal, h);
+
+    vec3 diffuseColor = mix(aAlbedo, vec3(0.), aMetallic);
+    vec3 f0 = mix(vec3(0.04), aAlbedo, aMetallic);
+    vec3 f90 = vec3(1.0);
+    // The reference implementation squares it,
+    // hard to say if the map already contains it squared...
+    float alpha = aRoughness * aRoughness;
+
+    vec3 reflectance = f0 + (f90 - f0) * pow(1 - vDotH, 5);
+
+    result.diffuse = (1.0 - reflectance) * (diffuseColor / M_PI)
+                    * nDotL
+                    * aColors.diffuse.rgb
+                    ;
+
+#ifdef GLTF_GGX
+    // glTF-viewer implementation squares the roughness in the functions
+    float V = V_GGX_gltf(nDotL, nDotV, aRoughness);
+    float D = D_GGX_gltf(nDotH, aRoughness);
+#else
+    float V = Visibility_GGX(alpha, hDotL, vDotH, nDotL, nDotV);
+    float D = Distribution_GGX(alpha, nDotH);
+#endif
+    result.specular = reflectance * V * D
+                    * nDotL
+                    * aColors.specular.rgb
+                    ;
+#else
+    vec3 metal_brdf =
+        schlickFresnelReflectance(aShadingNormal, aLightDir, aAlbedo);
+#endif    
+
+    return result;
+}
+
+
 void main()
 {
     // Fetch the material
@@ -134,92 +186,44 @@ void main()
     vec3 diffuseAccum = vec3(0.);
     vec3 specularAccum = vec3(0.);
 
-#define GLTF_BRDF
-//#define GLTF_GGX
-
     // Directional lights
     for(uint directionalIdx = 0; directionalIdx != ub_DirectionalCount.x; ++directionalIdx)
     {
         DirectionalLight directional = ub_DirectionalLights[directionalIdx];
         vec3 lightDir_cam = -directional.direction.xyz;
 
-#ifdef GLTF_BRDF
-        vec3 h_cam = normalize(view_cam + lightDir_cam);
-        float vDotH = dotPlus(view_cam, h_cam);
-        float hDotL = dotPlus(h_cam, lightDir_cam);
-        float nDotL = dotPlus(shadingNormal_cam, lightDir_cam);
-        float nDotV = dotPlus(shadingNormal_cam, view_cam);
-        float nDotH = dotPlus(shadingNormal_cam, h_cam);
+        LightContributions lighting =
+            applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
+                           metallic, roughness, albedo.rgb, directional.colors);
 
-        vec3 diffuseColor = mix(albedo.rgb, vec3(0.), metallic);
-        vec3 f0 = mix(vec3(0.04), albedo.rgb, metallic);
-        vec3 f90 = vec3(1.0);
-        // The reference implementation squares it,
-        // hard to say if the map already contains it squared...
-        float alpha = roughness * roughness;
-
-        vec3 reflectance = f0 + (f90 - f0) * pow(1 - vDotH, 5);
-
-        diffuseAccum += (1.0 - reflectance) * (diffuseColor / M_PI)
-                        * nDotL
-                        * directional.colors.diffuse.rgb
-                        ;
-
-#ifdef GLTF_GGX
-        // glTF-viewer implementation squares the roughness in the functions
-        float V = V_GGX_gltf(nDotL, nDotV, roughness);
-        float D = D_GGX_gltf(nDotH, roughness);
-#else
-        float V = Visibility_GGX(alpha, hDotL, vDotH, nDotL, nDotV);
-        float D = Distribution_GGX(alpha, nDotH);
-#endif
-        specularAccum += reflectance * V * D
-                        * nDotL
-                        * directional.colors.specular.rgb
-                        ;
-#else
-        vec3 metal_brdf =
-            schlickFresnelReflectance(shadingNormal_cam, lightDir_cam, albedo.rgb);
-#endif    
+        diffuseAccum += lighting.diffuse;
+        specularAccum += lighting.specular;
     }
 
     // Point lights
-    //for(uint pointIdx = 0; pointIdx != ub_PointCount.x; ++pointIdx)
-    //{
-    //    PointLight point = ub_PointLights[pointIdx];
+    for(uint pointIdx = 0; pointIdx != ub_PointCount.x; ++pointIdx)
+    {
+        PointLight point = ub_PointLights[pointIdx];
 
-    //    // see rtr 4th p110 (5.10)
-    //    vec3 lightRay_cam = point.position.xyz - ex_Position_cam;
-    //    float r = sqrt(dot(lightRay_cam, lightRay_cam));
-    //    vec3 lightDir_cam = lightRay_cam / r;
+        // see rtr 4th p110 (5.10)
+        vec3 lightRay_cam = point.position.xyz - ex_Position_cam;
+        float r = sqrt(dot(lightRay_cam, lightRay_cam));
+        vec3 lightDir_cam = lightRay_cam / r;
 
-    //    LightContributions lighting = 
-    //        applyLight(view_cam, lightDir_cam, shadingNormal_cam,
-    //                   point.colors, material.specularExponent);
+        LightContributions lighting =
+            applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
+                           metallic, roughness, albedo.rgb, point.colors);
 
-    //    float falloff = attenuatePoint(point, r);
-    //    diffuseAccum += lighting.diffuse * falloff;
-    //    specularAccum += lighting.specular * falloff;
-    //}
+        float falloff = attenuatePoint(point, r);
+        diffuseAccum += lighting.diffuse * falloff;
+        specularAccum += lighting.specular * falloff;
+    }
 
     vec3 ambient = albedo.rgb * material.ambientColor.rgb * ub_AmbientColor.rgb * ambientOcclusion;
     vec3 diffuse  = diffuseAccum * vec3(material.diffuseColor.rgb);
     vec3 specular = specularAccum * vec3(material.specularColor.rgb);
 
-// Not needed: albedo is directly applied in each light contribution
-//#if ALBEDO_SPECULAR
-//    // The specular highlights are multiplied with the albedo:
-//    // this gives tinted specular reflection (correct for metals, wrong for dielectrics), and dim highlights for dark surfaces.
-//    vec3 phongColor = albedo.rgb * (diffuse + specular + ambient);
-//#else
-//    vec3 phongColor = albedo.rgb * (diffuse + ambient) + specular;
-//#endif
-
-    //vec3 phongColor = ambient + diffuse + specular;
-    vec3 phongColor;
-    phongColor += diffuse;
-    phongColor += specular;
-    phongColor += ambient;
+    vec3 phongColor = ambient + diffuse + specular;
 
     out_Color = correctGamma(vec4(phongColor, albedo.a * material.diffuseColor.a));
 }
