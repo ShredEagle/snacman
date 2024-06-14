@@ -42,11 +42,16 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
     float nDotV = dotPlus(aShadingNormal, aView);
     float nDotH = dotPlus(aShadingNormal, h);
 
+    // TODO this should be taken out of the function, it is common to all lights
+    // Note: This is material blending section. 
+    // This approach is blending the parameters before computing the model.
+    // Although theoretically incorrect (the parameters do not have a linear relation to the output)
+    // it is faster than computing the model for the two materials then blending the results.
     vec3 diffuseColor = mix(aAlbedo, vec3(0.), aMetallic);
     vec3 f0 = mix(vec3(0.04), aAlbedo, aMetallic);
     vec3 f90 = vec3(1.0);
-    // The reference implementation squares it,
-    // hard to say if the map already contains it squared...
+    // Disney PBR square the user provided roughness value (r) to obtain alpha.
+    // hard to say if the map already contains it squared, which would save instructions...
     float alpha = aRoughness * aRoughness;
 
     vec3 reflectance = f0 + (f90 - f0) * pow(1 - vDotH, 5);
@@ -58,11 +63,12 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
 
 #ifdef GLTF_GGX
     // glTF-viewer implementation squares the roughness in the functions
-    float V = V_GGX_gltf(nDotL, nDotV, aRoughness);
-    float D = D_GGX_gltf(nDotH, aRoughness);
+    float V = V_GGX_gltf(nDotL, nDotV, alpha);
+    float D = D_GGX_gltf(nDotH, alpha);
 #else
-    float V = Visibility_GGX(alpha, hDotL, vDotH, nDotL, nDotV);
-    float D = Distribution_GGX(alpha, nDotH);
+    float alphaSq = alpha * alpha;
+    float V = Visibility_GGX(alphaSq, hDotL, vDotH, nDotL, nDotV);
+    float D = Distribution_GGX(alphaSq, nDotH);
 #endif
     result.specular = reflectance * V * D
                     * nDotL

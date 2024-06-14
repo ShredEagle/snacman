@@ -34,7 +34,8 @@ float _Visibility_GGX_denominator(float aRoughnessSquared, float plusDot)
     return plusDot + sqrt(aRoughnessSquared + (1 - aRoughnessSquared) * plusDot * plusDot);
 }
 
-
+// I think this is the separable form of the joint masking-shadowing function
+// see rtr 4th p335
 float Visibility_GGX(float aRoughnessSquared, float hDotL, float hDotV, float nDotL, float nDotV)
 {
     float l = heaviside(hDotL) / _Visibility_GGX_denominator(aRoughnessSquared, nDotL);
