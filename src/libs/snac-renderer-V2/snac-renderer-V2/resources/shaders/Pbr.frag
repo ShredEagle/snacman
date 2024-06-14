@@ -25,22 +25,13 @@ uniform sampler2DArray u_MetallicRoughnessAoTexture;
 
 out vec4 out_Color;
 
+//#define GLTF_BRDF
+//#define GLTF_GGX
 
 LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
                                   float aMetallic, float aRoughness, vec3 aAlbedo, LightColors aColors)
 {
-#define GLTF_BRDF
-//#define GLTF_GGX
-
     LightContributions result;
-
-#ifdef GLTF_BRDF
-    vec3 h = normalize(aView + aLightDir);
-    float vDotH = dotPlus(aView, h);
-    float hDotL = dotPlus(h, aLightDir);
-    float nDotL = dotPlus(aShadingNormal, aLightDir);
-    float nDotV = dotPlus(aShadingNormal, aView);
-    float nDotH = dotPlus(aShadingNormal, h);
 
     // TODO this should be taken out of the function, it is common to all lights
     // Note: This is material blending section. 
@@ -53,6 +44,14 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
     // Disney PBR square the user provided roughness value (r) to obtain alpha.
     // hard to say if the map already contains it squared, which would save instructions...
     float alpha = aRoughness * aRoughness;
+
+#ifdef GLTF_BRDF
+    vec3 h = normalize(aView + aLightDir);
+    float vDotH = dotPlus(aView, h);
+    float hDotL = dotPlus(h, aLightDir);
+    float nDotL = dotPlus(aShadingNormal, aLightDir);
+    float nDotV = dotPlus(aShadingNormal, aView);
+    float nDotH = dotPlus(aShadingNormal, h);
 
     vec3 reflectance = f0 + (f90 - f0) * pow(1 - vDotH, 5);
 
@@ -67,16 +66,32 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
     float D = D_GGX_gltf(nDotH, alpha);
 #else
     float alphaSq = alpha * alpha;
-    float V = Visibility_GGX(alphaSq, hDotL, vDotH, nDotL, nDotV);
-    float D = Distribution_GGX(alphaSq, nDotH);
+    float V = Visibility_GGX_gltf(alphaSq, hDotL, vDotH, nDotL, nDotV);
+    float D = Distribution_GGX_gltf(alphaSq, nDotH);
 #endif
     result.specular = reflectance * V * D
                     * nDotL
                     * aColors.specular.rgb
                     ;
-#else
-    vec3 metal_brdf =
-        schlickFresnelReflectance(aShadingNormal, aLightDir, aAlbedo);
+
+#else // not GLTF_BRDF
+    vec3 h = normalize(aView + aLightDir);
+
+    float hDotL = dotPlus(h, aLightDir);
+    float nDotH = dotPlus(aShadingNormal, h);
+    float nDotL = dotPlus(aShadingNormal, aLightDir);
+    float nDotV = dotPlus(aShadingNormal, aView);
+
+    vec3 F = schlickFresnelReflectance(hDotL, f0, f90);
+
+    // Important: All albedos are given already multiplied by Pi
+    // This already satisfy the Pi factor in the reflectance equation.
+    result.specular = specularBrdf_GGX(F, nDotH, nDotL, nDotV, alpha)
+                      * aColors.specular.rgb
+                      * nDotL;
+    result.diffuse  = diffuseBrdf_weightedLambertian(F, diffuseColor)
+                      * aColors.diffuse.rgb
+                      * nDotL;
 #endif    
 
     return result;
