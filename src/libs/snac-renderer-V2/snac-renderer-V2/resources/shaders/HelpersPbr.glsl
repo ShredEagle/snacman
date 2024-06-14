@@ -50,16 +50,28 @@ float Visibility_GGX(float nDotL, float nDotV, float aAlphaSq)
     return 0.5 / (l + r);
 }
 
+// Hammon-Karis approximation
+// see: rtr 4th p342
+float Visibility_GGX_approx(float nDotL, float nDotV, float aAlpha)
+{
+    return 0.5 / mix(2 * nDotL * nDotV, nDotL + nDotV, aAlpha);
+}
+
+//#define APPROXIMATE_G2_GGX
 
 // Important: All BRDFs are given already mutiplied by Pi
 // (because the correct formulas usually have a Pi in the denominator)
 vec3 specularBrdf_GGX(vec3 aFresnelReflectance, 
-                        float nDotH, float nDotL, float nDotV,
-                        float aAlpha)
+                      float nDotH, float nDotL, float nDotV,
+                      float aAlpha)
 {
     float alphaSquared = aAlpha * aAlpha;
     float D = Distribution_GGX(nDotH, alphaSquared);
+#ifdef APPROXIMATE_G2_GGX
+    float V = Visibility_GGX_approx(nDotL, nDotV, aAlpha);
+#else
     float V = Visibility_GGX(nDotL, nDotV, alphaSquared);
+#endif
     return aFresnelReflectance * V * D;
 }
 
