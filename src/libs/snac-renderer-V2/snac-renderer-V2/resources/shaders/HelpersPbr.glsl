@@ -92,7 +92,8 @@ float Distribution_GGX_gltf(float aRoughnessSquared, float nDotH)
     float n = aRoughnessSquared * heaviside(nDotH);
 
     float f = nDotH * nDotH * (aRoughnessSquared - 1) + 1;
-    float d = M_PI * f * f;
+    //float d = M_PI * f * f;
+    float d = f * f;
 
     return n/d;
 }
@@ -146,5 +147,6 @@ float D_GGX_gltf(float NdotH, float alphaRoughness)
 {
     float alphaRoughnessSq = alphaRoughness * alphaRoughness;
     float f = (NdotH * NdotH) * (alphaRoughnessSq - 1.0) + 1.0;
-    return alphaRoughnessSq / (M_PI * f * f);
+    //return alphaRoughnessSq / (M_PI * f * f);
+    return alphaRoughnessSq / (f * f);
 }

@@ -55,7 +55,8 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
 
     vec3 reflectance = f0 + (f90 - f0) * pow(1 - vDotH, 5);
 
-    result.diffuse = (1.0 - reflectance) * (diffuseColor / M_PI)
+    //result.diffuse = (1.0 - reflectance) * (diffuseColor / M_PI)
+    result.diffuse = (1.0 - reflectance) * (diffuseColor)
                     * nDotL
                     * aColors.diffuse.rgb
                     ;
