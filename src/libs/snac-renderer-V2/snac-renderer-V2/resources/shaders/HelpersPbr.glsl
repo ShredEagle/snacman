@@ -38,14 +38,14 @@ float Distribution_GGX(float nDotH, float aAlphaSq)
 
 
 // Visibility is G2 / (4 |n.l| |n.v|)
-// This is the simplified form of the height-correlated Smith G2 for GGX
+// This is the simplified (yet I assume exact) form of the height-correlated Smith G2 for GGX
 // see rtr 4th p341
 float Visibility_GGX(float nDotL, float nDotV, float aAlphaSq)
 {
     float uo = nDotV;
     float ui = nDotL;
-    float l = uo + sqrt(aAlphaSq + ui * (ui - aAlphaSq * ui));
-    float r = ui + sqrt(aAlphaSq + uo * (uo - aAlphaSq * uo));
+    float l = uo * sqrt(aAlphaSq + ui * (ui - aAlphaSq * ui));
+    float r = ui * sqrt(aAlphaSq + uo * (uo - aAlphaSq * uo));
     // TODO is there a risk of divide by zero?
     return 0.5 / (l + r);
 }
