@@ -27,6 +27,8 @@ out vec4 out_Color;
 
 //#define GLTF_BRDF
 //#define GLTF_GGX
+//#define GGX_BRDF
+#define BLINNPHONG_BRDF
 
 LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
                                   float aMetallic, float aRoughness, vec3 aAlbedo, LightColors aColors)
@@ -69,7 +71,7 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
     float alphaSq = alpha * alpha;
     float V = Visibility_GGX_gltf(alphaSq, hDotL, vDotH, nDotL, nDotV);
     float D = Distribution_GGX_gltf(alphaSq, nDotH);
-#endif
+#endif // GLTF_GGX
     result.specular = reflectance * V * D
                     * nDotL
                     * aColors.specular.rgb
@@ -87,19 +89,24 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
 
     // Important: All albedos are given already multiplied by Pi
     // This already satisfy the Pi factor in the reflectance equation.
-    float alpha_b = alpha/1.7; // the magic denominator was manually tweaked to mostly match
-    float alpha_p = 2 * pow(alpha_b, -2) -2;
-    float D = Distribution_BlinnPhong(nDotH, alpha_p);
-    float V = Visibility_Beckmann(aShadingNormal, aLightDir, aView, alpha_b);
-    result.specular = F * V * D
-    //result.specular = specularBrdf_BlinnPhong(F, nDotH, nDotL, nDotV, 1000)
-    //result.specular = specularBrdf_GGX(F, nDotH, nDotL, nDotV, alpha)
+
+#ifdef GGX_BRDF
+    result.specular = specularBrdf_GGX(F, nDotH, nDotL, nDotV, alpha)
                       * aColors.specular.rgb
                       * nDotL;
+#elif defined(BLINNPHONG_BRDF)
+    float nDotL_raw = dot(aShadingNormal, aLightDir);
+    float nDotV_raw = dot(aShadingNormal, aView);
+
+    float alpha_b = alpha / 1.7; // the magic denominator was manually tweaked to mostly match
+    result.specular = specularBrdf_BlinnPhong(F, nDotH, nDotL_raw, nDotV_raw, alpha_b)
+                      * aColors.specular.rgb
+                      * nDotL;
+#endif // GGX_BRDF / BLINNPHONG_BRDF
+#endif // GLTF_BRDF   
     result.diffuse  = diffuseBrdf_weightedLambertian(F, diffuseColor)
                       * aColors.diffuse.rgb
                       * nDotL;
-#endif    
 
     return result;
 }

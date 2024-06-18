@@ -15,6 +15,8 @@ vec3 schlickFresnelReflectance(vec3 aNormal, vec3 aLightDir, vec3 F0, vec3 F90 =
 
 float heaviside(float aValue)
 {
+    // Note: I do not think we can implement it as step(0., aValue)
+    // since it would return 1 when aValue is 0.
     return float(aValue > 0.);
 }
 
@@ -104,17 +106,32 @@ vec3 specularBrdf_GGX(vec3 aFresnelReflectance,
 // Beckmann & Blinn-Phong models
 //
 
-// Important: All BRDFs are given already mutiplied by Pi
-float Distribution_BlinnPhong(float nDotH, float aAlpha)
+float alphaBeckmannToPhong(float aAlpha_beckmann)
 {
-    return heaviside(nDotH) * (aAlpha + 2) / 2 * pow(nDotH, aAlpha);
+    return 2 * pow(aAlpha_beckmann, -2) - 2;
+}
+
+
+// Important: All BRDFs are given already mutiplied by Pi
+/// @param nDotH_plus dotPlus of N and H.
+/// @note see rtr 4th p340
+float Distribution_BlinnPhong(float nDotH_plus, float aAlpha_phong)
+{
+    // Note: The formula in rtr 4th p340 use the raw dot product, but we use dotPlus.
+    // Rationale: GLSL pow() is undefined for x < 0., and this should be equivalent since
+    // the heaviside operator in the formula means any negative nDotH should return 0,
+    // which is also the case when nDotH is 0.
+    // Note: we probably do not need heaviside, since 0^y is 0 (for any non-nul y).
+    return /*heaviside(nDotH_plus) * */((aAlpha_phong + 2) / 2) * pow(nDotH_plus, aAlpha_phong);
 }
 
 
 /// @note The exact Lambda is known but considered too expensinve for real-time.
-float Lambda_Beckmann_approximate(float dotPlus, float aAlpha)
+/// see rtr 4th p339
+/// @param aDot nDotL or nDotV, unclamped and signed.
+float Lambda_Beckmann_approximate(float aDot, float aAlpha_beckmann)
 {
-    float a = dotPlus / (aAlpha * sqrt(1 - (dotPlus * dotPlus)));
+    float a = aDot / (aAlpha_beckmann * sqrt(1 - (aDot * aDot)));
     if (a < 1.6)
     {
         return (1 - 1.259 * a + 0.396 * a * a)
@@ -129,30 +146,31 @@ float Lambda_Beckmann_approximate(float dotPlus, float aAlpha)
 
 /// @param nDotL is the **unclamped** signed dot product ("raw" dot product).
 /// @param nDotV is the **unclamped** signed dot product ("raw" dot product).
-float Visibility_Beckmann(float nDotL, float nDotV, float aAlpha)
+float Visibility_Beckmann(float nDotL, float nDotV, float aAlpha_beckmann)
 {
-    float lambda_v = Lambda_Beckmann_approximate(nDotV, aAlpha);
-    float lambda_l = Lambda_Beckmann_approximate(nDotL, aAlpha);
+    float lambda_v = Lambda_Beckmann_approximate(nDotV, aAlpha_beckmann);
+    float lambda_l = Lambda_Beckmann_approximate(nDotL, aAlpha_beckmann);
     float G2 = 1 / (1 + lambda_v + lambda_l);
+
     return G2 / (4 * abs(nDotL) * abs(nDotV));
 }
 
 
-float Visibility_Beckmann(vec3 n, vec3 l, vec3 v, float aAlpha)
+/// @brief Overload taking the unit vectors directly, so there is no client-error
+/// regarding dot products post-op.
+float Visibility_Beckmann(vec3 n, vec3 l, vec3 v, float aAlpha_beckmann)
 {
-    float lambda_v = Lambda_Beckmann_approximate(dot(n, v), aAlpha);
-    float lambda_l = Lambda_Beckmann_approximate(dot(n, l), aAlpha);
-    float G2 = 1 / (1 + lambda_v + lambda_l);
-    return G2 / (4 * abs(dot(n, l)) * abs(dot(n, v)));
+    return Visibility_Beckmann(dot(n, l), dot(n, v), aAlpha_beckmann);
 }
 
 
 vec3 specularBrdf_BlinnPhong(vec3 aFresnelReflectance, 
-                             float nDotH, float nDotL, float nDotV,
-                             float aAlpha)
+                             float nDotH_plus, float nDotL_raw, float nDotV_raw,
+                             float aAlpha_beckmann)
 {
-    float D = Distribution_BlinnPhong(nDotH, aAlpha);
-    float V = Visibility_Beckmann(nDotL, nDotV, aAlpha);
+    float D = Distribution_BlinnPhong(nDotH_plus, alphaBeckmannToPhong(aAlpha_beckmann));
+    // rtr 4th p340 suggests using the Beckmann Lambda (thus, visibility).
+    float V = Visibility_Beckmann(nDotL_raw, nDotV_raw, aAlpha_beckmann);
     return aFresnelReflectance * V * D;
 }
 
