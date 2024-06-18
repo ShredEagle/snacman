@@ -46,15 +46,33 @@ float Visibility_GGX(float nDotL, float nDotV, float aAlphaSq)
     float ui = nDotL;
     float l = uo * sqrt(aAlphaSq + ui * (ui - aAlphaSq * ui));
     float r = ui * sqrt(aAlphaSq + uo * (uo - aAlphaSq * uo));
-    // TODO is there a risk of divide by zero?
-    return 0.5 / (l + r);
+    // I suppose there is a risk of division by zero
+    // because I sometime get dark outlines if not making the test
+    float d = l + r;
+    if (d > 0)
+    {
+        return 0.5 / d;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 // Hammon-Karis approximation
 // see: rtr 4th p342
 float Visibility_GGX_approx(float nDotL, float nDotV, float aAlpha)
 {
-    return 0.5 / mix(2 * nDotL * nDotV, nDotL + nDotV, aAlpha);
+    // The approximation suffer from the same problem of division by zero
+    // so we test the upper bound
+    if ((nDotL + nDotV) > 0)
+    {
+        return 0.5 / mix(2 * nDotL * nDotV, nDotL + nDotV, aAlpha);
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 //#define APPROXIMATE_G2_GGX
