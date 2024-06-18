@@ -29,6 +29,10 @@ vec3 diffuseBrdf_weightedLambertian(vec3 aFresnelReflectance, vec3 aDiffuseColor
 }
 
 
+//
+// Trowbridge-Reitz / GGX microfacet model
+//
+
 // Important: returned multiplied by Pi, so the overall GGX specular BRDF is mutiplied by Pi
 float Distribution_GGX(float nDotH, float aAlphaSq)
 {
@@ -37,9 +41,11 @@ float Distribution_GGX(float nDotH, float aAlphaSq)
 }
 
 
-// Visibility is G2 / (4 |n.l| |n.v|)
-// This is the simplified (yet I assume exact) form of the height-correlated Smith G2 for GGX
-// see rtr 4th p341
+// Visibility is how we call the the compound term: G2 / (4 |n.l| |n.v|)
+// TODO: Find the correct name, it might be an abuse.
+//       Some texts seem to use "visibility" for the masking-shadowing function (G2).
+/// @note This is the simplified (yet I assume exact) form of the height-correlated Smith G2 for GGX
+/// see rtr 4th p341
 float Visibility_GGX(float nDotL, float nDotV, float aAlphaSq)
 {
     float uo = nDotV;
@@ -59,7 +65,7 @@ float Visibility_GGX(float nDotL, float nDotV, float aAlphaSq)
     }
 }
 
-// Hammon-Karis approximation
+// Hammon-Karis approximation of Trowbridge-Reitz/GGX visibility
 // see: rtr 4th p342
 float Visibility_GGX_approx(float nDotL, float nDotV, float aAlpha)
 {
@@ -90,6 +96,63 @@ vec3 specularBrdf_GGX(vec3 aFresnelReflectance,
 #else
     float V = Visibility_GGX(nDotL, nDotV, alphaSquared);
 #endif
+    return aFresnelReflectance * V * D;
+}
+
+
+//
+// Beckmann & Blinn-Phong models
+//
+
+// Important: All BRDFs are given already mutiplied by Pi
+float Distribution_BlinnPhong(float nDotH, float aAlpha)
+{
+    return heaviside(nDotH) * (aAlpha + 2) / 2 * pow(nDotH, aAlpha);
+}
+
+
+/// @note The exact Lambda is known but considered too expensinve for real-time.
+float Lambda_Beckmann_approximate(float dotPlus, float aAlpha)
+{
+    float a = dotPlus / (aAlpha * sqrt(1 - (dotPlus * dotPlus)));
+    if (a < 1.6)
+    {
+        return (1 - 1.259 * a + 0.396 * a * a)
+                / (3.535 * a + 2.181 * a * a);
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+
+/// @param nDotL is the **unclamped** signed dot product ("raw" dot product).
+/// @param nDotV is the **unclamped** signed dot product ("raw" dot product).
+float Visibility_Beckmann(float nDotL, float nDotV, float aAlpha)
+{
+    float lambda_v = Lambda_Beckmann_approximate(nDotV, aAlpha);
+    float lambda_l = Lambda_Beckmann_approximate(nDotL, aAlpha);
+    float G2 = 1 / (1 + lambda_v + lambda_l);
+    return G2 / (4 * abs(nDotL) * abs(nDotV));
+}
+
+
+float Visibility_Beckmann(vec3 n, vec3 l, vec3 v, float aAlpha)
+{
+    float lambda_v = Lambda_Beckmann_approximate(dot(n, v), aAlpha);
+    float lambda_l = Lambda_Beckmann_approximate(dot(n, l), aAlpha);
+    float G2 = 1 / (1 + lambda_v + lambda_l);
+    return G2 / (4 * abs(dot(n, l)) * abs(dot(n, v)));
+}
+
+
+vec3 specularBrdf_BlinnPhong(vec3 aFresnelReflectance, 
+                             float nDotH, float nDotL, float nDotV,
+                             float aAlpha)
+{
+    float D = Distribution_BlinnPhong(nDotH, aAlpha);
+    float V = Visibility_Beckmann(nDotL, nDotV, aAlpha);
     return aFresnelReflectance * V * D;
 }
 

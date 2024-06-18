@@ -87,7 +87,13 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
 
     // Important: All albedos are given already multiplied by Pi
     // This already satisfy the Pi factor in the reflectance equation.
-    result.specular = specularBrdf_GGX(F, nDotH, nDotL, nDotV, alpha)
+    float alpha_b = alpha/1.7; // the magic denominator was manually tweaked to mostly match
+    float alpha_p = 2 * pow(alpha_b, -2) -2;
+    float D = Distribution_BlinnPhong(nDotH, alpha_p);
+    float V = Visibility_Beckmann(aShadingNormal, aLightDir, aView, alpha_b);
+    result.specular = F * V * D
+    //result.specular = specularBrdf_BlinnPhong(F, nDotH, nDotL, nDotV, 1000)
+    //result.specular = specularBrdf_GGX(F, nDotH, nDotL, nDotV, alpha)
                       * aColors.specular.rgb
                       * nDotL;
     result.diffuse  = diffuseBrdf_weightedLambertian(F, diffuseColor)
