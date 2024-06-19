@@ -193,11 +193,8 @@ void main()
     //vec3 shadingNormal_cam = normalize(normal_cam);
 
     //
-    // PBR shading model
+    // Metallic-Roughness parameterization 
     //
-
-    // We consider the eye is at the origin in cam space
-    vec3 view_cam = -normalize(ex_Position_cam.xyz);
 
     // Extract PBR parameters
     vec3 mrao = 
@@ -216,24 +213,59 @@ void main()
     float ambientOcclusion = mrao.g;
 #endif
 
-    // Populate the PBR material from metallic roughnes parameterization
-    PbrMaterial pbrMaterial;
-    // Note: This is material blending section. 
-    // This approach is blending the parameters before computing the model.
-    // Although theoretically incorrect (the parameters do not have a linear relation to the output)
-    // it is faster than computing the model for the two materials then blending the results.
-    pbrMaterial.diffuseColor = mix(albedo.rgb, vec3(0.), metallic);
-    pbrMaterial.f0 = mix(vec3(0.04), albedo.rgb, metallic);
-    pbrMaterial.f90 = vec3(1.0);
+    // Handle alpha
+
     // Disney PBR square the user provided roughness value (r) to obtain alpha.
     // hard to say if the map already contains it squared, which would save instructions
     // (but would change the precision distribution)
-    pbrMaterial.alpha = roughness * roughness;
+    float alpha = roughness * roughness;
     // Note: Too smooth a surface (i.e too low an alpha)
     // makes it that there is not even a specular highlight showing with most models
     // (at least GGX & Blinn-Phong)
     // So, uncomment to fix it (e.g. the display on the glTF water bottle)
-    //pbrMaterial.alpha = max(0.005, pbrMaterial.alpha);
+    //alpha = max(0.005, alpha);
+
+    // Material blending approaches
+    // see rtr 4th p366
+
+// * When defined, the parameters themselves are blended
+//   before evaluating the shading model.
+//   Although theoretically incorrect (parameters do not have a linear relation to the output)
+//   it is faster and the usual approach in real-time.
+// * The alternative (not defined) is evaluation the shading model twice 
+//   (once as metal, once as dielectric),
+//   then blending the results based on metallic.
+#define MATERIAL_BLEND_PARAMETERS 
+
+    // Populate the PBR material from metallic-roughness parameterization
+#if defined(MATERIAL_BLEND_PARAMETERS)
+    // This approach is blending the parameters before computing the model.
+    PbrMaterial pbrMaterial;
+    pbrMaterial.diffuseColor = mix(albedo.rgb, vec3(0.), metallic);
+    pbrMaterial.f0 = mix(vec3(0.04), albedo.rgb, metallic);
+    pbrMaterial.f90 = vec3(1.0);
+    pbrMaterial.alpha = alpha;
+#else
+    PbrMaterial metalMaterial;
+    metalMaterial.diffuseColor = vec3(0.);
+    metalMaterial.f0 = albedo.rgb;
+    metalMaterial.f90 = vec3(1.);
+    metalMaterial.alpha = alpha;
+
+    PbrMaterial dielecMaterial;
+    dielecMaterial.diffuseColor = albedo.rgb;
+    dielecMaterial.f0 = vec3(0.04);
+    dielecMaterial.f90 = vec3(1.);
+    dielecMaterial.alpha = alpha;
+#endif
+
+
+    //
+    // PBR shading model (light simulation)
+    //
+
+    // We consider the eye is at the origin in cam space
+    vec3 view_cam = -normalize(ex_Position_cam.xyz);
 
     // Accumulators for the lights contributions
     vec3 diffuseAccum = vec3(0.);
@@ -245,9 +277,25 @@ void main()
         DirectionalLight directional = ub_DirectionalLights[directionalIdx];
         vec3 lightDir_cam = -directional.direction.xyz;
 
+#if defined(MATERIAL_BLEND_PARAMETERS)
+        // evaluate the model only once, with interpolated material parameters
         LightContributions lighting =
             applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
                            pbrMaterial, directional.colors);
+#else
+        // when blending the shading model results, the model must be evaluated twice
+        LightContributions lightingMetal =
+            applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
+                           metalMaterial, directional.colors);
+
+        LightContributions lightingDielec =
+            applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
+                           dielecMaterial, directional.colors);
+
+        LightContributions lighting;
+        lighting.diffuse += mix(lightingDielec.diffuse, lightingMetal.diffuse, metallic);
+        lighting.specular += mix(lightingDielec.specular, lightingMetal.specular, metallic);
+#endif
 
         diffuseAccum += lighting.diffuse;
         specularAccum += lighting.specular;
@@ -263,16 +311,32 @@ void main()
         float r = sqrt(dot(lightRay_cam, lightRay_cam));
         vec3 lightDir_cam = lightRay_cam / r;
 
+#if defined(MATERIAL_BLEND_PARAMETERS)
+        // evaluate the model only once, with interpolated material parameters
         LightContributions lighting =
             applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
                            pbrMaterial, point.colors);
+#else
+        // when blending the shading model results, the model must be evaluated twice
+        LightContributions lightingMetal =
+            applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
+                           metalMaterial, point.colors);
+
+        LightContributions lightingDielec =
+            applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
+                           dielecMaterial, point.colors);
+
+        LightContributions lighting;
+        lighting.diffuse += mix(lightingDielec.diffuse, lightingMetal.diffuse, metallic);
+        lighting.specular += mix(lightingDielec.specular, lightingMetal.specular, metallic);
+#endif
 
         float falloff = attenuatePoint(point, r);
         diffuseAccum += lighting.diffuse * falloff;
         specularAccum += lighting.specular * falloff;
     }
 
-    vec3 ambient = albedo.rgb * material.ambientColor.rgb * ub_AmbientColor.rgb * ambientOcclusion;
+    vec3 ambient = albedo.rgb * material.ambientColor.rgb * ub_AmbientColor.rgb * ambientOcclusion; 
     vec3 diffuse  = diffuseAccum * vec3(material.diffuseColor.rgb);
     vec3 specular = specularAccum * vec3(material.specularColor.rgb);
 
