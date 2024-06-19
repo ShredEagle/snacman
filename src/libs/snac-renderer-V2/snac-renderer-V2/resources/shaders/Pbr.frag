@@ -46,6 +46,11 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
     // Disney PBR square the user provided roughness value (r) to obtain alpha.
     // hard to say if the map already contains it squared, which would save instructions...
     float alpha = aRoughness * aRoughness;
+    // Note: Too smooth a surface (i.e too low an alpha)
+    // makes it that there is not even a specular highlight showing with most models
+    // (at least GGX & Blinn-Phong)
+    // So, uncomment to fix it (e.g. the display on the glTF water bottle)
+    //alpha = max(0.005, alpha);
 
 #ifdef GLTF_BRDF
     vec3 h = normalize(aView + aLightDir);

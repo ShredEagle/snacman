@@ -106,6 +106,8 @@ vec3 specularBrdf_GGX(vec3 aFresnelReflectance,
 // Beckmann & Blinn-Phong models
 //
 
+/// @param aAlpha_beckmann Alpha value according to Bekcmann model.
+/// **attention**: must not be zero, has to be strictly positive.
 float alphaBeckmannToPhong(float aAlpha_beckmann)
 {
     return 2 * pow(aAlpha_beckmann, -2) - 2;
@@ -129,6 +131,7 @@ float Distribution_BlinnPhong(float nDotH_plus, float aAlpha_phong)
 /// @note The exact Lambda is known but considered too expensinve for real-time.
 /// see rtr 4th p339
 /// @param aDot nDotL or nDotV, unclamped and signed.
+/// @param aAlpha_beckmann should be strictly positive, **cannot** be null.
 float Lambda_Beckmann_approximate(float aDot, float aAlpha_beckmann)
 {
     float a = aDot / (aAlpha_beckmann * sqrt(1 - (aDot * aDot)));
@@ -164,13 +167,20 @@ float Visibility_Beckmann(vec3 n, vec3 l, vec3 v, float aAlpha_beckmann)
 }
 
 
+/// @important aAlpha_beckmann cannot be zero, as it create a lot of numerical issues
+/// (for the moment, this function ensures it is not, which has a runtime cost)
 vec3 specularBrdf_BlinnPhong(vec3 aFresnelReflectance, 
                              float nDotH_plus, float nDotL_raw, float nDotV_raw,
                              float aAlpha_beckmann)
 {
-    float D = Distribution_BlinnPhong(nDotH_plus, alphaBeckmannToPhong(aAlpha_beckmann));
+    // It is mandatory that alpha_beckmann is not null 
+    // otherwise the conversion returns inf
+    // (which is theoretically correct, but numerically problematic)
+    // and the visibility returns nan.
+    float alpha_b_safe = max(0.0001, aAlpha_beckmann);
+    float D = Distribution_BlinnPhong(nDotH_plus, alphaBeckmannToPhong(alpha_b_safe));
     // rtr 4th p340 suggests using the Beckmann Lambda (thus, visibility).
-    float V = Visibility_Beckmann(nDotL_raw, nDotV_raw, aAlpha_beckmann);
+    float V = Visibility_Beckmann(nDotL_raw, nDotV_raw, alpha_b_safe);
     return aFresnelReflectance * V * D;
 }
 
