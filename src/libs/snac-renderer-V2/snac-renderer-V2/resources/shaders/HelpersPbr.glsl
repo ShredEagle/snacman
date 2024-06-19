@@ -1,9 +1,9 @@
 #include "Helpers.glsl"
 
 
-vec3 schlickFresnelReflectance(float aNormalDotLightPlus, vec3 F0, vec3 F90 = vec3(1., 1., 1.))
+vec3 schlickFresnelReflectance(float aNormalDotLight_plus, vec3 F0, vec3 F90 = vec3(1., 1., 1.))
 {
-    return F0 + (F90 - F0) * pow(1 - aNormalDotLightPlus, 5);
+    return F0 + (F90 - F0) * pow(1 - aNormalDotLight_plus, 5);
 }
 
 
@@ -217,6 +217,9 @@ float _Visibility_GGX_denominator(float aRoughnessSquared, float plusDot)
 // see rtr 4th p335
 float Visibility_GGX_gltf(float aRoughnessSquared, float hDotL, float hDotV, float nDotL, float nDotV)
 {
+    // For some reason, a null roughness lead to inf in l or r
+    // So setting a minimum value > 0 fixes this
+    //aRoughnessSquared = max(0.0001, aRoughnessSquared);
     float l = heaviside(hDotL) / _Visibility_GGX_denominator(aRoughnessSquared, nDotL);
     float r = heaviside(hDotV) / _Visibility_GGX_denominator(aRoughnessSquared, nDotV);
     return l * r;

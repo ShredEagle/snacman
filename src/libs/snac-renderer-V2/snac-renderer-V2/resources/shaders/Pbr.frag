@@ -27,30 +27,27 @@ out vec4 out_Color;
 
 //#define GLTF_BRDF
 //#define GLTF_GGX
-//#define GGX_BRDF
-#define BLINNPHONG_BRDF
+#define GGX_BRDF
+//#define BLINNPHONG_BRDF
+
+
+/// @brief A material tailored for BRDFs formulas.
+/// It is intended as a convenient parameter to PBR light computations.
+struct PbrMaterial
+{
+    vec3 diffuseColor;
+    vec3 f0;
+    vec3 f90;
+    float alpha;
+};
+
 
 LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
-                                  float aMetallic, float aRoughness, vec3 aAlbedo, LightColors aColors)
+                                  PbrMaterial aMaterial, LightColors aColors)
 {
     LightContributions result;
 
-    // TODO this should be taken out of the function, it is common to all lights
-    // Note: This is material blending section. 
-    // This approach is blending the parameters before computing the model.
-    // Although theoretically incorrect (the parameters do not have a linear relation to the output)
-    // it is faster than computing the model for the two materials then blending the results.
-    vec3 diffuseColor = mix(aAlbedo, vec3(0.), aMetallic);
-    vec3 f0 = mix(vec3(0.04), aAlbedo, aMetallic);
-    vec3 f90 = vec3(1.0);
-    // Disney PBR square the user provided roughness value (r) to obtain alpha.
-    // hard to say if the map already contains it squared, which would save instructions...
-    float alpha = aRoughness * aRoughness;
-    // Note: Too smooth a surface (i.e too low an alpha)
-    // makes it that there is not even a specular highlight showing with most models
-    // (at least GGX & Blinn-Phong)
-    // So, uncomment to fix it (e.g. the display on the glTF water bottle)
-    //alpha = max(0.005, alpha);
+    float alpha = aMaterial.alpha;
 
 #ifdef GLTF_BRDF
     vec3 h = normalize(aView + aLightDir);
@@ -60,10 +57,10 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
     float nDotV = dotPlus(aShadingNormal, aView);
     float nDotH = dotPlus(aShadingNormal, h);
 
-    vec3 reflectance = f0 + (f90 - f0) * pow(1 - vDotH, 5);
+    vec3 reflectance = schlickFresnelReflectance(hDotL, aMaterial.f0, aMaterial.f90);
 
     //result.diffuse = (1.0 - reflectance) * (diffuseColor / M_PI)
-    result.diffuse = (1.0 - reflectance) * (diffuseColor)
+    result.diffuse = (1.0 - reflectance) * (aMaterial.diffuseColor)
                     * nDotL
                     * aColors.diffuse.rgb
                     ;
@@ -90,10 +87,14 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
     float nDotL = dotPlus(aShadingNormal, aLightDir);
     float nDotV = dotPlus(aShadingNormal, aView);
 
-    vec3 F = schlickFresnelReflectance(hDotL, f0, f90);
+    vec3 F = schlickFresnelReflectance(hDotL, aMaterial.f0, aMaterial.f90);
 
     // Important: All albedos are given already multiplied by Pi
     // This already satisfy the Pi factor in the reflectance equation.
+
+    result.diffuse  = diffuseBrdf_weightedLambertian(F, aMaterial.diffuseColor)
+                      * aColors.diffuse.rgb
+                      * nDotL;
 
 #ifdef GGX_BRDF
     result.specular = specularBrdf_GGX(F, nDotH, nDotL, nDotV, alpha)
@@ -109,10 +110,6 @@ LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNorma
                       * nDotL;
 #endif // GGX_BRDF / BLINNPHONG_BRDF
 #endif // GLTF_BRDF   
-    result.diffuse  = diffuseBrdf_weightedLambertian(F, diffuseColor)
-                      * aColors.diffuse.rgb
-                      * nDotL;
-
     return result;
 }
 
@@ -219,8 +216,24 @@ void main()
     float ambientOcclusion = mrao.g;
 #endif
 
-    //out_Color = vec4(vec3(metallic), 1.);
-    //return;
+    // Populate the PBR material from metallic roughnes parameterization
+    PbrMaterial pbrMaterial;
+    // Note: This is material blending section. 
+    // This approach is blending the parameters before computing the model.
+    // Although theoretically incorrect (the parameters do not have a linear relation to the output)
+    // it is faster than computing the model for the two materials then blending the results.
+    pbrMaterial.diffuseColor = mix(albedo.rgb, vec3(0.), metallic);
+    pbrMaterial.f0 = mix(vec3(0.04), albedo.rgb, metallic);
+    pbrMaterial.f90 = vec3(1.0);
+    // Disney PBR square the user provided roughness value (r) to obtain alpha.
+    // hard to say if the map already contains it squared, which would save instructions
+    // (but would change the precision distribution)
+    pbrMaterial.alpha = roughness * roughness;
+    // Note: Too smooth a surface (i.e too low an alpha)
+    // makes it that there is not even a specular highlight showing with most models
+    // (at least GGX & Blinn-Phong)
+    // So, uncomment to fix it (e.g. the display on the glTF water bottle)
+    //pbrMaterial.alpha = max(0.005, pbrMaterial.alpha);
 
     // Accumulators for the lights contributions
     vec3 diffuseAccum = vec3(0.);
@@ -234,7 +247,7 @@ void main()
 
         LightContributions lighting =
             applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
-                           metallic, roughness, albedo.rgb, directional.colors);
+                           pbrMaterial, directional.colors);
 
         diffuseAccum += lighting.diffuse;
         specularAccum += lighting.specular;
@@ -252,7 +265,7 @@ void main()
 
         LightContributions lighting =
             applyLight_pbr(view_cam, lightDir_cam, shadingNormal_cam,
-                           metallic, roughness, albedo.rgb, point.colors);
+                           pbrMaterial, point.colors);
 
         float falloff = attenuatePoint(point, r);
         diffuseAccum += lighting.diffuse * falloff;
@@ -263,7 +276,7 @@ void main()
     vec3 diffuse  = diffuseAccum * vec3(material.diffuseColor.rgb);
     vec3 specular = specularAccum * vec3(material.specularColor.rgb);
 
-    vec3 phongColor = ambient + diffuse + specular;
+    vec3 fragmentColor = ambient + diffuse + specular;
 
-    out_Color = correctGamma(vec4(phongColor, albedo.a * material.diffuseColor.a));
+    out_Color = correctGamma(vec4(fragmentColor, albedo.a * material.diffuseColor.a));
 }
