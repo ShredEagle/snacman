@@ -18,9 +18,10 @@ namespace ad::renderer {
 class Camera;
 struct LightsData;
 struct Loader;
+struct Scene;
+struct Storage;
 struct ViewerPartList;
 struct ViewerPassCache;
-struct Storage;
 
 
 struct HardcodedUbos
@@ -50,7 +51,7 @@ struct TheGraph
 
     void setupTextures();
 
-    void renderFrame(const ViewerPartList & aPartList, 
+    void renderFrame(const Scene & aScene,
                      const Camera & aCamera,
                      const LightsData & aLights_camera,
                      Storage & aStorage);

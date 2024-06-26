@@ -202,11 +202,16 @@ void TheGraph::loadDrawBuffers(const ViewerPartList & aPartList,
 }
 
 
-void TheGraph::renderFrame(const ViewerPartList & aPartList, 
+void TheGraph::renderFrame(const Scene & aScene, 
                            const Camera & aCamera,
                            const LightsData & aLights_camera,
                            Storage & aStorage)
 {
+    // TODO: How to handle material/program selection while generating the part list,
+    // if the camera (or pass itself?) might override the materials?
+    // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
+    ViewerPartList partList = aScene.populatePartList();
+
     {
         PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
         loadFrameUbo(*mUbos.mFrameUbo);
@@ -215,7 +220,7 @@ void TheGraph::renderFrame(const ViewerPartList & aPartList,
 
         loadLightsUbo(*mUbos.mLightsUbo, aLights_camera);
 
-        proto::load(*mUbos.mJointMatrixPaletteUbo, std::span{aPartList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
+        proto::load(*mUbos.mJointMatrixPaletteUbo, std::span{partList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
     }
 
     // Use the same indirect buffer for all drawings
@@ -223,13 +228,13 @@ void TheGraph::renderFrame(const ViewerPartList & aPartList,
     // With the current approach, this binding could be done only once at construction
     graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
 
-    passOpaqueDepth(aPartList, aStorage);
+    passOpaqueDepth(partList, aStorage);
     // TODO Ad 2023/11/30: #perf Currently, this forward pass does not leverage the already available opaque depth-buffer
     // We cannot bind our "custom" depth buffer as the default framebuffer depth-buffer, so we will need to study alternatives:
     // render opaque depth to default FB, and blit to a texture for showing, render forward to a render target then blit to default FB, ...
-    passForward(aPartList, aStorage);
-    passTransparencyAccumulation(aPartList, aStorage);
-    passTransparencyResolve(aPartList, aStorage);
+    passForward(partList, aStorage);
+    passTransparencyAccumulation(partList, aStorage);
+    passTransparencyResolve(partList, aStorage);
 
     //
     // Debug rendering of the depth texture

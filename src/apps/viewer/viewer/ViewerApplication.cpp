@@ -428,11 +428,7 @@ void ViewerApplication::render()
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
-    // TODO: How to handle material/program selection while generating the part list,
-    // if the camera (or pass itself?) might override the materials?
-    // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
-    ViewerPartList partList = mScene.populatePartList();
-    mGraph.renderFrame(partList,
+    mGraph.renderFrame(mScene,
                        mCameraSystem.mCamera,
                        mScene.getLightsInCamera(mCameraSystem.mCamera,
                                                 !mSceneGui.mOptions.mAreDirectionalLightsCameraSpace),
