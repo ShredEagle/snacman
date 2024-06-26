@@ -107,6 +107,8 @@ set(${TARGET_NAME}_HEADERS
 
     detail/Logger.h
     detail/Serialization.h
+    detail/Reflexion.h
+    detail/Reflexion_impl.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -166,6 +168,7 @@ set(${TARGET_NAME}_SOURCES
 
     detail/Logger.cpp
     detail/Serialization.cpp
+    detail/Reflexion.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

@@ -4,6 +4,8 @@
 
 // TODO might become useless once Resources itselfs become the Load<> implementer
 #include <snac-renderer-V1/ResourceLoad.h>
+#include "entity/Entity.h"
+#include "entity/HandleKey.h"
 
 // Note: this is coupling the Resource class to the specifics of snacgame. 
 // But I do not want to template Resource on the renderer...
@@ -57,6 +59,7 @@ public:
     std::shared_ptr<Font> getFont(filesystem::path aFont,
                                   unsigned int aPixelHeight = gDefaultPixelHeight,
                                   filesystem::path aEffect = "effects/Text.sefx");
+    std::shared_ptr<Font> getBlueprint(filesystem::path aBpFile);
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
     // TODO Ad 2024/03/28: #RV2 #decommissionRV1 Finish porting to V2 resources (not even sure we need a this anymore)
@@ -92,6 +95,11 @@ private:
         filesystem::path aEffect,
         RenderThread<snacgame::Renderer_t> & aRenderThread,
         snacgame::Resources_V2 & aResources);
+
+    static ent::Handle<ent::Entity> BpLoader(
+        filesystem::path aBpFile, 
+        ent::EntityManager & aWorld,
+        Resources & aResources);
     
     // There is a smelly circular dependency in this design:
     // Resources knows the RenderThread to request OpenGL related resource loading
@@ -105,7 +113,8 @@ private:
     std::shared_ptr<Model> mCube = nullptr;
     resource::ResourceManager<std::shared_ptr<Font>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;
     resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;
-    resource::ResourceManager<snacgame::Renderer_t::Handle_t<const renderer::Object>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
+    resource::ResourceManager<std::shared_ptr<Model>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
+    resource::ResourceManager<ent::HandleKey<ent::Entity>,   resource::ResourceFinder, &Resources::ModelLoader> mBlueprints;
 };
 
 

@@ -28,6 +28,10 @@ class SnacmanConan(ConanFile):
         ("math/d200cdb8ba@adnn/develop"),
         ("MarkovJunior.cpp/86f542db56@adnn/develop"),
 
+        ("implot/0.16"),  # MIT
+        ("imgui/1.89.8"),
+
+
         # Waiting for my PR on conan-center for assimp to get merged in
         # see: https://github.com/conan-io/conan-center-index/pull/20185
         # I manually exported the recipe and uploaded it.
