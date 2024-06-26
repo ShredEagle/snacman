@@ -91,6 +91,7 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
     },
     mRenderSize{mGlfwAppInterface->getFramebufferSize()},
     mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")},
+    mSkybox{aLoader, aStorage},
     mDebugRenderer{aStorage, aLoader}
 {
     allocateTextures(mRenderSize);
@@ -236,6 +237,11 @@ void TheGraph::renderFrame(const Scene & aScene,
     passTransparencyAccumulation(partList, aStorage);
     passTransparencyResolve(partList, aStorage);
 
+    if(aScene.mEnvironment)
+    {
+        passSkybox(aScene.mEnvironment->mMap, aStorage);
+    }
+
     //
     // Debug rendering of the depth texture
     //
@@ -243,6 +249,35 @@ void TheGraph::renderFrame(const Scene & aScene,
     showDepthTexture(mDepthMap, nearZ, farZ) ;
     showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
     showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
+}
+
+
+void TheGraph::passSkybox(Handle<graphics::Texture> aSkybox, Storage & aStorage)
+{
+    glUseProgram(mSkybox.mProgram);
+    glBindVertexArray(*mSkybox.mCubeVao);
+
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, *aSkybox);
+    graphics::setUniform(mSkybox.mProgram, "u_SkyboxTexture", 5);
+
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, *mUbos.mViewingUbo);
+
+    // Default Framebuffer
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+    glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_LEQUAL);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+    auto scopedPolygonMode = graphics::scopePolygonMode(*mControls.mForwardPolygonMode);
+
+    glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 
 

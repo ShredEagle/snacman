@@ -19,6 +19,7 @@
 #include <profiler/GlApi.h>
 
 #include <snac-renderer-V2/Cube.h>
+#include <snac-renderer-V2/Cubemap.h>
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/debug/DebugDrawing.h>
 
@@ -278,6 +279,14 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // Toggle the triangle and cube in the scene
     //mScene.addToRoot(triangle);
     //mScene.addToRoot(cube);
+
+    {
+        mStorage.mTextures.push_back(
+            loadCubemapFromStrip("D:/projects/Gamedev/2/proto-assets/envmaps/extreme_centre.hdr"));
+        mScene.mEnvironment = Environment{
+            .mMap = &mStorage.mTextures.back(),
+        };
+    }
 }
 
 

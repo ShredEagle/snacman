@@ -4,6 +4,7 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Commons.h
     Cube.h
+    Cubemap.h
     Handle.h
     IntrospectProgram.h
     Json.h
@@ -32,6 +33,7 @@ set(${TARGET_NAME}_HEADERS
 
 set(${TARGET_NAME}_SOURCES
     Camera.cpp
+    Cubemap.cpp
     IntrospectProgram.cpp
     Logging-init.cpp
     Model.cpp

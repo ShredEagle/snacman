@@ -7,6 +7,7 @@
 #include <renderer/FrameBuffer.h>
 #include <renderer/Texture.h>
 
+#include <snac-renderer-V2/Cubemap.h>
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Repositories.h>
 #include <snac-renderer-V2/debug/DebugRenderer.h>
@@ -63,6 +64,7 @@ struct TheGraph
     void passForward(const ViewerPartList & aPartList, Storage & mStorage);
     void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
     void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
+    void passSkybox(Handle<graphics::Texture> aSkybox, Storage & aStorage);
 
     void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache);
 
@@ -125,6 +127,9 @@ struct TheGraph
     QuadDrawer mTransparencyResolver;
     static const GLint gAccumTextureUnit{0};
     static const GLint gRevealageTextureUnit{1};
+
+    // Skybox rendering
+    Skybox mSkybox;
 
     // Debug rendering
     DebugRenderer mDebugRenderer;

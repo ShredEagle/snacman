@@ -8,13 +8,14 @@
 
 #include <math/Transformations.h>
 
-#include <snac-renderer-V2/files/Loader.h>
 #include <snac-renderer-V2/Camera.h>
+#include <snac-renderer-V2/files/Loader.h>
 
 #include <fstream>
 
 
 namespace ad::renderer {
+
 
 
 Scene loadScene(const filesystem::path & aSceneFile,

@@ -12,6 +12,12 @@ struct Loader;
 struct ViewerPartList;
 
 
+struct Environment
+{
+    Handle<graphics::Texture> mMap;
+};
+
+
 struct Scene
 {
     Scene & addToRoot(Node aNode)
@@ -71,6 +77,8 @@ struct Scene
             },
         },
     };
+
+    std::optional<Environment> mEnvironment;
 };
 
 
