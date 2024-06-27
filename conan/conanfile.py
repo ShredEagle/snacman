@@ -32,6 +32,7 @@ class SnacmanConan(ConanFile):
         # see: https://github.com/conan-io/conan-center-index/pull/20185
         # I manually exported the recipe and uploaded it.
         ("assimp/5.3.1@adnn/develop"),
+        ("cli11/2.4.2"),
         ("spdlog/1.13.0"),
         ("nlohmann_json/3.11.2"),
 

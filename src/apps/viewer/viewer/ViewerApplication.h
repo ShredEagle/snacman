@@ -27,8 +27,10 @@ struct PassCache;
 struct ViewerApplication
 {
     ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
-                const std::filesystem::path & aSceneFile,
-                const imguiui::ImguiUi & aImguiUi);
+                      const std::filesystem::path & aSceneFile,
+                      const imguiui::ImguiUi & aImguiUi);
+
+    void setEnvironment(std::filesystem::path aEnvironmentStrip);
 
     // for camera movements, should be moved out to the simuation of course
     void update(const Timing & aTime);

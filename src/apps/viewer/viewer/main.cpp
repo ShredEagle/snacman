@@ -17,6 +17,8 @@
 
 #include <utilities/Time.h>
 
+#include <CLI/CLI.hpp>
+
 #include <iostream>
 
 
@@ -25,27 +27,38 @@ using namespace se;
 
 using renderer::gRenderProfiler;
 
-std::filesystem::path handleArguments(int argc, char * argv[])
+
+struct Arguments
 {
-    if(argc != 2)
+    std::filesystem::path mSceneFile;
+    std::optional<std::filesystem::path> mEnvironment;
+};
+
+
+/// @brief Handle the command line arguments
+/// @return 0 if the arguments were accepted, not-0 otherwise.
+int handleArguments(int argc, char * argv[], Arguments & aArgs)
+{
+    CLI::App cliApp{"ShredEagle 3D model viewer."};
+    argv = cliApp.ensure_utf8(argv);
+    
+    cliApp.add_option("sew-file", aArgs.mSceneFile,
+                      "The scene file containing the model to load.")
+        ->required();
+
+    cliApp.add_option("-e, --environment", aArgs.mEnvironment,
+                      "Environment map, used as a skybox");
+
+    CLI11_PARSE(cliApp, argc, argv);
+
+    // TODO Study how CLI11 advises to do arguments validation
+    if(!is_regular_file(aArgs.mSceneFile))
     {
-        std::cerr << "Usage: " << std::filesystem::path{argv[0]}.filename().string() << " input_model_file\n";
-        std::exit(EXIT_FAILURE);
+        std::cerr << "Provided scene should be a file, but '" << aArgs.mSceneFile.string() << "' is not.\n";
+        return EXIT_FAILURE;
     }
 
-    std::filesystem::path inputPath{argv[1]};
-    if(inputPath.extension() != ".sew")
-    {
-        inputPath.replace_extension(".seum");
-    }
-
-    if(!is_regular_file(inputPath))
-    {
-        std::cerr << "Provided argument should be a file, but '" << inputPath.string() << "' is not.\n";
-        std::exit(EXIT_FAILURE);
-    }
-
-    return inputPath;
+    return 0;
 }
 
 
@@ -99,9 +112,15 @@ void showGui(imguiui::ImguiUi & imguiUi,
 }
 
 
-void runApplication(int argc, char * argv[])
+int runApplication(int argc, char * argv[])
 {
     SELOG(info)("Starting application '{}'.", gApplicationName);
+
+    Arguments args;
+    if(int result = handleArguments(argc, argv, args))
+    {
+        return result;
+    }
 
     renderer::initializeDebugDrawers();
 
@@ -126,9 +145,13 @@ void runApplication(int argc, char * argv[])
     auto loadingSection = PROFILER_BEGIN_SINGLESHOT_SECTION(gRenderProfiler, , "rendergraph_loading", renderer::CpuTime);
     renderer::ViewerApplication application{
         glfwApp.getAppInterface(),
-        handleArguments(argc, argv),
+        args.mSceneFile,
         imguiUi,
     };
+    if(auto environment = args.mEnvironment)
+    {
+        application.setEnvironment(*environment);
+    }
     PROFILER_END_SECTION(loadingSection);
 
     renderer::Timing timing;
@@ -187,6 +210,8 @@ void runApplication(int argc, char * argv[])
         PROFILER_PRINT_TO_STREAM(gRenderProfiler, profilerOut);
     }
     SELOG(info)("Application '{}' is exiting.", gApplicationName);
+
+    return 0;
 }
 
 
@@ -214,7 +239,7 @@ int main(int argc, char * argv[])
     // Run the application (and use logging facilities if there is an error)
     try
     {
-        runApplication(argc, argv);
+        return runApplication(argc, argv);
     }
     catch (std::exception & aException)
     {

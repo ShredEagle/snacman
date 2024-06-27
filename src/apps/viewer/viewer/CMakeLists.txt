@@ -66,7 +66,7 @@ cmc_cpp_all_warnings_as_errors(${TARGET_NAME} ENABLED ${BUILD_CONF_WarningAsErro
 
 cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
-file(GENERATE 
+file(GENERATE
      OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
      CONTENT "{\"prefixes\": [\"${REPO_FOLDER}/src/libs/snac-renderer-V2/snac-renderer-V2/resources/\",
                               \"${REPO_FOLDER}/../snac-assets/\"]}")
@@ -82,7 +82,7 @@ find_package(Math CONFIG REQUIRED math)
 find_package(Handy CONFIG REQUIRED handy)
 
 
-#find_package(nlohmann_json 3.11.2 CONFIG REQUIRED)
+find_package(CLI11 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
@@ -96,8 +96,8 @@ target_link_libraries(${TARGET_NAME}
         ad::snac-renderer-V2
         ad::utilities
 
+        CLI11::CLI11
         spdlog::spdlog
-        #nlohmann_json::nlohmann_json
 )
 
 

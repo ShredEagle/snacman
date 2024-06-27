@@ -279,14 +279,20 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // Toggle the triangle and cube in the scene
     //mScene.addToRoot(triangle);
     //mScene.addToRoot(cube);
+    
+}
 
-    {
-        mStorage.mTextures.push_back(
-            loadCubemapFromStrip("D:/projects/Gamedev/2/proto-assets/envmaps/extreme_centre.hdr"));
-        mScene.mEnvironment = Environment{
-            .mMap = &mStorage.mTextures.back(),
-        };
-    }
+
+void ViewerApplication::setEnvironment(std::filesystem::path aEnvironmentStrip)
+{
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "ViewerApplication::setEnvironment()",
+                                      CpuTime, GpuTime, BufferMemoryWritten);
+    SELOG(info)("Loading environment map from '{}'", aEnvironmentStrip.string());
+
+    mStorage.mTextures.push_back(loadCubemapFromStrip(aEnvironmentStrip));
+    mScene.mEnvironment = Environment{
+        .mMap = &mStorage.mTextures.back(),
+    };
 }
 
 
