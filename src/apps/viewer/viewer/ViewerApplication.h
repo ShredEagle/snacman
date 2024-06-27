@@ -30,7 +30,8 @@ struct ViewerApplication
                       const std::filesystem::path & aSceneFile,
                       const imguiui::ImguiUi & aImguiUi);
 
-    void setEnvironment(std::filesystem::path aEnvironmentStrip);
+    void setEnvironmentCubemap(std::filesystem::path aEnvironmentStrip);
+    void setEnvironmentEquirectangular(std::filesystem::path aEnvironmentEquirect);
 
     // for camera movements, should be moved out to the simuation of course
     void update(const Timing & aTime);

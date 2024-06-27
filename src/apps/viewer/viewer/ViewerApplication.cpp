@@ -283,14 +283,29 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
 }
 
 
-void ViewerApplication::setEnvironment(std::filesystem::path aEnvironmentStrip)
+void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironmentStrip)
 {
-    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "ViewerApplication::setEnvironment()",
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "Load environment map",
                                       CpuTime, GpuTime, BufferMemoryWritten);
-    SELOG(info)("Loading environment map from '{}'", aEnvironmentStrip.string());
+    SELOG(info)("Loading environment map from cubemap strip '{}'", aEnvironmentStrip.string());
 
     mStorage.mTextures.push_back(loadCubemapFromStrip(aEnvironmentStrip));
     mScene.mEnvironment = Environment{
+        .mType = Environment::Cubemap,
+        .mMap = &mStorage.mTextures.back(),
+    };
+}
+
+
+void ViewerApplication::setEnvironmentEquirectangular(std::filesystem::path aEnvironmentEquirect)
+{
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "Load environment map",
+                                      CpuTime, GpuTime, BufferMemoryWritten);
+    SELOG(info)("Loading environment map from equirectangular map '{}'", aEnvironmentEquirect.string());
+
+    mStorage.mTextures.push_back(loadEquirectangular(aEnvironmentEquirect));
+    mScene.mEnvironment = Environment{
+        .mType = Environment::Equirectangular,
         .mMap = &mStorage.mTextures.back(),
     };
 }

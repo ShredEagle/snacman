@@ -239,7 +239,7 @@ void TheGraph::renderFrame(const Scene & aScene,
 
     if(aScene.mEnvironment)
     {
-        passSkybox(aScene.mEnvironment->mMap, aStorage);
+        passSkybox(*aScene.mEnvironment, aStorage);
     }
 
     //
@@ -252,14 +252,28 @@ void TheGraph::renderFrame(const Scene & aScene,
 }
 
 
-void TheGraph::passSkybox(Handle<graphics::Texture> aSkybox, Storage & aStorage)
+void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage)
 {
-    glUseProgram(mSkybox.mProgram);
-    glBindVertexArray(*mSkybox.mCubeVao);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_skybox", CpuTime, GpuTime);
 
+    Handle<graphics::Texture> envMap = aEnvironment.mMap;
+
+    glBindVertexArray(*mSkybox.mCubeVao);
     glActiveTexture(GL_TEXTURE5);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, *aSkybox);
-    graphics::setUniform(mSkybox.mProgram, "u_SkyboxTexture", 5);
+    switch(aEnvironment.mType)
+    {
+        case Environment::Cubemap:
+            glUseProgram(mSkybox.mCubemapProgram);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, *envMap);
+            break;
+        case Environment::Equirectangular:
+            glUseProgram(mSkybox.mEquirectangularProgram);
+            glBindTexture(GL_TEXTURE_2D, *envMap);
+            break;
+    }
+
+    graphics::setUniform(mSkybox.mCubemapProgram, "u_SkyboxTexture", 5);
+    graphics::setUniform(mSkybox.mEquirectangularProgram, "u_SkyboxTexture", 5);
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, *mUbos.mViewingUbo);
 

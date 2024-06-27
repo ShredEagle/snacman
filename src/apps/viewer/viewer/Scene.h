@@ -14,6 +14,12 @@ struct ViewerPartList;
 
 struct Environment
 {
+    enum Type
+    {
+        Cubemap,
+        Equirectangular,
+    };
+    Type mType;
     Handle<graphics::Texture> mMap;
 };
 

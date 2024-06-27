@@ -25,7 +25,7 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
                     1);
 
     graphics::ScopedBind bound{cubemap};
-    // TODO pixel unpack alignment?
+    Guard scopedAlignment = graphics::detail::scopeUnpackAlignment((GLint)hdrStrip.rowAlignment());
     for(unsigned int lineIdx = 0; lineIdx != side; ++lineIdx)
     {
         for(unsigned int faceIdx = 0; faceIdx != 6; ++faceIdx)
@@ -50,6 +50,25 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
 }
 
 
+graphics::Texture loadEquirectangular(filesystem::path aEquirectangularMap)
+{
+    arte::Image<math::hdr::Rgb_f> hdrMap = 
+        arte::Image<math::hdr::Rgb_f>::LoadFile(aEquirectangularMap,
+                                                arte::ImageOrientation::Unchanged);
+
+    graphics::Texture equirectMap{GL_TEXTURE_2D};
+    graphics::loadImage(equirectMap, hdrMap);
+
+    graphics::ScopedBind bound{equirectMap};
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    return equirectMap;
+}
+
+
 //Part makeUnitCube(Storage & aStorage)
 //{
 //    Handle<VertexStream> vertexStream = primeVertexStream(aStorage);
@@ -65,7 +84,8 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
 
 Skybox::Skybox(const Loader & aLoader, Storage & aStorage) :
     mCubeVao{&aStorage.mVaos.emplace_back()},
-    mProgram{aLoader.loadProgram("shaders/Skybox.prog")}
+    mCubemapProgram{aLoader.loadProgram("shaders/Skybox.prog")},
+    mEquirectangularProgram{aLoader.loadProgram("shaders/Skybox.prog", {"EQUIRECTANGULAR"})}
 {
     std::vector<math::Position<3, float>> vertices;
     vertices.reserve(cube::Maker::gVertexCount);

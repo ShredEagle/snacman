@@ -31,7 +31,8 @@ using renderer::gRenderProfiler;
 struct Arguments
 {
     std::filesystem::path mSceneFile;
-    std::optional<std::filesystem::path> mEnvironment;
+    std::optional<std::filesystem::path> mCubemapEnv;
+    std::optional<std::filesystem::path> mEquirectangularEnv;
 };
 
 
@@ -46,8 +47,11 @@ int handleArguments(int argc, char * argv[], Arguments & aArgs)
                       "The scene file containing the model to load.")
         ->required();
 
-    cliApp.add_option("-e, --environment", aArgs.mEnvironment,
-                      "Environment map, used as a skybox");
+    cliApp.add_option("-c, --cube-environment", aArgs.mCubemapEnv,
+                      "Environment map, given as a cubemap strip. Takes precedence.");
+
+    cliApp.add_option("-e, --equirectangular-environment", aArgs.mEquirectangularEnv,
+                      "Environment map, given as an equirectangular map.");
 
     CLI11_PARSE(cliApp, argc, argv);
 
@@ -148,9 +152,13 @@ int runApplication(int argc, char * argv[])
         args.mSceneFile,
         imguiUi,
     };
-    if(auto environment = args.mEnvironment)
+    if(auto environment = args.mCubemapEnv)
     {
-        application.setEnvironment(*environment);
+        application.setEnvironmentCubemap(*environment);
+    }
+    else if(auto environment = args.mEquirectangularEnv)
+    {
+        application.setEnvironmentEquirectangular(*environment);
     }
     PROFILER_END_SECTION(loadingSection);
 

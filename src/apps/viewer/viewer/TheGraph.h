@@ -17,6 +17,7 @@ namespace ad::renderer {
 
 
 class Camera;
+struct Environment;
 struct LightsData;
 struct Loader;
 struct Scene;
@@ -64,7 +65,7 @@ struct TheGraph
     void passForward(const ViewerPartList & aPartList, Storage & mStorage);
     void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
     void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
-    void passSkybox(Handle<graphics::Texture> aSkybox, Storage & aStorage);
+    void passSkybox(const Environment & aEnvironment, Storage & aStorage);
 
     void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache);
 
