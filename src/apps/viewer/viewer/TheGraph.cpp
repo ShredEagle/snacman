@@ -35,12 +35,6 @@ namespace {
     }
 
 
-    void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
-    {
-        proto::loadSingle(aUbo, GpuViewProjectionBlock{aCamera}, graphics::BufferHint::DynamicDraw);
-    }
-
-
     void loadLightsUbo(const graphics::UniformBufferObject & aUbo, const LightsData & aLights)
     {
         proto::loadSingle(aUbo, aLights, graphics::BufferHint::DynamicDraw);
@@ -48,6 +42,12 @@ namespace {
 
 
 } // unnamed namespace
+
+
+void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
+{
+    proto::loadSingle(aUbo, GpuViewProjectionBlock{aCamera}, graphics::BufferHint::DynamicDraw);
+}
 
 
 //
@@ -239,6 +239,11 @@ void TheGraph::renderFrame(const Scene & aScene,
 
     if(aScene.mEnvironment)
     {
+        // The Framebuffer binding should be moved out of the passes, making them more reusable
+        // Default Framebuffer
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
+
         passSkybox(*aScene.mEnvironment, aStorage);
     }
 
@@ -275,12 +280,9 @@ void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage)
     graphics::setUniform(mSkybox.mCubemapProgram, "u_SkyboxTexture", 5);
     graphics::setUniform(mSkybox.mEquirectangularProgram, "u_SkyboxTexture", 5);
 
+    // This is bad, harcoding knowledge of the binding points
+    // but this was written as a refresher on native GL
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, *mUbos.mViewingUbo);
-
-    // Default Framebuffer
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-    glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
 
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);

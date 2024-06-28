@@ -6,8 +6,24 @@
 
 #include <arte/Image.h>
 
+#include <graphics/CameraUtilities.h>
+
 
 namespace ad::renderer {
+
+
+// Note: OpenGL order of cubemap faces is +X, -X, +Y, -Y, +Z, -Z
+// Yet, the coordinate system of the cubemap is **left-handed**,
+// so we want to render a camera facing -Z in our right-handed world to render the cubemap +Z
+// (see: https://www.khronos.org/opengl/wiki/Cubemap_Texture#Upload_and_orientation)
+const std::array<math::AffineMatrix<4, GLfloat>, 6> gCubeCaptureViews{
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 1.f, 0.f, 0.f}),
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {-1.f, 0.f, 0.f}),
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {0.f,  1.f, 0.f}, {0.f, 0.f,  1.f}),
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, -1.f}),
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {0.f, 0.f, -1.f}), // -Z in our right handed basis
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {0.f, 0.f,  1.f}),
+};
 
 
 graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
@@ -17,7 +33,7 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
                                                 arte::ImageOrientation::Unchanged);
     // A requirement for a strip representing the 6 faces of a cubemap
     assert(hdrStrip.height() * 6 == hdrStrip.width());
-    GLsizei side = hdrStrip.height();
+    const GLsizei side = hdrStrip.height();
 
     graphics::Texture cubemap{GL_TEXTURE_CUBE_MAP};
     allocateStorage(cubemap, GL_RGB16F,
@@ -45,6 +61,50 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
     //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return cubemap;
+}
+
+
+graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence)
+{
+    const std::filesystem::path parent = aImageSequence.parent_path();
+    const std::string stem = aImageSequence.stem().string();
+    const std::string extension = aImageSequence.extension().string();
+
+    arte::Image<math::hdr::Rgb_f> hdrFace = 
+        arte::Image<math::hdr::Rgb_f>::LoadFile(parent / (stem + "_" + std::to_string(0) + extension),
+                                                arte::ImageOrientation::Unchanged);
+    const GLsizei side = hdrFace.height();
+
+    graphics::Texture cubemap{GL_TEXTURE_CUBE_MAP};
+    allocateStorage(cubemap, GL_RGB16F,
+                    side, side,
+                    1);
+
+    graphics::ScopedBind bound{cubemap};
+    Guard scopedAlignment = graphics::detail::scopeUnpackAlignment((GLint)hdrFace.rowAlignment());
+
+    for(unsigned int faceIdx = 0; faceIdx != 6; ++faceIdx)
+    {
+        if (faceIdx != 0)
+        {
+            hdrFace = 
+                arte::Image<math::hdr::Rgb_f>::LoadFile(
+                    parent / (stem + "_" + std::to_string(faceIdx) + extension),
+                    arte::ImageOrientation::Unchanged);
+        }
+
+        glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIdx,
+            0,
+            0, 0, side, side,
+            GL_RGB,
+            GL_FLOAT,
+            hdrFace.data());
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     return cubemap;
 }

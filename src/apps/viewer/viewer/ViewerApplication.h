@@ -33,6 +33,10 @@ struct ViewerApplication
     void setEnvironmentCubemap(std::filesystem::path aEnvironmentStrip);
     void setEnvironmentEquirectangular(std::filesystem::path aEnvironmentEquirect);
 
+    // TODO Ad 2024/06/27: This should probably live in a separate preprocessing application
+    // instead of polluting the viewer with asset processing.
+    void dumpEnvironmentCubemap(std::filesystem::path aOutputColumn);
+
     // for camera movements, should be moved out to the simuation of course
     void update(const Timing & aTime);
     void render();

@@ -11,8 +11,13 @@ namespace ad::renderer {
 struct Loader;
 
 
+extern const std::array<math::AffineMatrix<4, GLfloat>, 6> gCubeCaptureViews;
+
+
 /// @param aImageStrip should be in the standard OpenGL order (+X, -X, +Y, -Y, +Z, -Z)
 graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip);
+
+graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence);
 
 graphics::Texture loadEquirectangular(filesystem::path aEquirectangularMap);
 
@@ -30,7 +35,6 @@ struct Skybox
     IntrospectProgram mCubemapProgram;
     IntrospectProgram mEquirectangularProgram;
 };
-
 
 
 } // namespace ad::renderer

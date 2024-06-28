@@ -40,6 +40,11 @@ struct HardcodedUbos
 };
 
 
+/// @brief Load data from aCamera into aUbo.
+/// @note It is proving useful to have access to it to re-use passes outside of the main renderFrame()
+void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera);
+
+
 /// @brief The specific Render Graph for this viewer application.
 struct TheGraph
 {

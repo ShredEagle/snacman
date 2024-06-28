@@ -21,6 +21,7 @@ struct Environment
     };
     Type mType;
     Handle<graphics::Texture> mMap;
+    std::filesystem::path mMapFile; // notably used when dumping the cubemap, to derive a destination
 };
 
 

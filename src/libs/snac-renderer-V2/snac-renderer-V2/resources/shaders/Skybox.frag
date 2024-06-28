@@ -11,8 +11,8 @@ uniform sampler2D u_SkyboxTexture;
 uniform samplerCube u_SkyboxTexture;
 #endif
 
-out vec4 out_Color;
-
+layout(location = 0) out vec4 out_Color;
+layout(location = 1) out vec3 out_LinearHdr;
 
 void main()
 {
@@ -24,7 +24,7 @@ void main()
     // so x becomes y, y becomes z, z becomes x).
     vec3 view_world = normalize(ex_CubeTextureCoords);
 
-    // This formula show the middle of the equirectangle with default camera.
+    // This formula show the middle of the equirectangle with default camera looking down -Z (in world).
     // The value is mirrored on the range [0, 1]:
     // an increasing azimuth (counterclockwise) has to lead to a decreasing u to avoid mirroring.
     float u = 1 - atan(view_world.x, view_world.z) / (2 * M_PI);
@@ -35,9 +35,10 @@ void main()
 
     vec3 envColor = texture(u_SkyboxTexture, vec2(u,v)).rgb;
 #else
-    vec3 envColor = texture(u_SkyboxTexture, ex_CubeTextureCoords).rgb;
+    // Cubemap coordinate system is left handed, but the cube texture coords is given
+    // in right handed world space, so negate Z. 
+    vec3 envColor = texture(u_SkyboxTexture, vec3(ex_CubeTextureCoords.xy, -ex_CubeTextureCoords.z)).rgb;
 #endif
-    // What is this tone mapping found in Learn OpenGL?
-    //envColor = envColor / (envColor + 1.0);
     out_Color = correctGamma(vec4(envColor, 1.0));
+    out_LinearHdr = envColor;
 }
