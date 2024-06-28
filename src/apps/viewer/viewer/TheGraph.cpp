@@ -285,13 +285,16 @@ void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage)
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
     glDepthFunc(GL_LEQUAL);
-    glDisable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
     glDisable(GL_BLEND);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     auto scopedPolygonMode = graphics::scopePolygonMode(*mControls.mForwardPolygonMode);
 
     glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    glCullFace(GL_BACK);
 }
 
 
