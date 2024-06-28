@@ -59,7 +59,7 @@ private:
     math::AffineMatrix<4, float> mParentToCamera = math::AffineMatrix<4, float>::Identity(); 
     math::Matrix<4, 4, float> mProjection = graphics::makeProjection(OrthographicParameters{
             .mAspectRatio = 1,
-            .mViewHeight = 1,
+            .mViewHeight = 2,
             .mNearZ = +1,
             .mFarZ = -1,
         }); 
