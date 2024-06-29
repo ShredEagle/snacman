@@ -31,12 +31,15 @@ void main()
     // Which give the same result as:
     //float u = atan(-view_world.x, view_world.z) / (2 * M_PI);
 
-    float v = acos(view_world.y) / M_PI;
+    // Polar angle increase in the opposite direction compared to v coordinate
+    float v = 1 - acos(view_world.y) / M_PI;
 
     vec3 envColor = texture(u_SkyboxTexture, vec2(u,v)).rgb;
 #else
     // Cubemap coordinate system is left handed, but the cube texture coords is given
     // in right handed world space, so negate Z. 
+    // Note: the individual images in the cubemap texture are loaded "upside-down" compared to usual OpenGL textures
+    // in order for this to work (you can see they are upside down in Nsight Graphics)
     vec3 envColor = texture(u_SkyboxTexture, vec3(ex_CubeTextureCoords.xy, -ex_CubeTextureCoords.z)).rgb;
 #endif
     out_Color = correctGamma(vec4(envColor, 1.0));

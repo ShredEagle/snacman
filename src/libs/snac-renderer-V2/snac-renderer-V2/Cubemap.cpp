@@ -28,6 +28,15 @@ const std::array<math::AffineMatrix<4, GLfloat>, 6> gCubeCaptureViews{
 
 graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
 {
+    // Note: Cubemap coordinates are a surprisingly confusing topic 
+    // (still giving rise to posts such as:
+    //  https://community.khronos.org/t/image-orientation-for-cubemaps-actually-a-very-old-topic/105338)
+    // My current approach is to load the faces as labeled in the left-handed coordinate system described in:
+    // https://www.khronos.org/opengl/wiki/Cubemap_Texture#Upload_and_orientation
+    // Yet, the vertical texture coordinate (v) increases from top to bottom on each individual textre image.
+    // This is the opposite of the usual bottom origin for texture (u, v) in OpenGL:
+    // For this reason, the image files are not flipped vertically as they usually should be.
+    // (So, the individual cubemap texture images appear upside down in Nsight Graphics)
     arte::Image<math::hdr::Rgb_f> hdrStrip = 
         arte::Image<math::hdr::Rgb_f>::LoadFile(aImageStrip,
                                                 arte::ImageOrientation::Unchanged);
@@ -114,7 +123,7 @@ graphics::Texture loadEquirectangular(filesystem::path aEquirectangularMap)
 {
     arte::Image<math::hdr::Rgb_f> hdrMap = 
         arte::Image<math::hdr::Rgb_f>::LoadFile(aEquirectangularMap,
-                                                arte::ImageOrientation::Unchanged);
+                                                arte::ImageOrientation::InvertVerticalAxis);
 
     graphics::Texture equirectMap{GL_TEXTURE_2D};
     graphics::loadImage(equirectMap, hdrMap);
