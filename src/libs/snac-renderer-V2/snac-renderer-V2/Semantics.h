@@ -20,6 +20,7 @@ namespace semantic
     const Semantic gDiffuseTexture{"DiffuseTexture"};
     const Semantic gNormalTexture{"NormalTexture"};
     SEM(MetallicRoughnessAoTexture);
+    SEM(SpecularEnvironmentTexture);
     const Semantic gModelTransformIdx{"ModelTransformIdx"};
     const Semantic gMaterialIdx{"MaterialIdx"};
     SEM(MatrixPaletteOffset);

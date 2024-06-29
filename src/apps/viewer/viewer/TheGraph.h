@@ -109,7 +109,7 @@ struct TheGraph
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
 
     HardcodedUbos mUbos;
-    RepositoryTexture mDummyTextureRepository;
+    RepositoryTexture mTextureRepository;
 
     GenericStream mInstanceStream;
 

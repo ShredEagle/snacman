@@ -23,6 +23,7 @@
 #include <snac-renderer-V2/Cube.h>
 #include <snac-renderer-V2/Cubemap.h>
 #include <snac-renderer-V2/Profiling.h>
+#include <snac-renderer-V2/Semantics.h>
 #include <snac-renderer-V2/debug/DebugDrawing.h>
 
 #include <utilities/Time.h>
@@ -284,6 +285,21 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     
 }
 
+namespace {
+
+    void setEnvironmentMap(ViewerApplication & aApp, graphics::Texture aMap, Environment::Type aType, std::filesystem::path aPath)
+    {
+        aApp.mStorage.mTextures.push_back(std::move(aMap));
+        Handle<const graphics::Texture> texture = &aApp.mStorage.mTextures.back();
+        aApp.mScene.mEnvironment = Environment{
+            .mType = aType,
+            .mMap = texture,
+            .mMapFile = std::move(aPath),
+        };
+        aApp.mGraph.mTextureRepository[semantic::gSpecularEnvironmentTexture] = texture;
+    }
+
+} // unnamed namespace
 
 void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironmentStrip)
 {
@@ -291,13 +307,11 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
                                       CpuTime, GpuTime, BufferMemoryWritten);
     SELOG(info)("Loading environment map from cubemap strip '{}'", aEnvironmentStrip.string());
 
-    mStorage.mTextures.push_back(loadCubemapFromStrip(aEnvironmentStrip));
-    //mStorage.mTextures.push_back(loadCubemapFromSequence(aEnvironmentStrip));
-    mScene.mEnvironment = Environment{
-        .mType = Environment::Cubemap,
-        .mMap = &mStorage.mTextures.back(),
-        .mMapFile = std::move(aEnvironmentStrip),
-    };
+    setEnvironmentMap(*this, 
+                      loadCubemapFromStrip(aEnvironmentStrip),
+                      //loadCubemapFromSequence(aEnvironmentStrip),
+                      Environment::Cubemap,
+                      aEnvironmentStrip);
 }
 
 
@@ -307,12 +321,10 @@ void ViewerApplication::setEnvironmentEquirectangular(std::filesystem::path aEnv
                                       CpuTime, GpuTime, BufferMemoryWritten);
     SELOG(info)("Loading environment map from equirectangular map '{}'", aEnvironmentEquirect.string());
 
-    mStorage.mTextures.push_back(loadEquirectangular(aEnvironmentEquirect));
-    mScene.mEnvironment = Environment{
-        .mType = Environment::Equirectangular,
-        .mMap = &mStorage.mTextures.back(),
-        .mMapFile = std::move(aEnvironmentEquirect),
-    };
+    setEnvironmentMap(*this, 
+                      loadEquirectangular(aEnvironmentEquirect),
+                      Environment::Equirectangular,
+                      aEnvironmentEquirect);
 }
 
 

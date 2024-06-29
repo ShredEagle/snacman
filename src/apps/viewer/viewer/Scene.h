@@ -20,7 +20,7 @@ struct Environment
         Equirectangular,
     };
     Type mType;
-    Handle<graphics::Texture> mMap;
+    Handle<const graphics::Texture> mMap;
     std::filesystem::path mMapFile; // notably used when dumping the cubemap, to derive a destination
 };
 

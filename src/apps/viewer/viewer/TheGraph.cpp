@@ -261,7 +261,7 @@ void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_skybox", CpuTime, GpuTime);
 
-    Handle<graphics::Texture> envMap = aEnvironment.mMap;
+    Handle<const graphics::Texture> envMap = aEnvironment.mMap;
 
     glBindVertexArray(*mSkybox.mCubeVao);
     glActiveTexture(GL_TEXTURE5);
@@ -396,7 +396,7 @@ void TheGraph::passOpaqueDepth(const ViewerPartList & aPartList, Storage & aStor
     {
         {
             PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
-            draw(passCache, mUbos.mUboRepository, mDummyTextureRepository);
+            draw(passCache, mUbos.mUboRepository, mTextureRepository);
         }
     }
 }
@@ -446,7 +446,7 @@ void TheGraph::passForward(const ViewerPartList & aPartList, Storage & mStorage)
 
         {
             PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
-            draw(passCache, mUbos.mUboRepository, mDummyTextureRepository);
+            draw(passCache, mUbos.mUboRepository, mTextureRepository);
         }
     }
 }
@@ -503,7 +503,7 @@ void TheGraph::passTransparencyAccumulation(const ViewerPartList & aPartList, St
 
         {
             PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
-            draw(passCache, mUbos.mUboRepository, mDummyTextureRepository);
+            draw(passCache, mUbos.mUboRepository, mTextureRepository);
         }
     }
 }
