@@ -52,17 +52,17 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
 
     graphics::ScopedBind bound{cubemap};
     Guard scopedAlignment = graphics::detail::scopeUnpackAlignment((GLint)hdrStrip.rowAlignment());
-    for(unsigned int lineIdx = 0; lineIdx != side; ++lineIdx)
+    // Set the stride between source images rows to the strip total width.
+    auto scopedRowLength = graphics::detail::scopePixelStorageMode(GL_UNPACK_ROW_LENGTH, hdrStrip.width());
+    for(unsigned int faceIdx = 0; faceIdx != 6; ++faceIdx)
     {
-        for(unsigned int faceIdx = 0; faceIdx != 6; ++faceIdx)
-        {
-            glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIdx,
-                0,
-                0, lineIdx, side, 1,
-                GL_RGB,
-                GL_FLOAT,
-                hdrStrip.data() + (lineIdx * hdrStrip.width()) + (faceIdx * side));
-        }
+        glTexSubImage2D(
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIdx,
+            0,
+            0, 0, side, side,
+            GL_RGB,
+            GL_FLOAT,
+            hdrStrip.data() + (faceIdx * side));
     }
 
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
