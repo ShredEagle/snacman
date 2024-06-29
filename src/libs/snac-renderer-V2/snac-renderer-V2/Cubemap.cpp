@@ -45,7 +45,8 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
     const GLsizei side = hdrStrip.height();
 
     graphics::Texture cubemap{GL_TEXTURE_CUBE_MAP};
-    allocateStorage(cubemap, GL_RGB16F,
+    allocateStorage(cubemap,
+                    graphics::MappedSizedPixel_v<decltype(hdrStrip)::pixel_format_t>,
                     side, side,
                     1);
 
@@ -87,7 +88,8 @@ graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence)
     const GLsizei side = hdrFace.height();
 
     graphics::Texture cubemap{GL_TEXTURE_CUBE_MAP};
-    allocateStorage(cubemap, GL_RGB16F,
+    allocateStorage(cubemap,
+                    graphics::MappedSizedPixel_v<decltype(hdrFace)::pixel_format_t>,
                     side, side,
                     1);
 

@@ -322,11 +322,16 @@ void ViewerApplication::dumpEnvironmentCubemap(std::filesystem::path aOutputColu
 
     assert(mScene.mEnvironment);
 
+    using Pixel = math::hdr::Rgb_f;
+
     graphics::Renderbuffer renderbuffer;
     graphics::ScopedBind boundRenderbuffer{renderbuffer};
 
     const math::Size<2, GLsizei> renderSize{2048, 2048};
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB16F, renderSize.width(), renderSize.height());
+    glRenderbufferStorage(
+        GL_RENDERBUFFER, 
+        graphics::MappedSizedPixel_v<Pixel>,
+        renderSize.width(), renderSize.height());
 
     graphics::FrameBuffer framebuffer;
     // Bound as both READ and DRAW framebuffer
@@ -343,7 +348,6 @@ void ViewerApplication::dumpEnvironmentCubemap(std::filesystem::path aOutputColu
 
     Camera orthographicFace;
 
-    using Pixel = math::hdr::Rgb_f;
     std::unique_ptr<unsigned char[]> raster = std::make_unique<unsigned char[]>(sizeof(Pixel) * renderSize.area());
     arte::Image<Pixel> image{renderSize, std::move(raster)};
 
@@ -356,7 +360,7 @@ void ViewerApplication::dumpEnvironmentCubemap(std::filesystem::path aOutputColu
         mGraph.passSkybox(*mScene.mEnvironment, mStorage);
 
         glReadPixels(0, 0, renderSize.width(), renderSize.height(),
-                    GL_RGB, graphics::MappedPixelComponentType_v<Pixel>, image.data());
+                     GL_RGB, graphics::MappedPixelComponentType_v<Pixel>, image.data());
 
         // OpenGL Image origin is bottom left, images on disk are top left, so invert axis.
         image.saveFile(aOutputColumn.parent_path() / (aOutputColumn.stem() += "_" + std::to_string(faceIdx) + ".hdr"), arte::ImageOrientation::InvertVerticalAxis);
