@@ -12,6 +12,23 @@
 namespace ad::renderer {
 
 
+namespace {
+
+    void setupCubeFiltering()
+    {
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        //glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8.f);
+
+        //// TODO understand if wrap filtering parameters have an impact on cubemaps
+        //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    }
+
+} // unnamed namespace
+
+
 // Note: OpenGL order of cubemap faces is +X, -X, +Y, -Y, +Z, -Z
 // Yet, the coordinate system of the cubemap is **left-handed**,
 // so we want to render a camera facing -Z in our right-handed world to render the cubemap +Z
@@ -48,7 +65,7 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
     allocateStorage(cubemap,
                     graphics::MappedSizedPixel_v<decltype(hdrStrip)::pixel_format_t>,
                     side, side,
-                    1);
+                    graphics::countCompleteMipmaps({side, side}));
 
     graphics::ScopedBind bound{cubemap};
     Guard scopedAlignment = graphics::detail::scopeUnpackAlignment((GLint)hdrStrip.rowAlignment());
@@ -65,12 +82,9 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
             hdrStrip.data() + (faceIdx * side));
     }
 
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //// TODO understand if wrap filtering parameters have an impact on cubemaps
-    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    setupCubeFiltering();
 
     return cubemap;
 }
@@ -114,8 +128,9 @@ graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence)
             hdrFace.data());
     }
 
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    setupCubeFiltering();
 
     return cubemap;
 }
