@@ -873,13 +873,22 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
 std::vector<Technique> populateTechniques(const Loader & aLoader,
                                           const filesystem::path & aEffectPath,
                                           Storage & aStorage,
-                                          const std::vector<std::string> & aDefines)
+                                          std::vector<std::string> aDefines)
 {
     std::vector<Technique> result;
     Json effect = Json::parse(std::ifstream{aEffectPath});
 
     for (const auto & technique : effect.at("techniques"))
     {
+        // Merge the potential defines found at the technique level into aDefines
+        if(auto techniqueDefines = technique.find("defines");
+           techniqueDefines != technique.end())
+        {
+            aDefines.insert(aDefines.end(),
+                            techniqueDefines->begin(),
+                            techniqueDefines->end());
+        }
+
         result.push_back(Technique{
             .mConfiguredProgram =
                 storeConfiguredProgram(aLoader.loadProgram(technique.at("programfile"), aDefines), aStorage),

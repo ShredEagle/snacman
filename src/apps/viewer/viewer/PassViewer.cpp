@@ -6,7 +6,7 @@
 namespace ad::renderer {
 
 
-ViewerPassCache prepareViewerPass(StringKey aPass,
+ViewerPassCache prepareViewerPass(AnnotationsSelector aAnnotations,
                                   const ViewerPartList & aPartList,
                                   Storage & aStorage)
 {
@@ -14,7 +14,7 @@ ViewerPassCache prepareViewerPass(StringKey aPass,
 
     DrawEntryHelper helper;
     std::vector<PartDrawEntry> entries = 
-        helper.generateDrawEntries(aPass,
+        helper.generateDrawEntries(aAnnotations,
                                    aPartList,
                                    aStorage);
 

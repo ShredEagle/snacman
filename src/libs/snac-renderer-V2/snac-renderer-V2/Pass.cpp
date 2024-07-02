@@ -101,13 +101,9 @@ namespace {
 } // unnamed namespace
 
 
-/// @brief Specializes getProgram, returning first program matching provided pass name.
-Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName)
+Handle<ConfiguredProgram> getProgram(const Effect & aEffect, AnnotationsSelector aAnnotations)
 {
-    const std::array<Technique::Annotation, 1> annotations{/*aggregate init of std::array*/{/*aggregate init of inner C-array*/
-        {"pass", aPassName},
-    }};
-    return getProgram(aEffect, annotations.begin(), annotations.end());
+    return getProgram(aEffect, aAnnotations.begin(), aAnnotations.end());
 }
 
 
@@ -171,7 +167,7 @@ struct DrawEntryHelper::Opaque
     ResourceIdMap<graphics::VertexArrayObject, gVaoBits> mVaoToId;
     ResourceIdMap<MaterialContext, gMaterialContextBits> mMaterialContextToId;
 
-    std::vector<PartDrawEntry> generateDrawEntries(StringKey aPass,
+    std::vector<PartDrawEntry> generateDrawEntries(AnnotationsSelector aAnnotations,
                                                    const PartList & aPartList,
                                                    Storage & aStorage)
     {
@@ -208,7 +204,7 @@ struct DrawEntryHelper::Opaque
             assert(part.mPrimitiveMode == GL_TRIANGLES);
             assert(part.mVertexStream->mIndicesType == GL_UNSIGNED_INT);
             
-            if(Handle<ConfiguredProgram> configuredProgram = getProgramForPass(*material.mEffect, aPass);
+            if(Handle<ConfiguredProgram> configuredProgram = getProgram(*material.mEffect, aAnnotations);
                 configuredProgram)
             {
                 Handle<graphics::VertexArrayObject> vao = getVao(*configuredProgram, part, aStorage);
@@ -245,11 +241,11 @@ struct DrawEntryHelper::Opaque
 };
 
 
-std::vector<PartDrawEntry> DrawEntryHelper::generateDrawEntries(StringKey aPass,
+std::vector<PartDrawEntry> DrawEntryHelper::generateDrawEntries(AnnotationsSelector aAnnotations,
                                                                 const PartList & aPartList,
                                                                 Storage & aStorage)
 {
-    return mImpl->generateDrawEntries(aPass, aPartList, aStorage);
+    return mImpl->generateDrawEntries(aAnnotations, aPartList, aStorage);
 }
 
 

@@ -67,7 +67,9 @@ struct TheGraph
 
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
     void passOpaqueDepth(const ViewerPartList & aPartList, Storage & mStorage);
-    void passForward(const ViewerPartList & aPartList, Storage & mStorage);
+    void passForward(const ViewerPartList & aPartList,
+                     Storage & aStorage,
+                     bool aEnvironmentMappingconst);
     void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
     void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
     void passSkybox(const Environment & aEnvironment, Storage & aStorage);

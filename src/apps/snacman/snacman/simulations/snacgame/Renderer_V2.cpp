@@ -67,9 +67,10 @@ renderer::PassCache SnacGraph::preparePass(renderer::StringKey aPass,
 {
     TIME_RECURRING_GL("prepare_pass");
 
+    auto annotations = renderer::selectPass(aPass);
     renderer::DrawEntryHelper helper;
     std::vector<renderer::PartDrawEntry> entries = 
-        helper.generateDrawEntries(aPass, aPartList, aStorage);
+        helper.generateDrawEntries(annotations, aPartList, aStorage);
 
     //
     // Sort the entries
@@ -162,8 +163,9 @@ void SnacGraph::drawInstancedDirect(const renderer::Object & aObject,
     // A given part **always** use the same material, in all entities.
     for(const renderer::Part & part : aObject.mParts)
     {
+        auto annotations = renderer::selectPass(aPass);
         if(renderer::Handle<renderer::ConfiguredProgram> configuredProgram = 
-                renderer::getProgramForPass(*part.mMaterial.mEffect, aPass))
+                renderer::getProgram(*part.mMaterial.mEffect, annotations))
         {
             // Materials are uploaded to the UBO by loadBinary()
             // ViewProjection data should already be loaded by the calling code.

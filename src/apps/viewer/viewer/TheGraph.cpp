@@ -233,7 +233,7 @@ void TheGraph::renderFrame(const Scene & aScene,
     // TODO Ad 2023/11/30: #perf Currently, this forward pass does not leverage the already available opaque depth-buffer
     // We cannot bind our "custom" depth buffer as the default framebuffer depth-buffer, so we will need to study alternatives:
     // render opaque depth to default FB, and blit to a texture for showing, render forward to a render target then blit to default FB, ...
-    passForward(partList, aStorage);
+    passForward(partList, aStorage, aScene.mEnvironment.has_value());
     passTransparencyAccumulation(partList, aStorage);
     passTransparencyResolve(partList, aStorage);
 
@@ -363,8 +363,9 @@ void TheGraph::passOpaqueDepth(const ViewerPartList & aPartList, Storage & aStor
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_depth", CpuTime, GpuTime);
 
+    auto annotations = selectPass("depth_opaque");
     // Can be done once even for distinct cameras, if there is no culling
-    ViewerPassCache passCache = prepareViewerPass("depth_opaque", aPartList, aStorage);
+    ViewerPassCache passCache = prepareViewerPass(annotations , aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -402,12 +403,21 @@ void TheGraph::passOpaqueDepth(const ViewerPartList & aPartList, Storage & aStor
 }
 
 
-void TheGraph::passForward(const ViewerPartList & aPartList, Storage & mStorage)
+void TheGraph::passForward(const ViewerPartList & aPartList,
+                           Storage & aStorage,
+                           bool aEnvironmentMapping)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_forward", CpuTime, GpuTime);
 
     // Can be done once for distinct camera, if there is no culling
-    ViewerPassCache passCache = prepareViewerPass(*mControls.mForwardPassKey, aPartList, mStorage);
+    std::vector<Technique::Annotation> annotations{
+        {"pass", *mControls.mForwardPassKey},
+    };
+    if(aEnvironmentMapping)
+    {
+        annotations.emplace_back("environment", "on");
+    }
+    ViewerPassCache passCache = prepareViewerPass(annotations, aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -491,7 +501,8 @@ void TheGraph::passTransparencyAccumulation(const ViewerPartList & aPartList, St
     }
 
     // Can be done once for distinct camera, if there is no culling
-    ViewerPassCache passCache = prepareViewerPass("transparent", aPartList, mStorage);
+    auto annotations = selectPass("transparent");
+    ViewerPassCache passCache = prepareViewerPass(annotations, aPartList, mStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
