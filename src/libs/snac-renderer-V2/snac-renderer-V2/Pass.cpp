@@ -104,8 +104,7 @@ namespace {
 /// @brief Specializes getProgram, returning first program matching provided pass name.
 Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName)
 {
-    const std::array<Technique::Annotation, 2> annotations{/*aggregate init of std::array*/{/*aggregate init of inner C-array*/
-        {"pass", aPassName},
+    const std::array<Technique::Annotation, 1> annotations{/*aggregate init of std::array*/{/*aggregate init of inner C-array*/
         {"pass", aPassName},
     }};
     return getProgram(aEffect, annotations.begin(), annotations.end());
