@@ -2,8 +2,10 @@
 
 #include "Gamma.glsl"
 #include "HelpersPbr.glsl"
+
 #include "Lights.glsl"
 #include "GenericMaterial.glsl"
+#include "ViewProjectionBlock.glsl"
  
 in vec3 ex_Position_cam;
 in vec3 ex_Normal_cam;
@@ -21,6 +23,10 @@ in flat uint ex_MaterialIdx;
 uniform sampler2DArray u_DiffuseTexture;
 uniform sampler2DArray u_NormalTexture;
 uniform sampler2DArray u_MetallicRoughnessAoTexture;
+#endif
+
+#if defined(ENVIRONMENT_MAPPING)
+uniform samplerCube u_SpecularEnvironmentTexture;
 #endif
 
 out vec4 out_Color;
@@ -308,8 +314,8 @@ void main()
 
         // see rtr 4th p110 (5.10)
         vec3 lightRay_cam = point.position.xyz - ex_Position_cam;
-        float r = sqrt(dot(lightRay_cam, lightRay_cam));
-        vec3 lightDir_cam = lightRay_cam / r;
+        float radius = sqrt(dot(lightRay_cam, lightRay_cam));
+        vec3 lightDir_cam = lightRay_cam / radius;
 
 #if defined(MATERIAL_BLEND_PARAMETERS)
         // evaluate the model only once, with interpolated material parameters
@@ -331,7 +337,7 @@ void main()
         lighting.specular += mix(lightingDielec.specular, lightingMetal.specular, metallic);
 #endif
 
-        float falloff = attenuatePoint(point, r);
+        float falloff = attenuatePoint(point, radius);
         diffuseAccum += lighting.diffuse * falloff;
         specularAccum += lighting.specular * falloff;
     }
@@ -341,6 +347,12 @@ void main()
     vec3 specular = specularAccum * vec3(material.specularColor.rgb);
 
     vec3 fragmentColor = ambient + diffuse + specular;
+
+#if defined(ENVIRONMENT_MAPPING)
+    //vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, shadingNormal_cam);
+    vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, normal_cam);
+    fragmentColor = texture(u_SpecularEnvironmentTexture, vec3(reflected_world.xy, -reflected_world.z)).rgb;
+#endif
 
     out_Color = correctGamma(vec4(fragmentColor, albedo.a * material.diffuseColor.a));
 }

@@ -2,7 +2,8 @@
     "techniques": [
         {
             "annotations": {
-                "pass": "forward"
+                "pass": "forward",
+                "environment": "on"
             },
             "programfile": "shaders/ForwardBlinnPhongLighting.prog"
         },
@@ -14,13 +15,23 @@
         },
         {
             "annotations": {
-                "pass": "forward_phong"
+                "pass": "forward_pbr",
+                "environment": "on"
+            },
+            "programfile": "shaders/ForwardPbr.prog",
+            "defines": ["ENVIRONMENT_MAPPING"]
+        },
+        {
+            "annotations": {
+                "pass": "forward_phong",
+                "environment": "on"
             },
             "programfile": "shaders/ForwardPhongLighting.prog"
         },
         {
             "annotations": {
-                "pass": "forward_debug"
+                "pass": "forward_debug",
+                "environment": "on"
             },
             "programfile": "shaders/ForwardDebug.prog"
         },

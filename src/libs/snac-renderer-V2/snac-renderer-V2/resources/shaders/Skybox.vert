@@ -2,12 +2,7 @@
 
 layout(location = 0) in vec3 ve_Position_l;
 
-layout(std140, binding = 0) uniform ViewProjectionBlock
-{
-    mat4 worldToCamera;
-    mat4 projection;
-    mat4 viewingProjection;
-};
+#include "ViewProjectionBlock.glsl"
 
 out vec3 ex_CubeTextureCoords;
 

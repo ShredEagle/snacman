@@ -85,6 +85,7 @@ struct GpuViewProjectionBlock
         math::Matrix<4, 4, GLfloat> aProjection 
     ) :
         mWorldToCamera{aWorldToCamera},
+        mCameraToWorld{aWorldToCamera.inverse()},
         mProjection{aProjection},
         mViewingProjection{aWorldToCamera * aProjection}
     {}
@@ -94,6 +95,7 @@ struct GpuViewProjectionBlock
     {}
 
     math::AffineMatrix<4, GLfloat> mWorldToCamera; 
+    math::AffineMatrix<4, GLfloat> mCameraToWorld; 
     math::Matrix<4, 4, GLfloat> mProjection; 
     math::Matrix<4, 4, GLfloat> mViewingProjection;
 };
