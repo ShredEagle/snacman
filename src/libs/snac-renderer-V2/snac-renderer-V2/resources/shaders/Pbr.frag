@@ -1,6 +1,7 @@
 #version 420
 
 #include "Gamma.glsl"
+#include "HelpersIbl.glsl"
 #include "HelpersPbr.glsl"
 
 #include "Lights.glsl"
@@ -224,6 +225,9 @@ void main()
     // Disney PBR square the user provided roughness value (r) to obtain alpha.
     // hard to say if the map already contains it squared, which would save instructions
     // (but would change the precision distribution)
+    //
+    // Also, from "Real Shading in Unreal Engine 4", some other massaging of roughness are possible.
+    // For examplen to reduce "hotness" alpha = ((roughness + 1) / 2) ^ 2
     float alpha = roughness * roughness;
     // Note: Too smooth a surface (i.e too low an alpha)
     // makes it that there is not even a specular highlight showing with most models
@@ -348,11 +352,37 @@ void main()
 
     vec3 fragmentColor = ambient + diffuse + specular;
 
+//#define ENVIRONMENT_MAPPING_MIRROR 
 #if defined(ENVIRONMENT_MAPPING)
-    //vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, shadingNormal_cam);
-    vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, normal_cam);
-    fragmentColor = texture(u_SpecularEnvironmentTexture, vec3(reflected_world.xy, -reflected_world.z)).rgb;
-#endif
+    vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, shadingNormal_cam);
+    
+#if defined(ENVIRONMENT_MAPPING_MIRROR)
+    vec3 mirror = texture(u_SpecularEnvironmentTexture,
+                          vec3(reflected_world.xy, -reflected_world.z)).rgb;
+    fragmentColor += schlickFresnelReflectance(shadingNormal_cam, view_cam, pbrMaterial.f0)
+                     * mirror;
+#else
+    // take alpha (?squared) directly
+    // TODO: test if f0 is the same thing here? (and re read code)
+    //vec3 specularIbl = specularIBL(pbrMaterial.f0,
+    vec3 specularIbl = specularIBL(material.specularColor.rgb,
+                                   //sqrt(pbrMaterial.alpha),
+                                   0.1,
+                                   mat3(cameraToWorld) * shadingNormal_cam,
+                                   //mat3(cameraToWorld) * normal_cam,
+                                   mat3(cameraToWorld) * view_cam,
+                                   u_SpecularEnvironmentTexture);
+    // Catches the nan and make them more obvious
+    if(isnan(specularIbl.r))
+    {
+        fragmentColor = vec3(1., 0., 1.);
+    }
+    else
+    {
+        fragmentColor += specularIbl;
+    }
+#endif // ENVIRONMENT_MAPPING_MIRROR
+#endif // ENVIRONMENT_MAPPING
 
     out_Color = correctGamma(vec4(fragmentColor, albedo.a * material.diffuseColor.a));
 }
