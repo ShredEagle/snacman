@@ -1,3 +1,7 @@
+#if !defined(HELPERS_GLSL_INCLUDE_GUARD)
+#define HELPERS_GLSL_INCLUDE_GUARD
+
+
 const float M_PI = 3.141592653589793;
 
 
@@ -28,3 +32,5 @@ vec3 remapToRgb(vec3 aInput, float aMagnitude = 1)
 {
     return (aInput + vec3(aMagnitude)) / (2 * aMagnitude);
 }
+
+#endif //include guard

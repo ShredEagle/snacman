@@ -1,3 +1,7 @@
+#if !defined(HELPERS_PBR_GLSL_INCLUDE_GUARD)
+#define HELPERS_PBR_GLSL_INCLUDE_GUARD
+
+
 #include "Helpers.glsl"
 
 
@@ -311,3 +315,6 @@ float D_GGX_gltf(float NdotH, float alphaRoughness)
     //return alphaRoughnessSq / (M_PI * f * f);
     return alphaRoughnessSq / (f * f);
 }
+
+
+#endif //include guard
