@@ -39,12 +39,57 @@ vec3 diffuseBrdf_weightedLambertian(vec3 aFresnelReflectance, vec3 aDiffuseColor
 float Distribution_GGX(float nDotH, float aAlphaSq)
 {
     float d = 1 + nDotH * nDotH * (aAlphaSq - 1);
+    // TODO is heaviside useful here?
     return (heaviside(nDotH) * aAlphaSq) / (d * d);
 }
 
 
+/// @param aDot either vDotL or lDotN 
+float Lambda_GGX(float aDot, float aAlphaSq)
+{
+    float dotSq = aDot * aDot;
+    // rtr 4th p339 (9.37)
+    float aSq = dotSq / (aAlphaSq * (1 - dotSq));
+    // rtr 4th p341 (9.42)
+    return (-1. + sqrt(1. + (1. / aSq))) / 2.;
+}
+
+/// @brief Smith height-correlated masking-shadowing function
+/// @see rtr 4th p335
+float G2_GGX(float nDotL, float nDotV, float aAlphaSq)
+{
+    // Our equivalent to heaviside (not sure how relevant it is)
+    if ((nDotV == 0) || (nDotL == 0))
+    {
+        return 0.f;
+    }
+    else
+    {
+        float d = 1 + Lambda_GGX(nDotV, aAlphaSq) + Lambda_GGX(nDotL, aAlphaSq);
+        return 1.f / d;
+    }
+}
+
+
 // Visibility is how we call the the compound term: G2 / (4 |n.l| |n.v|)
-// TODO: Find the correct name, it might be an abuse.
+/// @brief The explicit longform of the visibility (please use the a simplification/approximation for prod)
+/// It is mainly intended to test the G2_GGX.
+float Visibility_GGX_longform(float nDotL, float nDotV, float aAlphaSq)
+{
+    // Guard against division by zero (redundant with heaviside in G2_GGX)
+    if ((nDotV == 0) || (nDotL == 0))
+    {
+        return 0;
+    }
+    else
+    {
+        return G2_GGX(nDotL, nDotV, aAlphaSq) / (4 * nDotL * nDotV);
+    }
+}
+
+
+// Visibility is how we call the the compound term: G2 / (4 |n.l| |n.v|)
+// TODO: Find the correct name, "visibility" might be an abuse.
 //       Some texts seem to use "visibility" for the masking-shadowing function (G2).
 /// @note This is the simplified (yet I assume exact) form of the height-correlated Smith G2 for GGX
 /// see rtr 4th p341
@@ -84,6 +129,8 @@ float Visibility_GGX_approx(float nDotL, float nDotV, float aAlpha)
 }
 
 //#define APPROXIMATE_G2_GGX
+#define SIMPLIFIED_VISIBILITY_GGX
+//#define EXPLICIT_G2_GGX
 
 // Important: All BRDFs are given already mutiplied by Pi
 // (because the correct formulas usually have a Pi in the denominator)
@@ -95,8 +142,10 @@ vec3 specularBrdf_GGX(vec3 aFresnelReflectance,
     float D = Distribution_GGX(nDotH, alphaSquared);
 #ifdef APPROXIMATE_G2_GGX
     float V = Visibility_GGX_approx(nDotL, nDotV, aAlpha);
-#else
+#elif defined(SIMPLIFIED_VISIBILITY_GGX)
     float V = Visibility_GGX(nDotL, nDotV, alphaSquared);
+#elif defined(EXPLICIT_G2_GGX)
+    float V = Visibility_GGX_longform(nDotL, nDotV, alphaSquared);
 #endif
     return aFresnelReflectance * V * D;
 }
@@ -128,7 +177,7 @@ float Distribution_BlinnPhong(float nDotH_plus, float aAlpha_phong)
 }
 
 
-/// @note The exact Lambda is known but considered too expensinve for real-time.
+/// @note The exact Lambda is known but considered too expensive for real-time.
 /// see rtr 4th p339
 /// @param aDot nDotL or nDotV, unclamped and signed.
 /// @param aAlpha_beckmann should be strictly positive, **cannot** be null.
