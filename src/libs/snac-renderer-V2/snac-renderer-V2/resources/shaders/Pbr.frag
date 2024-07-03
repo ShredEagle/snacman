@@ -363,12 +363,12 @@ void main()
     fragmentColor += schlickFresnelReflectance(shadingNormal_cam, view_cam, pbrMaterial.f0)
                      * mirror;
 #else
-    // take alpha (?squared) directly
+    //float alphaSquared = pbrMaterial.alpha;
+    float alphaSquared = pow(0.1, 4);
     // TODO: test if f0 is the same thing here? (and re read code)
     //vec3 specularIbl = specularIBL(pbrMaterial.f0,
     vec3 specularIbl = specularIBL(material.specularColor.rgb,
-                                   //sqrt(pbrMaterial.alpha),
-                                   0.1,
+                                   alphaSquared,
                                    normalize(mat3(cameraToWorld) * shadingNormal_cam),
                                    //normalize(mat3(cameraToWorld) * normal_cam),
                                    normalize(mat3(cameraToWorld) * view_cam),
