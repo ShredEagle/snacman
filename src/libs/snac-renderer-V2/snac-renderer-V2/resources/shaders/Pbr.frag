@@ -369,9 +369,9 @@ void main()
     vec3 specularIbl = specularIBL(material.specularColor.rgb,
                                    //sqrt(pbrMaterial.alpha),
                                    0.1,
-                                   mat3(cameraToWorld) * shadingNormal_cam,
-                                   //mat3(cameraToWorld) * normal_cam,
-                                   mat3(cameraToWorld) * view_cam,
+                                   normalize(mat3(cameraToWorld) * shadingNormal_cam),
+                                   //normalize(mat3(cameraToWorld) * normal_cam),
+                                   normalize(mat3(cameraToWorld) * view_cam),
                                    u_SpecularEnvironmentTexture);
     // Catches the nan and make them more obvious
     if(isnan(specularIbl.r))
