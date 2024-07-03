@@ -72,15 +72,16 @@ vec3 importanceSampleGGX(vec2 Xi, float aRoughness, vec3 N)
 vec3 specularIBL(vec3 SpecularColor, float aRoughness, vec3 N, vec3 V, samplerCube aEnvMap)
 {
     vec3 specularLighting = vec3(0);
+
     // Does not depend on the sample
     float NoV = dotPlus(N, V);
-    if(NoV == 0)
+    if(NoV == 0) // Would cause a divisioh by zero on accumulation
     {
-        // Would cause a divisioh by zero on accumulation
         return vec3(0.);
     }
+
     //const uint NumSamples = 1024;
-    const uint NumSamples = 128;
+    const uint NumSamples = 256;
     for(uint i = 0; i < NumSamples; i++)
     {
         vec2 Xi = hammersley(i, NumSamples);
@@ -97,9 +98,7 @@ vec3 specularIBL(vec3 SpecularColor, float aRoughness, vec3 N, vec3 V, samplerCu
             // to the expected alpha squared:
             float alphaSquared = (aRoughness * aRoughness);
             float G = G2_GGX(NoL, NoV, alphaSquared);
-            // I do not understand this Fresnel, let's test with it
-            float Fc = pow(1 - VoH, 5);
-            vec3 F = (1 - Fc) * SpecularColor + Fc;
+            vec3 F = schlickFresnelReflectance(VoH, SpecularColor);
             // Incident light = sampleColor * NoL
             // Microfacet specular = D*G*F / (4*NoL*NoV)
             // pdf = D * NoH / (4 * VoH)

@@ -354,6 +354,7 @@ void main()
 
 //#define ENVIRONMENT_MAPPING_MIRROR 
 #if defined(ENVIRONMENT_MAPPING)
+    // No need to normalize as long as it is only used to sample a cubemap.
     vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, shadingNormal_cam);
     
 #if defined(ENVIRONMENT_MAPPING_MIRROR)
