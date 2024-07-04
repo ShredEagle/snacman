@@ -257,7 +257,7 @@ void TheGraph::renderFrame(const Scene & aScene,
 }
 
 
-void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage)
+void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage) const
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_skybox", CpuTime, GpuTime);
 

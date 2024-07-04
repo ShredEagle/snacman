@@ -6,6 +6,7 @@
 namespace ad::renderer {
 
 
+/// @param aStorage cannot be const, because new VAOs might be cached into it.
 ViewerPassCache prepareViewerPass(AnnotationsSelector aAnnotations,
                                   const ViewerPartList & aPartList,
                                   Storage & aStorage)

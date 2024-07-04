@@ -7,6 +7,7 @@ configure_file(build_info.h.in build_info.h @ONLY)
 set(${TARGET_NAME}_HEADERS
     CameraSystem.h
     DrawQuad.h
+    EnvironmentUtilities.h
     GraphGui.h
     Json.h
     Lights.h
@@ -26,6 +27,7 @@ set(${TARGET_NAME}_SOURCES
 
     CameraSystem.cpp
     DrawQuad.cpp
+    EnvironmentUtilities.cpp
     GraphGui.cpp
     Logging.cpp
     PassViewer.cpp

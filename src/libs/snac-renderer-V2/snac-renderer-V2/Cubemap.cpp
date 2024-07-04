@@ -142,14 +142,25 @@ graphics::Texture loadEquirectangular(filesystem::path aEquirectangularMap)
         arte::Image<math::hdr::Rgb_f>::LoadFile(aEquirectangularMap,
                                                 arte::ImageOrientation::InvertVerticalAxis);
 
+    // Mipmapping causes a lot of issues with equirectangular maps:
+    // * There is a discontinuity on the sampled v coordinate, at the azimuthal wrap-around
+    // * It tends to picks a way to blurry mipmap levels wrt to the actual framebuffer resolution
+    //   * TODO: understand why that is the case?
+    const GLint mipmapLevels = 1; // 1 means no mipmapping
+
     graphics::Texture equirectMap{GL_TEXTURE_2D};
-    graphics::loadImage(equirectMap, hdrMap);
+    graphics::loadImage(equirectMap, hdrMap, mipmapLevels);
 
     graphics::ScopedBind bound{equirectMap};
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    if(mipmapLevels > 1)
+    {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
 
     return equirectMap;
 }
