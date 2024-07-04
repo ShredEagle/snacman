@@ -1,0 +1,25 @@
+{
+    "techniques": [
+        {
+            "annotations": {
+                "pass": "forward",
+                "environment_texture": "cubemap"
+            },
+            "programfile": "shaders/Skybox.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward",
+                "environment_texture": "equirectangular"
+            },
+            "programfile": "shaders/Skybox.prog",
+            "defines": "EQUIRECTANGULAR"
+        },
+        {
+            "annotations": {
+                "pass": "prefilter_radiance"
+            },
+            "programfile": "shaders/PrefilterCubemap.prog"
+        }
+    ]
+}

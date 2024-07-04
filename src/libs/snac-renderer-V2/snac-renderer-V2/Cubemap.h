@@ -32,8 +32,7 @@ struct Skybox
     //Part mUnitCube;
     Handle<graphics::VertexArrayObject> mCubeVao;
     // NOTE: to disappear in the part effect
-    IntrospectProgram mCubemapProgram;
-    IntrospectProgram mEquirectangularProgram;
+    Handle<const Effect> mEffect;
 };
 
 

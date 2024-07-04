@@ -25,6 +25,20 @@ struct Environment
 };
 
 
+inline std::string to_string(Environment::Type aEnvironment)
+{
+    switch(aEnvironment)
+    {
+        case Environment::Cubemap:
+            return "cubemap";
+        case Environment::Equirectangular:
+            return "equirectangular";
+        default:
+            throw std::invalid_argument{"Environment type value is not known."};
+    }
+}
+
+
 struct Scene
 {
     Scene & addToRoot(Node aNode)

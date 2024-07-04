@@ -939,9 +939,9 @@ bool recompileEffects(const Loader & aLoader, Storage & aStorage)
 }
 
 
-Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
-                            Storage & aStorage,
-                            const std::vector<std::string> & aDefines_temp) const
+Handle<Effect> Loader::loadEffect(const std::filesystem::path & aEffectFile,
+                                  Storage & aStorage,
+                                  const std::vector<std::string> & aDefines_temp) const
 {
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();

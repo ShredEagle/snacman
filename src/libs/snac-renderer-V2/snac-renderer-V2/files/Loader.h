@@ -53,10 +53,10 @@ GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
 struct Loader
 {
     /// @brief Load an effect file (.sefx), store it in `aStorage` and return its handle.
-    Effect * loadEffect(const std::filesystem::path & aEffectFile,
-                        Storage & aStorage,
-                        // TODO Ad 2023/10/03: #shader-system Remove this temporary.
-                        const std::vector<std::string> & aDefines_temp = {}) const;
+    Handle<Effect> loadEffect(const std::filesystem::path & aEffectFile,
+                              Storage & aStorage,
+                              // TODO Ad 2023/10/03: #shader-system Remove this temporary.
+                              const std::vector<std::string> & aDefines_temp = {}) const;
 
     /// @brief Load a `.prog` file as an IntrospectProgram.
     IntrospectProgram loadProgram(const filesystem::path & aProgFile,

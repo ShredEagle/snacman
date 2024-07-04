@@ -181,8 +181,7 @@ graphics::Texture loadEquirectangular(filesystem::path aEquirectangularMap)
 
 Skybox::Skybox(const Loader & aLoader, Storage & aStorage) :
     mCubeVao{&aStorage.mVaos.emplace_back()},
-    mCubemapProgram{aLoader.loadProgram("shaders/Skybox.prog")},
-    mEquirectangularProgram{aLoader.loadProgram("shaders/Skybox.prog", {"EQUIRECTANGULAR"})}
+    mEffect{aLoader.loadEffect("effects/Skybox.sefx", aStorage)}
 {
     std::vector<math::Position<3, float>> vertices;
     vertices.reserve(cube::Maker::gVertexCount);

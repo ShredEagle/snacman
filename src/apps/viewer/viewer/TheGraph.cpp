@@ -268,17 +268,22 @@ void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage) 
     switch(aEnvironment.mType)
     {
         case Environment::Cubemap:
-            glUseProgram(mSkybox.mCubemapProgram);
             glBindTexture(GL_TEXTURE_CUBE_MAP, *envMap);
             break;
         case Environment::Equirectangular:
-            glUseProgram(mSkybox.mEquirectangularProgram);
             glBindTexture(GL_TEXTURE_2D, *envMap);
             break;
     }
 
-    graphics::setUniform(mSkybox.mCubemapProgram, "u_SkyboxTexture", 5);
-    graphics::setUniform(mSkybox.mEquirectangularProgram, "u_SkyboxTexture", 5);
+    std::vector<Technique::Annotation> annotations{
+        {"pass", "forward"},
+        {"environment_texture", to_string(aEnvironment.mType)},
+    };
+    Handle<ConfiguredProgram> confProgram = getProgram(*mSkybox.mEffect, annotations);
+    glUseProgram(confProgram->mProgram);
+
+    // TODO Ad 2024/06/29: Use the existing setup code to bind texture and UBOs
+    graphics::setUniform(confProgram->mProgram, "u_SkyboxTexture", 5);
 
     // This is bad, harcoding knowledge of the binding points
     // but this was written as a refresher on native GL
