@@ -244,7 +244,7 @@ void TheGraph::renderFrame(const Scene & aScene,
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
 
-        passSkybox(*aScene.mEnvironment, aStorage);
+        passDrawSkybox(*aScene.mEnvironment, aStorage);
     }
 
     //
@@ -257,9 +257,11 @@ void TheGraph::renderFrame(const Scene & aScene,
 }
 
 
-void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage) const
+void TheGraph::passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage) const
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_skybox", CpuTime, GpuTime);
+
+    glUseProgram(aProgram);
 
     Handle<const graphics::Texture> envMap = aEnvironment.mMap;
 
@@ -275,15 +277,8 @@ void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage) 
             break;
     }
 
-    std::vector<Technique::Annotation> annotations{
-        {"pass", "forward"},
-        {"environment_texture", to_string(aEnvironment.mType)},
-    };
-    Handle<ConfiguredProgram> confProgram = getProgram(*mSkybox.mEffect, annotations);
-    glUseProgram(confProgram->mProgram);
-
     // TODO Ad 2024/06/29: Use the existing setup code to bind texture and UBOs
-    graphics::setUniform(confProgram->mProgram, "u_SkyboxTexture", 5);
+    graphics::setUniform(aProgram, "u_SkyboxTexture", 5);
 
     // This is bad, harcoding knowledge of the binding points
     // but this was written as a refresher on native GL
@@ -302,6 +297,32 @@ void TheGraph::passSkybox(const Environment & aEnvironment, Storage & aStorage) 
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
     glCullFace(GL_BACK);
+}
+
+
+void TheGraph::passDrawSkybox(const Environment & aEnvironment, Storage & aStorage) const
+{
+    std::vector<Technique::Annotation> annotations{
+        {"pass", "forward"},
+        {"environment_texture", to_string(aEnvironment.mType)},
+    };
+    Handle<ConfiguredProgram> confProgram = getProgram(*mSkybox.mEffect, annotations);
+
+    passSkyboxBase(confProgram->mProgram, aEnvironment, aStorage);
+}
+
+
+void TheGraph::passFilterEnvironment(const Environment & aEnvironment, float aAlphaSquared, Storage & aStorage) const
+{
+    std::vector<Technique::Annotation> annotations{
+        {"pass", "prefilter_radiance"},
+    };
+    Handle<ConfiguredProgram> confProgram = getProgram(*mSkybox.mEffect, annotations);
+
+    // TODO: find a more dynamic way to bind those plain uniforms
+    graphics::setUniform(confProgram->mProgram, "u_AlphaSquared", aAlphaSquared);
+
+    passSkyboxBase(confProgram->mProgram, aEnvironment, aStorage);
 }
 
 

@@ -84,7 +84,7 @@ vec3 specularIBL(vec3 SpecularColor, float aAlphaSquared, vec3 N, vec3 V, sample
     {
         vec2 Xi = hammersley(i, NumSamples);
         vec3 H = importanceSampleGGX(Xi, aAlphaSquared, N);
-        vec3 L = 2 * dot(V, H) * H - V;
+        vec3 L = reflect(-V, H);
         float NoL = dotPlus(N, L);
         float NoH = dotPlus(N, H);
         float VoH = dotPlus(V, H);
@@ -100,6 +100,38 @@ vec3 specularIBL(vec3 SpecularColor, float aAlphaSquared, vec3 N, vec3 V, sample
         }
     }
     return specularLighting / NumSamples;
+}
+
+
+vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
+{
+    const uint NumSamples = 1024 * 2;
+
+    // To use any lobe, this approach imposes n = v = r
+    // see: rtr 4th p421
+    // This is an isotropic assumption, making the lobe radially symmetric.
+    vec3 N = R;
+    vec3 V = R;
+    
+    // The accumulator
+    vec3 prefilteredColor = vec3(0);
+    float totalWeight = 0.f;
+    for(uint i = 0; i < NumSamples; i++)
+    {
+        vec2 Xi = hammersley(i, NumSamples);
+        vec3 H = importanceSampleGGX(Xi, aAlphaSquared, N);
+        //vec3 L = 2 * dot(V, H) * H - V;
+        // TODO normalize?
+        vec3 L = reflect(-V, H);
+        float nDotL = dotPlus(N, L);
+        if(nDotL > 0)
+        {
+            prefilteredColor += textureLod(aEnvMap, vec3(L.xy, -L.z), 0).rgb * nDotL;
+            totalWeight += nDotL;
+        }
+    }
+
+    return prefilteredColor / totalWeight;
 }
 
 

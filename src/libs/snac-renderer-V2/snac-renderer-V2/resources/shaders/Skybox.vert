@@ -4,7 +4,7 @@ layout(location = 0) in vec3 ve_Position_l;
 
 #include "ViewProjectionBlock.glsl"
 
-out vec3 ex_CubeTextureCoords;
+out vec3 ex_FragmentPosition_world;
 
 void main(void)
 {
@@ -21,5 +21,5 @@ void main(void)
     gl_Position = pos.xyww;
 
     // The interpolated world coordinate of the fragment will be the direction to sample in cubemap
-    ex_CubeTextureCoords = ve_Position_l;
+    ex_FragmentPosition_world = ve_Position_l;
 }

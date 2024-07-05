@@ -294,7 +294,7 @@ namespace {
             .mMap = texture,
             .mMapFile = std::move(aPath),
         };
-        aApp.mGraph.mTextureRepository[semantic::gSpecularEnvironmentTexture] = texture;
+        aApp.mGraph.mTextureRepository[semantic::gEnvironmentTexture] = texture;
     }
 
 } // unnamed namespace
@@ -310,6 +310,17 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
                       //loadCubemapFromSequence(aEnvironmentStrip),
                       Environment::Cubemap,
                       aEnvironmentStrip);
+
+    //
+    // Setup the filtered environment radiance
+    //
+
+    const GLint gFilteredRadianceSide = 512;
+    // That approach is smelly: we use the Environment to compute an value we will set on the Environment
+    mScene.mEnvironment->mFilteredRadiance =
+        filterEnvironmentMap(*mScene.mEnvironment, mGraph, mStorage, gFilteredRadianceSide);
+    mGraph.mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] = 
+        mScene.mEnvironment->mFilteredRadiance;
 }
 
 

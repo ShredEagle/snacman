@@ -3,6 +3,9 @@
 #include <filesystem>
 
 #include <renderer/Shading.h>
+#include <renderer/Texture.h>
+
+#include <snac-renderer-V2/Handle.h>
 
 
 namespace ad::renderer {
@@ -24,14 +27,10 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
                             std::filesystem::path aOutputStrip);
 
 
-//class EnvironmentUtilities
-//{
-//public:
-//    EnvironmentUtilities();
-//    void filterEnvironmentMap(const Environment & aEnvironment, 
-//
-//private:
-//    graphics::Program mEnvironmentFilter;
-//};
+Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
+                                               const TheGraph & aGraph,
+                                               Storage & aStorage,
+                                               GLsizei aOutputSideLength);
+
 
 } // namespace ad::renderer

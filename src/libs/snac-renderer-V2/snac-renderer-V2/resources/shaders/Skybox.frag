@@ -3,7 +3,7 @@
 #include "Gamma.glsl"
 #include "Helpers.glsl"
 
-in vec3 ex_CubeTextureCoords;
+in vec3 ex_FragmentPosition_world;
 
 #if defined(EQUIRECTANGULAR)
 uniform sampler2D u_SkyboxTexture;
@@ -22,7 +22,7 @@ void main()
     // I suppose it is the physic basis from: 
     // https://en.wikipedia.org/wiki/Spherical_coordinate_system,
     // so x becomes y, y becomes z, z becomes x).
-    vec3 view_world = normalize(ex_CubeTextureCoords);
+    vec3 view_world = normalize(ex_FragmentPosition_world);
 
     // This formula show the middle of the equirectangle with default camera looking down -Z (in world).
     // The value is mirrored on the range [0, 1]:
@@ -40,7 +40,7 @@ void main()
     // in right handed world space, so negate Z. 
     // Note: the individual images in the cubemap texture are loaded "upside-down" compared to usual OpenGL textures
     // in order for this to work (you can see they are upside down in Nsight Graphics)
-    vec3 envColor = texture(u_SkyboxTexture, vec3(ex_CubeTextureCoords.xy, -ex_CubeTextureCoords.z)).rgb;
+    vec3 envColor = texture(u_SkyboxTexture, vec3(ex_FragmentPosition_world.xy, -ex_FragmentPosition_world.z)).rgb;
 #endif
     out_Color = correctGamma(vec4(envColor, 1.0));
     out_LinearHdr = envColor;

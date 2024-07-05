@@ -72,7 +72,10 @@ struct TheGraph
                      bool aEnvironmentMappingconst);
     void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
     void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
-    void passSkybox(const Environment & aEnvironment, Storage & aStorage) const;
+    void passDrawSkybox(const Environment & aEnvironment, Storage & aStorage) const;
+    void passFilterEnvironment(const Environment & aEnvironment, float aAlphaSquared, Storage & aStorage) const;
+
+    void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage) const;
 
     void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache);
 
