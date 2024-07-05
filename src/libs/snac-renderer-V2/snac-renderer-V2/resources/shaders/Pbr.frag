@@ -27,7 +27,7 @@ uniform sampler2DArray u_MetallicRoughnessAoTexture;
 #endif
 
 #if defined(ENVIRONMENT_MAPPING)
-uniform samplerCube u_SpecularEnvironmentTexture;
+uniform samplerCube u_EnvironmentTexture;
 #endif
 
 out vec4 out_Color;
@@ -358,7 +358,7 @@ void main()
     vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, shadingNormal_cam);
     
 #if defined(ENVIRONMENT_MAPPING_MIRROR)
-    vec3 mirror = texture(u_SpecularEnvironmentTexture,
+    vec3 mirror = texture(u_EnvironmentTexture,
                           vec3(reflected_world.xy, -reflected_world.z)).rgb;
     fragmentColor += schlickFresnelReflectance(shadingNormal_cam, view_cam, pbrMaterial.f0)
                      * mirror;
@@ -372,7 +372,7 @@ void main()
                                    normalize(mat3(cameraToWorld) * shadingNormal_cam),
                                    //normalize(mat3(cameraToWorld) * normal_cam),
                                    normalize(mat3(cameraToWorld) * view_cam),
-                                   u_SpecularEnvironmentTexture);
+                                   u_EnvironmentTexture);
     // Catches the nan and make them more obvious
     if(isnan(specularIbl.r))
     {
