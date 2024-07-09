@@ -465,26 +465,61 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
         }
     }
 
-    if(!mScene.mEnvironment)
+    auto conditionalGuard = [](bool aCondition, 
+                               auto aEnter,
+                               Guard::release_fun aExit) -> Guard
     {
-        ImGui::BeginDisabled();
-    }
-    if(ImGui::Button("Dump environment"))
-    {
-        assert(mScene.mEnvironment);
-        dumpEnvironmentCubemap(
-            *mScene.mEnvironment,
-            mGraph,
-            mStorage,
-            mScene.mEnvironment->mMapFile.parent_path() /
-                "split-" += mScene.mEnvironment->mMapFile.filename());
-    }
-    if(!mScene.mEnvironment)
-    {
-        ImGui::EndDisabled();
-    }
+        if(aCondition)
+        {
+            aEnter();
+            return Guard{std::move(aExit)};
+        }
+        else
+        {
+            return Guard{[](){}};
+        }
+    };
 
-    mGraphGui.present(mGraph);
+    {
+        Guard scopeDisable = conditionalGuard(
+            !mScene.mEnvironment || mScene.mEnvironment->mType != Environment::Equirectangular,
+            [](){ImGui::BeginDisabled();},
+            ImGui::EndDisabled);
+
+        if(ImGui::Button("Dump environment"))
+        {
+            assert(mScene.mEnvironment);
+            dumpEnvironmentCubemap(
+                *mScene.mEnvironment,
+                mGraph,
+                mStorage,
+                mScene.mEnvironment->mMapFile.parent_path() /
+                    "split-" += mScene.mEnvironment->mMapFile.filename());
+        }
+    }
+    {
+        Guard scopeDisable = conditionalGuard(
+            !mScene.mEnvironment,
+            [](){ImGui::BeginDisabled();},
+            ImGui::EndDisabled);
+
+        if(ImGui::Button("Highlight samples"))
+        {
+            float roughness = 1.f/9.f; // the first level of our 10 mipmaps
+            // Left-handed "into the screen" normal
+            static graphics::Texture highlights =
+                highLightSamples(*mScene.mEnvironment,
+                                 math::Vec<3, float>(0.f, 0.f, 1.f),
+                                 roughness,
+                                 mLoader);
+            glObjectLabel(GL_TEXTURE, highlights, -1, "highlight-samples");
+            dumpToFile(highlights,
+                    mScene.mEnvironment->mMapFile.parent_path() /
+                        "samples-" += 
+                            mScene.mEnvironment->mMapFile.filename().replace_extension("png"),
+                    0);
+        }
+    }
 
     static bool gShowScene = false;
     if(imguiui::addCheckbox("Scene", gShowScene))

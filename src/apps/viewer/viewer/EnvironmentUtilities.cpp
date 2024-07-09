@@ -10,10 +10,13 @@
 #include <renderer/MappedGL.h>
 #include <renderer/Renderbuffer.h>
 #include <renderer/ScopeGuards.h>
+#include <renderer/Uniforms.h>
 
 #include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/Cubemap.h>
 #include <snac-renderer-V2/Profiling.h>
+
+#include <snac-renderer-V2/files/Loader.h>
 
 
 namespace ad::renderer {
@@ -180,6 +183,98 @@ Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
     }
 
     return &aStorage.mTextures.emplace_back(std::move(filteredCubemap));
+}
+
+
+graphics::Texture highLightSamples(const Environment & aEnvironment,
+                                   math::Vec<3, float> aSurfaceNormal,
+                                   float aRoughness,
+                                   const Loader & aLoader)
+{
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "hightlight samples", CpuTime, GpuTime);
+
+    assert(aEnvironment.mType == Environment::Cubemap);
+    
+    // Get the internal format and size of the provided environment texture
+    GLint environmentInternalFormat = 0;
+    GLint environmentSideSize = 0;
+    {
+        graphics::ScopedBind boundEnvironment{*aEnvironment.mMap};
+        glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+                                 0,
+                                 GL_TEXTURE_INTERNAL_FORMAT,
+                                 &environmentInternalFormat);
+        glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+                                 0,
+                                 GL_TEXTURE_WIDTH,
+                                 &environmentSideSize);
+    }
+
+    graphics::Texture output{GL_TEXTURE_2D};
+    graphics::ScopedBind boundTexture{output};
+
+    // The initial intention was to be clever and use the same internal format 
+    // for our output sample image than for the environment cubempa (so we could composite)
+    // Yet, you can't use (most of the) 3-channels image formats with image load/store.
+    // see: https://stackoverflow.com/a/74794343/1027706 
+    // So, let's hardcode atm:
+    GLenum imageFormat = GL_RGBA32F;
+
+    // Allocate storage for an image (level 0) of the texture.
+    glTexImage2D(output.mTarget, 0, imageFormat, environmentSideSize, environmentSideSize,
+                 0, GL_RGBA, GL_FLOAT, nullptr);
+
+    // Bind texture level 0 to image unit 1 (matched by layout binding in fragment shader)
+    const GLuint imageUnit = 1;
+    glBindImageTexture(imageUnit, output, 0, GL_FALSE, 0, GL_WRITE_ONLY, imageFormat);
+
+    IntrospectProgram program = aLoader.loadProgram("shaders/HighlightSamples.prog");
+    graphics::ScopedBind boundProgram(program);
+
+    graphics::setUniform(program, "u_SurfaceNormal", aSurfaceNormal);
+    graphics::setUniform(program, "u_AlphaSquared", std::pow(aRoughness, 4.f));
+
+    // Rasterizing 1 pixel of the quad is all we need:
+    // A single shader invocation takes care of all the job
+    // (Note: it would likely be much better to issue 1 sample position per fragment,
+    // but this code will not be run in release anyway)
+    glViewport(0, 0, 1, 1);
+
+    // I suppose the image is already in state "cleared" after initialization
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    return output;
+}
+
+
+void dumpToFile(const graphics::Texture & aTexture, std::filesystem::path aOutput, GLint aLevel)
+{
+    graphics::ScopedBind boundTexture{aTexture};
+
+    math::Size<2, GLint> size;
+    glGetTexLevelParameteriv(aTexture.mTarget,
+                             0,
+                             GL_TEXTURE_WIDTH,
+                             &size.width());
+    glGetTexLevelParameteriv(aTexture.mTarget,
+                             0,
+                             GL_TEXTURE_HEIGHT,
+                             &size.height());
+    GLint internalFormat;
+    glGetTexLevelParameteriv(aTexture.mTarget,
+                             0,
+                             GL_TEXTURE_INTERNAL_FORMAT,
+                             &internalFormat);
+
+    using Pixel = math::sdr::Rgb;
+
+    std::unique_ptr<unsigned char[]> raster = 
+        std::make_unique<unsigned char[]>(sizeof(Pixel) * size.area());
+    // Return as RGB unsigned bytes
+    glGetTexImage(aTexture.mTarget, aLevel, GL_RGB, GL_UNSIGNED_BYTE, raster.get());
+
+    arte::Image<Pixel> result{size, std::move(raster)};
+    result.saveFile(aOutput);
 }
 
 
