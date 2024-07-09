@@ -210,9 +210,6 @@ graphics::Texture highLightSamples(const Environment & aEnvironment,
                                  &environmentSideSize);
     }
 
-    graphics::Texture output{GL_TEXTURE_2D};
-    graphics::ScopedBind boundTexture{output};
-
     // The initial intention was to be clever and use the same internal format 
     // for our output sample image than for the environment cubempa (so we could composite)
     // Yet, you can't use (most of the) 3-channels image formats with image load/store.
@@ -220,9 +217,19 @@ graphics::Texture highLightSamples(const Environment & aEnvironment,
     // So, let's hardcode atm:
     GLenum imageFormat = GL_RGBA32F;
 
-    // Allocate storage for an image (level 0) of the texture.
-    glTexImage2D(output.mTarget, 0, imageFormat, environmentSideSize, environmentSideSize,
-                 0, GL_RGBA, GL_FLOAT, nullptr);
+    graphics::Texture output{GL_TEXTURE_2D};
+    {
+        // Only bound for the storage allocation
+        graphics::ScopedBind boundTexture{output};
+
+        // Allocate storage for an image (level 0) of the texture.
+        // TODO Ad 2024/07/09: Understand why this allocation (pointed out by ChatGPT) does not seem to work
+        // TODO Ad 2024/07/09: Find a way to test for texture "completeness", I chased this bug for two hours
+        //glTexImage2D(output.mTarget, 0, imageFormat, environmentSideSize, environmentSideSize,
+        //             0, GL_RGBA, GL_FLOAT, nullptr);
+
+        glTexStorage2D(output.mTarget, 1, imageFormat, environmentSideSize, environmentSideSize);
+    }
 
     // Bind texture level 0 to image unit 1 (matched by layout binding in fragment shader)
     const GLuint imageUnit = 1;
@@ -240,8 +247,22 @@ graphics::Texture highLightSamples(const Environment & aEnvironment,
     // but this code will not be run in release anyway)
     glViewport(0, 0, 1, 1);
 
+    // We use a FS invocations query to assert it is called exactly once
+    GLuint queryId;
+    glGenQueries(1, &queryId);
+    glBeginQuery(GL_FRAGMENT_SHADER_INVOCATIONS, queryId);
+
     // I suppose the image is already in state "cleared" after initialization
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glEndQuery(GL_FRAGMENT_SHADER_INVOCATIONS);
+    GLuint invocationsResult;
+    glGetQueryObjectuiv(queryId, GL_QUERY_RESULT, &invocationsResult);
+
+    assert(invocationsResult == 1);
+
+    // Having them directly here seems too conservative
+    glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT); // I guess what we need
 
     return output;
 }

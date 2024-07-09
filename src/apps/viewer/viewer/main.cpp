@@ -134,7 +134,7 @@ int runApplication(int argc, char * argv[])
         getVersionedName(),
         1920, 1024,
         glfwFlags,
-        4, 2,
+        4, 6,
     };
     glfwSwapInterval(0); // Disable V-sync
 

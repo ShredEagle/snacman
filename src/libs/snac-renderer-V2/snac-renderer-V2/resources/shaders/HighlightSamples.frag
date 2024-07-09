@@ -12,28 +12,25 @@ layout(binding = 1, rgba32f) uniform writeonly image2D outImage;
 uniform vec3 u_SurfaceNormal;
 uniform float u_AlphaSquared;
 
-
 void main()
 {
     //highlightSamples(u_SurfaceNormal, u_AlphaSquared, outImage);
     vec3 N = u_SurfaceNormal;
     float aAlphaSquared = u_AlphaSquared;
 
-    //// Why so painful to use?
-    //ivec2 size = ivec2(2048, 2048);
     ivec2 size = imageSize(outImage);
 
-    const uint NumSamples = 256;
+    const uint NumSamples = 512;
 
     vec3 R = N;
     vec3 V = N;
     
-    // White out (to test writes)
+    // Grey out (to test writes)
     for(int h = 0; h < size.y; ++h)
     {
         for(int w = 0; w < size.x; ++w)
         {
-            imageStore(outImage, ivec2(w, h), vec4(1.0, 1.0, 1.0, 1.0));
+            imageStore(outImage, ivec2(w, h), vec4(0.2, 0.2, 0.2, 1.0));
         }
     }
 
@@ -46,6 +43,7 @@ void main()
         if(nDotL > 0)
         {
             float sc, tc, ma;
+            // Cubemap sampling expects left-handed (+Z into screen), so convert
             vec3 dir = vec3(L.xy, -L.z);
             if(abs(dir.z) >= abs(dir.x) && abs(dir.z) >= abs(dir.y))
             {
@@ -59,11 +57,16 @@ void main()
             }
 
             ivec2 sampleLocation_pixel = 
-                ivec2((sc / ma + 1) / 2,
-                     (tc / ma + 1) / 2)
-                * size;
+                ivec2(
+                    vec2((sc / ma + 1.) / 2.,
+                         (tc / ma + 1.) / 2.)
+                    * vec2(size));
 
+            // Dump 4 pixels, to make the locations bigger.
             imageStore(outImage, sampleLocation_pixel, vec4(1.0, 0.0, 1.0, 1.0));
+            imageStore(outImage, sampleLocation_pixel + ivec2(0, 1), vec4(1.0, 0.0, 1.0, 1.0));
+            imageStore(outImage, sampleLocation_pixel + ivec2(1, 1), vec4(1.0, 0.0, 1.0, 1.0));
+            imageStore(outImage, sampleLocation_pixel + ivec2(1, 0), vec4(1.0, 0.0, 1.0, 1.0));
         }
     }
 }

@@ -506,10 +506,10 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
         if(ImGui::Button("Highlight samples"))
         {
             float roughness = 1.f/9.f; // the first level of our 10 mipmaps
-            // Left-handed "into the screen" normal
+            // Normal is provided right-handed: z -> -1 "into the screen" normal
             static graphics::Texture highlights =
                 highLightSamples(*mScene.mEnvironment,
-                                 math::Vec<3, float>(0.f, 0.f, 1.f),
+                                 math::Vec<3, float>(0.f, 0.f, -1.f),
                                  roughness,
                                  mLoader);
             glObjectLabel(GL_TEXTURE, highlights, -1, "highlight-samples");
