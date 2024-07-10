@@ -12,9 +12,13 @@ layout(binding = 1, rgba32f) uniform writeonly image2D outImage;
 uniform vec3 u_SurfaceNormal;
 uniform float u_AlphaSquared;
 
+
 void main()
 {
+    // Note: It seems "tricky" to have a function taking an image as parameter
+    // see: https://github.com/KhronosGroup/glslang/issues/1720
     //highlightSamples(u_SurfaceNormal, u_AlphaSquared, outImage);
+
     vec3 N = u_SurfaceNormal;
     float aAlphaSquared = u_AlphaSquared;
 
