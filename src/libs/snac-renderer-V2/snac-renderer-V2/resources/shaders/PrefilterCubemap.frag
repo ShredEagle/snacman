@@ -14,5 +14,5 @@ layout(location = 0) out vec3 out_LinearHdr;
 
 void main()
 {
-    out_LinearHdr = prefilterEnvMap(u_AlphaSquared, ex_FragmentPosition_world, u_SkyboxTexture);
+    out_LinearHdr = prefilterEnvMap(u_AlphaSquared, normalize(ex_FragmentPosition_world), u_SkyboxTexture);
 }

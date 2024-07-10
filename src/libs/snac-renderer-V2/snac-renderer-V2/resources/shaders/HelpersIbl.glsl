@@ -103,6 +103,8 @@ vec3 specularIBL(vec3 SpecularColor, float aAlphaSquared, vec3 N, vec3 V, sample
 }
 
 
+/// @param R the \b normalized reflection direction 
+/// (i.e. the direciton that would be sampled in the filtered map)
 vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
 {
     const uint NumSamples = 1024 * 2;
