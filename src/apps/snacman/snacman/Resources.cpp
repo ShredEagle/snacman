@@ -31,8 +31,6 @@ Resources::~Resources()
     SELOG(debug)("Destructing snacman::Resources instance.");
 }
 
-<<<<<<< HEAD
-
 snacgame::Renderer_t::Handle_t<const renderer::Object> Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
 {
     // TODO Ad 2024/03/27: Since it will reuse the effect of first load,
@@ -43,20 +41,6 @@ snacgame::Renderer_t::Handle_t<const renderer::Object> Resources::getModel(files
     if(aModel.string() == "CUBE")
     {
         throw std::invalid_argument("'CUBE' hardcoded model is now deprecated.");
-=======
-std::shared_ptr<Model> Resources::getModel(filesystem::path aModel,
-                                           filesystem::path aEffect)
-{
-    // This is bad design, but lazy to get the result quickly
-    if (aModel.string() == "CUBE")
-    {
-        if (!mCube)
-        {
-            mCube = mRenderThread.loadModel(aModel, aEffect, *this)
-                        .get(); // synchronize call
-        }
-        return mCube;
->>>>>>> 520904c (WIP serialization with simple serial/deserial)
     }
     else
     {
@@ -82,23 +66,15 @@ std::shared_ptr<Effect> Resources::getShaderEffect(filesystem::path aEffect)
     return mEffects.load(aEffect, mFinder, mRenderThread, *this);
 }
 
-<<<<<<< HEAD
 
 std::shared_ptr<Effect> Resources::EffectLoader(
     filesystem::path aEffect, 
     RenderThread<snacgame::Renderer_t> & aRenderThread,
     Resources & aResources)
-=======
-std::shared_ptr<Effect>
-Resources::EffectLoader(filesystem::path aEffect,
-                        RenderThread<snacgame::Renderer> & aRenderThread,
-                        Resources & aResources)
->>>>>>> 520904c (WIP serialization with simple serial/deserial)
 {
     return loadEffect(aEffect, aResources.getTechniqueLoader());
 }
 
-<<<<<<< HEAD
 
 std::shared_ptr<Font> Resources::FontLoader(
     filesystem::path aFont, 
@@ -106,14 +82,6 @@ std::shared_ptr<Font> Resources::FontLoader(
     filesystem::path aEffect,
     RenderThread<snacgame::Renderer_t> & aRenderThread,
     Resources & aResources)
-=======
-std::shared_ptr<Font>
-Resources::FontLoader(filesystem::path aFont,
-                      unsigned int aPixelHeight,
-                      filesystem::path aEffect,
-                      RenderThread<snacgame::Renderer> & aRenderThread,
-                      Resources & aResources)
->>>>>>> 520904c (WIP serialization with simple serial/deserial)
 {
     return aRenderThread
         .loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aEffect,
@@ -121,20 +89,11 @@ Resources::FontLoader(filesystem::path aFont,
         .get(); // synchronize call
 }
 
-<<<<<<< HEAD
-
 snacgame::Renderer_t::Handle_t<const renderer::Object> Resources::ModelLoader(
     filesystem::path aModel, 
     filesystem::path aEffect,
     RenderThread<snacgame::Renderer_t> & aRenderThread,
     snacgame::Resources_V2 & aResources)
-=======
-std::shared_ptr<Model>
-Resources::ModelLoader(filesystem::path aModel,
-                       filesystem::path aEffect,
-                       RenderThread<snacgame::Renderer> & aRenderThread,
-                       Resources & aResources)
->>>>>>> 520904c (WIP serialization with simple serial/deserial)
 {
     return aRenderThread.loadModel(aModel, aEffect, aResources)
         .get(); // synchronize call
@@ -147,10 +106,10 @@ ent::Handle<ent::Entity> Resources::BpLoader(filesystem::path aBpFile,
                                              Resources & aResources)
 {
     std::ifstream bpStream(aBpFile);
-    json data = json::parse(bpStream);
+    const json data = json::parse(bpStream);
     ent::Handle<ent::Entity> bp =
         aWorld.addBlueprint(data["name"].get<std::string>().c_str());
-    bp & data;
+    from_json(bp, data);
     return bp;
 }
 

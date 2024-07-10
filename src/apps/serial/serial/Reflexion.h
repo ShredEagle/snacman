@@ -14,89 +14,96 @@ namespace reflexion {
 
 using json = nlohmann::json;
 
-class TypedErasedConstructor;
+class TypeErasedProcessor;
 
 template <class T_type>
-inline std::shared_ptr<TypedErasedConstructor>
+inline std::shared_ptr<TypeErasedProcessor>
 addConstructor(ad::handy::StringId aId);
 
+
+/// \brief Map of typed constructor by type_index
+/// used during Handle construction/serialization to retrieve
+/// a component processor that can add a component or serialize
+/// a component from a handle
 inline std::unordered_map<std::type_index,
-                          std::shared_ptr<TypedErasedConstructor>> &
-indexedTypedConstrutorInstance()
+                          std::shared_ptr<TypeErasedProcessor>> &
+typedProcessorStore()
 {
     static std::unordered_map<std::type_index,
-                              std::shared_ptr<TypedErasedConstructor>>
-        indexedTypedConstructorStore = {};
-    return indexedTypedConstructorStore;
+                              std::shared_ptr<TypeErasedProcessor>>
+        typedProcessorStoreInstance = {};
+    return typedProcessorStoreInstance;
 }
 
+/// \brief Map of type index by name used to retrieve a component
+/// type_index, during deserialization, from its name
 inline std::unordered_map<std::string,
                           std::type_index> &
-nameTypeIndexInstance()
+nameTypeIndexStore()
 {
     static std::unordered_map<std::string,
                               std::type_index>
-        nameTypeIndexStore = {};
-    return nameTypeIndexStore;
+        nameTypeIndexStoreInstance = {};
+    return nameTypeIndexStoreInstance;
 }
 
-class TypedErasedConstructor
+/// \brief Abstract component processor provides a type erased
+/// interface for component creation and serialization
+class TypeErasedProcessor
 {
 public:
-    TypedErasedConstructor() = default;
-    TypedErasedConstructor(const TypedErasedConstructor &) = default;
-    TypedErasedConstructor(TypedErasedConstructor &&) = delete;
-    TypedErasedConstructor &
-    operator=(const TypedErasedConstructor &) = default;
-    TypedErasedConstructor & operator=(TypedErasedConstructor &&) = delete;
-    virtual ~TypedErasedConstructor() = default;
-    virtual void construct(ad::ent::Handle<ad::ent::Entity> aHandle,
+    TypeErasedProcessor() = default;
+    TypeErasedProcessor(const TypeErasedProcessor &) = default;
+    TypeErasedProcessor(TypeErasedProcessor &&) = delete;
+    TypeErasedProcessor &
+    operator=(const TypeErasedProcessor &) = default;
+    TypeErasedProcessor & operator=(TypeErasedProcessor &&) = delete;
+    virtual ~TypeErasedProcessor() = default;
+    virtual void addComponentToHandle(ad::ent::Handle<ad::ent::Entity> aHandle,
                            const json & aData) = 0;
-    virtual void serialize(json & aJson,
+    virtual void serializeComponent(json & aJson,
                            ad::ent::Handle<ad::ent::Entity> aHandle) = 0;
 };
 
 template <class T_type>
-class TypedConstructor : public TypedErasedConstructor
+class TypedProcessor : public TypeErasedProcessor
 {
 public:
-    TypedConstructor(const char * aName) :
+    TypedProcessor(const char * aName) :
         mName{aName}
-    {
-        
-    }
+    {}
 
-    static std::shared_ptr<TypedConstructor<T_type>> bind(const char * aName);
+    static std::shared_ptr<TypedProcessor<T_type>> bind(const char * aName);
 
-    void construct(ad::ent::Handle<ad::ent::Entity> aHandle,
+    void addComponentToHandle(ad::ent::Handle<ad::ent::Entity> aHandle,
                    const json & aData) override;
 
-    void serialize(json & aData,
+    void serializeComponent(json & aData,
                    ad::ent::Handle<ad::ent::Entity> aHandle) override;
 
     const char * mName;
 };
 
 template <class T_type>
-std::shared_ptr<TypedErasedConstructor> addConstructor(const char * aName)
+std::shared_ptr<TypeErasedProcessor> addConstructor(const char * aName)
 {
-    auto constructor = std::make_shared<TypedConstructor<T_type>>(aName);
-    indexedTypedConstrutorInstance().insert_or_assign(std::type_index(typeid(T_type)), constructor);
-    nameTypeIndexInstance().insert_or_assign(aName, std::type_index(typeid(T_type)));
+    auto constructor = std::make_shared<TypedProcessor<T_type>>(aName);
+    typedProcessorStore().insert_or_assign(std::type_index(typeid(T_type)), constructor);
+    nameTypeIndexStore().insert_or_assign(aName, std::type_index(typeid(T_type)));
     return constructor;
 }
 
 template <class T_type>
-std::shared_ptr<TypedConstructor<T_type>> TypedConstructor<T_type>::bind(const char * aName)
+std::shared_ptr<TypedProcessor<T_type>> TypedProcessor<T_type>::bind(const char * aName)
 {
-    return std::dynamic_pointer_cast<TypedConstructor<T_type>>(
+    return std::dynamic_pointer_cast<TypedProcessor<T_type>>(
         addConstructor<T_type>(aName));
 }
 
 #define SNAC_SERIAL_REGISTER(name)                                             \
     struct InitConstructor##name                                               \
     {                                                                          \
-        static inline const std::shared_ptr<reflexion::TypedConstructor<name>> \
-            a = reflexion::TypedConstructor<name>::bind(#name);                \
+        static inline const std::shared_ptr<reflexion::TypedProcessor<name>> \
+            a = reflexion::TypedProcessor<name>::bind(#name);                \
     };
 } // namespace reflexion

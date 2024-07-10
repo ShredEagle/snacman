@@ -3,6 +3,10 @@
 #include "../GameParameters.h"
 #include "snacman/simulations/snacgame/component/PowerUp.h"
 
+#include <snacman/detail/Reflexion.h>
+#include <snacman/detail/Reflexion_impl.h>
+#include <snacman/detail/Serialization.h>
+
 #include <entity/Entity.h>
 
 #include <math/Vector.h>
@@ -55,7 +59,17 @@ struct PlayerHud
     ent::Handle<ent::Entity> mScoreText;
     ent::Handle<ent::Entity> mRoundText;
     ent::Handle<ent::Entity> mPowerupText;
+
+    template <SnacArchive T_archive>
+    void serialize(T_archive & archive)
+    {
+        archive & SERIAL_PARAM(mScoreText);
+        archive & SERIAL_PARAM(mRoundText);
+        archive & SERIAL_PARAM(mPowerupText);
+    }
 };
+
+SNAC_SERIAL_REGISTER(PlayerHud)
 
 
 } // namespace component

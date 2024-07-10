@@ -1,5 +1,5 @@
 #include "Serialization.h"
-
+#include "entity/Entity.h"
 #include "handy/StringId.h"
 #include "Reflexion.h"
 #include "Reflexion_impl.h"
@@ -7,25 +7,58 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-namespace ad {
-namespace ent {
-
 using json = nlohmann::json;
-ent::Handle<ent::Entity> & operator&(ent::Handle<ent::Entity> & aHandle,
-                                     json & aData)
+
+void from_json(ad::ent::EntityManager & aWorld, const json & aData)
+{
+    std::unordered_map<std::string, ad::ent::Handle<ad::ent::Entity>>
+        nameHandleMap;
+
+    for (auto & [name, ent] : aData.items())
+    {
+        ad::ent::Handle<ad::ent::Entity> handle =
+            aWorld.addEntity(name.c_str());
+        from_json(handle, ent);
+        nameHandleMap.insert_or_assign(name, handle);
+    }
+
+    for (auto & pair : handleRequestsInstance())
+    {
+        auto [handle, nameRequested] = pair;
+        *handle = nameHandleMap.at(nameRequested);
+    }
+    handleRequestsInstance().clear();
+}
+
+void from_json(ad::ent::Handle<ad::ent::Entity> & aHandle, const json & aData)
 {
     json components = aData["components"];
 
-    for (const auto & comp : components)
+    for (auto & [name, comp] : components.items())
     {
-        std::string compName = comp["name"].get<std::string>();
-
-        handy::StringId id{compName};
-        snacgame::detail::HandleBinderStore::sStore.at(id)->construct(aHandle, comp);
+        std::type_index index =
+            reflexion::nameTypeIndexStore().at(name.c_str());
+        reflexion::typedProcessorStore().at(index)->addComponentToHandle(
+            aHandle, comp);
     }
-
-    return aHandle;
 }
 
-} // namespace ent
-} // namespace ad
+void to_json(ad::ent::EntityManager & aWorld, json & aData)
+{
+    std::unordered_map<ad::ent::Handle<ad::ent::Entity>, std::string> handleNameMap;
+
+    aWorld.forEachHandle([&aData](ad::ent::Handle<ad::ent::Entity> aHandle, const char * aName){
+        to_json(aHandle, aData[aName]);
+    });
+}
+
+void to_json(ad::ent::Handle<ad::ent::Entity> & aHandle, json & aData)
+{
+    json & componentJson = aData["components"];
+
+    for (std::type_index type : aHandle.getTypeSet())
+    {
+        reflexion::typedProcessorStore().at(type)->serializeComponent(
+            componentJson, aHandle);
+    }
+}

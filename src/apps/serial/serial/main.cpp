@@ -27,11 +27,15 @@ int main(int argc, char * argv[])
     json jOutput;
     if (i == 0 || i == 2)
     {
-        std::ifstream f("test.json");
+        std::ifstream f("test_handle.json");
         const json jInput = json::parse(f);
         from_json(handle, jInput);
-        std::cout << "hello" << handle.get()->get<component::CompA>().a
-                  << std::endl;
+        SnacArchiveOut archive(std::cout);
+        if (handle.get()->has<component::CompA>())
+        {
+            archive & "CompA" & "\n"
+                & handle.get()->get<component::CompA>() & "\n";
+        }
     }
     if (i == 1)
     {
@@ -46,7 +50,7 @@ int main(int argc, char * argv[])
 
     if (i == 3)
     {
-        std::ifstream f("test.json");
+        std::ifstream f("test_world.json");
         const json jInput = json::parse(f);
         from_json(world, jInput);
         SnacArchiveOut archive(std::cout);

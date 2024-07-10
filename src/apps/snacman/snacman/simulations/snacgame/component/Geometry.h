@@ -4,6 +4,10 @@
 #include <math/Quaternion.h>
 #include <math/Vector.h>
 
+#include <snacman/detail/Reflexion.h>
+#include <snacman/detail/Reflexion_impl.h>
+#include <snacman/detail/Serialization.h>
+
 namespace ad {
 namespace snacgame {
 namespace component {
@@ -24,8 +28,19 @@ struct Geometry
     math::hdr::Rgba_f mColor = math::hdr::gWhite<float>;
 
     void drawUi() const;
+
+    template <SnacArchive T_archive>
+    void serialize(T_archive & archive)
+    {
+        archive & SERIAL_PARAM(mPosition);
+        archive & SERIAL_PARAM(mScaling);
+        archive & SERIAL_PARAM(mInstanceScaling);
+        archive & SERIAL_PARAM(mOrientation);
+        archive & SERIAL_PARAM(mColor);
+    }
 };
 
+SNAC_SERIAL_REGISTER(Geometry)
 
 } // namespace component
 } // namespace cubes

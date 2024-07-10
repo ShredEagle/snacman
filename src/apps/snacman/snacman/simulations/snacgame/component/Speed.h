@@ -1,5 +1,9 @@
 #pragma once
 
+#include <snacman/detail/Reflexion.h>
+#include <snacman/detail/Reflexion_impl.h>
+#include <snacman/detail/Serialization.h>
+
 #include <math/Quaternion.h>
 
 namespace ad {
@@ -13,6 +17,13 @@ struct AxisAngle
 {
     math::UnitVec<3, float> mAxis;
     math::Radian<float> mAngle;
+
+    template <SnacArchive T_archive>
+    void serialize(T_archive & archive)
+    {
+        archive & SERIAL_PARAM(mAxis);
+        archive & SERIAL_PARAM(mAngle);
+    }
 };
 
 namespace component {
@@ -27,7 +38,16 @@ struct Speed
     AxisAngle mRotation = {
         .mAxis = math::UnitVec<3, float>::MakeFromUnitLength({1.f, 0.f, 0.f}),
         .mAngle = math::Radian<float>{0.f}};
+
+    template <SnacArchive T_archive>
+    void serialize(T_archive & archive)
+    {
+        archive & SERIAL_PARAM(mSpeed);
+        archive & SERIAL_PARAM(mRotation);
+    }
 };
+
+SNAC_SERIAL_REGISTER(Speed)
 
 } // namespace component
 } // namespace snacgame

@@ -113,7 +113,7 @@ private:
     std::shared_ptr<Model> mCube = nullptr;
     resource::ResourceManager<std::shared_ptr<Font>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;
     resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;
-    resource::ResourceManager<std::shared_ptr<Model>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
+    resource::ResourceManager<snacgame::Renderer_t::Handle_t<const renderer::Object>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
     resource::ResourceManager<ent::HandleKey<ent::Entity>,   resource::ResourceFinder, &Resources::ModelLoader> mBlueprints;
 };
 

@@ -37,8 +37,8 @@ void from_json(ad::ent::Handle<ad::ent::Entity> & aHandle, const json & aData)
     for (auto & [name, comp] : components.items())
     {
         std::type_index index =
-            reflexion::nameTypeIndexInstance().at(name.c_str());
-        reflexion::indexedTypedConstrutorInstance().at(index)->construct(
+            reflexion::nameTypeIndexStore().at(name.c_str());
+        reflexion::typedProcessorStore().at(index)->addComponentToHandle(
             aHandle, comp);
     }
 }
@@ -54,11 +54,11 @@ void to_json(ad::ent::EntityManager & aWorld, json & aData)
 
 void to_json(ad::ent::Handle<ad::ent::Entity> & aHandle, json & aData)
 {
-    json & components = aData["components"];
+    json & componentJson = aData["components"];
 
     for (std::type_index type : aHandle.getTypeSet())
     {
-        reflexion::indexedTypedConstrutorInstance().at(type)->serialize(
-            components, aHandle);
+        reflexion::typedProcessorStore().at(type)->serializeComponent(
+            componentJson, aHandle);
     }
 }

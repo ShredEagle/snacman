@@ -1,5 +1,8 @@
 #pragma once
 
+#include <snacman/detail/Reflexion.h>
+#include <snacman/detail/Reflexion_impl.h>
+#include <snacman/detail/Serialization.h>
 #include <snacman/Timing.h>
 
 #include <math/Interpolation/ParameterAnimation.h>
@@ -27,7 +30,19 @@ struct RigAnimation
     {
         return mParameter.at(snac::asSeconds(aCurrentTime - mStartTime));
     }
+
+    template <SnacArchive T_archive>
+    void serialize(T_archive & archive)
+    {
+        archive & SERIAL_PARAM(mAnimation);
+        archive & SERIAL_PARAM(mAnimatedRig);
+        archive & SERIAL_PARAM(mStartTime);
+        archive & SERIAL_PARAM(mParameter);
+        archive & SERIAL_PARAM(mParameterValue);
+    }
 };
+
+SNAC_SERIAL_REGISTER(RigAnimation)
 
 
 } // namespace component

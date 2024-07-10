@@ -7,6 +7,8 @@
 
 #include <memory>
 #include <snacman/detail/Reflexion.h>
+#include <snacman/detail/Reflexion_impl.h>
+#include <snacman/detail/Serialization.h>
 
 namespace ad {
 namespace snacgame {
@@ -19,6 +21,12 @@ struct AllowedMovement
 
     void drawUi() const;
 
+    template <SnacArchive T_archive>
+    void serialize(T_archive & archive)
+    {
+        archive & SERIAL_PARAM(mAllowedMovement);
+        archive & SERIAL_PARAM(mWindow);
+    }
 };
 
 SNAC_SERIAL_REGISTER(AllowedMovement)

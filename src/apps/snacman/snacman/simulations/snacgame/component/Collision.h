@@ -5,6 +5,10 @@
 #include <math/Vector.h>
 #include <math/Box.h>
 
+#include <snacman/detail/Reflexion.h>
+#include <snacman/detail/Reflexion_impl.h>
+#include <snacman/detail/Serialization.h>
+
 namespace ad {
 namespace snacgame {
 namespace component {
@@ -12,7 +16,15 @@ namespace component {
 struct Collision
 {
     math::Box<float> mHitbox;
+
+    template <SnacArchive T_archive>
+    void serialize(T_archive & archive)
+    {
+        archive & SERIAL_PARAM(mHitbox);
+    }
 };
+
+SNAC_SERIAL_REGISTER(Collision)
 
 constexpr const math::Box<float> gPlayerHitbox{{-0.35f, 0.f, -0.35f},
                                                {0.7f, 0.7f, 0.7f}};
