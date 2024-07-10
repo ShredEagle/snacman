@@ -103,11 +103,14 @@ vec3 specularIBL(vec3 SpecularColor, float aAlphaSquared, vec3 N, vec3 V, sample
 }
 
 
+// Use the original environment mipmaps when prefiltering, which immensely helps with aliasing
+#define PREFILTER_LEVERAGE_LOD
+
 /// @param R the \b normalized reflection direction 
 /// (i.e. the direciton that would be sampled in the filtered map)
 vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
 {
-    const uint NumSamples = 1024 * 2;
+    const uint NumSamples = 1024;
 
     // To use any lobe, this approach imposes n = v = r
     // see: rtr 4th p421
@@ -115,6 +118,11 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
     vec3 N = R;
     vec3 V = R;
     
+#if defined(PREFILTER_LEVERAGE_LOD)
+    ivec2 envSize = textureSize(aEnvMap, 0);
+    float lodUniform = log2(envSize.x * envSize.y / NumSamples) / 2;
+#endif
+
     // The accumulator
     vec3 prefilteredColor = vec3(0);
     float totalWeight = 0.f;
@@ -122,13 +130,57 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
     {
         vec2 Xi = hammersley(i, NumSamples);
         vec3 H = importanceSampleGGX(Xi, aAlphaSquared, N);
-        //vec3 L = 2 * dot(V, H) * H - V;
-        // TODO normalize?
         vec3 L = reflect(-V, H);
         float nDotL = dotPlus(N, L);
         if(nDotL > 0)
         {
-            prefilteredColor += textureLod(aEnvMap, vec3(L.xy, -L.z), 0).rgb * nDotL;
+            vec3 sampleDir = vec3(L.xy, -L.z);
+            
+#if defined(PREFILTER_LEVERAGE_LOD)
+            vec3 sampled;
+            // Improtant: Distribution_GGX does not handle alpha == 0 (the theoretical result is +inf)
+            // Anyway, we should probably always sample the mipmap level matching pixel coverage 
+            // (only one sample direction should be possible when alpha == 0)
+            if(aAlphaSquared != 0.)
+            {
+                // From "Real Shading in Unreal Engine 4": pdf = D * NoH / (4 * VoH)
+                // From GPU Gems 3 chapter 20:
+                // lod = max(0, 1/2 log2(w*h/N) - 1/2 log2(p(u,v) d(u)))
+
+                float NoH = dot(N, H);
+                // Note: NoH == VoH because of the isotropic assumtion (see above that N == V == R).
+                // Note: The article was using dual parabolloid mapping (where distortion d(u) gets large)
+                //       For cubemap, distortion is low, let's assume it is constant to 1 atm.
+                // Note: Distribution_GGX returns the NDF multiplied by Pi (not sure we have to divide though)
+                float D = Distribution_GGX(NoH, aAlphaSquared) / M_PI;
+                float lod = max(0, lodUniform - (log2(D / 4) / 2));
+                sampled = textureLod(aEnvMap, sampleDir, lod).rgb;
+
+            #if 0 
+                // Alternative implementation from https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/
+                // which gives visually close results (I think it is equivalent up to a constant factor)
+                float pdf = (D /** NdotH*/ / (4.0 /** HdotV*/)) + 0.0001; 
+                float resolution = 2048.0; // resolution of source cubemap (per face)
+                float saTexel  = 4.0 * M_PI / (6.0 * resolution * resolution);
+                float saSample = 1.0 / (float(N) * pdf + 0.0001);
+                float mipLevel = 0.5 * log2(saSample / saTexel); 
+
+                sampled = textureLod(aEnvMap, sampleDir, lod).rgb;
+            #endif
+            }
+            else
+            {
+                // The sample direction should be unique, with L == N == V == R.
+                // i.e. we can leverage normal LODs calculation
+                // Also, we should only ever take 1 sample...
+                sampled = texture(aEnvMap, sampleDir).rgb;
+            }
+#else
+            vec3 sampled = min(vec3(500.),
+                               textureLod(aEnvMap, vec3(L.xy, -L.z), 0).rgb);
+#endif
+
+            prefilteredColor += sampled * nDotL;
             totalWeight += nDotL;
         }
     }

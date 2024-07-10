@@ -40,8 +40,12 @@ vec3 diffuseBrdf_weightedLambertian(vec3 aFresnelReflectance, vec3 aDiffuseColor
 //
 
 // Important: returned multiplied by Pi, so the overall GGX specular BRDF is mutiplied by Pi
+/// @param aAlphaSq cannot be null
 float Distribution_GGX(float nDotH, float aAlphaSq)
 {
+    // Note: I do not know how to handle alpha == 0:
+    // the function becomes an asymptote where result is 0 but tends to +inf as nDotH tends to 1.
+
     float d = 1 + nDotH * nDotH * (aAlphaSq - 1);
     // TODO is heaviside useful here?
     return (heaviside(nDotH) * aAlphaSq) / (d * d);
