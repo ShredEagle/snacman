@@ -521,6 +521,8 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
         }
     }
 
+    mGraphGui.present(mGraph);
+
     static bool gShowScene = false;
     if(imguiui::addCheckbox("Scene", gShowScene))
     {
