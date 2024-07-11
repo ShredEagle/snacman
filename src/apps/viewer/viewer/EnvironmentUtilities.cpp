@@ -185,6 +185,52 @@ Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
 }
 
 
+Handle<graphics::Texture> integrateEnvironmentBrdf(Storage & aStorage,
+                                                   GLsizei aOutputSideLength,
+                                                   const Loader & aLoader)
+{
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "integrate environment brdf", CpuTime, GpuTime);
+
+    const math::Size<2, GLsizei> size{aOutputSideLength, aOutputSideLength};
+
+    graphics::Texture result{GL_TEXTURE_2D};
+    graphics::allocateStorage(result,
+                              // Note: the paper recommended 16bit floats for precision
+                              GL_RG32F, // This is the commonly used internal format around these functions
+                              size.width(), size.height(),
+                              1);
+
+    graphics::FrameBuffer framebuffer;
+    graphics::ScopedBind boundFbo{framebuffer, graphics::FrameBufferTarget::Draw};
+
+    // We attach the current texture level 0 to the Framebuffer's draw color buffer attachment 1 
+    // (it could be zero since we do not attach to another color buffer, this is just to be fancy)
+    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
+                            GL_COLOR_ATTACHMENT1,
+                            GL_TEXTURE_2D,
+                            result, 
+                            0);
+
+    // Map output fragment color at location 2 to the draw buffer at color attachment 1
+    // (once again, just to be fancy, we could use the default mapping 
+    //  of fragment color at location 0 to the draw buffer at color attachment 1)
+    static const std::array<GLenum, 3> drawBuffers{GL_NONE, GL_NONE, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers((GLsizei)drawBuffers.size(), drawBuffers.data());
+
+    glViewport(0, 0, size.width(), size.height());
+
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    IntrospectProgram program = aLoader.loadProgram("shaders/IntegrateEnvironmentBrdf.prog");
+    graphics::ScopedBind boundProgram(program);
+
+    // Draw the fullscreen quad (which will invoke the FS for each ouptut pixel of the viewport)
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    return &aStorage.mTextures.emplace_back(std::move(result));
+}
+
+
 graphics::Texture highLightSamples(const Environment & aEnvironment,
                                    math::Vec<3, float> aSurfaceNormal,
                                    float aRoughness,

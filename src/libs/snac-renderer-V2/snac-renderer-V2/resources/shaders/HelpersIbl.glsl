@@ -53,8 +53,9 @@ float alphaFromRoughness(float aRoughness)
 
 
 /// @param Xi (Chi) a random uniform sample on [0, 1].
-/// @param N The surface normal in world space.
-/// @return A half-vector (H) in world space that allows importance sampling of the GGX specular lobe.
+/// @param N The surface normal in a coordinate system that will be used for the result.
+/// @return A half-vector (H) <b>in the same space as N</b>
+///         that allows importance sampling of the GGX specular lobe.
 vec3 importanceSampleGGX(vec2 Xi, float aAlphaSquared, vec3 N)
 {
     float Phi = 2 * M_PI * Xi.x;
@@ -68,11 +69,12 @@ vec3 importanceSampleGGX(vec2 Xi, float aAlphaSquared, vec3 N)
     H.x = SinTheta * cos( Phi );
     H.y = SinTheta * sin( Phi );
     H.z = CosTheta;
-    // Compute the world coordinates of the tagent space basis vectors
+    // Compute the coordinates of the tagent space basis vectors in the space of N
+    // (the resulting tangent space is right-handed)
     vec3 UpVector = abs(N.z) < 0.999 ? vec3(0,0,1) : vec3(1,0,0);
     vec3 TangentX = normalize( cross( UpVector, N ) );
     vec3 TangentY = cross( N, TangentX );
-    // Tangent to world space
+    // TBN to world space
     return TangentX * H.x + TangentY * H.y + N * H.z;
 }
 
@@ -199,6 +201,51 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
     }
 
     return prefilteredColor / totalWeight;
+}
+
+
+vec2 integrateBRDF(float aAlphaSquared, float NoV)
+{
+    const uint NumSamples = 1024;
+
+    // View vector in tangent space
+    vec3 V;
+    V.x = sqrt(1.0f - NoV * NoV); // sin
+    V.y = 0;
+    V.z = NoV; // cos
+    
+    const vec3 normal_tbn = vec3(0, 0, 1);
+
+    float A = 0; // Scale accumulator
+    float B = 0; // Bias accumulator
+    for( uint i = 0; i < NumSamples; i++ )
+    {
+        vec2 Xi = hammersley(i, NumSamples);
+        // H in tangent space
+        vec3 H = importanceSampleGGX(Xi, aAlphaSquared, normal_tbn);
+        vec3 L = 2 * dot( V, H ) * H - V;
+        float NoL = max(0, L.z); // normal being (0, 0, 1);
+        float NoH = max(0, H.z);
+        float VoH = dotPlus(V, H);
+        if(NoL > 0)
+        {
+            // since theta is the angle between normal and light, cos(theta) == NoL
+            // here we aim to integrate : X = (f * cos(theta)) / pdf == F * (G * VoH) / (NoH * NoV)
+            // (this can be verified by expanding the terms and simplifying)
+            // setting G_vis = (G * VoH) / (NoH * NoV), we have X == F * G_vis
+            // subsituting F = F0 + (1 - F0)(1 - VoH)^5
+            // we get X = F0 * (G_vis * (1 - (1 - VoH)^5)) + G_vis * (1 - VoH)^5
+            // (which maps to equation 8 in the paper)
+            // Here we can accumulate the scale (G_vis * (1 - (1 - VoH)^5)) in A
+            // and the bias (G_vis * (1 - VoH)^5) in B
+            float G = G2_GGX(NoL, NoV, aAlphaSquared);
+            float G_Vis = (G * VoH) / (NoH * NoV);
+            float Fc = pow(1 - VoH, 5);
+            A += (1 - Fc) * G_Vis;
+            B += Fc * G_Vis;
+        }
+    }
+    return vec2(A, B) / NumSamples;
 }
 
 

@@ -28,11 +28,17 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
                             std::filesystem::path aOutputStrip);
 
 
+/// @brief Implement the 1st part of the split-sum approximation
 Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
                                                const TheGraph & aGraph,
                                                Storage & aStorage,
                                                GLsizei aOutputSideLength);
 
+
+/// @brief Implement the 2nd part (scale & bias to F0) of the split-sum approximation
+Handle<graphics::Texture> integrateEnvironmentBrdf(Storage & aStorage,
+                                                   GLsizei aOutputSideLength,
+                                                   const Loader & aLoader);
 
 /// @brief Returns a texture showing where `filterEnvironmentMap()` would take its samples
 /// @note The function is very limited at the moment, returning a 2D texture and developped
