@@ -10,17 +10,18 @@
 layout(binding = 1, rgba32f) uniform writeonly image2D outImage;
 
 uniform vec3 u_SurfaceNormal;
-uniform float u_AlphaSquared;
+uniform float u_Roughness;
 
 
 void main()
 {
+    float alphaSquared = pow(alphaFromRoughness(u_Roughness), 2);
+
     // Note: It seems "tricky" to have a function taking an image as parameter
     // see: https://github.com/KhronosGroup/glslang/issues/1720
-    //highlightSamples(u_SurfaceNormal, u_AlphaSquared, outImage);
+    //highlightSamples(u_SurfaceNormal, alphaSquared, outImage);
 
     vec3 N = u_SurfaceNormal;
-    float aAlphaSquared = u_AlphaSquared;
 
     ivec2 size = imageSize(outImage);
 
@@ -41,7 +42,7 @@ void main()
     for(uint i = 0; i < NumSamples; i++)
     {
         vec2 Xi = hammersley(i, NumSamples);
-        vec3 H = importanceSampleGGX(Xi, aAlphaSquared, N);
+        vec3 H = importanceSampleGGX(Xi, alphaSquared, N);
         vec3 L = reflect(-V, H);
         float nDotL = dotPlus(N, L);
         if(nDotL > 0)

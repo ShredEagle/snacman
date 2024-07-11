@@ -312,7 +312,7 @@ void TheGraph::passDrawSkybox(const Environment & aEnvironment, Storage & aStora
 }
 
 
-void TheGraph::passFilterEnvironment(const Environment & aEnvironment, float aAlphaSquared, Storage & aStorage) const
+void TheGraph::passFilterEnvironment(const Environment & aEnvironment, float aRoughness, Storage & aStorage) const
 {
     std::vector<Technique::Annotation> annotations{
         {"pass", "prefilter_radiance"},
@@ -320,7 +320,7 @@ void TheGraph::passFilterEnvironment(const Environment & aEnvironment, float aAl
     Handle<ConfiguredProgram> confProgram = getProgram(*mSkybox.mEffect, annotations);
 
     // TODO: find a more dynamic way to bind those plain uniforms
-    graphics::setUniform(confProgram->mProgram, "u_AlphaSquared", aAlphaSquared);
+    graphics::setUniform(confProgram->mProgram, "u_Roughness", aRoughness);
 
     passSkyboxBase(confProgram->mProgram, aEnvironment, aStorage);
 }

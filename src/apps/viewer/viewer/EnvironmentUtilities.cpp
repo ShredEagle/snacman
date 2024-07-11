@@ -152,7 +152,6 @@ Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
         // Roughness zero seems wasteful (I suppose it should be identical to the unfiltered cubemap)
         // but probably more correct.
         float roughness = (float)level / (textureLevels - 1); // Note: we asserted that textueLevels is more than 1
-        float alphaSquared = std::pow(roughness, 4.f);
 
         glViewport(0, 0, levelSize.width(), levelSize.height());
 
@@ -174,7 +173,7 @@ Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
             orthographicFace.setPose(gCubeCaptureViews[faceIdx]);
             loadCameraUbo(*aGraph.mUbos.mViewingUbo, orthographicFace);
             glClear(GL_COLOR_BUFFER_BIT);
-            aGraph.passFilterEnvironment(aEnvironment, alphaSquared, aStorage);
+            aGraph.passFilterEnvironment(aEnvironment, roughness, aStorage);
         }
 
         // This is the mipmap size derivation described in: 
@@ -239,7 +238,7 @@ graphics::Texture highLightSamples(const Environment & aEnvironment,
     graphics::ScopedBind boundProgram(program);
 
     graphics::setUniform(program, "u_SurfaceNormal", aSurfaceNormal);
-    graphics::setUniform(program, "u_AlphaSquared", std::pow(aRoughness, 4.f));
+    graphics::setUniform(program, "u_Roughness", aRoughness);
 
     // Rasterizing 1 pixel of the quad is all we need:
     // A single shader invocation takes care of all the job

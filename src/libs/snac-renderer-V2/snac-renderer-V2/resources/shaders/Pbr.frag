@@ -228,7 +228,7 @@ void main()
     //
     // Also, from "Real Shading in Unreal Engine 4", some other massaging of roughness are possible.
     // For examplen to reduce "hotness" alpha = ((roughness + 1) / 2) ^ 2
-    float alpha = roughness * roughness;
+    float alpha = alphaFromRoughness(roughness);
     // Note: Too smooth a surface (i.e too low an alpha)
     // makes it that there is not even a specular highlight showing with most models
     // (at least GGX & Blinn-Phong)

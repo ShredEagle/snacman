@@ -39,6 +39,19 @@ vec2 hammersley(uint i, uint N)
 //////
 
 
+/// @brief Comput alpha from roughness parameter
+float alphaFromRoughness(float aRoughness)
+{
+    // Disney PBR square the user provided roughness value (r) to obtain alpha.
+    // hard to say if the metallic-roughness map already contains it squared, which would save instructions
+    // (but would change the precision distribution)
+    //
+    // Also, from "Real Shading in Unreal Engine 4", some other massaging of roughness are possible.
+    // For examplen to reduce "hotness" alpha = ((roughness + 1) / 2) ^ 2
+    return aRoughness * aRoughness;
+}
+
+
 /// @param Xi (Chi) a random uniform sample on [0, 1].
 /// @param N The surface normal in world space.
 /// @return A half-vector (H) in world space that allows importance sampling of the GGX specular lobe.
