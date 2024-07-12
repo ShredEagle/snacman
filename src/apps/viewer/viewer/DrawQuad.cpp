@@ -43,19 +43,32 @@ namespace {
 
         in vec2 ex_Uv;
 
-        layout(binding=0) uniform sampler2D u_Texture;
+        layout(binding=0) uniform sampler2D u_Texture2D;
+        layout(binding=1) uniform samplerCube u_TextureCubemap;
 
         uniform int u_SourceChannel;
 
         uniform unsigned int u_Linearization;
         uniform float u_NearDistance;
         uniform float u_FarDistance;
+        uniform bool u_IsCubemap;
 
         out vec4 out_Color;
 
         void main()
         {
-            vec4 sampled = texture(u_Texture, ex_Uv);
+            vec4 sampled;
+            if(u_IsCubemap)
+            {
+                // Using Z = +1 will index into the cubemap X_POSITIVE face
+                // (since (u, v) is in [0, 1]^2)
+                // TODO allow to select other cubemap faces.
+                sampled = textureLod(u_TextureCubemap, vec3(ex_Uv * 2 - 1, 1.), 1); // TODO control lod with uniform
+            }
+            else
+            {
+                sampled = texture(u_Texture2D, ex_Uv);
+            }
             vec4 color = sampled;
             if(u_SourceChannel >= 0)
             {
@@ -124,10 +137,11 @@ void drawQuad(DrawQuadParameters aParameters)
     glBindVertexArray(dummyVao);
     glUseProgram(program);
 
-    glProgramUniform1i(program, glGetUniformLocation(program, "u_SourceChannel"), aParameters.mSourceChannel);
-    glProgramUniform1ui(program, glGetUniformLocation(program,  "u_Linearization"), aParameters.mOperation);
-    glProgramUniform1f(program, glGetUniformLocation(program, "u_NearDistance"),  aParameters.mNearDistance);
-    glProgramUniform1f(program, glGetUniformLocation(program, "u_FarDistance"),   aParameters.mFarDistance);
+    glProgramUniform1i( program, glGetUniformLocation(program, "u_SourceChannel"), aParameters.mSourceChannel);
+    glProgramUniform1ui(program, glGetUniformLocation(program, "u_Linearization"), aParameters.mOperation);
+    glProgramUniform1f( program, glGetUniformLocation(program, "u_NearDistance"),  aParameters.mNearDistance);
+    glProgramUniform1f( program, glGetUniformLocation(program, "u_FarDistance"),   aParameters.mFarDistance);
+    glProgramUniform1i( program, glGetUniformLocation(program, "u_IsCubemap"),     aParameters.mIsCubemap);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }

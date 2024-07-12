@@ -252,8 +252,14 @@ void TheGraph::renderFrame(const Scene & aScene,
     //
     auto [nearZ, farZ] = getNearFarPlanes(aCamera);
     showDepthTexture(mDepthMap, nearZ, farZ) ;
-    showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
-    showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
+    //showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
+    //showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
+
+    if(aScene.mEnvironment && aScene.mEnvironment->mFilteredRadiance != 0)
+    {
+        showTexture(*aScene.mEnvironment->mFilteredRadiance, 1, {.mIsCubemap = true,}) ;
+        showTexture(*aScene.mEnvironment->mIntegratedBrdf, 2) ;
+    }
 }
 
 
@@ -345,7 +351,15 @@ void TheGraph::showTexture(const graphics::Texture & aTexture,
     // and prevent main rasterization behind them.
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glActiveTexture(GL_TEXTURE0);
+    
+    if(aTexture.mTarget == GL_TEXTURE_CUBE_MAP)
+    {
+        glActiveTexture(GL_TEXTURE1);
+    }
+    else
+    {
+        glActiveTexture(GL_TEXTURE0);
+    }
     glBindTexture(aTexture.mTarget, aTexture);
 
     // Would require scissor test to clear only part of the screen.

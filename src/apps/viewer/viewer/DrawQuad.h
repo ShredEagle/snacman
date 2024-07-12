@@ -25,12 +25,15 @@ struct DrawQuadParameters
     Operation mOperation = None;
     GLfloat mNearDistance;
     GLfloat mFarDistance;
+    GLboolean mIsCubemap = false;
 };
 
 
 void drawQuad(DrawQuadParameters aParameters = {});
 
 
+// TODO Ad 2024/07/12: Refactor, this is currently mostly used to display textures content in viewports
+// but the texture handling is very hardcoded (in particular cubemap), not complete (missing LODs, etc.)
 struct QuadDrawer
 {
     QuadDrawer(graphics::ShaderSourceView aFragmentCode);
