@@ -73,28 +73,87 @@ vec3 importanceSampleGGX(vec2 Xi, float aAlphaSquared, vec3 N)
     // (the resulting tangent space is right-handed)
     vec3 UpVector = abs(N.z) < 0.999 ? vec3(0,0,1) : vec3(1,0,0);
     vec3 TangentX = normalize( cross( UpVector, N ) );
-    vec3 TangentY = cross( N, TangentX );
+    vec3 TangentY = cross(N, TangentX);
     // TBN to world space
     return TangentX * H.x + TangentY * H.y + N * H.z;
 }
 
 
+/// @brief Compute the LOD approximating the cone matching distance between samples
+/// see: rtr 4th p419
+/// see: [GPU Gems 3 chapter 20](https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-20-gpu-based-importance-sampling)
+/// @param aLodUniformTerm a term constant for a given texture size and sample count, that is computed by computeLodUniformTerm()
+/// @note This is hardcoding the GGX NDF when getting D to compute the PDF.
+/// @warning This is hardcoding the anisotropic assumption used in split-sum approximation, that N == V == R.
+float computeLodIsotropic_GGX(float aLodUniformTerm, float NoH, float aAlphaSquared)
+{
+    // From "Real Shading in Unreal Engine 4": pdf = D * NoH / (4 * VoH)
+    // From GPU Gems 3 chapter 20:
+    // lod = max(0, 1/2 log2(w*h/N) - 1/2 log2(p(u,v) d(u)))
+
+    // Note: NoH == VoH because of the isotropic assumtion (see above that N == V == R).
+    // Note: The article was using dual parabolloid mapping (where distortion d(u) gets large)
+    //       For cubemap, distortion is low, let's assume it is constant to 1 atm.
+    // Note: Distribution_GGX returns the NDF multiplied by Pi (not sure we have to divide though)
+    float D = Distribution_GGX(NoH, aAlphaSquared) / M_PI;
+    float lod = max(0, aLodUniformTerm - (log2(D / 4) / 2));
+
+#if 0 
+    // Alternative implementation from https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/
+    // which gives visually close results (I think it is equivalent up to a constant factor)
+    float pdf = (D /** NdotH*/ / (4.0 /** HdotV*/)) + 0.0001; 
+    float resolution = 2048.0; // resolution of source cubemap (per face)
+    float saTexel  = 4.0 * M_PI / (6.0 * resolution * resolution);
+    float saSample = 1.0 / (float(N) * pdf + 0.0001);
+    lod = 0.5 * log2(saSample / saTexel); 
+#endif
+
+    return lod;
+}
+
+
+float computeLodGeneric_GGX(float aLodUniformTerm, float NoH, float VoH, float aAlphaSquared)
+{
+    // From "Real Shading in Unreal Engine 4": pdf = D * NoH / (4 * VoH)
+    // From GPU Gems 3 chapter 20:
+    // lod = max(0, 1/2 log2(w*h/N) - 1/2 log2(p(u,v) d(u)))
+
+    // Note: Distribution_GGX returns the NDF multiplied by Pi (not sure we have to divide though)
+    float D = Distribution_GGX(NoH, aAlphaSquared) / M_PI;
+    return max(0, aLodUniformTerm - (log2((D * NoH) / (4 * VoH)) / 2));
+}
+
+
+float computeLodUniformTerm(ivec2 aEnvSize, uint aNumSamples)
+{
+    return log2(aEnvSize.x * aEnvSize.y / aNumSamples) / 2.0;
+}
+
+
+// Use the environment mipmaps when prefiltering, which immensely helps with aliasing
+#define PREFILTER_LEVERAGE_LOD
+
 /// @brief Specular contribution of Image Based Lighting from a cube environment map.
 /// 
 /// Computed via quasi Monte Carlo importance sampling of the environment map.
-vec3 specularIBL(vec3 SpecularColor, float aAlphaSquared, vec3 N, vec3 V, samplerCube aEnvMap)
+vec3 specularIBL(vec3 aSpecularColor, float aAlphaSquared, vec3 N, vec3 V, samplerCube aEnvMap)
 {
+    //const uint NumSamples = 1024;
+    const uint NumSamples = 256;
+
     vec3 specularLighting = vec3(0);
 
     // Does not depend on the sample
     float NoV = dotPlus(N, V);
-    if(NoV == 0) // Would cause a divisioh by zero on accumulation
+    if(NoV == 0) // Would cause a division by zero on accumulation
     {
         return vec3(0.);
     }
 
-    //const uint NumSamples = 1024;
-    const uint NumSamples = 256;
+#if defined(PREFILTER_LEVERAGE_LOD)
+    float lodUniformTerm = computeLodUniformTerm(textureSize(aEnvMap, 0), NumSamples);
+#endif
+
     for(uint i = 0; i < NumSamples; i++)
     {
         vec2 Xi = hammersley(i, NumSamples);
@@ -105,9 +164,16 @@ vec3 specularIBL(vec3 SpecularColor, float aAlphaSquared, vec3 N, vec3 V, sample
         float VoH = dotPlus(V, H);
         if(NoL > 0)
         {
-            vec3 sampleColor = textureLod(aEnvMap, vec3(L.xy, -L.z), 0).rgb;
+#if defined(PREFILTER_LEVERAGE_LOD)
+            // I think NoH and VoH have to be > 0 when getting there
+            float lod = computeLodGeneric_GGX(lodUniformTerm, NoH, VoH, aAlphaSquared);
+#else
+            float lod = 0.;
+#endif
+            vec3 sampleColor = textureLod(aEnvMap, vec3(L.xy, -L.z), lod).rgb;
+
             float G = G2_GGX(NoL, NoV, aAlphaSquared);
-            vec3 F = schlickFresnelReflectance(VoH, SpecularColor);
+            vec3 F = schlickFresnelReflectance(VoH, aSpecularColor);
             // Incident light = sampleColor * NoL
             // Microfacet specular = D*G*F / (4*NoL*NoV)
             // pdf = D * NoH / (4 * VoH)
@@ -117,9 +183,6 @@ vec3 specularIBL(vec3 SpecularColor, float aAlphaSquared, vec3 N, vec3 V, sample
     return specularLighting / NumSamples;
 }
 
-
-// Use the original environment mipmaps when prefiltering, which immensely helps with aliasing
-#define PREFILTER_LEVERAGE_LOD
 
 /// @param R the \b normalized reflection direction 
 /// (i.e. the direciton that would be sampled in the filtered map)
@@ -134,8 +197,7 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
     vec3 V = R;
     
 #if defined(PREFILTER_LEVERAGE_LOD)
-    ivec2 envSize = textureSize(aEnvMap, 0);
-    float lodUniform = log2(envSize.x * envSize.y / NumSamples) / 2;
+    float lodUniformTerm = computeLodUniformTerm(textureSize(aEnvMap, 0), NumSamples);
 #endif
 
     // The accumulator
@@ -158,30 +220,8 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
             // (only one sample direction should be possible when alpha == 0)
             if(aAlphaSquared != 0.)
             {
-                // From "Real Shading in Unreal Engine 4": pdf = D * NoH / (4 * VoH)
-                // From GPU Gems 3 chapter 20:
-                // lod = max(0, 1/2 log2(w*h/N) - 1/2 log2(p(u,v) d(u)))
-
-                float NoH = dot(N, H);
-                // Note: NoH == VoH because of the isotropic assumtion (see above that N == V == R).
-                // Note: The article was using dual parabolloid mapping (where distortion d(u) gets large)
-                //       For cubemap, distortion is low, let's assume it is constant to 1 atm.
-                // Note: Distribution_GGX returns the NDF multiplied by Pi (not sure we have to divide though)
-                float D = Distribution_GGX(NoH, aAlphaSquared) / M_PI;
-                float lod = max(0, lodUniform - (log2(D / 4) / 2));
+                float lod = computeLodIsotropic_GGX(lodUniformTerm, dot(N, H), aAlphaSquared);
                 sampled = textureLod(aEnvMap, sampleDir, lod).rgb;
-
-            #if 0 
-                // Alternative implementation from https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/
-                // which gives visually close results (I think it is equivalent up to a constant factor)
-                float pdf = (D /** NdotH*/ / (4.0 /** HdotV*/)) + 0.0001; 
-                float resolution = 2048.0; // resolution of source cubemap (per face)
-                float saTexel  = 4.0 * M_PI / (6.0 * resolution * resolution);
-                float saSample = 1.0 / (float(N) * pdf + 0.0001);
-                float mipLevel = 0.5 * log2(saSample / saTexel); 
-
-                sampled = textureLod(aEnvMap, sampleDir, lod).rgb;
-            #endif
             }
             else
             {
@@ -191,8 +231,10 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
                 sampled = texture(aEnvMap, sampleDir).rgb;
             }
 #else
-            vec3 sampled = min(vec3(500.),
-                               textureLod(aEnvMap, vec3(L.xy, -L.z), 0).rgb);
+            // Limiting light intensity can reduce aliasing due to hug contributions, like the sun
+            //vec3 sampled = min(vec3(100.),
+            //                   textureLod(aEnvMap, vec3(L.xy, -L.z), 0).rgb);
+            vec3 sampled = textureLod(aEnvMap, vec3(L.xy, -L.z), 0).rgb;
 #endif
 
             prefilteredColor += sampled * nDotL;
