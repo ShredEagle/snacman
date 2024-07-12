@@ -1,4 +1,4 @@
-#version 420
+#version 430
 
 #include "Gamma.glsl"
 #include "HelpersIbl.glsl"
@@ -28,6 +28,9 @@ uniform sampler2DArray u_MetallicRoughnessAoTexture;
 
 #if defined(ENVIRONMENT_MAPPING)
 uniform samplerCube u_EnvironmentTexture;
+uniform samplerCube u_FilteredRadianceEnvironmentTexture;
+uniform sampler2D u_IntegratedEnvironmentBrdf;
+
 #endif
 
 out vec4 out_Color;
@@ -352,8 +355,11 @@ void main()
 
     vec3 fragmentColor = ambient + diffuse + specular;
 
-//#define ENVIRONMENT_MAPPING_MIRROR 
 #if defined(ENVIRONMENT_MAPPING)
+
+//#define ENVIRONMENT_MAPPING_MIRROR 
+#define APPROXIMATE_SPECULAR_IBL
+
     // No need to normalize as long as it is only used to sample a cubemap.
     vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, shadingNormal_cam);
     
@@ -363,16 +369,42 @@ void main()
     fragmentColor += schlickFresnelReflectance(shadingNormal_cam, view_cam, pbrMaterial.f0)
                      * mirror;
 #else
-    //float alphaSquared = pbrMaterial.alpha;
-    float alphaSquared = pow(0.1, 4);
-    // TODO: test if f0 is the same thing here? (and re read code)
-    //vec3 specularIbl = specularIBL(pbrMaterial.f0,
+    // TODO fix that when implementing correct IBL
+    roughness = 0.2;
+    float alphaSquared = pow(alphaFromRoughness(roughness), 2);
+    
+    // THE REAL THING
+    //float alphaSquared = pow(max(0.00001, pbrMaterial.alpha), 2);
+
+#if defined(APPROXIMATE_SPECULAR_IBL)
+#if 0
+    vec3 specularIbl = approximateSpecularIbl_live(material.specularColor.rgb,
+                                 dotPlus(shadingNormal_cam, view_cam),
+                                 reflected_world,
+                                 alphaSquared,
+                                 roughness,
+                                 u_EnvironmentTexture);
+#else
+    vec3 specularIbl = approximateSpecularIbl(material.specularColor.rgb,
+                                reflected_world,
+                                // Note should be reused from previous computation
+                                // (but is currently calculated inside a function)
+                                dotPlus(shadingNormal_cam, view_cam),
+                                roughness,
+                                u_FilteredRadianceEnvironmentTexture,
+                                u_IntegratedEnvironmentBrdf);
+#endif
+#else
     vec3 specularIbl = specularIBL(material.specularColor.rgb,
                                    alphaSquared,
                                    normalize(mat3(cameraToWorld) * shadingNormal_cam),
-                                   //normalize(mat3(cameraToWorld) * normal_cam),
                                    normalize(mat3(cameraToWorld) * view_cam),
                                    u_EnvironmentTexture);
+#endif // APPROXIMATE_SPECULAR_IBL
+
+    // Control the contribution of specular IBL to the final color
+    const float specularIblFactor = 0.4;
+
     // Catches the nan and make them more obvious
     if(isnan(specularIbl.r))
     {
@@ -380,8 +412,9 @@ void main()
     }
     else
     {
-        fragmentColor += specularIbl;
+        fragmentColor += specularIbl * specularIblFactor;
     }
+
 #endif // ENVIRONMENT_MAPPING_MIRROR
 #endif // ENVIRONMENT_MAPPING
 

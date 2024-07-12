@@ -1,7 +1,7 @@
 // Compute the 2nd part of the split-sum approximation, "Environment BRDF",
 // as described in "Real Shading in Unreal Engine 4"
 
-#version 420
+#version 430
 
 
 #include "HelpersIbl.glsl"

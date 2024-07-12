@@ -180,11 +180,19 @@ Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
         // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexStorage2D.xhtml
         levelSize = max((levelSize / 2), {1, 1});
     }
+    
+    {
+        graphics::ScopedBind boundCubemap{filteredCubemap};
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        //glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY, 16.f);
+    }
 
     return &aStorage.mTextures.emplace_back(std::move(filteredCubemap));
 }
 
 
+// Note: Render to a texture via the classical framebuffer/viewport approach.
 Handle<graphics::Texture> integrateEnvironmentBrdf(Storage & aStorage,
                                                    GLsizei aOutputSideLength,
                                                    const Loader & aLoader)
@@ -231,6 +239,7 @@ Handle<graphics::Texture> integrateEnvironmentBrdf(Storage & aStorage,
 }
 
 
+// Note: Renders with random writes (scatter) to an Image
 graphics::Texture highLightSamples(const Environment & aEnvironment,
                                    math::Vec<3, float> aSurfaceNormal,
                                    float aRoughness,

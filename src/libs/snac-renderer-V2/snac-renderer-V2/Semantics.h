@@ -22,6 +22,7 @@ namespace semantic
     SEM(MetallicRoughnessAoTexture);
     SEM(EnvironmentTexture);
     SEM(FilteredRadianceEnvironmentTexture);
+    SEM(IntegratedEnvironmentBrdf);
     const Semantic gModelTransformIdx{"ModelTransformIdx"};
     const Semantic gMaterialIdx{"MaterialIdx"};
     SEM(MatrixPaletteOffset);

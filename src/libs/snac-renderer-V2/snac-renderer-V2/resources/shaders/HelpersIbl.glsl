@@ -291,4 +291,42 @@ vec2 integrateBRDF(float aAlphaSquared, float NoV)
 }
 
 
+/// @brief Split-sum approximation of the specular contribution from IBL
+/// Acts as an approximate and much faster specularIbl()
+vec3 approximateSpecularIbl(vec3 aSpecularColor,
+                            vec3 aReflection,
+                            float NoV,
+                            float aRoughness,
+                            samplerCube aFilteredRadiance,
+                            sampler2D aIntegratedBrdf)
+{
+    // TODO replace with an uniform
+    const int lodCount = textureQueryLevels(aFilteredRadiance);
+
+    float lod = aRoughness * float(lodCount);
+    vec3 cubemapSampleDir = vec3(aReflection.xy, -aReflection.z);
+    vec3 filteredRadiance = textureLod(aFilteredRadiance, cubemapSampleDir, lod).rgb;
+
+    vec2 brdf = texture(aIntegratedBrdf, vec2(NoV, aRoughness)).rg;
+    
+    return filteredRadiance;
+    return filteredRadiance * (aSpecularColor * brdf.r + brdf.g);
+}
+
+
+/// @brief Split-sum approximatin of the specular contribution from IBL
+/// Instead of fetching from the usual pre-computed textures,
+/// this variant directly computes each term of the approximation.
+vec3 approximateSpecularIbl_live(vec3 aSpecularColor,
+                                 float NoV,
+                                 vec3 aReflection,
+                                 float aAlphaSquared,
+                                 float aRoughness,
+                                 samplerCube aEnvMap)
+{
+    vec3 prefilteredColor = prefilterEnvMap(aAlphaSquared, aReflection, aEnvMap);
+    vec2 envBRDF = integrateBRDF(aAlphaSquared, NoV);
+    return prefilteredColor * (aSpecularColor * envBRDF.x + envBRDF.y);
+}
+
 #endif //include guard
