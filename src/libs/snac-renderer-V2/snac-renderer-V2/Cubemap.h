@@ -11,7 +11,7 @@ namespace ad::renderer {
 struct Loader;
 
 
-extern const std::array<math::AffineMatrix<4, GLfloat>, 6> gCubeCaptureViews;
+extern const std::array<math::AffineMatrix<4, GLfloat>, 6> gCubeCaptureViewsNegateY;
 
 
 /// @param aImageStrip should be in the standard OpenGL order (+X, -X, +Y, -Y, +Z, -Z)

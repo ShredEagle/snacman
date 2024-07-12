@@ -26,6 +26,7 @@ namespace {
         //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     }
 
+    constexpr auto gNegateVertical = math::trans3d::scale(1.f, -1.f, 1.f);
 } // unnamed namespace
 
 
@@ -33,22 +34,22 @@ namespace {
 // Yet, the coordinate system of the cubemap is **left-handed**,
 // so we want to render a camera facing -Z in our right-handed world to render the cubemap +Z
 // (see: https://www.khronos.org/opengl/wiki/Cubemap_Texture#Upload_and_orientation)
-// Important: The camera UP is negated in order to generate images with a top-left origin,
+// Important: The camera vertical axis is negated (not rotated!) in order to generate images with a top-left origin,
 // (i.e. first bytes appearing in the texture correspond to the top row, instead of the bottom row)
 // since cubemaps, unlike all other OpenGL textures, are behaving as having a top-left origin.
-const std::array<math::AffineMatrix<4, GLfloat>, 6> gCubeCaptureViews{
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 1.f,  0.f,  0.f}, {0.f, -1.f,  0.f}),
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {-1.f,  0.f,  0.f}, {0.f, -1.f,  0.f}),
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f,  1.f,  0.f}, {0.f,  0.f, -1.f}),
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f, -1.f,  0.f}, {0.f,  0.f,  1.f}),
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f,  0.f, -1.f}, {0.f, -1.f,  0.f}), // -Z in our right handed basis
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f,  0.f,  1.f}, {0.f, -1.f,  0.f}),
+const std::array<math::AffineMatrix<4, GLfloat>, 6> gCubeCaptureViewsNegateY{
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 1.f,  0.f,  0.f}) * gNegateVertical,
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {-1.f,  0.f,  0.f}) * gNegateVertical,
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f,  1.f,  0.f}, {0.f,  0.f,  1.f}) * gNegateVertical,
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f, -1.f,  0.f}, {0.f,  0.f, -1.f}) * gNegateVertical,
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f,  0.f, -1.f}) * gNegateVertical, // -Z in our right handed basis
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f,  0.f,  1.f}) * gNegateVertical,
 };
 
 
 graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
 {
-    // Note: Cubemap coordinates are a surprisingly confusing topic 
+    // Note: Cubemap coordinates are a surprisingly confusing topic
     // (still giving rise to posts such as:
     //  https://community.khronos.org/t/image-orientation-for-cubemaps-actually-a-very-old-topic/105338)
     // My current approach is to load the faces as labeled in the left-handed coordinate system described in:
@@ -57,7 +58,7 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
     // This is the opposite of the usual bottom origin for texture (u, v) in OpenGL:
     // For this reason, the image files are not flipped vertically as they usually should be.
     // (So, the individual cubemap texture images appear upside down in Nsight Graphics)
-    arte::Image<math::hdr::Rgb_f> hdrStrip = 
+    arte::Image<math::hdr::Rgb_f> hdrStrip =
         arte::Image<math::hdr::Rgb_f>::LoadFile(aImageStrip,
                                                 arte::ImageOrientation::Unchanged);
     // A requirement for a strip representing the 6 faces of a cubemap
@@ -99,7 +100,7 @@ graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence)
     const std::string stem = aImageSequence.stem().string();
     const std::string extension = aImageSequence.extension().string();
 
-    arte::Image<math::hdr::Rgb_f> hdrFace = 
+    arte::Image<math::hdr::Rgb_f> hdrFace =
         arte::Image<math::hdr::Rgb_f>::LoadFile(parent / (stem + "_" + std::to_string(0) + extension),
                                                 arte::ImageOrientation::Unchanged);
     const GLsizei side = hdrFace.height();
@@ -117,7 +118,7 @@ graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence)
     {
         if (faceIdx != 0)
         {
-            hdrFace = 
+            hdrFace =
                 arte::Image<math::hdr::Rgb_f>::LoadFile(
                     parent / (stem + "_" + std::to_string(faceIdx) + extension),
                     arte::ImageOrientation::Unchanged);
@@ -141,7 +142,7 @@ graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence)
 
 graphics::Texture loadEquirectangular(filesystem::path aEquirectangularMap)
 {
-    arte::Image<math::hdr::Rgb_f> hdrMap = 
+    arte::Image<math::hdr::Rgb_f> hdrMap =
         arte::Image<math::hdr::Rgb_f>::LoadFile(aEquirectangularMap,
                                                 arte::ImageOrientation::InvertVerticalAxis);
 
@@ -188,7 +189,7 @@ Skybox::Skybox(const Loader & aLoader, Storage & aStorage) :
 {
     std::vector<math::Position<3, float>> vertices;
     vertices.reserve(cube::Maker::gVertexCount);
-    for(unsigned int idx = 0; idx != cube::Maker::gVertexCount; ++idx) 
+    for(unsigned int idx = 0; idx != cube::Maker::gVertexCount; ++idx)
     {
         vertices.push_back(cube::Maker::getPosition(idx));
     }

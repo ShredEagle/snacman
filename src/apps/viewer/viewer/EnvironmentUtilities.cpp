@@ -72,7 +72,7 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
         // Make a pass with the appropriate camera pose
         orthographicFace.setPose(gCubeCaptureViews[faceIdx]);
         loadCameraUbo(*aGraph.mUbos.mViewingUbo, orthographicFace);
-        aGraph.passSkybox(aEnvironment, aStorage);
+        aGraph.passDrawSkybox(aEnvironment, aStorage, GL_BACK);
 
         glReadPixels(0, 0, renderSize.width(), renderSize.height(),
                      GL_RGB, graphics::MappedPixelComponentType_v<Pixel>, image.data());
@@ -91,9 +91,13 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
     for(unsigned int faceIdx = 0; faceIdx != gFaceCount; ++faceIdx)
     {
         // Make a pass with the appropriate camera pose
-        orthographicFace.setPose(gCubeCaptureViews[faceIdx]);
+        orthographicFace.setPose(gCubeCaptureViewsNegateY[faceIdx]);
         loadCameraUbo(*aGraph.mUbos.mViewingUbo, orthographicFace);
-        aGraph.passDrawSkybox(aEnvironment, aStorage);
+
+        // When drawing the skybox, we are "inside" the cube, so only render backfaces (cull GL_FRONT)
+        // Yet, we use a camera transform that negates the Y coordinates, turning backfaces into frontfaces
+        // i.e., we only render frontfaces (cull GL_BACK).
+        aGraph.passDrawSkybox(aEnvironment, aStorage, GL_BACK);
 
         glReadPixels(0, 0, renderSize.width(), renderSize.height(),
                      GL_RGB, graphics::MappedPixelComponentType_v<Pixel>,
@@ -173,10 +177,14 @@ Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
             glDrawBuffer(GL_COLOR_ATTACHMENT1);
 
             // Set the appropriate camera pose for this face's pass
-            orthographicFace.setPose(gCubeCaptureViews[faceIdx]);
+            // BUGFIXED: It is required to write the destination cubemap images as having top-left origin
+            // This is implemented by negating the Y coordinate of gl_Position (via the provided camera transform)
+            orthographicFace.setPose(gCubeCaptureViewsNegateY[faceIdx]);
             loadCameraUbo(*aGraph.mUbos.mViewingUbo, orthographicFace);
             glClear(GL_COLOR_BUFFER_BIT);
-            aGraph.passFilterEnvironment(aEnvironment, roughness, aStorage);
+
+            // We need to render cube inner-faces (backfaces), but they are turned into frontfaces by the negated Y camera
+            aGraph.passFilterEnvironment(aEnvironment, roughness, aStorage, GL_BACK);
         }
 
         // This is the mipmap size derivation described in: 
