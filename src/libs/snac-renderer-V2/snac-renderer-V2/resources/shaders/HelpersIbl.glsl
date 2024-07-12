@@ -143,14 +143,15 @@ vec3 specularIBL(vec3 aSpecularColor, float aAlphaSquared, vec3 N, vec3 V, sampl
 
     vec3 specularLighting = vec3(0);
 
-    // Does not depend on the sample
-    float NoV = dotPlus(N, V);
-    if(NoV == 0) // Would cause a division by zero on accumulation
-    {
-        return vec3(0.);
-    }
+    // We assume that if a fragment made it there, it's normal N have to make it visible from V.
+    // Yet, it is possible that the dot product is zero (even negative with normal mapping).
+    // Initially, we returned zero if (NoV <= 0),
+    // but this lead to black pixels on some borders where strong Fresnel was expected instead.
+    // Now, clamp to a small positive value instead:
+    float NoV = max(0.000001, dot(N, V));
 
 #if defined(PREFILTER_LEVERAGE_LOD)
+    // Does not depend on the sample
     float lodUniformTerm = computeLodUniformTerm(textureSize(aEnvMap, 0), NumSamples);
 #endif
 
