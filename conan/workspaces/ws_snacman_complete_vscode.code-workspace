@@ -121,7 +121,8 @@
 			"*.rh": "cpp",
 			"strstream": "cpp",
 			"numbers": "cpp",
-			"resumable": "cpp"
+			"resumable": "cpp",
+			"codecvt": "cpp"
 		},
 		"cmake.buildDirectory": "D:\\projects\\Gamedev\\2\\ws_snacman_complete_vscode",
 		"[cpp]": {
@@ -132,12 +133,93 @@
 		"version": "0.2.0",
 		"configurations": [
 			{
-			"name": "(msvc) Launch",
+            "name": "(sew) Bomb scene",
             "type": "cppvsdbg",
             "request": "launch",
             // Resolved by CMake Tools:
             "program": "${command:cmake.launchTargetPath}",
-            "args": ["D:/projects/Gamedev/2/proto-assets/proto_simple.sew"],
+            //"args": ["D:/projects/Gamedev/2/proto-assets/donut.sew"],
+            "args": ["D:/projects/Gamedev/2/artistic-zone/export/Bomb/Bomb.sew"],
+            //"args": ["D:/projects/Gamedev/2/artistic-zone/export/Triangle/triangle.sew"],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB cube outdoor",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/JE_Gray_02/split-je_gray_02_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB equi outdoor",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/JE_Gray_02/je_gray_02_8k.hdr"
+				//"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/river_walk_1/river_walk_1_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			}{
+            "name": "(sew) WB cube neon",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/split-neon_photostudio_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB equi neon",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/neon_photostudio_8k.hdr"
+				//"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/river_walk_1/river_walk_1_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(mdl) Bomb fbx",
+            "type": "cppvsdbg",
+            "request": "launch",
+            // Resolved by CMake Tools:
+            "program": "${command:cmake.launchTargetPath}",
+            "args": ["D:/projects/Gamedev/2/artistic-zone/export/Bomb/Bomb.fbx"],
             "stopAtEntry": false,
             "cwd": "${command:cmake.launchTargetDirectory}",
             "environment": [],
