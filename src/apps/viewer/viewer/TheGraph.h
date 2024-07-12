@@ -99,7 +99,7 @@ struct TheGraph
             "forward_debug",
         };
 
-        std::vector<StringKey>::const_iterator mForwardPassKey = gForwardKeys.begin();
+        std::vector<StringKey>::const_iterator mForwardPassKey = gForwardKeys.begin() + 1;
 
         inline static const std::array<GLenum, 3> gPolygonModes{
             GL_POINT,
