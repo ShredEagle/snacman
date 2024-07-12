@@ -78,7 +78,7 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
                      GL_RGB, graphics::MappedPixelComponentType_v<Pixel>, image.data());
 
         // OpenGL Image origin is bottom left, images on disk are top left, so invert axis.
-        image.saveFile(aOutputColumn.parent_path() / (aOutputColumn.stem() += "_" + std::to_string(faceIdx) + ".hdr"), arte::ImageOrientation::InvertVerticalAxis);
+        image.saveFile(aOutputColumn.parent_path() / (aOutputColumn.stem() += "_" + std::to_string(faceIdx) + ".hdr"), arte::ImageOrientation::Unchanged);
     }
 #else
     std::unique_ptr<unsigned char[]> raster = std::make_unique<unsigned char[]>(sizeof(Pixel) * renderSize.area() * gFaceCount);
@@ -99,8 +99,11 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
                      GL_RGB, graphics::MappedPixelComponentType_v<Pixel>,
                      image.data() + faceIdx * renderSize.width());
     }
-    // OpenGL Image origin is bottom left, images on disk are top left, so invert axis.
-    image.saveFile(aOutputStrip, arte::ImageOrientation::InvertVerticalAxis);
+    // OpenGL Image origin is bottom left, but cubemaps individual faces origin is actually top-left.
+    // Since we directly rendered to the image as a correctly oriented cubemap face 
+    // (cf. negated up vector of gCubeCaptureviews),
+    // it already has the top-left origin expected by image-file formats.
+    image.saveFile(aOutputStrip, arte::ImageOrientation::Unchanged);
 #endif
 }
 

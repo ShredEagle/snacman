@@ -33,13 +33,16 @@ namespace {
 // Yet, the coordinate system of the cubemap is **left-handed**,
 // so we want to render a camera facing -Z in our right-handed world to render the cubemap +Z
 // (see: https://www.khronos.org/opengl/wiki/Cubemap_Texture#Upload_and_orientation)
+// Important: The camera UP is negated in order to generate images with a top-left origin,
+// (i.e. first bytes appearing in the texture correspond to the top row, instead of the bottom row)
+// since cubemaps, unlike all other OpenGL textures, are behaving as having a top-left origin.
 const std::array<math::AffineMatrix<4, GLfloat>, 6> gCubeCaptureViews{
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 1.f, 0.f, 0.f}),
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {-1.f, 0.f, 0.f}),
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {0.f,  1.f, 0.f}, {0.f, 0.f,  1.f}),
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, -1.f}),
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {0.f, 0.f, -1.f}), // -Z in our right handed basis
-    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {0.f, 0.f,  1.f}),
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 1.f,  0.f,  0.f}, {0.f, -1.f,  0.f}),
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {-1.f,  0.f,  0.f}, {0.f, -1.f,  0.f}),
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f,  1.f,  0.f}, {0.f,  0.f, -1.f}),
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f, -1.f,  0.f}, {0.f,  0.f,  1.f}),
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f,  0.f, -1.f}, {0.f, -1.f,  0.f}), // -Z in our right handed basis
+    graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 0.f,  0.f,  1.f}, {0.f, -1.f,  0.f}),
 };
 
 
