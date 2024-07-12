@@ -364,8 +364,7 @@ void main()
     vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, shadingNormal_cam);
     
 #if defined(ENVIRONMENT_MAPPING_MIRROR)
-    vec3 mirror = texture(u_EnvironmentTexture,
-                          vec3(reflected_world.xy, -reflected_world.z)).rgb;
+    vec3 mirror = texture(u_EnvironmentTexture, worldToCubemap(reflected_world)).rgb;
     fragmentColor += schlickFresnelReflectance(shadingNormal_cam, view_cam, pbrMaterial.f0)
                      * mirror;
 #else

@@ -14,6 +14,7 @@ uniform samplerCube u_SkyboxTexture;
 layout(location = 0) out vec4 out_Color;
 layout(location = 1) out vec3 out_LinearHdr;
 
+
 void main()
 {
 #if defined(EQUIRECTANGULAR)
@@ -40,7 +41,7 @@ void main()
     // in right handed world space, so negate Z. 
     // Note: the individual images in the cubemap texture are loaded "upside-down" compared to usual OpenGL textures
     // in order for this to work (you can see they are upside down in Nsight Graphics)
-    vec3 envColor = texture(u_SkyboxTexture, vec3(ex_FragmentPosition_world.xy, -ex_FragmentPosition_world.z)).rgb;
+    vec3 envColor = texture(u_SkyboxTexture, worldToCubemap(ex_FragmentPosition_world)).rgb;
 #endif
     out_Color = correctGamma(vec4(envColor, 1.0));
     out_LinearHdr = envColor;

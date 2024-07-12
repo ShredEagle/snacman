@@ -33,4 +33,14 @@ vec3 remapToRgb(vec3 aInput, float aMagnitude = 1)
     return (aInput + vec3(aMagnitude)) / (2 * aMagnitude);
 }
 
+
+/// @param aWorldDirection direction in world space, expected in the usual right-handed world basis.
+vec3 worldToCubemap(vec3 aWorldDirection)
+{
+    // The cubemap basis is left-handed
+    // see: https://www.khronos.org/opengl/wiki/Cubemap_Texture
+    return vec3(aWorldDirection.xy, -aWorldDirection.z);
+}
+
+
 #endif //include guard

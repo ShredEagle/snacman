@@ -185,7 +185,7 @@ vec3 specularIBL(vec3 aSpecularColor, float aAlphaSquared, vec3 N, vec3 V, sampl
 }
 
 
-/// @param R the \b normalized reflection direction 
+/// @param R the \b normalized reflection direction in world basis
 /// (i.e. the direciton that would be sampled in the filtered map)
 vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
 {
@@ -212,7 +212,7 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
         float nDotL = dotPlus(N, L);
         if(nDotL > 0)
         {
-            vec3 sampleDir = vec3(L.xy, -L.z);
+            vec3 sampleDir = worldToCubemap(L);
             
 #if defined(PREFILTER_LEVERAGE_LOD)
             vec3 sampled;
