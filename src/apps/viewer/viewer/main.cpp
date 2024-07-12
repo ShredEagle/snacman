@@ -128,6 +128,8 @@ int runApplication(int argc, char * argv[])
 
     renderer::initializeDebugDrawers();
 
+    constexpr unsigned int gMsaaSamples = 1;
+
     // Application and window initialization
     graphics::ApplicationFlag glfwFlags = graphics::ApplicationFlag::None;
     graphics::ApplicationGlfw glfwApp{
@@ -135,6 +137,7 @@ int runApplication(int argc, char * argv[])
         1920, 1024,
         glfwFlags,
         4, 6,
+        { {GLFW_SAMPLES, gMsaaSamples} },
     };
     glfwSwapInterval(0); // Disable V-sync
 
