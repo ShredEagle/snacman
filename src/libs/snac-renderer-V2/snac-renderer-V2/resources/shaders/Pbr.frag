@@ -368,12 +368,7 @@ void main()
     fragmentColor += schlickFresnelReflectance(shadingNormal_cam, view_cam, pbrMaterial.f0)
                      * mirror;
 #else
-    // TODO fix that when implementing correct IBL
-    roughness = 0.2;
-    float alphaSquared = pow(alphaFromRoughness(roughness), 2);
-    
-    // THE REAL THING
-    //float alphaSquared = pow(max(0.00001, pbrMaterial.alpha), 2);
+    float alphaSquared = pow(max(0.00001, pbrMaterial.alpha), 2);
 
 #if defined(APPROXIMATE_SPECULAR_IBL)
 #if 0

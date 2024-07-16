@@ -31,12 +31,13 @@ namespace {
 
 
 // Note: OpenGL order of cubemap faces is +X, -X, +Y, -Y, +Z, -Z
-// Yet, the coordinate system of the cubemap is **left-handed**,
-// so we want to render a camera facing -Z in our right-handed world to render the cubemap +Z
+// The coordinate system of the cubemap is **left-handed**,
+// thus a camera facing -Z in our right-handed world should render the cubemap +Z face.
 // (see: https://www.khronos.org/opengl/wiki/Cubemap_Texture#Upload_and_orientation)
 // Important: The camera vertical axis is negated (not rotated!) in order to generate images with a top-left origin,
 // (i.e. first bytes appearing in the texture correspond to the top row, instead of the bottom row)
 // since cubemaps, unlike all other OpenGL textures, are behaving as having a top-left origin.
+// (Apparently, this is coming from Renderman,)
 const std::array<math::AffineMatrix<4, GLfloat>, 6> gCubeCaptureViewsNegateY{
     graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, { 1.f,  0.f,  0.f}) * gNegateVertical,
     graphics::getCameraTransform<GLfloat>({0.f, 0.f, 0.f}, {-1.f,  0.f,  0.f}) * gNegateVertical,

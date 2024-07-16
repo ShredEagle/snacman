@@ -247,6 +247,8 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
 }
 
 
+/// @param NoV is theretically the value clamped to [0..1], 
+///        but it should not be equal to zero, otherwise leading to div by 0.
 vec2 integrateBRDF(float aAlphaSquared, float NoV)
 {
     const uint NumSamples = 1024;
@@ -305,7 +307,7 @@ vec3 approximateSpecularIbl(vec3 aSpecularColor,
     const int lodCount = textureQueryLevels(aFilteredRadiance);
 
     float lod = aRoughness * float(lodCount);
-    vec3 cubemapSampleDir = vec3(aReflection.xy, -aReflection.z);
+    vec3 cubemapSampleDir = worldToCubemap(aReflection);
     vec3 filteredRadiance = textureLod(aFilteredRadiance, cubemapSampleDir, lod).rgb;
 
     vec2 brdf = texture(aIntegratedBrdf, vec2(NoV, aRoughness)).rg;
@@ -325,7 +327,7 @@ vec3 approximateSpecularIbl_live(vec3 aSpecularColor,
                                  samplerCube aEnvMap)
 {
     vec3 prefilteredColor = prefilterEnvMap(aAlphaSquared, aReflection, aEnvMap);
-    vec2 envBRDF = integrateBRDF(aAlphaSquared, NoV);
+    vec2 envBRDF = integrateBRDF(aAlphaSquared, max(0.00001, NoV));
     return prefilteredColor * (aSpecularColor * envBRDF.x + envBRDF.y);
 }
 
