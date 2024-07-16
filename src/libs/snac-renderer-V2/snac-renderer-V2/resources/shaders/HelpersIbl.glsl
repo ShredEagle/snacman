@@ -304,11 +304,32 @@ vec2 integrateBRDF(float aAlphaSquared, float NoV)
     return vec2(A, B) / NumSamples;
 }
 
+// Apply the correction discussed in
+// "Moving Frostbite to Physically Based Rendering 3.0", p10
+// TODO: I suppose more places should be skewed by this define.
+//#define OFF_SPECULAR_PEAK
+
+// Taken from "Moving Frostbite to Physically Based Rendering 3.0"
+// Listing 22 p69
+// Original comment: We have a better approximation of the off specular peak
+// but due to the other approximations we found this one performs better .
+// N is the normal direction
+// R is the mirror vector
+// This approximation works fine for G smith correlated and uncorrelated
+vec3 getSpecularDominantDir (vec3 N , vec3 R , float roughness)
+{
+    float smoothness = clamp(1 - roughness, 0, 1);
+    float lerpFactor = smoothness * (sqrt (smoothness) + roughness);
+    // The result is not normalized as we fetch in a cubemap
+    return mix(N , R , lerpFactor);
+ }
+
 
 /// @brief Split-sum approximation of the specular contribution from IBL
 /// Acts as an approximate and much faster specularIbl()
 vec3 approximateSpecularIbl(vec3 aSpecularColor,
                             vec3 aReflection,
+                            vec3 aNormal,
                             float NoV,
                             float aRoughness,
                             samplerCube aFilteredRadiance,
@@ -318,7 +339,12 @@ vec3 approximateSpecularIbl(vec3 aSpecularColor,
     const int lodCount = textureQueryLevels(aFilteredRadiance);
 
     float lod = aRoughness * float(lodCount);
-    vec3 cubemapSampleDir = worldToCubemap(aReflection);
+    vec3 cubemapSampleDir = 
+#if defined(OFF_SPECULAR_PEAK)
+        worldToCubemap(getSpecularDominantDir(aNormal, aReflection, aRoughness));
+#else
+        worldToCubemap(aReflection);
+#endif
     vec3 filteredRadiance = textureLod(aFilteredRadiance, cubemapSampleDir, lod).rgb;
 
     vec2 brdf = texture(aIntegratedBrdf, vec2(NoV, aRoughness)).rg;

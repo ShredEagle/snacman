@@ -381,6 +381,7 @@ void main()
 #else
     vec3 specularIbl = approximateSpecularIbl(material.specularColor.rgb,
                                 reflected_world,
+                                mat3(cameraToWorld) * shadingNormal_cam,
                                 // Note should be reused from previous computation
                                 // (but is currently calculated inside a function)
                                 dotPlus(shadingNormal_cam, view_cam),
