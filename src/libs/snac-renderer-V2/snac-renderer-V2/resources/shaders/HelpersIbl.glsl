@@ -221,6 +221,15 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
             // (only one sample direction should be possible when alpha == 0)
             if(aAlphaSquared != 0.)
             {
+                // TODO: clarify why both following sources diverge.
+                // As far as I understand, Karis (UE4 paper) compute the pre-filtered radiance
+                // by importance sampling the radiance (mutiplied by the cos(theta_light))
+                // but rtr 4th p421 seems to indicate that it should be multiplied by the distribution D.
+                // Doing this multiplication seems to diverge a lot from specularIbl(),
+                // so we avoid it.
+                //float NoH = dot(N, H); // factorize if kept
+                //float D = Distribution_GGX(NoH, aAlphaSquared) / M_PI;
+
                 float lod = computeLodIsotropic_GGX(lodUniformTerm, dot(N, H), aAlphaSquared);
                 sampled = textureLod(aEnvMap, sampleDir, lod).rgb;
             }
@@ -239,7 +248,8 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
 #endif
 
             prefilteredColor += sampled * nDotL;
-            totalWeight += nDotL;
+            totalWeight += nDotL; // theoretically, the weight should always be 1
+                                  // but Karis states "weighting by cos achieves better results" p5.
         }
     }
 
