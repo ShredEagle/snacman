@@ -310,7 +310,6 @@ vec3 approximateSpecularIbl(vec3 aSpecularColor,
 
     vec2 brdf = texture(aIntegratedBrdf, vec2(NoV, aRoughness)).rg;
     
-    return filteredRadiance;
     return filteredRadiance * (aSpecularColor * brdf.r + brdf.g);
 }
 
