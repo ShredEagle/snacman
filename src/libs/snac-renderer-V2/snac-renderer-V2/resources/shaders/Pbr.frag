@@ -373,8 +373,8 @@ void main()
 #if defined(APPROXIMATE_SPECULAR_IBL)
 #if 0
     vec3 specularIbl = approximateSpecularIbl_live(material.specularColor.rgb,
-                                 dotPlus(shadingNormal_cam, view_cam),
                                  reflected_world,
+                                 dotPlus(shadingNormal_cam, view_cam),
                                  alphaSquared,
                                  roughness,
                                  u_EnvironmentTexture);

@@ -85,7 +85,8 @@ vec3 importanceSampleGGX(vec2 Xi, float aAlphaSquared, vec3 N)
 /// @param aLodUniformTerm a term constant for a given texture size and sample count, that is computed by computeLodUniformTerm()
 /// @note This is hardcoding the GGX NDF when getting D to compute the PDF.
 /// @warning This is hardcoding the anisotropic assumption used in split-sum approximation, that N == V == R.
-float computeLodIsotropic_GGX(float aLodUniformTerm, float NoH, float aAlphaSquared)
+float computeLodIsotropic_GGX(float aLodUniformTerm, float NoH, float aAlphaSquared, 
+                              uint aNumSamples/* TODO: remove when the LearnOpenGL approach is removed*/)
 {
     // From "Real Shading in Unreal Engine 4": pdf = D * NoH / (4 * VoH)
     // From GPU Gems 3 chapter 20:
@@ -100,11 +101,11 @@ float computeLodIsotropic_GGX(float aLodUniformTerm, float NoH, float aAlphaSqua
 
 #if 0 
     // Alternative implementation from https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/
-    // which gives visually close results (I think it is equivalent up to a constant factor)
+    // which gives visually very similar/identical results (I think it is equivalent up to a constant factor)
     float pdf = (D /** NdotH*/ / (4.0 /** HdotV*/)) + 0.0001; 
     float resolution = 2048.0; // resolution of source cubemap (per face)
     float saTexel  = 4.0 * M_PI / (6.0 * resolution * resolution);
-    float saSample = 1.0 / (float(N) * pdf + 0.0001);
+    float saSample = 1.0 / (float(aNumSamples) * pdf + 0.0001);
     lod = 0.5 * log2(saSample / saTexel); 
 #endif
 
@@ -230,7 +231,7 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
                 //float NoH = dot(N, H); // factorize if kept
                 //float D = Distribution_GGX(NoH, aAlphaSquared) / M_PI;
 
-                float lod = computeLodIsotropic_GGX(lodUniformTerm, dot(N, H), aAlphaSquared);
+                float lod = computeLodIsotropic_GGX(lodUniformTerm, dot(N, H), aAlphaSquared, NumSamples);
                 sampled = textureLod(aEnvMap, sampleDir, lod).rgb;
             }
             else
@@ -326,12 +327,49 @@ vec3 approximateSpecularIbl(vec3 aSpecularColor,
 }
 
 
+
+/// This version attempts to also sample from the envmap if it has a LOD higher
+/// than the filtered radiance (with hope it will give better sampling)
+/// Yet it makes it much too sharp, so this is considered a failure.
+vec3 approximateSpecularIbl_alterLod(vec3 aSpecularColor,
+                            vec3 aReflection,
+                            vec3 aReflectionBase,
+                            float NoV,
+                            float aRoughness,
+                            samplerCube aFilteredRadiance,
+                            samplerCube aEnvMap,
+                            sampler2D aIntegratedBrdf)
+{
+    // TODO replace with an uniform
+    const int lodCount = textureQueryLevels(aFilteredRadiance);
+
+    float lod_hardware = textureQueryLod(aEnvMap, worldToCubemap(aReflectionBase)).y;
+    vec3 envSample = textureLod(aEnvMap, worldToCubemap(aReflectionBase), lod_hardware).rgb;
+
+    float lod = aRoughness * float(lodCount);
+    vec3 cubemapSampleDir = worldToCubemap(aReflection);
+    //max(lod, lod_hardware) was making it too blurry
+    vec3 filteredSample = textureLod(aFilteredRadiance, cubemapSampleDir, lod).rgb;
+
+    vec3 filteredRadiance = filteredSample;
+    if(lod_hardware > lod)
+    {
+        float diff = (lod_hardware - lod) / lodCount;
+        filteredRadiance = mix(filteredSample, envSample, diff * (1. - aRoughness));
+    }
+
+    vec2 brdf = texture(aIntegratedBrdf, vec2(NoV, aRoughness)).rg;
+    
+    return filteredRadiance * (aSpecularColor * brdf.r + brdf.g);
+}
+
+
 /// @brief Split-sum approximatin of the specular contribution from IBL
 /// Instead of fetching from the usual pre-computed textures,
 /// this variant directly computes each term of the approximation.
 vec3 approximateSpecularIbl_live(vec3 aSpecularColor,
-                                 float NoV,
                                  vec3 aReflection,
+                                 float NoV,
                                  float aAlphaSquared,
                                  float aRoughness,
                                  samplerCube aEnvMap)
