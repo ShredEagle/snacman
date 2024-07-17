@@ -265,7 +265,7 @@ void TheGraph::renderFrame(const Scene & aScene,
 }
 
 
-void TheGraph::passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage) const
+void TheGraph::passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_skybox", CpuTime, GpuTime);
 
@@ -298,6 +298,9 @@ void TheGraph::passSkyboxBase(const IntrospectProgram & aProgram, const Environm
     glDisable(GL_BLEND);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
+    glEnable(GL_CULL_FACE);
+    auto scopedCullFace = graphics::scopeCullFace(aCulledFace);
+
     auto scopedPolygonMode = graphics::scopePolygonMode(*mControls.mForwardPolygonMode);
 
     glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -312,27 +315,7 @@ void TheGraph::passDrawSkybox(const Environment & aEnvironment, Storage & aStora
     };
     Handle<ConfiguredProgram> confProgram = getProgram(*mSkybox.mEffect, annotations);
 
-    glEnable(GL_CULL_FACE);
-    auto scopedCullFace = graphics::scopeCullFace(aCulledFace);
-
-    passSkyboxBase(confProgram->mProgram, aEnvironment, aStorage);
-}
-
-
-void TheGraph::passFilterEnvironment(const Environment & aEnvironment, float aRoughness, Storage & aStorage, GLenum aCulledFace) const
-{
-    std::vector<Technique::Annotation> annotations{
-        {"pass", "prefilter_radiance"},
-    };
-    Handle<ConfiguredProgram> confProgram = getProgram(*mSkybox.mEffect, annotations);
-
-    // TODO: find a more dynamic way to bind those plain uniforms
-    graphics::setUniform(confProgram->mProgram, "u_Roughness", aRoughness);
-
-    glEnable(GL_CULL_FACE);
-    auto scopedCullFace = graphics::scopeCullFace(aCulledFace);
-
-    passSkyboxBase(confProgram->mProgram, aEnvironment, aStorage);
+    passSkyboxBase(confProgram->mProgram, aEnvironment, aStorage, aCulledFace);
 }
 
 

@@ -14,6 +14,7 @@
 
 #include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/Cubemap.h>
+#include <snac-renderer-V2/Pass.h> // for getProgram()
 #include <snac-renderer-V2/Profiling.h>
 
 #include <snac-renderer-V2/files/Loader.h>
@@ -112,55 +113,41 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
 }
 
 
-Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
-                                               const TheGraph & aGraph,
-                                               Storage & aStorage,
-                                               GLsizei aOutputSideLength)
-{
-    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "filter environment map", CpuTime, GpuTime);
+namespace {
 
-    // Texture level 1 (maximum) size
-    const math::Size<2, GLsizei> size{aOutputSideLength, aOutputSideLength};
-    const GLint textureLevels = graphics::countCompleteMipmaps(size);
-    assert(textureLevels > 1); // otherwise there is just one value for roughness (zero), which is likely wrong
-    
-    // We could actually hande equirectangular, but it will also require extension of the filtering shader
-    assert(aEnvironment.mType == Environment::Cubemap);
-    
-    // Get the internal format of the provided environment texture
-    GLint environmentInternalFormat = 0;
+    graphics::Texture prepareCubemap(const Environment & aEnvironment, math::Size<2, GLsizei> aSize, GLsizei aLevelsCount)
     {
-        graphics::ScopedBind boundEnvironment{*aEnvironment.mMap};
-        glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-                                 0,
-                                 GL_TEXTURE_INTERNAL_FORMAT,
-                                 &environmentInternalFormat);
+        // We could actually hande equirectangular, but it will also require extension of the filtering shader
+        assert(aEnvironment.mType == Environment::Cubemap);
+        
+        // Get the internal format of the provided environment texture
+        GLint environmentInternalFormat = 0;
+        {
+            graphics::ScopedBind boundEnvironment{*aEnvironment.mMap};
+            glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+                                    0,
+                                    GL_TEXTURE_INTERNAL_FORMAT,
+                                    &environmentInternalFormat);
+        }
+
+        graphics::Texture cubemap{GL_TEXTURE_CUBE_MAP};
+        graphics::allocateStorage(cubemap,
+                                  environmentInternalFormat,
+                                  aSize.width(), aSize.height(),
+                                  aLevelsCount);
+
+        return cubemap;
     }
+        
 
-
-    graphics::Texture filteredCubemap{GL_TEXTURE_CUBE_MAP};
-    graphics::allocateStorage(filteredCubemap,
-                              environmentInternalFormat,
-                              aOutputSideLength, aOutputSideLength,
-                              textureLevels);
-
-    graphics::FrameBuffer framebuffer;
-    graphics::ScopedBind boundFbo{framebuffer, graphics::FrameBufferTarget::Draw};
-
-    // TODO implement as layered rendering instead
-    // see: https://www.khronos.org/opengl/wiki/Geometry_Shader#Layered_rendering
-
-    Camera orthographicFace;
-
-    math::Size<2, GLsizei> levelSize = size;
-    for(GLint level = 0; level != textureLevels; ++level)
+    void renderCubemapFaces(const IntrospectProgram & aProgram,
+                            const TheGraph & aGraph,
+                            const Environment & aEnvironment,
+                            Storage & aStorage,
+                            const graphics::Texture & aTargetCubemap,
+                            GLsizei aLevel)
     {
-        // I am not 100% sure if level 1 should be roughness 0 or the first step.
-        // Roughness zero seems wasteful (I suppose it should be identical to the unfiltered cubemap)
-        // but probably more correct.
-        float roughness = (float)level / (textureLevels - 1); // Note: we asserted that textueLevels is more than 1
-
-        glViewport(0, 0, levelSize.width(), levelSize.height());
+        Camera orthographicFace;
 
         for(unsigned int faceIdx = 0; faceIdx != gFaceCount; ++faceIdx)
         {
@@ -169,8 +156,8 @@ Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
             glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
                                    GL_COLOR_ATTACHMENT1,
                                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIdx, 
-                                   filteredCubemap, 
-                                   level);
+                                   aTargetCubemap, 
+                                   aLevel);
 
             // Map output fragment color at location 0 to the draw buffer at color attachment 1
             // (this color attachment was set to the output texture face just above)
@@ -184,8 +171,50 @@ Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
             glClear(GL_COLOR_BUFFER_BIT);
 
             // We need to render cube inner-faces (backfaces), but they are turned into frontfaces by the negated Y camera
-            aGraph.passFilterEnvironment(aEnvironment, roughness, aStorage, GL_BACK);
+            aGraph.passSkyboxBase(aProgram, aEnvironment, aStorage, GL_BACK);
         }
+    }
+
+} // unnamed namespace
+
+Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvironment,
+                                                       const TheGraph & aGraph,
+                                                       Storage & aStorage,
+                                                       GLsizei aOutputSideLength)
+{
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "filter environment map", CpuTime, GpuTime);
+
+    // Texture level 0 (maximum) size
+    const math::Size<2, GLsizei> size{aOutputSideLength, aOutputSideLength};
+    const GLint textureLevels = graphics::countCompleteMipmaps(size);
+    assert(textureLevels > 1); // otherwise there is just one value for roughness (zero), which is likely wrong
+    graphics::Texture filteredCubemap = prepareCubemap(aEnvironment, size, textureLevels);
+
+    graphics::FrameBuffer framebuffer;
+    graphics::ScopedBind boundFbo{framebuffer, graphics::FrameBufferTarget::Draw};
+
+    // TODO implement as layered rendering instead
+    // see: https://www.khronos.org/opengl/wiki/Geometry_Shader#Layered_rendering
+
+    math::Size<2, GLsizei> levelSize = size;
+
+    static const std::vector<Technique::Annotation> annotations{
+        {"pass", "prefilter_radiance"},
+    };
+    Handle<ConfiguredProgram> confProgram = getProgram(*aGraph.mSkybox.mEffect, annotations);
+
+    for(GLint level = 0; level != textureLevels; ++level)
+    {
+        glViewport(0, 0, levelSize.width(), levelSize.height());
+
+        // I am not 100% sure if level 0 should be roughness 0 or the first step.
+        // Roughness zero seems wasteful (I suppose it should be identical to the unfiltered cubemap)
+        // but probably more correct to allow mip-levels interpolation.
+        float roughness = (float)level / (textureLevels - 1); // Note: we asserted that textueLevels is more than 1
+        // TODO: find a more dynamic way to bind those plain uniforms
+        graphics::setUniform(confProgram->mProgram, "u_Roughness", roughness);
+
+        renderCubemapFaces(confProgram->mProgram, aGraph, aEnvironment, aStorage, filteredCubemap, level);
 
         // This is the mipmap size derivation described in: 
         // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexStorage2D.xhtml

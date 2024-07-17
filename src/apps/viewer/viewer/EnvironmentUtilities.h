@@ -29,10 +29,13 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
 
 
 /// @brief Implement the 1st part of the split-sum approximation
-Handle<graphics::Texture> filterEnvironmentMap(const Environment & aEnvironment,
-                                               const TheGraph & aGraph,
-                                               Storage & aStorage,
-                                               GLsizei aOutputSideLength);
+/// @return An environment map representing the radiance along an outgoing direction
+/// corresponding to the sampled principal incoming direction.
+/// (principal incoming direction might just be view reflection, or a skew of it.)
+Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvironment,
+                                                       const TheGraph & aGraph,
+                                                       Storage & aStorage,
+                                                       GLsizei aOutputSideLength);
 
 
 /// @brief Implement the 2nd part (scale & bias to F0) of the split-sum approximation

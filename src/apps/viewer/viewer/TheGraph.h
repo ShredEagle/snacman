@@ -73,9 +73,8 @@ struct TheGraph
     void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
     void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
     void passDrawSkybox(const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace = GL_FRONT) const;
-    void passFilterEnvironment(const Environment & aEnvironment, float aRoughness, Storage & aStorage, GLenum aCulledFace) const;
 
-    void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage) const;
+    void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const;
 
     void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache);
 

@@ -103,7 +103,7 @@ void draw(const PassCache & aPassCache,
 // Low level API
 //
 
-using AnnotationsSelector = std::span<Technique::Annotation>;
+using AnnotationsSelector = std::span<const Technique::Annotation>;
 
 // NOTE Ad 2024/04/09: I am not fan of having generateDrawEntries as part of a class.
 // Yet, for the moment we rely on some hackish ResourceIdMap to get the integer part of the sorting key
