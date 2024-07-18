@@ -423,9 +423,10 @@ void main()
                               worldToCubemap(shadingNormal_world)).rgb
                       * pbrMaterial.diffuseColor.rgb;
 
-    // Control the contribution of specular IBL to the final color
-    const float specularIblFactor = 0.5;
-    const float diffuseIblFactor = 0.3;
+    // Control the contributions IBL to the final color
+    // TODO: good candidates for some uniforms attached to the environment.
+    const float specularIblFactor = 1.f;
+    const float diffuseIblFactor = 1.f; 
 
     // Catches the nan and make them more obvious
     if(isnan(specularIbl.r))
@@ -434,8 +435,8 @@ void main()
     }
     else
     {
-        fragmentColor += specularIbl * specularIblFactor;
-        fragmentColor += diffuseIbl * diffuseIblFactor;
+        fragmentColor += specularIbl * specularIblFactor * vec3(material.specularColor.rgb);
+        fragmentColor += diffuseIbl  * diffuseIblFactor  * vec3(material.diffuseColor.rgb);
     }
 
 #endif // ENVIRONMENT_MAPPING_MIRROR
