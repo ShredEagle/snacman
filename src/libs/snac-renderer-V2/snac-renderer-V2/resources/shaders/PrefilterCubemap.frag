@@ -2,6 +2,7 @@
 
 
 #include "HelpersIbl.glsl"
+#include "HelpersPbr.glsl"
 
 
 in vec3 ex_FragmentPosition_world;
@@ -20,6 +21,9 @@ void main()
 #if defined(SPECULAR_RADIANCE)
         prefilterEnvMapSpecular(alphaSquared, normalize(ex_FragmentPosition_world), u_SkyboxTexture);
 #elif defined(DIFFUSE_IRRADIANCE)
-        prefilterEnvMapDiffuse(normalize(ex_FragmentPosition_world), u_SkyboxTexture);
+        // Note: we use the F0 of dielectric, because metals do not have a diffuse contribution
+        prefilterEnvMapDiffuse_LambertianFresnel(normalize(ex_FragmentPosition_world),
+                                                 gF0_dielec,
+                                                 u_SkyboxTexture);
 #endif
 }

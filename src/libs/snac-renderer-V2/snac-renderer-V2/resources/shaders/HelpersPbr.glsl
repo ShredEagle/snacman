@@ -4,6 +4,7 @@
 
 #include "Helpers.glsl"
 
+const vec3 gF0_dielec = vec3(0.04);
 
 vec3 schlickFresnelReflectance(float aNormalDotLight_plus, vec3 F0, vec3 F90 = vec3(1., 1., 1.))
 {

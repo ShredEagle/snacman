@@ -297,6 +297,7 @@ vec3 prefilterEnvMapSpecular(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
 }
 
 
+/// @brief Integrate the environment map convolved with a cosine lobe center on the normal N.
 /// @param R the \b normalized normal direction in world basis
 /// (i.e. the direciton that would be sampled in the filtered map)
 vec3 prefilterEnvMapDiffuse(vec3 N, samplerCube aEnvMap)
@@ -335,7 +336,57 @@ vec3 prefilterEnvMapDiffuse(vec3 N, samplerCube aEnvMap)
     }
 
     // Note: Later, if applying a diffuse brdf, the Pi might vanish into it (see mftpbr p67)
+    // For e.g., look at prefilterEnvMapDiffuse_LambertianFresnel()
     return M_PI * prefilteredColor / NumSamples;
+}
+
+
+/// @brief Integrate the diffuse reflectance equation with a BRDF
+/// based on the Lambertian model for a flat mirror.
+/// @note: using e.q. (9.62), for flat mirrors instead of microfacet BRDF
+/// because (9.63) depends upon view direction (to get H).
+vec3 prefilterEnvMapDiffuse_LambertianFresnel(vec3 N, vec3 F0, samplerCube aEnvMap)
+{
+    const uint NumSamples = 1024;
+
+#if defined(PREFILTER_LEVERAGE_LOD)
+    // Does not depend on the sample
+    float lodUniformTerm = computeLodUniformTerm(textureSize(aEnvMap, 0), NumSamples);
+#endif
+
+    // The accumulator
+    vec3 prefilteredColor = vec3(0);
+    for(uint i = 0; i < NumSamples; i++)
+    {
+        vec2 Xi = hammersley(i, NumSamples);
+        vec3 L = importanceSampleCosDir(Xi, N);
+        float nDotL = dot(N, L);
+        if(nDotL > 0)
+        {
+            vec3 sampleDir = worldToCubemap(L);
+            
+            // We want to integrate the diffuse part of the reflectance equation:
+            //    f_{diff}(l) * L_i(l) * (n . l), over the hemisphere centered on n.
+            // rtr eq (9.62):
+            // f_{diff}(l) = (1 - F(n, l)) * rho_{ss}/Pi
+            // L_i(l) radiance is obtained by sampling the environment
+            // see: mftpbr p67
+            // pdf = (n.l) / Pi, for a sample distribution following a Cosine lobe
+            // f_{diff}(l) * L_i(l) * (n.l) / pdf = (1 - F(n, l)) * rho_{ss} * Env(l),
+            // rho_{ss} is constant an is factored out of the integral (actually applied by calling code)
+#if defined(PREFILTER_LEVERAGE_LOD)
+            float lod = computeLod_Cosine(lodUniformTerm, nDotL);
+            vec3 sampled = textureLod(aEnvMap, sampleDir, lod).rgb;
+#else
+            vec3 sampled = textureLod(aEnvMap, sampleDir, 0).rgb;
+#endif
+
+            vec3 F = schlickFresnelReflectance(nDotL, gF0_dielec);
+            prefilteredColor += max(vec3(0.), (1 - F)) * sampled;
+        }
+    }
+
+    return prefilteredColor / NumSamples;
 }
 
 

@@ -256,7 +256,7 @@ void main()
     // This approach is blending the parameters before computing the model.
     PbrMaterial pbrMaterial;
     pbrMaterial.diffuseColor = mix(albedo.rgb, vec3(0.), metallic);
-    pbrMaterial.f0 = mix(vec3(0.04), albedo.rgb, metallic);
+    pbrMaterial.f0 = mix(gF0_dielec, albedo.rgb, metallic);
     pbrMaterial.f90 = vec3(1.0);
     pbrMaterial.alpha = alpha;
 #else
@@ -406,8 +406,8 @@ void main()
     // Diffuse IBL
     //
 
-    // TODO: currently, our diffuse IBL contribution is very bare bone
-    // (reflecting the hand-waviness of rtr 4th on the topic compared to specular IBL)
+    // --- LEFT FOR DOCUMENTATION, the first two point have been addressed ---
+    // Currently, our diffuse IBL contribution is very bare bone
     // In particular, the following aspects are not yet addressed:
     // * The values retrieved from the irradiance map are used directly as diffuse contribution.
     //   Yet, it seem that physically this is the irradiance arriving at a non-occluded point with same normal,
