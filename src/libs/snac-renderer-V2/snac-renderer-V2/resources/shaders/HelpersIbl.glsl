@@ -103,6 +103,8 @@ vec3 importanceSampleCosDir(vec2 Xi, vec3 N)
 }
 
 
+/// @brief Compute the LOD approximating the cone matching distance between samples,
+/// for the special case of the isotropic assumption.
 /// see: rtr 4th p419
 /// see: [GPU Gems 3 chapter 20](https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-20-gpu-based-importance-sampling)
 /// @param aLodUniformTerm a term constant for a given texture size and sample count, that is computed by computeLodUniformTerm()
@@ -115,7 +117,7 @@ float computeLodIsotropic_GGX(float aLodUniformTerm, float NoH, float aAlphaSqua
     // From GPU Gems 3 chapter 20:
     // lod = max(0, 1/2 log2(w*h/N) - 1/2 log2(p(u,v) d(u)))
 
-    // Note: NoH == VoH because of the isotropic assumtion (see above that N == V == R).
+    // Note: NoH == VoH because of the isotropic assumption (see above that N == V == R).
     // Note: The article was using dual parabolloid mapping (where distortion d(u) gets large)
     //       For cubemap, distortion is low, let's assume it is constant to 1 atm.
     // Note: Distribution_GGX returns the NDF multiplied by Pi (not sure we have to divide though)
@@ -145,6 +147,17 @@ float computeLodGeneric_GGX(float aLodUniformTerm, float NoH, float VoH, float a
     // Note: Distribution_GGX returns the NDF multiplied by Pi (not sure we have to divide though)
     float D = Distribution_GGX(NoH, aAlphaSquared) / M_PI;
     return max(0, aLodUniformTerm - (log2((D * NoH) / (4 * VoH)) / 2));
+}
+
+
+float computeLod_Cosine(float aLodUniformTerm, float NoL)
+{
+    // From "Porting Frostbite to Physically Based Rendering": pdf = NoL / Pi 
+    // From GPU Gems 3 chapter 20:
+    // lod = max(0, 1/2 log2(w*h/N) - 1/2 log2(p(u,v) d(u)))
+
+    float lod = max(0, aLodUniformTerm - (log2(NoL / M_PI) / 2));
+    return lod;
 }
 
 
@@ -211,7 +224,7 @@ vec3 specularIBL(vec3 aSpecularColor, float aAlphaSquared, vec3 N, vec3 V, sampl
 
 /// @param R the \b normalized reflection direction in world basis
 /// (i.e. the direciton that would be sampled in the filtered map)
-vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
+vec3 prefilterEnvMapSpecular(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
 {
     const uint NumSamples = 1024;
 
@@ -253,7 +266,10 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
                 // so we avoid it.
                 //float NoH = dot(N, H); // factorize if kept
                 //float D = Distribution_GGX(NoH, aAlphaSquared) / M_PI;
-
+                // Additional notes: The reasoning might be that rtr gives the equation as integrals
+                // but the importance-sampled integrator additionally has the PDF in the denominator 
+                // (which puts D in the denominator, cancelling out).
+                // I suspect this is equivalent up to a constant factor.
                 float lod = computeLodIsotropic_GGX(lodUniformTerm, dot(N, H), aAlphaSquared, NumSamples);
                 sampled = textureLod(aEnvMap, sampleDir, lod).rgb;
             }
@@ -268,7 +284,7 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
             // Limiting light intensity can reduce aliasing due to hug contributions, like the sun
             //vec3 sampled = min(vec3(100.),
             //                   textureLod(aEnvMap, vec3(L.xy, -L.z), 0).rgb);
-            vec3 sampled = textureLod(aEnvMap, vec3(L.xy, -L.z), 0).rgb;
+            vec3 sampled = textureLod(aEnvMap, sampleDir, 0).rgb;
 #endif
 
             prefilteredColor += sampled * nDotL;
@@ -278,6 +294,48 @@ vec3 prefilterEnvMap(float aAlphaSquared, vec3 R, samplerCube aEnvMap)
     }
 
     return prefilteredColor / totalWeight;
+}
+
+
+/// @param R the \b normalized normal direction in world basis
+/// (i.e. the direciton that would be sampled in the filtered map)
+vec3 prefilterEnvMapDiffuse(vec3 N, samplerCube aEnvMap)
+{
+    const uint NumSamples = 1024;
+
+#if defined(PREFILTER_LEVERAGE_LOD)
+    // Does not depend on the sample
+    float lodUniformTerm = computeLodUniformTerm(textureSize(aEnvMap, 0), NumSamples);
+#endif
+
+    // The accumulator
+    vec3 prefilteredColor = vec3(0);
+    for(uint i = 0; i < NumSamples; i++)
+    {
+        vec2 Xi = hammersley(i, NumSamples);
+        vec3 L = importanceSampleCosDir(Xi, N);
+        float nDotL = dot(N, L);
+        if(nDotL > 0)
+        {
+            vec3 sampleDir = worldToCubemap(L);
+            
+            // see: mftpbr p67
+            // pdf = (n.l) / Pi, for a sample distribution following a Cosine lobe
+            // We want to integrate Env(l) * (n . l) over the hemisphere centered on n.
+            // Env(l) * (n.l) / pdf = Pi * Env(l), Pi can be factored out of the sum.
+#if defined(PREFILTER_LEVERAGE_LOD)
+            float lod = computeLod_Cosine(lodUniformTerm, nDotL);
+            vec3 sampled = textureLod(aEnvMap, sampleDir, lod).rgb;
+#else
+            vec3 sampled = textureLod(aEnvMap, sampleDir, 0).rgb;
+#endif
+
+            prefilteredColor += sampled;
+        }
+    }
+
+    // Note: Later, if applying a diffuse brdf, the Pi might vanish into it (see mftpbr p67)
+    return M_PI * prefilteredColor / NumSamples;
 }
 
 
@@ -372,7 +430,8 @@ vec3 approximateSpecularIbl(vec3 aSpecularColor,
 
     vec2 brdf = texture(aIntegratedBrdf, vec2(NoV, aRoughness)).rg;
     
-    return filteredRadiance * (aSpecularColor * brdf.r + brdf.g);
+    // The F90 term was found in mftpbr eq. (58)
+    return filteredRadiance * (aSpecularColor * brdf.r + /*F90 * */brdf.g);
 }
 
 
@@ -423,9 +482,10 @@ vec3 approximateSpecularIbl_live(vec3 aSpecularColor,
                                  float aRoughness,
                                  samplerCube aEnvMap)
 {
-    vec3 prefilteredColor = prefilterEnvMap(aAlphaSquared, aReflection, aEnvMap);
+    vec3 prefilteredColor = prefilterEnvMapSpecular(aAlphaSquared, aReflection, aEnvMap);
     vec2 envBRDF = integrateBRDF(aAlphaSquared, max(0.00001, NoV));
     return prefilteredColor * (aSpecularColor * envBRDF.x + envBRDF.y);
 }
+
 
 #endif //include guard

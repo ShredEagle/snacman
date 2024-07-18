@@ -24,6 +24,7 @@ struct Environment
     std::filesystem::path mMapFile; // notably used when dumping the cubemap, to derive a destination
     Handle<const graphics::Texture> mFilteredRadiance;
     Handle<const graphics::Texture> mIntegratedBrdf;
+    Handle<const graphics::Texture> mFilteredIrradiance;
 };
 
 

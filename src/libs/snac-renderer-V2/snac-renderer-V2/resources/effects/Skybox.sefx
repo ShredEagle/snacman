@@ -17,9 +17,17 @@
         },
         {
             "annotations": {
-                "pass": "prefilter_radiance"
+                "pass": "prefilter_specular_radiance"
             },
-            "programfile": "shaders/PrefilterCubemap.prog"
+            "programfile": "shaders/PrefilterCubemap.prog",
+            "defines": "SPECULAR_RADIANCE"
+        },
+        {
+            "annotations": {
+                "pass": "prefilter_diffuse_irradiance"
+            },
+            "programfile": "shaders/PrefilterCubemap.prog",
+            "defines": "DIFFUSE_IRRADIANCE"
         }
     ]
 }

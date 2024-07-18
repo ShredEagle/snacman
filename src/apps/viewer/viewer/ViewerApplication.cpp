@@ -317,6 +317,7 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
 
     const GLint gFilteredRadianceSide = 512;
     const GLint gIntegratedBrdfSide = 512;
+    const GLint gFilteredIrradianceSide = 128;
     // That approach is smelly: we use the Environment to compute an value we will set on the Environment
     mScene.mEnvironment->mFilteredRadiance =
         filterEnvironmentMapSpecular(*mScene.mEnvironment, mGraph, mStorage, gFilteredRadianceSide);
@@ -329,6 +330,12 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
     glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mIntegratedBrdf, -1, "integrated_env_brdf");
     mGraph.mTextureRepository[semantic::gIntegratedEnvironmentBrdf] = 
         mScene.mEnvironment->mIntegratedBrdf;
+
+    mScene.mEnvironment->mFilteredIrradiance =
+        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mGraph, mStorage, gFilteredIrradianceSide);
+    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mFilteredIrradiance, -1, "filtered_irradiance_env");
+    mGraph.mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] = 
+        mScene.mEnvironment->mFilteredIrradiance;
 }
 
 

@@ -29,6 +29,7 @@ uniform sampler2DArray u_MetallicRoughnessAoTexture;
 #if defined(ENVIRONMENT_MAPPING)
 uniform samplerCube u_EnvironmentTexture;
 uniform samplerCube u_FilteredRadianceEnvironmentTexture;
+uniform samplerCube u_FilteredIrradianceEnvironmentTexture;
 uniform sampler2D u_IntegratedEnvironmentBrdf;
 
 #endif
@@ -362,6 +363,8 @@ void main()
 
     // No need to normalize as long as it is only used to sample a cubemap.
     vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, shadingNormal_cam);
+    // Not normalized, should only be used for sampling cubemaps
+    vec3 shadingNormal_world = mat3(cameraToWorld) * shadingNormal_cam;
     
 #if defined(ENVIRONMENT_MAPPING_MIRROR)
     vec3 mirror = texture(u_EnvironmentTexture, worldToCubemap(reflected_world)).rgb;
@@ -397,8 +400,30 @@ void main()
                                    u_EnvironmentTexture);
 #endif // APPROXIMATE_SPECULAR_IBL
 
+    //
+    // Diffuse IBL
+    //
+
+    // TODO: currently, our diffuse IBL contribution is very bare bone
+    // (reflecting the hand-waviness of rtr 4th on the topic compared to specular IBL)
+    // In particular, the following aspects are not yet addressed:
+    // * The values retrieved from the irradiance map are used directly as diffuse contribution.
+    //   Yet, it seem that physically this is the irradiance arriving at a non-occluded point with same normal,
+    //   Not necessarily the radiance redirected toward the camera at this fragment.
+    // * A diffuse BRDF might be applied. In particular, see mftpbr p67. 
+    //   This point might be what addressed the previous one.
+    // * rtr 4th mention that the Fresnel effect can be modeled (p426), after mentionning retrieval.
+    //   Yet, as far as I understand, Fresnel effect depends upon light direction, so it could only be
+    //   applied while filtering each map texel, not after retrieving the value.
+    //   * Note that mftpbr does use Fresnel terms in its diffuses brdf (Fr_DisneyDiffuse),
+    //     which is in a term separate from the actual image lighting pre-integration.
+    vec3 diffuseIbl = texture(u_FilteredIrradianceEnvironmentTexture, 
+                              worldToCubemap(shadingNormal_world)).rgb
+                      * pbrMaterial.diffuseColor.rgb;
+
     // Control the contribution of specular IBL to the final color
-    const float specularIblFactor = 0.4;
+    const float specularIblFactor = 0.5;
+    const float diffuseIblFactor = 0.3;
 
     // Catches the nan and make them more obvious
     if(isnan(specularIbl.r))
@@ -408,6 +433,7 @@ void main()
     else
     {
         fragmentColor += specularIbl * specularIblFactor;
+        fragmentColor += diffuseIbl * diffuseIblFactor;
     }
 
 #endif // ENVIRONMENT_MAPPING_MIRROR

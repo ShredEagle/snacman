@@ -260,6 +260,7 @@ void TheGraph::renderFrame(const Scene & aScene,
     {
         showTexture(*aScene.mEnvironment->mMap, 1, {.mIsCubemap = true,}) ;
         showTexture(*aScene.mEnvironment->mFilteredRadiance, 2, {.mIsCubemap = true,}) ;
+        showTexture(*aScene.mEnvironment->mFilteredIrradiance, 3, {.mIsCubemap = true,}) ;
         //showTexture(*aScene.mEnvironment->mIntegratedBrdf, 2) ;
     }
 }

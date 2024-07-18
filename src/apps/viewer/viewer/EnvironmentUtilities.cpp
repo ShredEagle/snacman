@@ -147,6 +147,9 @@ namespace {
                             const graphics::Texture & aTargetCubemap,
                             GLsizei aLevel)
     {
+        // TODO implement as layered rendering instead
+        // see: https://www.khronos.org/opengl/wiki/Geometry_Shader#Layered_rendering
+
         Camera orthographicFace;
 
         for(unsigned int faceIdx = 0; faceIdx != gFaceCount; ++faceIdx)
@@ -182,7 +185,7 @@ Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvi
                                                        Storage & aStorage,
                                                        GLsizei aOutputSideLength)
 {
-    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "filter environment map", CpuTime, GpuTime);
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "filter env: specular radiance", CpuTime, GpuTime);
 
     // Texture level 0 (maximum) size
     const math::Size<2, GLsizei> size{aOutputSideLength, aOutputSideLength};
@@ -193,13 +196,10 @@ Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvi
     graphics::FrameBuffer framebuffer;
     graphics::ScopedBind boundFbo{framebuffer, graphics::FrameBufferTarget::Draw};
 
-    // TODO implement as layered rendering instead
-    // see: https://www.khronos.org/opengl/wiki/Geometry_Shader#Layered_rendering
-
     math::Size<2, GLsizei> levelSize = size;
 
     static const std::vector<Technique::Annotation> annotations{
-        {"pass", "prefilter_radiance"},
+        {"pass", "prefilter_specular_radiance"},
     };
     Handle<ConfiguredProgram> confProgram = getProgram(*aGraph.mSkybox.mEffect, annotations);
 
@@ -226,6 +226,41 @@ Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvi
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         //glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY, 16.f);
+    }
+
+    return &aStorage.mTextures.emplace_back(std::move(filteredCubemap));
+}
+
+
+Handle<graphics::Texture> filterEnvironmentMapDiffuse(const Environment & aEnvironment,
+                                                      const TheGraph & aGraph,
+                                                      Storage & aStorage,
+                                                      GLsizei aOutputSideLength)
+{
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "filter env: diffuse irradiance", CpuTime, GpuTime);
+
+    // Texture level 0 (maximum) size
+    const math::Size<2, GLsizei> size{aOutputSideLength, aOutputSideLength};
+    constexpr GLint textureLevels = 1;
+    graphics::Texture filteredCubemap = prepareCubemap(aEnvironment, size, textureLevels);
+
+    graphics::FrameBuffer framebuffer;
+    graphics::ScopedBind boundFbo{framebuffer, graphics::FrameBufferTarget::Draw};
+
+    static const std::vector<Technique::Annotation> annotations{
+        {"pass", "prefilter_diffuse_irradiance"},
+    };
+    Handle<ConfiguredProgram> confProgram = getProgram(*aGraph.mSkybox.mEffect, annotations);
+
+    glViewport(0, 0, size.width(), size.height());
+
+    constexpr GLint level = 0;
+    renderCubemapFaces(confProgram->mProgram, aGraph, aEnvironment, aStorage, filteredCubemap, level);
+
+    {
+        graphics::ScopedBind boundCubemap{filteredCubemap};
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }
 
     return &aStorage.mTextures.emplace_back(std::move(filteredCubemap));
