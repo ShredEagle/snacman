@@ -873,25 +873,28 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
 std::vector<Technique> populateTechniques(const Loader & aLoader,
                                           const filesystem::path & aEffectPath,
                                           Storage & aStorage,
-                                          std::vector<std::string> aDefines)
+                                          const std::vector<std::string> & aDefines)
 {
     std::vector<Technique> result;
     Json effect = Json::parse(std::ifstream{aEffectPath});
 
     for (const auto & technique : effect.at("techniques"))
     {
-        // Merge the potential defines found at the technique level into aDefines
+        // The defines from context above are copied for each technique,
+        // otherwise technique N+1 would lso get the cumulated defines from techniques 0..N.
+        auto definesCopy{aDefines};
+        // Merge the potential defines found at the technique level into the copy
         if(auto techniqueDefines = technique.find("defines");
            techniqueDefines != technique.end())
         {
-            aDefines.insert(aDefines.end(),
-                            techniqueDefines->begin(),
-                            techniqueDefines->end());
+            definesCopy.insert(definesCopy.end(),
+                               techniqueDefines->begin(),
+                               techniqueDefines->end());
         }
 
         result.push_back(Technique{
             .mConfiguredProgram =
-                storeConfiguredProgram(aLoader.loadProgram(technique.at("programfile"), aDefines), aStorage),
+                storeConfiguredProgram(aLoader.loadProgram(technique.at("programfile"), std::move(definesCopy)), aStorage),
         });
 
         if(technique.contains("annotations"))
@@ -1015,7 +1018,11 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
             graphics::ShaderSource::Preprocess(*inputStream, aDefines_temp, identifier, lookup));
     }
 
-    SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());
+    SELOG(debug)("Compiling shader program from '{}', containing {} stages, {defines}.",
+                 lookup.top(), shaders.size(),
+                 fmt::arg("defines", aDefines_temp.empty() ? 
+                    "no defines" 
+                    : fmt::format("with defines '{}'", fmt::join(aDefines_temp, ", "))));
 
     return IntrospectProgram{shaders.begin(), shaders.end(), aProgFile.filename().string()};
 }
