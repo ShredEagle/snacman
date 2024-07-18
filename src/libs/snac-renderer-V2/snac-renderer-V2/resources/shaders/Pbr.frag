@@ -249,7 +249,7 @@ void main()
 // * The alternative (not defined) is evaluation the shading model twice 
 //   (once as metal, once as dielectric),
 //   then blending the results based on metallic.
-#define MATERIAL_BLEND_PARAMETERS 
+#define MATERIAL_BLEND_PARAMETERS  // currently required for IBL
 
     // Populate the PBR material from metallic-roughness parameterization
 #if defined(MATERIAL_BLEND_PARAMETERS)
@@ -363,28 +363,30 @@ void main()
 
     // No need to normalize as long as it is only used to sample a cubemap.
     vec3 reflected_world = mat3(cameraToWorld) * reflect(-view_cam, shadingNormal_cam);
-    // Not normalized, should only be used for sampling cubemaps
     vec3 shadingNormal_world = mat3(cameraToWorld) * shadingNormal_cam;
     
 #if defined(ENVIRONMENT_MAPPING_MIRROR)
     vec3 mirror = texture(u_EnvironmentTexture, worldToCubemap(reflected_world)).rgb;
+    // Note: since light direction is the reflection of view around shadingNormal
+    // view / light dir can be used interchangeably to compute the Fresnel term.
     fragmentColor += schlickFresnelReflectance(shadingNormal_cam, view_cam, pbrMaterial.f0)
                      * mirror;
 #else
     float alphaSquared = pow(max(0.00001, pbrMaterial.alpha), 2);
 
 #if defined(APPROXIMATE_SPECULAR_IBL)
-#if 0
-    vec3 specularIbl = approximateSpecularIbl_live(material.specularColor.rgb,
+#if 0 // The live variant does not use pre-computed values for the split-sum approximation:
+      //is not intended for production rendering, but for debugging the cached approach.
+    vec3 specularIbl = approximateSpecularIbl_live(pbrMaterial.f0,
                                  reflected_world,
                                  dotPlus(shadingNormal_cam, view_cam),
                                  alphaSquared,
                                  roughness,
                                  u_EnvironmentTexture);
 #else
-    vec3 specularIbl = approximateSpecularIbl(material.specularColor.rgb,
+    vec3 specularIbl = approximateSpecularIbl(pbrMaterial.f0,
                                 reflected_world,
-                                mat3(cameraToWorld) * shadingNormal_cam,
+                                shadingNormal_world,
                                 // Note should be reused from previous computation
                                 // (but is currently calculated inside a function)
                                 dotPlus(shadingNormal_cam, view_cam),
@@ -393,9 +395,9 @@ void main()
                                 u_IntegratedEnvironmentBrdf);
 #endif
 #else
-    vec3 specularIbl = specularIBL(material.specularColor.rgb,
+    vec3 specularIbl = specularIBL(pbrMaterial.f0,
                                    alphaSquared,
-                                   normalize(mat3(cameraToWorld) * shadingNormal_cam),
+                                   normalize(shadingNormal_world),
                                    normalize(mat3(cameraToWorld) * view_cam),
                                    u_EnvironmentTexture);
 #endif // APPROXIMATE_SPECULAR_IBL
