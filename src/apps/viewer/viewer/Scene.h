@@ -80,8 +80,8 @@ struct Scene
 
     
     LightsData mLights_world{
-        .mDirectionalCount = 1,
-        .mPointCount = 1,
+        .mDirectionalCount = 0,
+        .mPointCount = 0,
         .mAmbientColor = math::hdr::gWhite<GLfloat> / 3.f,
         .mDirectionalLights = {
             DirectionalLight{
