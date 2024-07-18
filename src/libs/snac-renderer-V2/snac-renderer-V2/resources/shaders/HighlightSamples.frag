@@ -31,6 +31,7 @@ vec3 getLight_importanceSampleCosDir(uint i, uint aNumSamples, vec3 N)
     return importanceSampleCosDir(Xi, N);
 }
 
+
 void main()
 {
     float alphaSquared = pow(alphaFromRoughness(u_Roughness), 2);

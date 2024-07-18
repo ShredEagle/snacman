@@ -82,7 +82,7 @@ struct Scene
     LightsData mLights_world{
         .mDirectionalCount = 0,
         .mPointCount = 0,
-        .mAmbientColor = math::hdr::gWhite<GLfloat> / 3.f,
+        .mAmbientColor = math::hdr::gWhite<GLfloat> / 12.f,
         .mDirectionalLights = {
             DirectionalLight{
                 .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.f, -0.2f, -1.f}},
