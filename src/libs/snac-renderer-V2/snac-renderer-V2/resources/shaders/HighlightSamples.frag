@@ -12,6 +12,24 @@ layout(binding = 1, rgba32f) uniform writeonly image2D outImage;
 uniform vec3 u_SurfaceNormal;
 uniform float u_Roughness;
 
+vec3 getLight_importanceSampleGGX(uint i, uint aNumSamples, vec3 N, float aAlphaSquared)    
+{
+    vec3 R = N;
+    vec3 V = N;
+    
+    vec2 Xi = hammersley(i, aNumSamples);
+    vec3 H = importanceSampleGGX(Xi, aAlphaSquared, N);
+    vec3 L = reflect(-V, H);
+
+    return L;
+}
+
+
+vec3 getLight_importanceSampleCosDir(uint i, uint aNumSamples, vec3 N)    
+{
+    vec2 Xi = hammersley(i, aNumSamples);
+    return importanceSampleCosDir(Xi, N);
+}
 
 void main()
 {
@@ -25,11 +43,6 @@ void main()
 
     ivec2 size = imageSize(outImage);
 
-    const uint NumSamples = 512;
-
-    vec3 R = N;
-    vec3 V = N;
-    
     // Grey out (to test writes)
     for(int h = 0; h < size.y; ++h)
     {
@@ -39,17 +52,21 @@ void main()
         }
     }
 
+    const uint NumSamples = 512;
+
     for(uint i = 0; i < NumSamples; i++)
     {
-        vec2 Xi = hammersley(i, NumSamples);
-        vec3 H = importanceSampleGGX(Xi, alphaSquared, N);
-        vec3 L = reflect(-V, H);
+#if 0 // Specular importance sampling
+        vec3 L = getLight_importanceSampleGGX(i, NumSamples, N, alphaSquared);
+#else // Diffuse importance sampling
+        vec3 L = getLight_importanceSampleCosDir(i, NumSamples, N);
+#endif
         float nDotL = dotPlus(N, L);
         if(nDotL > 0)
         {
             float sc, tc, ma;
             // Cubemap sampling expects left-handed (+Z into screen), so convert
-            vec3 dir = vec3(L.xy, -L.z);
+            vec3 dir = worldToCubemap(L);
             if(abs(dir.z) >= abs(dir.x) && abs(dir.z) >= abs(dir.y))
             {
                 if(dir.z > 0)

@@ -72,14 +72,37 @@ vec3 importanceSampleGGX(vec2 Xi, float aAlphaSquared, vec3 N)
     // Compute the coordinates of the tagent space basis vectors in the space of N
     // (the resulting tangent space is right-handed)
     vec3 UpVector = abs(N.z) < 0.999 ? vec3(0,0,1) : vec3(1,0,0);
-    vec3 TangentX = normalize( cross( UpVector, N ) );
+    vec3 TangentX = normalize(cross(UpVector, N));
     vec3 TangentY = cross(N, TangentX);
     // TBN to world space
     return TangentX * H.x + TangentY * H.y + N * H.z;
 }
 
 
-/// @brief Compute the LOD approximating the cone matching distance between samples
+/// @see "Moving Frostbite to Physically Based Rendering", listing 18.
+/// @param Xi (Chi) a random uniform sample on [0, 1].
+/// @param N The surface normal in a coordinate system that will be used for the result.
+/// @return A light direction (L) <b>in the same space as N</b>
+///         that allows importance sampling of the diffuse cosine lobe.
+vec3 importanceSampleCosDir(vec2 Xi, vec3 N)
+{
+    // Local referencial
+    vec3 upVector = abs(N.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0) ;
+    vec3 tangentX = normalize(cross(upVector , N));
+    vec3 tangentY = cross(N , tangentX);
+
+    float r = sqrt(Xi.x);
+    // The same than importantSampleGGX (just using the other dimension)
+    float phi = 2 * M_PI * Xi.y;
+
+    vec3 L = vec3(r * cos (phi) , r * sin (phi) , sqrt(max(0.0f, 1.0f - Xi.x)));
+    return normalize(tangentX * L.y + tangentY * L.x + N * L.z);
+
+    //NdotL = dot (L ,N) ;
+    //pdf = NdotL * FB_INV
+}
+
+
 /// see: rtr 4th p419
 /// see: [GPU Gems 3 chapter 20](https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-20-gpu-based-importance-sampling)
 /// @param aLodUniformTerm a term constant for a given texture size and sample count, that is computed by computeLodUniformTerm()
