@@ -375,13 +375,28 @@ namespace {
     }
 
 
+    // Intended to annotate the color space of an image
+    enum class ColorSpace
+    {
+        Linear,
+        sRGB,
+    };
+
+
     void loadTextureLayer(graphics::Texture & a3dTexture,
                           GLint aLayerIdx,
                           std::filesystem::path aTexturePath,
-                          math::Size<2, int> aExpectedDimensions)
+                          math::Size<2, int> aExpectedDimensions,
+                          ColorSpace aSourceColorSpace)
     {
         arte::Image<math::sdr::Rgba> image{aTexturePath, arte::ImageOrientation::InvertVerticalAxis};
+
         assert(aExpectedDimensions == image.dimensions());
+
+        if(aSourceColorSpace == ColorSpace::sRGB)
+        {
+            decodeSRGBToLinear(image);
+        }
 
         proto::writeTo(a3dTexture,
                        static_cast<const std::byte *>(image),
@@ -418,7 +433,7 @@ namespace {
             }
         }
 
-        auto loadTextures = [&aIn, &aStorage]() -> graphics::Texture *
+        auto loadTextures = [&aIn, &aStorage](ColorSpace aColorSpace) -> graphics::Texture *
         {
             math::Size<2, int> imageSize;        
             aIn.read(imageSize);
@@ -449,7 +464,7 @@ namespace {
                 for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
                 {
                     std::string path = aIn.readString();
-                    loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize);
+                    loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize, aColorSpace);
                 }
 
                 glGenerateMipmap(textureArray.mTarget);
@@ -463,15 +478,15 @@ namespace {
         };
 
         // IMPORTANT: This sequence is in the exact order of texture types in a binary.
-        static const Semantic semanticSequence[] = {
-            semantic::gDiffuseTexture,
-            semantic::gNormalTexture,
-            semantic::gMetallicRoughnessAoTexture,
+        static const std::pair<Semantic, ColorSpace> semanticSequence[] = {
+            {semantic::gDiffuseTexture, ColorSpace::sRGB},
+            {semantic::gNormalTexture, ColorSpace::Linear}, 
+            {semantic::gMetallicRoughnessAoTexture, ColorSpace::Linear},
         };
         RepositoryTexture textureRepo;
-        for (Semantic texSemantic : semanticSequence)
+        for (auto [texSemantic, colorSpace] : semanticSequence)
         {
-            if(graphics::Texture * texture = loadTextures())
+            if(graphics::Texture * texture = loadTextures(colorSpace))
             {
                 textureRepo.emplace(texSemantic, texture);
             }

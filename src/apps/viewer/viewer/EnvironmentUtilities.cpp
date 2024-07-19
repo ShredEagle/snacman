@@ -225,6 +225,7 @@ Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvi
         graphics::ScopedBind boundCubemap{filteredCubemap};
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // Probably useless since we select the LOD explicitly based on roughness
         //glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY, 16.f);
     }
 
