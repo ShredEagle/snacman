@@ -220,6 +220,7 @@ namespace {
 
             aPartList.mInstanceTransforms.push_back(
                 math::trans3d::scaleUniform(absolutePose.mUniformScale)
+                * absolutePose.mOrientation.toRotationMatrix()
                 * math::trans3d::translate(absolutePose.mPosition));
         }
 
