@@ -173,6 +173,7 @@ void main()
     vec3 tangent_cam = ex_Tangent_cam;
 #endif
 
+//#define COMPUTE_BITANGENT
 #ifdef COMPUTE_BITANGENT
     // TODO handle handedness, which should be -1 or 1
     //float handedness
@@ -191,13 +192,14 @@ void main()
         + normal_tbn.z * normal_cam
     );
 
-    //out_Color = vec4(-bumpNormal_cam, 1.0);
+    //out_Color = vec4(bumpNormal_cam, 1.0);
     //out_Color = vec4(remapToRgb(normal_cam), 1.0);
     //out_Color = vec4(remapToRgb(tangent_cam), 1.0);
     //out_Color = vec4(remapToRgb(bitangent_cam), 1.0);
     //out_Color = vec4(remapToRgb(bumpNormal_cam), 1.0);
     //out_Color = vec4(remapToRgb(normal_tbn), 1.0);
     //out_Color = albedo;
+    //out_Color = correctGamma(albedo);
     //return;
 
     vec3 shadingNormal_cam = bumpNormal_cam;
@@ -223,6 +225,11 @@ void main()
     float roughness = mrao.b;
     float ambientOcclusion = mrao.g;
 #endif
+
+    //out_Color = vec4(vec3(metallic), 1.);
+    //out_Color = vec4(vec3(roughness), 1.);
+    //out_Color = vec4(vec3(ambientOcclusion), 1.);
+    //return;
 
     // Handle alpha
 
@@ -406,7 +413,7 @@ void main()
     // Diffuse IBL
     //
 
-    // --- LEFT FOR DOCUMENTATION, the first two point have been addressed ---
+    // --- LEFT FOR DOCUMENTATION, the first two point have been addressed by integrating the diffuse reflectance equation ---
     // Currently, our diffuse IBL contribution is very bare bone
     // In particular, the following aspects are not yet addressed:
     // * The values retrieved from the irradiance map are used directly as diffuse contribution.
