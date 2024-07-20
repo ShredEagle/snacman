@@ -268,12 +268,12 @@ void draw(const PassCache & aPassCache,
     // This would address the warnings repetitions (only issued when the compiled state is (re-)generated), and be better for perfs.
 
     GLuint firstInstance = 0; 
-    for (const DrawCall & aCall : aPassCache.mCalls)
+    for (const DrawCall & call : aPassCache.mCalls)
     {
         PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "drawcall_iteration", CpuTime);
 
-        const IntrospectProgram & selectedProgram = *aCall.mProgram;
-        const graphics::VertexArrayObject & vao = *aCall.mVao;
+        const IntrospectProgram & selectedProgram = *call.mProgram;
+        const graphics::VertexArrayObject & vao = *call.mVao;
 
         // TODO Ad 2023/10/05: #perf #azdo 
         // Only change what is necessary, instead of rebiding everything each time.
@@ -287,9 +287,9 @@ void draw(const PassCache & aPassCache,
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
                 // TODO #repos This should be consolidated
                 RepositoryUbo uboRepo{aUboRepository};
-                if(aCall.mCallContext)
+                if(call.mCallContext)
                 {
-                    RepositoryUbo callRepo{aCall.mCallContext->mUboRepo};
+                    RepositoryUbo callRepo{call.mCallContext->mUboRepo};
                     uboRepo.merge(callRepo);
                 }
                 setBufferBackedBlocks(selectedProgram, uboRepo);
@@ -299,9 +299,9 @@ void draw(const PassCache & aPassCache,
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
                 // TODO #repos This should be consolidated
                 RepositoryTexture textureRepo{aTextureRepository};
-                if(aCall.mCallContext)
+                if(call.mCallContext)
                 {
-                    RepositoryTexture callRepo{aCall.mCallContext->mTextureRepo};
+                    RepositoryTexture callRepo{call.mCallContext->mTextureRepo};
                     textureRepo.merge(callRepo);
                 }
                 setTextures(selectedProgram, textureRepo);
@@ -317,14 +317,14 @@ void draw(const PassCache & aPassCache,
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw_call", CpuTime/*, GpuTime*/);
                 
                 gl.MultiDrawElementsIndirect(
-                    aCall.mPrimitiveMode,
-                    aCall.mIndicesType,
+                    call.mPrimitiveMode,
+                    call.mIndicesType,
                     (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
-                    aCall.mDrawCount,
+                    call.mDrawCount,
                     sizeof(DrawElementsIndirectCommand));
             }
         }
-        firstInstance += aCall.mDrawCount;
+        firstInstance += call.mDrawCount;
     }
 }
 
