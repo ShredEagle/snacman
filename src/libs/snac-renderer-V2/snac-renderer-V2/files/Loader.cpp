@@ -8,6 +8,7 @@
 #include "../Cube.h"
 #include "../Json.h"
 #include "../Logging.h"
+#include "../Profiling.h"
 #include "../RendererReimplement.h"
 #include "../Rigging.h"
 #include "../Semantics.h"
@@ -858,6 +859,15 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
                                              Effect * aPartsEffect,
                                              const GenericStream & aStream)
 {
+    // A quick hack to get around the limitation that the profiler system expects the client to maintain
+    // the c-string alive.
+    // Very thread unsafe
+    static std::vector<std::string> gUnsafeSectionNames;
+    gUnsafeSectionNames.push_back(fmt::format("load_binary: {}", aBinaryFile.stem().string()));
+
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, gUnsafeSectionNames.back().c_str(),
+                                      renderer::CpuTime, renderer::GpuTime);
+
     if(aBinaryFile.extension() != ".seum")
     {
         SELOG(error)("Files with extension '{}' are not supported.",
