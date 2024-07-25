@@ -1,5 +1,7 @@
 #include "Dds.h"
 
+#include "../Logging.h"
+
 #include <cassert>
 
 
@@ -184,7 +186,12 @@ GLenum getCompressedFormat(const Header & aHeader)
         {
             default:
                 // TODO Ad 2024/07/24: Extend to support a reasonable set of formats.
+                SELOG(error)("DXGI format {} is not supported at the moment", dxt10.dxgiFormat);
                 throw std::domain_error("The texture format in this DDS is not supported at the moment.");
+            case DXGI_FORMAT_BC5_UNORM:
+                return GL_COMPRESSED_RG_RGTC2;
+            case DXGI_FORMAT_BC5_SNORM:
+                return GL_COMPRESSED_SIGNED_RG_RGTC2;
             case DXGI_FORMAT_BC7_UNORM:
                 return GL_COMPRESSED_RGBA_BPTC_UNORM;
             case DXGI_FORMAT_BC7_UNORM_SRGB:

@@ -153,11 +153,25 @@ void main()
 
     // TODO factorize that!
 
-    // Fetch from normal map, and remap fro [0, 1]^3 to [-1, 1]^3.
+// Defines for BC5 Red-Green texture compression, which only store 2 channels
+// The third component has to be reconstructed.
+#define BC5_RGTC;
+#if defined(BC5_RGTC)
+    // Fetch from Red-Green channels, and remap from [0, 1]^2 to [-1, 1]^2.
+    vec2 normalXY = 
+        texture(u_NormalTexture, 
+                vec3(ex_Uv[material.normalUvChannel], material.normalTextureIndex)).xy
+        * 2.0 - vec2(1.0);
+
+    // Derives the third component from the two others, assuming the source normal map data was normalized
+    vec3 normal_tbn = vec3(normalXY, sqrt(1.0 - dot(normalXY, normalXY)));
+#else
+    // Fetch from normal map, and remap from [0, 1]^3 to [-1, 1]^3.
     vec3 normal_tbn = 
         texture(u_NormalTexture, 
                 vec3(ex_Uv[material.normalUvChannel], material.normalTextureIndex)).xyz
         * 2 - vec3(1);
+#endif // BC5_RGTC
 
     // MikkT see: http://www.mikktspace.com/
 
