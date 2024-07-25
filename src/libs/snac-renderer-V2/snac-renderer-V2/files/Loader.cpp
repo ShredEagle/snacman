@@ -1,6 +1,7 @@
 #include "Loader.h"
 
 #include "BinaryArchive.h" 
+#include "Dds.h" 
 #include "Flags.h" 
 #include "Versioning.h" 
 
