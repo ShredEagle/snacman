@@ -55,6 +55,8 @@ public:
     void PolygonMode(GLenum face, GLenum mode);
     void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
     void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
+    void CompressedTexImage3D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
+    void CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
 
 
     // Note: Give access to the Metrics even if the instrumentation is not macro enabled
@@ -266,6 +268,24 @@ inline void GlApi::TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLin
         width * height * depth * graphics::getComponentsCount(format) * graphics::getByteSize(type);
 #endif
     return glTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, pixels);
+}
+
+
+inline void GlApi::CompressedTexImage3D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data)
+{
+#if defined(SE_INSTRUMENT_GL)
+    v().mTextureMemory.mWritten += imageSize;
+#endif
+    return glCompressedTexImage3D(target, level, internalformat, width, height, depth, border, imageSize, data);
+}
+
+
+inline void GlApi::CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data)
+{
+#if defined(SE_INSTRUMENT_GL)
+    v().mTextureMemory.mWritten += imageSize;
+#endif
+    return glCompressedTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, imageSize, data);
 }
 
 

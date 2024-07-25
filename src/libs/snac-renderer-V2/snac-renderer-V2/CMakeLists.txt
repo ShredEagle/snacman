@@ -25,6 +25,7 @@ set(${TARGET_NAME}_HEADERS
     debug/DebugDrawing.h
     debug/DebugRenderer.h
 
+    files/Dds.h
     files/BinaryArchive.h
     files/Flags.h
     files/Loader.h
@@ -45,6 +46,7 @@ set(${TARGET_NAME}_SOURCES
     debug/DebugDrawing.cpp
     debug/DebugRenderer.cpp
 
+    files/Dds.cpp
     files/Loader.cpp
 )
 

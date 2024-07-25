@@ -383,25 +383,147 @@ namespace {
     };
 
 
+    // TODO replace this smelly approach to DDS handling
+    // The complication is that, at first, we want optional support for compressed texture
+    // basically, picking a .dds variant if it present, using the original image in the material otherwise.
+    namespace hackish {
+    
+
+        struct MyDds
+        {
+            dds::Header mHeader;
+            std::ifstream mDataStream;
+        };
+
+
+        std::filesystem::path getDdsCandidate(std::filesystem::path aTexturePath)
+        {
+            return aTexturePath.replace_extension(".dds");
+        }
+
+
+        /// @brief Construct a MyDds instance if `aDdsCandidate` file exists.
+        std::optional<MyDds> tryDds(std::filesystem::path aDdsCandidate)
+        {
+            if(is_regular_file(aDdsCandidate))
+            {
+                SELOG(debug)("Loading the DDS texture: {}", aDdsCandidate.string());
+
+                std::ifstream ddsStream{aDdsCandidate, std::ios_base::in | std::ios_base::binary};
+                if(!ddsStream.good())
+                {
+                    throw std::runtime_error{"Unable to open DDS file: '" + aDdsCandidate.string() + "'."};
+                }
+
+                dds::Header header = dds::readHeader(ddsStream);
+                return MyDds{
+                    .mHeader = std::move(header),
+                    .mDataStream = std::move(ddsStream),
+                };
+            }
+            return std::nullopt;
+        }
+
+
+    } // namespace hackish
+
+
     void loadTextureLayer(graphics::Texture & a3dTexture,
+                          GLenum aTextureInternalFormat,
                           GLint aLayerIdx,
                           std::filesystem::path aTexturePath,
                           math::Size<2, int> aExpectedDimensions,
                           ColorSpace aSourceColorSpace)
     {
-        arte::Image<math::sdr::Rgba> image{aTexturePath, arte::ImageOrientation::InvertVerticalAxis};
-
-        assert(aExpectedDimensions == image.dimensions());
-
-        if(aSourceColorSpace == ColorSpace::sRGB)
+        // If the layered texutre internal format is uncompressed SDR RGBA, load the uncompressed image and transfer it
+        if(aTextureInternalFormat == graphics::MappedSizedPixel_v<math::sdr::Rgba>)
         {
-            decodeSRGBToLinear(image);
-        }
+            // Ensure the file does not correspond to a compressed texture format
+            assert(aTexturePath.extension() != ".dds");
+            // Also ensure that non of the paths that will be added to this Texture Array would offer compressed alternatives
+            // (it would likely mean that we forgot to compress some)
+            assert(!std::filesystem::exists(hackish::getDdsCandidate(aTexturePath)));
 
-        proto::writeTo(a3dTexture,
-                       static_cast<const std::byte *>(image),
-                       graphics::InputImageParameters::From(image),
-                       math::Position<3, GLint>{0, 0, aLayerIdx});
+            arte::Image<math::sdr::Rgba> image{aTexturePath, arte::ImageOrientation::InvertVerticalAxis};
+
+            assert(aExpectedDimensions == image.dimensions());
+
+            if(aSourceColorSpace == ColorSpace::sRGB)
+            {
+                decodeSRGBToLinear(image);
+            }
+
+            proto::writeTo(a3dTexture,
+                           static_cast<const std::byte *>(image),
+                           graphics::InputImageParameters::From(image),
+                           math::Position<3, GLint>{0, 0, aLayerIdx});
+        }
+        // Handle compressed texture data
+        else
+        {
+            auto ddsCandidate = hackish::getDdsCandidate(aTexturePath);
+            if(auto dds = hackish::tryDds(ddsCandidate))
+            {
+                GLenum ddsFormat = dds::getCompressedFormat(dds->mHeader);
+                // In addition to better memory usage, we do that to speed-up loading:
+                // so we enforce that the compressed image data format exactly matches the texture internal format
+                if(ddsFormat != aTextureInternalFormat)
+                {
+                    SELOG(critical)("Texture internal format {} does not match DDS file '{}' internal format {}.",
+                                    aTextureInternalFormat, ddsCandidate.string(), ddsFormat);
+                    throw std::invalid_argument{"The texture internal format does not match the DDS file content."};
+                }
+
+                math::Size<2, int> imageDimensions{(int)dds->mHeader.h.dwWidth, (int)dds->mHeader.h.dwHeight};
+                assert(aExpectedDimensions == imageDimensions);
+
+                // The image data should be 2D
+                assert(dds->mHeader.h.dwDepth == 1);
+                // I cannot find a way to retrieve the bits-per-pixel for compressed texture formats.
+                // h.ddspf.dwRGBBitCount only contains a value when the RGB/YUV/LUMINANCE
+                // flag is set on h.ddspg.dwFlags, which is not the case for compressed images.
+                // So, hardcode it per compression format:
+                const GLuint pixelBitCount = graphics::getPixelFormatBitSize(ddsFormat);
+                assert(pixelBitCount == 8); // BC7 compression, only one supported atm, is 8bpp
+                assert(pixelBitCount % 8 == 0); // This is required so we can derive the number of byte per pixel.
+                const GLsizei bytePerPixel = pixelBitCount / 8;
+                const GLsizei imageByteSize = imageDimensions.area() * bytePerPixel;
+                // Does not seem defined either for our compressed texture
+                //assert(imageByteSize == dds::getCompressedByteSize(dds->mHeader));
+
+                graphics::ScopedBind bound{a3dTexture};
+                
+                // Client buffer to retrieve the compressed image data
+                std::unique_ptr<char []> imageData{new char[imageByteSize]};
+                // Note: This assert attempts to verify that we are at the expected byte offset
+                // from the start of the file 
+                // (128 + 20 see last example in: https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dds-file-layout-for-textures)
+                // Yet, the standard does not guarantee that tellg() returns a byte offset
+                // (Unices do, and Windows do for files opened in binary mode)
+                assert(dds->mDataStream.tellg() == 128 + 20);
+                dds->mDataStream.read(imageData.get(), imageByteSize);
+
+                // TODO: Should we handle alignment?
+                //Guard scopedAlignemnt = graphics::detail::scopeUnpackAlignment(aInput.alignment);
+
+                // TODO handle mipmaps
+                const GLint mipmapLevel = 0;
+                gl.CompressedTexSubImage3D(a3dTexture.mTarget,
+                                           mipmapLevel,
+                                           0, 0, aLayerIdx, // x, y, z offsets
+                                           dds->mHeader.h.dwWidth,
+                                           dds->mHeader.h.dwHeight,
+                                           dds->mHeader.h.dwDepth,
+                                           ddsFormat, 
+                                           imageByteSize,
+                                           imageData.get());
+            }
+            else
+            {
+                SELOG(critical)("Missing a DDS file for texture '{}'.", aTexturePath.string());
+                throw std::invalid_argument{"Missing DDS file."};
+            }
+        }
     }
 
 
@@ -445,11 +567,24 @@ namespace {
             {
                 assert(imageSize.width() > 0 && imageSize.height() > 1);
 
+                // The uncompressed internal format that would be used if no compression is available
+                GLenum internalFormat = graphics::MappedSizedPixel_v<math::sdr::Rgba>;
+
+                // With our current approach, we want ot decide on a given internal format that will be used for the
+                // array which will receive all texture for the list of paths.
+                // Unfortunately, our hackish approach requires to retrieve the first path to see if .dds candidates are
+                // expected or not.
+                std::string path = aIn.readString();
+                if(auto dds = hackish::tryDds(hackish::getDdsCandidate(aIn.mParentPath / path)))
+                {
+                    internalFormat = dds::getCompressedFormat(dds->mHeader);
+                }
+
                 graphics::Texture & textureArray = aStorage.mTextures.emplace_back(GL_TEXTURE_2D_ARRAY);
                 graphics::ScopedBind boundTextureArray{textureArray};
                 gl.TexStorage3D(textureArray.mTarget, 
                                 graphics::countCompleteMipmaps(imageSize),
-                                graphics::MappedSizedPixel_v<math::sdr::Rgba>,
+                                internalFormat,
                                 imageSize.width(), imageSize.height(), pathsCount);
                 { // scoping `isSuccess`
                     GLint isSuccess;
@@ -461,12 +596,15 @@ namespace {
                     }
                 }
 
-                for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
+                // We had to retrieve the first path to try the DDS candidate, so we have to handle it out of the loop
+                loadTextureLayer(textureArray, internalFormat, 0, aIn.mParentPath / path, imageSize, aColorSpace);
+                for(unsigned int pathIdx = 1; pathIdx != pathsCount; ++pathIdx)
                 {
                     std::string path = aIn.readString();
-                    loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize, aColorSpace);
+                    loadTextureLayer(textureArray, internalFormat, pathIdx, aIn.mParentPath / path, imageSize, aColorSpace);
                 }
 
+                // TODO handle mipmap loading for compressed texture, and do not generate anymore
                 glGenerateMipmap(textureArray.mTarget);
 
                 return &textureArray;
