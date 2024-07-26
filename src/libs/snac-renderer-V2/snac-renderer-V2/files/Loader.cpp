@@ -695,7 +695,17 @@ namespace {
             }
         }
 
-        auto loadTextures = [&aIn, &aStorage](ColorSpace aColorSpace) -> graphics::Texture *
+
+        auto setupFiltering = [](Handle<graphics::Texture> aTexture)
+        {
+            graphics::ScopedBind bound{*aTexture};
+            glTexParameteri(aTexture->mTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(aTexture->mTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameterf(aTexture->mTarget, GL_TEXTURE_MAX_ANISOTROPY, 16.f);
+        };
+
+
+        auto loadTextures = [&aIn, &aStorage](ColorSpace aColorSpace) -> Handle<graphics::Texture>
         {
             math::Size<2, int> imageSize;        
             aIn.read(imageSize);
@@ -767,8 +777,10 @@ namespace {
         RepositoryTexture textureRepo;
         for (auto [texSemantic, colorSpace] : semanticSequence)
         {
-            if(graphics::Texture * texture = loadTextures(colorSpace))
+            if(Handle<graphics::Texture> texture = loadTextures(colorSpace))
             {
+                // For the moment, set the same filtering for all texture semantics
+                setupFiltering(texture);
                 textureRepo.emplace(texSemantic, texture);
             }
         }
