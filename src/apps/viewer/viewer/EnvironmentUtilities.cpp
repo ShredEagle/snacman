@@ -1,5 +1,6 @@
 #include "EnvironmentUtilities.h"
 
+#include "Logging.h"
 #include "Scene.h"
 #include "TheGraph.h"
 
@@ -125,9 +126,32 @@ namespace {
         {
             graphics::ScopedBind boundEnvironment{*aEnvironment.mMap};
             glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-                                    0,
-                                    GL_TEXTURE_INTERNAL_FORMAT,
-                                    &environmentInternalFormat);
+                                     0,
+                                     GL_TEXTURE_INTERNAL_FORMAT,
+                                     &environmentInternalFormat);
+            
+            // Special care has to be taken if the internal format is compressed
+            switch(environmentInternalFormat)
+            {
+                default:
+                {
+                    GLint isCompressed = GL_TRUE;
+                    glGetInternalformativ(aEnvironment.mMap->mTarget, environmentInternalFormat, 
+                                          GL_TEXTURE_COMPRESSED, 1, &isCompressed);
+                    if(isCompressed)
+                    {
+                        // TODO complete the mapping if you end-up here
+                        SELOG(critical)("Environment map internal format {} is compressed, so it cannot be rendered.",
+                                        graphics::to_string(environmentInternalFormat));
+                        throw std::domain_error{"Compressed texture format unmapped for renderable cubemap."};
+                    }
+                }
+                case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
+                {
+                    // It seems it is mapping to 16 bits per channel when decompressed
+                    environmentInternalFormat = GL_RGB16F;
+                }
+            }
         }
 
         graphics::Texture cubemap{GL_TEXTURE_CUBE_MAP};
@@ -420,11 +444,6 @@ void dumpToFile(const graphics::Texture & aTexture, std::filesystem::path aOutpu
                              0,
                              GL_TEXTURE_HEIGHT,
                              &size.height());
-    GLint internalFormat;
-    glGetTexLevelParameteriv(aTexture.mTarget,
-                             0,
-                             GL_TEXTURE_INTERNAL_FORMAT,
-                             &internalFormat);
 
     using Pixel = math::sdr::Rgb;
 
