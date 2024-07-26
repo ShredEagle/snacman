@@ -53,8 +53,11 @@ public:
     void Enable(GLenum cap);
     void MultiDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect, GLsizei drawcount, GLsizei stride);
     void PolygonMode(GLenum face, GLenum mode);
+    void TexStorage2D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height);
     void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
     void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
+    void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data);
+    void CompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
     void CompressedTexImage3D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
     void CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
 
@@ -233,6 +236,27 @@ inline void GlApi::PolygonMode(GLenum face, GLenum mode)
 }
 
 
+inline void GlApi::TexStorage2D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height)
+{
+#if defined(SE_INSTRUMENT_GL)
+    // Only gives an approximation at the moment
+    // TODO Ad 2023/10/24: Is it actually how the reserved memory is computed?
+    // Do we need to take into account some further alignment constraints?
+    // How is byte rounding implemeneted?
+    GLuint bitsPerPixel = graphics::getPixelFormatBitSize(internalformat);
+    GLsizei w = width;
+    GLsizei h = height;
+    for (GLsizei i = 0; i < levels; i++) {
+        // Currently rounding each level independently.
+        v().mTextureMemory.mAllocated += (w * h * bitsPerPixel) / 8;
+        w = std::max(1, (w / 2));
+        h = std::max(1, (h / 2));
+    }
+#endif
+    return glTexStorage2D(target, levels, internalformat, width, height);
+}
+
+
 inline void GlApi::TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth)
 {
 #if defined(SE_INSTRUMENT_GL)
@@ -268,6 +292,24 @@ inline void GlApi::TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLin
         width * height * depth * graphics::getComponentsCount(format) * graphics::getByteSize(type);
 #endif
     return glTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, pixels);
+}
+
+
+inline void GlApi::CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data)
+{
+#if defined(SE_INSTRUMENT_GL)
+    v().mTextureMemory.mWritten += imageSize;
+#endif
+    return glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data);
+}
+
+
+inline void GlApi::CompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data)
+{
+#if defined(SE_INSTRUMENT_GL)
+    v().mTextureMemory.mWritten += imageSize;
+#endif
+    return glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data);
 }
 
 

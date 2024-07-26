@@ -32,6 +32,10 @@ enum class SeumErrorCode
     OutdatedVersion,
 };
 
+
+graphics::Texture loadDds(std::filesystem::path aDds);
+
+
 std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBinaryFile,
                                              Storage & aStorage,
                                              Effect * aPartsEffect,

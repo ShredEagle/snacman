@@ -300,22 +300,23 @@ namespace {
 
 } // unnamed namespace
 
-void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironmentStrip)
+void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment)
 {
     PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "Load environment map",
                                       CpuTime, GpuTime, BufferMemoryWritten);
-    SELOG(info)("Loading environment map from cubemap strip '{}'", aEnvironmentStrip.string());
+    SELOG(info)("Loading environment map from cubemap strip '{}'", aEnvironment.string());
 
     setEnvironmentMap(*this, 
-                      loadCubemapFromStrip(aEnvironmentStrip),
+                      aEnvironment.extension() == ".dds" ?
+                        loadCubemapFromDds(aEnvironment)
+                        : loadCubemapFromStrip(aEnvironment),
                       //loadCubemapFromSequence(aEnvironmentStrip),
                       Environment::Cubemap,
-                      aEnvironmentStrip);
+                      aEnvironment);
 
     //
-    // Setup the filtered environment radiance
+    // Setup the filtered environment textures
     //
-
     const GLint gFilteredRadianceSide = 512;
     const GLint gIntegratedBrdfSide = 512;
     const GLint gFilteredIrradianceSide = 128;

@@ -29,6 +29,14 @@ namespace {
 } // unnamed namespace
 
 
+enum DWCAPS_enum : Dword_t
+{
+    DDSCAPS_COMPLEX = 0x8,
+    DDSCAPS_MIPMAP = 0x400000,
+    DDSCAPS_TEXTURE = 0x1000,
+};
+
+
 Header readHeader(std::istream & aDdsStream)
 {
     // see: https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dx-graphics-dds-pguide#dds-file-layout
@@ -38,6 +46,9 @@ Header readHeader(std::istream & aDdsStream)
 
     Header result;
     readBytes(aDdsStream, result.h);
+    // Sanity checks
+    assert((result.h.dwFlags & DDS_HEADER_FLAGS_TEXTURE) == DDS_HEADER_FLAGS_TEXTURE);
+    assert((result.h.dwCaps & DDSCAPS_TEXTURE) == DDSCAPS_TEXTURE);
             
     if(((result.h.ddspf.dwFlags & DDPF_FOURCC) != 0)
         && result.h.ddspf.dwFourCC == 0x30315844) // "DX10", little endian
@@ -49,8 +60,14 @@ Header readHeader(std::istream & aDdsStream)
 }
 
 
+math::Size<2, GLint> getDimensions(const Header & aHeader)
+{
+    return {(GLint)aHeader.h.dwWidth, (GLint)aHeader.h.dwHeight};
+}
+
+
 // see: https://learn.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format
-enum DXGI_FORMAT 
+enum DXGI_FORMAT_enum : DXGI_FORMAT
 {
   DXGI_FORMAT_UNKNOWN = 0,
   DXGI_FORMAT_R32G32B32A32_TYPELESS = 1,
@@ -192,6 +209,10 @@ GLenum getCompressedFormat(const Header & aHeader)
                 return GL_COMPRESSED_RG_RGTC2;
             case DXGI_FORMAT_BC5_SNORM:
                 return GL_COMPRESSED_SIGNED_RG_RGTC2;
+            case DXGI_FORMAT_BC6H_UF16:
+                return GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
+            case DXGI_FORMAT_BC6H_SF16:
+                return GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT;
             case DXGI_FORMAT_BC7_UNORM:
                 return GL_COMPRESSED_RGBA_BPTC_UNORM;
             case DXGI_FORMAT_BC7_UNORM_SRGB:
@@ -212,5 +233,63 @@ GLsizei getCompressedByteSize(const Header & aHeader)
     throw std::domain_error("The texture in this DDS does not provide its linear size.");
 }
 
+
+enum DWCAPS2_enum : Dword_t
+{
+    DDSCAPS2_CUBEMAP = 0x200,
+    DDSCAPS2_CUBEMAP_POSITIVEX = 0x400,
+    DDSCAPS2_CUBEMAP_NEGATIVEX = 0x800,
+    DDSCAPS2_CUBEMAP_POSITIVEY = 0x1000,
+    DDSCAPS2_CUBEMAP_NEGATIVEY = 0x2000,
+    DDSCAPS2_CUBEMAP_POSITIVEZ = 0x4000,
+    DDSCAPS2_CUBEMAP_NEGATIVEZ = 0x8000,
+    DDSCAPS2_VOLUME = 0x200000,
+};
+
+
+Dword_t DDS_CUBEMAP_POSITIVEX = DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_POSITIVEX;
+// etc.
+Dword_t DDS_CUBEMAP_ALLFACES = 
+    DDSCAPS2_CUBEMAP
+    | DDSCAPS2_CUBEMAP_POSITIVEX
+    | DDSCAPS2_CUBEMAP_NEGATIVEX
+    | DDSCAPS2_CUBEMAP_POSITIVEY
+    | DDSCAPS2_CUBEMAP_NEGATIVEY
+    | DDSCAPS2_CUBEMAP_POSITIVEZ
+    | DDSCAPS2_CUBEMAP_NEGATIVEZ
+    ;
+
+
+GLenum getTextureTarget(const Header & aHeader)
+{
+    if((aHeader.h.dwCaps2 & DDSCAPS2_CUBEMAP) == DDSCAPS2_CUBEMAP)
+    {
+        assert((aHeader.h.dwCaps & DDSCAPS_COMPLEX) == DDSCAPS_COMPLEX);
+        if(aHeader.h.dwCaps2 == DDS_CUBEMAP_ALLFACES)
+        {
+            return GL_TEXTURE_CUBE_MAP;
+        }
+        else
+        {
+            SELOG(critical)("Partial cube-maps are not supported.");
+            throw std::invalid_argument{"Partial cube-maps are not supported."};
+        }
+    }
+    else if(aHeader.h_dxt10)
+    {
+        switch(aHeader.h_dxt10->resourceDimension)
+        {
+            case DDS_DIMENSION_TEXTURE1D:
+                return GL_TEXTURE_1D;
+            case DDS_DIMENSION_TEXTURE2D:
+                return GL_TEXTURE_2D;
+            case DDS_DIMENSION_TEXTURE3D:
+                return GL_TEXTURE_3D;
+        }
+    }
+
+    // TODO complete when this exception is thrown
+    throw std::domain_error{"Could not derive a target from the DDS header."};
+}
 
 } // namespace ad::renderer::dds

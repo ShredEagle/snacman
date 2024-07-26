@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include <math/Vector.h>
+
 #include <renderer/GL_Loader.h>
 
 #include <istream> 
@@ -78,6 +80,13 @@ enum DdsHeader_DwFlags : Dword_t
 };
 
 
+inline Dword_t DDS_HEADER_FLAGS_TEXTURE = 
+    DDSD_CAPS
+    | DDSD_HEIGHT
+    | DDSD_WIDTH
+    | DDSD_PIXELFORMAT;
+
+
 // see: https://learn.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format
 using DXGI_FORMAT = std::uint32_t; // an enum whose max value is named FORCE_UINT, with a widht of 32 bits.
 
@@ -120,9 +129,14 @@ namespace dds {
 
     Header readHeader(std::istream & aDdsStream);
 
+    math::Size<2, GLint> getDimensions(const Header & aHeader);
+
     GLenum getCompressedFormat(const Header & aHeader);
 
     GLsizei getCompressedByteSize(const Header & aHeader);
+
+    GLenum getTextureTarget(const Header & aHeader);
+
 
 } // namespace dds
 

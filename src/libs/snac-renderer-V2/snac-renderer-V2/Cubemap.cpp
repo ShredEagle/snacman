@@ -95,6 +95,18 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
 }
 
 
+graphics::Texture loadCubemapFromDds(filesystem::path aDds)
+{
+    graphics::Texture cubemap = loadDds(aDds);
+    assert(cubemap.mTarget == GL_TEXTURE_CUBE_MAP);
+
+    graphics::ScopedBind boundTexture{cubemap};
+    setupCubeFiltering();
+
+    return cubemap;
+}
+
+
 graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence)
 {
     const std::filesystem::path parent = aImageSequence.parent_path();

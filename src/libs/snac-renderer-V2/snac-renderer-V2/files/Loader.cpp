@@ -214,6 +214,10 @@ namespace {
             }
         }
 
+        // TODO BUGFIX: there is likely an offset missing here, from the already loaded materials
+        // Maybe not, because it seems each loaded 'seum' file is creating a distinct Material UBO (associated to its context)
+        // so, it is probably okay to index locally to this UBO.
+
         // Assign the part material index to the otherwise common material
         aPartsMaterial.mMaterialParametersIdx = materialIndex;
         Part part{
@@ -404,30 +408,44 @@ namespace {
         }
 
 
+        MyDds loadMyDds(std::filesystem::path aDds)
+        {
+            SELOG(debug)("Loading the DDS texture: {}", aDds.string());
+
+            std::ifstream ddsStream{aDds, std::ios_base::in | std::ios_base::binary};
+            if(!ddsStream.good())
+            {
+                throw std::runtime_error{"Unable to open DDS file: '" + aDds.string() + "'."};
+            }
+
+            dds::Header header = dds::readHeader(ddsStream);
+            return MyDds{
+                .mHeader = std::move(header),
+                .mDataStream = std::move(ddsStream),
+            };
+        }
+
+
         /// @brief Construct a MyDds instance if `aDdsCandidate` file exists.
         std::optional<MyDds> tryDds(std::filesystem::path aDdsCandidate)
         {
             if(is_regular_file(aDdsCandidate))
             {
-                SELOG(debug)("Loading the DDS texture: {}", aDdsCandidate.string());
-
-                std::ifstream ddsStream{aDdsCandidate, std::ios_base::in | std::ios_base::binary};
-                if(!ddsStream.good())
-                {
-                    throw std::runtime_error{"Unable to open DDS file: '" + aDdsCandidate.string() + "'."};
-                }
-
-                dds::Header header = dds::readHeader(ddsStream);
-                return MyDds{
-                    .mHeader = std::move(header),
-                    .mDataStream = std::move(ddsStream),
-                };
+                return loadMyDds(aDdsCandidate);
             }
             return std::nullopt;
         }
 
 
     } // namespace hackish
+
+
+    struct CompressedBlockInfo
+    {
+        GLenum mInternalFormat; // Not sure this member should exist
+        GLsizei mByteSize; 
+        math::Size<2, GLsizei> mDimensions;
+    };
 
 
     GLsizei computeCompressedImageSize(math::Size<2, GLsizei> aImageDimensions,
@@ -453,6 +471,121 @@ namespace {
         return aInternalFormat != graphics::MappedSizedPixel_v<math::sdr::Rgba>;
     }
 
+
+    CompressedBlockInfo getBlockInfo(GLenum aTextureTarget, GLenum aCompressedFormat)
+    {
+        // The block byte size is the reason sub-block image size
+        // are not going under a minimum value: any image in this format is at least 1 block
+        GLint blockByteSize = 0;
+        glGetInternalformativ(aTextureTarget, aCompressedFormat, 
+                              GL_TEXTURE_COMPRESSED_BLOCK_SIZE, 1, &blockByteSize);
+        // IMPORTANT: despite what OpenGL 4.6 core profile claims, it returns the size in bits, not bytes
+        assert(blockByteSize % 8 == 0);
+        blockByteSize /= 8;
+        // As of this writting, all compressed block sizes we implement are 16 bytes.
+        // Remove this assert when this is not true anymore.
+        assert(blockByteSize == 16);
+
+        // Sanity check: the block is 4x4
+        GLint blockWidth = 0;
+        glGetInternalformativ(aTextureTarget, aCompressedFormat, 
+                              GL_TEXTURE_COMPRESSED_BLOCK_WIDTH, 1, &blockWidth);
+        GLint blockHeight = 0;
+        glGetInternalformativ(aTextureTarget, aCompressedFormat, 
+                              GL_TEXTURE_COMPRESSED_BLOCK_HEIGHT, 1, &blockHeight);
+        assert(blockWidth == blockHeight && blockHeight == 4);
+
+        return {
+            .mInternalFormat = aCompressedFormat,
+            .mByteSize = blockByteSize,
+            .mDimensions = {(GLsizei)blockWidth, (GLsizei)blockHeight},
+        };
+    }
+
+
+    void loadDdsData(graphics::Texture & aTexture,
+                     GLenum aLoadedTarget, // might be a specific cubemap face
+                     math::Size<2, GLint> aMainImageDimensions,
+                     const CompressedBlockInfo & aBlockInfo,
+                     const dds::Header aDdsHeader,
+                     std::istream & aDataStream,
+                     GLint aLayerIdx = -1 /* -1 implies 2D texture target*/)
+    {
+        // The image data should be 2D
+        assert(aDdsHeader.h.dwDepth == 1);
+        assert(aDdsHeader.h_dxt10 
+                && aDdsHeader.h_dxt10->resourceDimension == DDS_DIMENSION_TEXTURE2D);
+
+
+        // Note: replaced with the GL query of compressed block size in getBlockInfo
+        {
+            // I cannot find a way to retrieve the bits-per-pixel from the DDS for compressed texture formats.
+            // h.ddspf.dwRGBBitCount only contains a value when the RGB/YUV/LUMINANCE
+            // flag is set on h.ddspg.dwFlags, which is not the case for compressed images.
+            // So, hardcode it per compression format:
+            const GLuint pixelBitCount = graphics::getPixelFormatBitSize(aBlockInfo.mInternalFormat);
+            assert(pixelBitCount == 8); // BC7 & BC5 compressions, only ones supported atm, are 8bpp
+            assert(pixelBitCount % 8 == 0); // This is required so we can derive the number of byte per pixel.
+            const GLsizei bytePerPixel = pixelBitCount / 8;
+            const GLsizei imageByteSize = aMainImageDimensions.area() * bytePerPixel;
+            // Does not seem defined either for our compressed texture
+            //assert(imageByteSize == dds::getCompressedByteSize(dds->mHeader));
+        }
+
+        const GLsizei imageByteSize = 
+            computeCompressedImageSize(aMainImageDimensions, aBlockInfo.mByteSize, aBlockInfo.mDimensions);
+
+        graphics::ScopedBind bound{aTexture};
+        
+        // Client buffer to retrieve the compressed image data
+        std::unique_ptr<char []> imageData{new char[imageByteSize]};
+
+        // TODO: Should we handle alignment?
+        //Guard scopedAlignemnt = graphics::detail::scopeUnpackAlignment(aInput.alignment);
+
+        assert((aDdsHeader.h.dwFlags & DDSD_MIPMAPCOUNT) == DDSD_MIPMAPCOUNT);
+        const GLint mipmapCount = aDdsHeader.h.dwMipMapCount;
+        // We expect complete mipmaps to be provided
+        assert(mipmapCount == graphics::countCompleteMipmaps(aMainImageDimensions));
+
+        math::Size<2, GLsizei> levelDimensions{aMainImageDimensions};
+        GLsizei levelByteSize = imageByteSize;
+        for(GLint level = 0; level != mipmapCount; ++level)
+        {
+            aDataStream.read(imageData.get(), levelByteSize);
+            assert(aDataStream.good());
+
+            if(aLayerIdx < 0) // Assumed to mean the target is a 2D texture type
+            {
+                gl.CompressedTexSubImage2D(aLoadedTarget,
+                                           level,
+                                           0, 0, // x, y offsets
+                                           levelDimensions.width(),
+                                           levelDimensions.height(),
+                                           aBlockInfo.mInternalFormat, 
+                                           levelByteSize,
+                                           imageData.get());
+            }
+            else
+            {
+                // For 3D texture, I am unaware of a use case to make it distinct atm.
+                assert(aLoadedTarget == aTexture.mTarget);
+                gl.CompressedTexSubImage3D(aLoadedTarget,
+                                           level,
+                                           0, 0, aLayerIdx, // x, y, z offsets
+                                           levelDimensions.width(),
+                                           levelDimensions.height(),
+                                           aDdsHeader.h.dwDepth,
+                                           aBlockInfo.mInternalFormat, 
+                                           levelByteSize,
+                                           imageData.get());
+            }
+
+            // Prepare next iteration
+            levelDimensions = max((levelDimensions / 2), {1, 1});
+            levelByteSize = computeCompressedImageSize(levelDimensions, aBlockInfo.mByteSize, aBlockInfo.mDimensions);
+        }
+    }
 
     void loadTextureLayer(graphics::Texture & a3dTexture,
                           GLenum aTextureInternalFormat,
@@ -501,7 +634,7 @@ namespace {
                     throw std::invalid_argument{"The texture internal format does not match the DDS file content."};
                 }
 
-                const math::Size<2, int> mainImageDimensions{(int)dds->mHeader.h.dwWidth, (int)dds->mHeader.h.dwHeight};
+                const math::Size<2, int> mainImageDimensions = dds::getDimensions(dds->mHeader);
                 assert(aExpectedDimensions == mainImageDimensions);
 
                 // The image data should be 2D
@@ -509,49 +642,6 @@ namespace {
                 assert(dds->mHeader.h_dxt10 
                        && dds->mHeader.h_dxt10->resourceDimension == DDS_DIMENSION_TEXTURE2D);
 
-                // Note: replaced with the GL query of compressed block size
-                {
-                    // I cannot find a way to retrieve the bits-per-pixel from the DDS for compressed texture formats.
-                    // h.ddspf.dwRGBBitCount only contains a value when the RGB/YUV/LUMINANCE
-                    // flag is set on h.ddspg.dwFlags, which is not the case for compressed images.
-                    // So, hardcode it per compression format:
-                    const GLuint pixelBitCount = graphics::getPixelFormatBitSize(ddsFormat);
-                    assert(pixelBitCount == 8); // BC7 & BC5 compressions, only ones supported atm, are 8bpp
-                    assert(pixelBitCount % 8 == 0); // This is required so we can derive the number of byte per pixel.
-                    const GLsizei bytePerPixel = pixelBitCount / 8;
-                    const GLsizei imageByteSize = mainImageDimensions.area() * bytePerPixel;
-                    // Does not seem defined either for our compressed texture
-                    //assert(imageByteSize == dds::getCompressedByteSize(dds->mHeader));
-                }
-
-                // The block byte size is the reason sub-block image size
-                // are not going under a minimum value: any image in this format is at least 1 block
-                GLint blockByteSize = 0;
-                glGetInternalformativ(a3dTexture.mTarget, ddsFormat, 
-                                      GL_TEXTURE_COMPRESSED_BLOCK_SIZE, 1, &blockByteSize);
-                // IMPORTANT: despite what OpenGL 4.6 core profile claims, it returns the size in bits, not bytes
-                assert(blockByteSize % 8 == 0);
-                blockByteSize /= 8;
-                // As of this writting, all compressed block sizes we implement are 16 bytes.
-                // Remove this assert when this is not true anymore.
-                assert(blockByteSize == 16);
-
-                // Sanity check: the block is 4x4
-                GLint blockWidth = 0;
-                glGetInternalformativ(a3dTexture.mTarget, ddsFormat, 
-                                      GL_TEXTURE_COMPRESSED_BLOCK_WIDTH, 1, &blockWidth);
-                GLint blockHeight = 0;
-                glGetInternalformativ(a3dTexture.mTarget, ddsFormat, 
-                                      GL_TEXTURE_COMPRESSED_BLOCK_HEIGHT, 1, &blockHeight);
-                assert(blockWidth == blockHeight && blockHeight == 4);
-
-                const GLsizei imageByteSize = 
-                    computeCompressedImageSize(mainImageDimensions, blockByteSize, {blockWidth, blockHeight});
-
-                graphics::ScopedBind bound{a3dTexture};
-                
-                // Client buffer to retrieve the compressed image data
-                std::unique_ptr<char []> imageData{new char[imageByteSize]};
                 // Note: This assert attempts to verify that we are at the expected byte offset
                 // from the start of the file 
                 // (128 + 20 see last example in: https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dds-file-layout-for-textures)
@@ -559,34 +649,14 @@ namespace {
                 // (Unices do, and Windows do for files opened in binary mode)
                 assert(dds->mDataStream.tellg() == 128 + 20);
 
-                // TODO: Should we handle alignment?
-                //Guard scopedAlignemnt = graphics::detail::scopeUnpackAlignment(aInput.alignment);
-
-                assert((dds->mHeader.h.dwFlags & DDSD_MIPMAPCOUNT) == DDSD_MIPMAPCOUNT);
-                const GLint mipmapCount = dds->mHeader.h.dwMipMapCount;
-                // We expect complete mipmaps to be provided
-                assert(mipmapCount == graphics::countCompleteMipmaps(mainImageDimensions));
-
-                math::Size<2, GLsizei> levelDimensions{mainImageDimensions};
-                GLsizei levelByteSize = imageByteSize;
-                for(GLint level = 0; level != mipmapCount; ++level)
-                {
-                    dds->mDataStream.read(imageData.get(), 
-                                          levelByteSize);
-                    assert(dds->mDataStream.good());
-                    gl.CompressedTexSubImage3D(a3dTexture.mTarget,
-                                            level,
-                                            0, 0, aLayerIdx, // x, y, z offsets
-                                            levelDimensions.width(),
-                                            levelDimensions.height(),
-                                            dds->mHeader.h.dwDepth,
-                                            ddsFormat, 
-                                            levelByteSize,
-                                            imageData.get());
-
-                    levelDimensions = max((levelDimensions / 2), {1, 1});
-                    levelByteSize = computeCompressedImageSize(levelDimensions, blockByteSize, {blockWidth, blockHeight});
-                }
+                const CompressedBlockInfo blockInfo = getBlockInfo(a3dTexture.mTarget, ddsFormat);
+                loadDdsData(a3dTexture,
+                            a3dTexture.mTarget, 
+                            mainImageDimensions,
+                            blockInfo,
+                            dds->mHeader,
+                            dds->mDataStream,
+                            aLayerIdx);
             }
             else
             {
@@ -635,7 +705,7 @@ namespace {
 
             if(pathsCount > 0)
             {
-                assert(imageSize.width() > 0 && imageSize.height() > 1);
+                assert(imageSize.width() > 0 && imageSize.height() > 0);
 
                 // The uncompressed internal format that would be used if no compression is available
                 GLenum internalFormat = graphics::MappedSizedPixel_v<math::sdr::Rgba>;
@@ -711,6 +781,60 @@ namespace {
 
 
 } // unnamed namespace
+
+
+graphics::Texture loadDds(std::filesystem::path aDds)
+{
+    hackish::MyDds dds = hackish::loadMyDds(aDds);
+
+    const GLenum target = dds::getTextureTarget(dds.mHeader);
+    graphics::Texture texture{target};
+
+    const math::Size<2, GLint> imageSize = dds::getDimensions(dds.mHeader);
+    const GLenum internalFormat = dds::getCompressedFormat(dds.mHeader);
+
+    graphics::ScopedBind boundTexture{texture};
+    gl.TexStorage2D(texture.mTarget, 
+                    graphics::countCompleteMipmaps(imageSize),
+                    internalFormat,
+                    imageSize.width(), imageSize.height());
+    { // scoping `isSuccess`
+        GLint isSuccess;
+        glGetTexParameteriv(texture.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);
+        if(!isSuccess)
+        {
+            SELOG(error)("Cannot create immutable storage for texture to load '{}'.", aDds.string());
+            throw std::runtime_error{"Error creating immutable storage for texture."};
+        }
+    }
+
+    const CompressedBlockInfo blockInfo = getBlockInfo(texture.mTarget, internalFormat);
+    if(target == GL_TEXTURE_CUBE_MAP)
+    {
+        // For a cubemap, we need to load each face (complete with its mipmaps) in sequence
+        for(unsigned int faceIdx = 0; faceIdx != 6; ++faceIdx)
+        {
+            loadDdsData(texture,
+                        GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIdx,
+                        imageSize,
+                        blockInfo,
+                        dds.mHeader,
+                        dds.mDataStream);
+        }
+    }
+    else
+    {
+        // Load the current texture target
+        loadDdsData(texture,
+                    texture.mTarget,
+                    imageSize,
+                    blockInfo,
+                    dds.mHeader,
+                    dds.mDataStream);
+    }
+
+    return texture;
+}
 
 
 std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage, 

@@ -19,6 +19,8 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip);
 
 graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence);
 
+graphics::Texture loadCubemapFromDds(filesystem::path aDds);
+
 graphics::Texture loadEquirectangular(filesystem::path aEquirectangularMap);
 
 
