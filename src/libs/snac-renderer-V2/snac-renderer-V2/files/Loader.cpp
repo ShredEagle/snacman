@@ -430,6 +430,30 @@ namespace {
     } // namespace hackish
 
 
+    GLsizei computeCompressedImageSize(math::Size<2, GLsizei> aImageDimensions,
+                                       GLsizei aBlockByteSize,          
+                                       math::Size<2, GLsizei> aBlockDimensions = {4, 4})
+    {
+        const math::Size<2, GLsizei> gCeilOffset = aBlockDimensions - math::Size<2, GLsizei>{1, 1};
+
+        // Formula for image size in bytes:
+        // ceil(<w>/4) * ceil(<h>/4) * blocksize.
+        // taken and generalized from appendix of:
+        // https://registry.khronos.org/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
+        // Ceil is implemented with the generalized +3 / 4 from:
+        // https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dds-file-layout-for-textures
+        return ((aImageDimensions + gCeilOffset).cwDiv(aBlockDimensions)).area() 
+               * aBlockByteSize;
+    }
+    
+
+    /// @brief Factorizes the test that is used to check if we are on the compressed textures path
+    bool useCompressedTextures(GLenum aInternalFormat)
+    {
+        return aInternalFormat != graphics::MappedSizedPixel_v<math::sdr::Rgba>;
+    }
+
+
     void loadTextureLayer(graphics::Texture & a3dTexture,
                           GLenum aTextureInternalFormat,
                           GLint aLayerIdx,
@@ -438,7 +462,7 @@ namespace {
                           ColorSpace aSourceColorSpace)
     {
         // If the layered texutre internal format is uncompressed SDR RGBA, load the uncompressed image and transfer it
-        if(aTextureInternalFormat == graphics::MappedSizedPixel_v<math::sdr::Rgba>)
+        if(!useCompressedTextures(aTextureInternalFormat))
         {
             // Ensure the file does not correspond to a compressed texture format
             assert(aTexturePath.extension() != ".dds");
@@ -446,6 +470,7 @@ namespace {
             // (it would likely mean that we forgot to compress some)
             assert(!std::filesystem::exists(hackish::getDdsCandidate(aTexturePath)));
 
+            // Image files are expected to have the usual top-left origin
             arte::Image<math::sdr::Rgba> image{aTexturePath, arte::ImageOrientation::InvertVerticalAxis};
 
             assert(aExpectedDimensions == image.dimensions());
@@ -476,22 +501,52 @@ namespace {
                     throw std::invalid_argument{"The texture internal format does not match the DDS file content."};
                 }
 
-                math::Size<2, int> imageDimensions{(int)dds->mHeader.h.dwWidth, (int)dds->mHeader.h.dwHeight};
-                assert(aExpectedDimensions == imageDimensions);
+                const math::Size<2, int> mainImageDimensions{(int)dds->mHeader.h.dwWidth, (int)dds->mHeader.h.dwHeight};
+                assert(aExpectedDimensions == mainImageDimensions);
 
                 // The image data should be 2D
                 assert(dds->mHeader.h.dwDepth == 1);
-                // I cannot find a way to retrieve the bits-per-pixel for compressed texture formats.
-                // h.ddspf.dwRGBBitCount only contains a value when the RGB/YUV/LUMINANCE
-                // flag is set on h.ddspg.dwFlags, which is not the case for compressed images.
-                // So, hardcode it per compression format:
-                const GLuint pixelBitCount = graphics::getPixelFormatBitSize(ddsFormat);
-                assert(pixelBitCount == 8); // BC7 compression, only one supported atm, is 8bpp
-                assert(pixelBitCount % 8 == 0); // This is required so we can derive the number of byte per pixel.
-                const GLsizei bytePerPixel = pixelBitCount / 8;
-                const GLsizei imageByteSize = imageDimensions.area() * bytePerPixel;
-                // Does not seem defined either for our compressed texture
-                //assert(imageByteSize == dds::getCompressedByteSize(dds->mHeader));
+                assert(dds->mHeader.h_dxt10 
+                       && dds->mHeader.h_dxt10->resourceDimension == DDS_DIMENSION_TEXTURE2D);
+
+                // Note: replaced with the GL query of compressed block size
+                {
+                    // I cannot find a way to retrieve the bits-per-pixel from the DDS for compressed texture formats.
+                    // h.ddspf.dwRGBBitCount only contains a value when the RGB/YUV/LUMINANCE
+                    // flag is set on h.ddspg.dwFlags, which is not the case for compressed images.
+                    // So, hardcode it per compression format:
+                    const GLuint pixelBitCount = graphics::getPixelFormatBitSize(ddsFormat);
+                    assert(pixelBitCount == 8); // BC7 & BC5 compressions, only ones supported atm, are 8bpp
+                    assert(pixelBitCount % 8 == 0); // This is required so we can derive the number of byte per pixel.
+                    const GLsizei bytePerPixel = pixelBitCount / 8;
+                    const GLsizei imageByteSize = mainImageDimensions.area() * bytePerPixel;
+                    // Does not seem defined either for our compressed texture
+                    //assert(imageByteSize == dds::getCompressedByteSize(dds->mHeader));
+                }
+
+                // The block byte size is the reason sub-block image size
+                // are not going under a minimum value: any image in this format is at least 1 block
+                GLint blockByteSize = 0;
+                glGetInternalformativ(a3dTexture.mTarget, ddsFormat, 
+                                      GL_TEXTURE_COMPRESSED_BLOCK_SIZE, 1, &blockByteSize);
+                // IMPORTANT: despite what OpenGL 4.6 core profile claims, it returns the size in bits, not bytes
+                assert(blockByteSize % 8 == 0);
+                blockByteSize /= 8;
+                // As of this writting, all compressed block sizes we implement are 16 bytes.
+                // Remove this assert when this is not true anymore.
+                assert(blockByteSize == 16);
+
+                // Sanity check: the block is 4x4
+                GLint blockWidth = 0;
+                glGetInternalformativ(a3dTexture.mTarget, ddsFormat, 
+                                      GL_TEXTURE_COMPRESSED_BLOCK_WIDTH, 1, &blockWidth);
+                GLint blockHeight = 0;
+                glGetInternalformativ(a3dTexture.mTarget, ddsFormat, 
+                                      GL_TEXTURE_COMPRESSED_BLOCK_HEIGHT, 1, &blockHeight);
+                assert(blockWidth == blockHeight && blockHeight == 4);
+
+                const GLsizei imageByteSize = 
+                    computeCompressedImageSize(mainImageDimensions, blockByteSize, {blockWidth, blockHeight});
 
                 graphics::ScopedBind bound{a3dTexture};
                 
@@ -503,22 +558,35 @@ namespace {
                 // Yet, the standard does not guarantee that tellg() returns a byte offset
                 // (Unices do, and Windows do for files opened in binary mode)
                 assert(dds->mDataStream.tellg() == 128 + 20);
-                dds->mDataStream.read(imageData.get(), imageByteSize);
 
                 // TODO: Should we handle alignment?
                 //Guard scopedAlignemnt = graphics::detail::scopeUnpackAlignment(aInput.alignment);
 
-                // TODO handle mipmaps
-                const GLint mipmapLevel = 0;
-                gl.CompressedTexSubImage3D(a3dTexture.mTarget,
-                                           mipmapLevel,
-                                           0, 0, aLayerIdx, // x, y, z offsets
-                                           dds->mHeader.h.dwWidth,
-                                           dds->mHeader.h.dwHeight,
-                                           dds->mHeader.h.dwDepth,
-                                           ddsFormat, 
-                                           imageByteSize,
-                                           imageData.get());
+                assert((dds->mHeader.h.dwFlags & DDSD_MIPMAPCOUNT) == DDSD_MIPMAPCOUNT);
+                const GLint mipmapCount = dds->mHeader.h.dwMipMapCount;
+                // We expect complete mipmaps to be provided
+                assert(mipmapCount == graphics::countCompleteMipmaps(mainImageDimensions));
+
+                math::Size<2, GLsizei> levelDimensions{mainImageDimensions};
+                GLsizei levelByteSize = imageByteSize;
+                for(GLint level = 0; level != mipmapCount; ++level)
+                {
+                    dds->mDataStream.read(imageData.get(), 
+                                          levelByteSize);
+                    assert(dds->mDataStream.good());
+                    gl.CompressedTexSubImage3D(a3dTexture.mTarget,
+                                            level,
+                                            0, 0, aLayerIdx, // x, y, z offsets
+                                            levelDimensions.width(),
+                                            levelDimensions.height(),
+                                            dds->mHeader.h.dwDepth,
+                                            ddsFormat, 
+                                            levelByteSize,
+                                            imageData.get());
+
+                    levelDimensions = max((levelDimensions / 2), {1, 1});
+                    levelByteSize = computeCompressedImageSize(levelDimensions, blockByteSize, {blockWidth, blockHeight});
+                }
             }
             else
             {
@@ -545,7 +613,7 @@ namespace {
         }
 
         { // load material names
-            unsigned int namesCount; // TODO: useless, but this is because the filewritter wrote the number of elements in a vector
+            unsigned int namesCount; // TODO: redundant, but this is because the filewritter wrote the number of elements in a vector
             aIn.read(namesCount);
             assert(namesCount == materialsCount);
 
@@ -606,8 +674,11 @@ namespace {
                     loadTextureLayer(textureArray, internalFormat, pathIdx, aIn.mParentPath / path, imageSize, aColorSpace);
                 }
 
-                // TODO handle mipmap loading for compressed texture, and do not generate anymore
-                glGenerateMipmap(textureArray.mTarget);
+                // When a compressed texture container was not used, mipmaps should be generated
+                if(!useCompressedTextures(internalFormat))
+                {
+                    glGenerateMipmap(textureArray.mTarget);
+                }
 
                 return &textureArray;
             }

@@ -65,7 +65,7 @@ struct DDS_HEADER
 };
 
 
-enum DdshHeader_DwFlags : Dword_t
+enum DdsHeader_DwFlags : Dword_t
 {
     DDSD_CAPS = 0x1,
     DDSD_HEIGHT = 0x2,
@@ -98,6 +98,14 @@ struct DDS_HEADER_DXT10
   UINT                     miscFlag;
   UINT                     arraySize;
   UINT                     miscFlags2;
+};
+
+
+enum DdsHeaderDxt10_ResourceDimension : D3D10_RESOURCE_DIMENSION
+{
+    DDS_DIMENSION_TEXTURE1D = 2,
+    DDS_DIMENSION_TEXTURE2D = 3,
+    DDS_DIMENSION_TEXTURE3D = 4,
 };
 
 
