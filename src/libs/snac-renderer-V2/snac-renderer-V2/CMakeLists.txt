@@ -100,6 +100,7 @@ target_link_libraries(${TARGET_NAME}
         ad::graphics
         ad::math
         ad::profiler
+        ittapi::ittapi
 )
 
 

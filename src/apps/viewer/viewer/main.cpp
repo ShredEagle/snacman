@@ -9,6 +9,8 @@
 #include <imguiui/ImguiUi.h>
 #include <imguiui/Widgets.h>
 
+#include <ittnotify.h>
+
 #include <profiler/GlApi.h>
 #include <profiler/Profiler.h> // Internals are used to measure frame duration
 
@@ -120,6 +122,8 @@ int runApplication(int argc, char * argv[])
 {
     SELOG(info)("Starting application '{}'.", gApplicationName);
 
+    __itt_domain * itt_domain = __itt_domain_create("se::viewer");
+
     Arguments args;
     if(int result = handleArguments(argc, argv, args))
     {
@@ -130,8 +134,10 @@ int runApplication(int argc, char * argv[])
 
     constexpr unsigned int gMsaaSamples = 1;
 
+    __itt_string_handle* itt_handleGlfwApp = __itt_string_handle_create("glfwApp-ctor");
     // Application and window initialization
     graphics::ApplicationFlag glfwFlags = graphics::ApplicationFlag::None;
+    __itt_task_begin(itt_domain, __itt_null, __itt_null, itt_handleGlfwApp);
     graphics::ApplicationGlfw glfwApp{
         getVersionedName(),
         1920, 1024,
@@ -140,6 +146,7 @@ int runApplication(int argc, char * argv[])
         { {GLFW_SAMPLES, gMsaaSamples} },
     };
     glfwSwapInterval(0); // Disable V-sync
+    __itt_task_end(itt_domain);
 
     // Ensures the messages are sent synchronously with the event triggering them
     // This makes debug stepping much more feasible.
@@ -150,6 +157,8 @@ int runApplication(int argc, char * argv[])
     auto renderProfilerScope = SCOPE_PROFILER(gRenderProfiler, renderer::Profiler::Providers::All);
 
     auto loadingSection = PROFILER_BEGIN_SINGLESHOT_SECTION(gRenderProfiler, , "rendergraph_loading", renderer::CpuTime);
+    __itt_string_handle* itt_handleLoadingSection = __itt_string_handle_create("loadingSection");
+    __itt_task_begin(itt_domain, __itt_null, __itt_null, itt_handleLoadingSection);
     renderer::ViewerApplication application{
         glfwApp.getAppInterface(),
         args.mSceneFile,
@@ -163,6 +172,7 @@ int runApplication(int argc, char * argv[])
     {
         application.setEnvironmentEquirectangular(*environment);
     }
+    __itt_task_end(itt_domain);
     PROFILER_END_SECTION(loadingSection);
 
     renderer::Timing timing;

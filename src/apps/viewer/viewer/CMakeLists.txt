@@ -85,6 +85,7 @@ find_package(Handy CONFIG REQUIRED handy)
 
 
 find_package(CLI11 CONFIG REQUIRED)
+find_package(ittapi REQUIRED CONFIG) # Intel Instrumentation & Tracing Technology API
 find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
@@ -99,6 +100,7 @@ target_link_libraries(${TARGET_NAME}
         ad::utilities
 
         CLI11::CLI11
+        ittapi::ittapi
         spdlog::spdlog
 )
 
