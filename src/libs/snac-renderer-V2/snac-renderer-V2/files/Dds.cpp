@@ -227,7 +227,7 @@ GLsizei getCompressedByteSize(const Header & aHeader)
 {
     if ((aHeader.h.dwFlags & DDSD_LINEARSIZE) != 0)
     {
-        aHeader.h.dwPitchOrLinearSize;
+        return aHeader.h.dwPitchOrLinearSize;
     }
 
     throw std::domain_error("The texture in this DDS does not provide its linear size.");
