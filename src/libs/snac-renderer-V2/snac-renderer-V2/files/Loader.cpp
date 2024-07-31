@@ -516,22 +516,6 @@ namespace {
         assert(aDdsHeader.h_dxt10 
                 && aDdsHeader.h_dxt10->resourceDimension == DDS_DIMENSION_TEXTURE2D);
 
-
-        // Note: replaced with the GL query of compressed block size in getBlockInfo
-        {
-            // I cannot find a way to retrieve the bits-per-pixel from the DDS for compressed texture formats.
-            // h.ddspf.dwRGBBitCount only contains a value when the RGB/YUV/LUMINANCE
-            // flag is set on h.ddspg.dwFlags, which is not the case for compressed images.
-            // So, hardcode it per compression format:
-            const GLuint pixelBitCount = graphics::getPixelFormatBitSize(aBlockInfo.mInternalFormat);
-            assert(pixelBitCount == 8); // BC7 & BC5 compressions, only ones supported atm, are 8bpp
-            assert(pixelBitCount % 8 == 0); // This is required so we can derive the number of byte per pixel.
-            const GLsizei bytePerPixel = pixelBitCount / 8;
-            const GLsizei imageByteSize = aMainImageDimensions.area() * bytePerPixel;
-            // Does not seem defined either for our compressed texture
-            //assert(imageByteSize == dds::getCompressedByteSize(dds->mHeader));
-        }
-
         const GLsizei imageByteSize = 
             computeCompressedImageSize(aMainImageDimensions, aBlockInfo.mByteSize, aBlockInfo.mDimensions);
 
