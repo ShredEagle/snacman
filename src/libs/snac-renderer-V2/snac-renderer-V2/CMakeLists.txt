@@ -4,6 +4,7 @@ set(${TARGET_NAME}_HEADERS
     Camera.h
     Commons.h
     Cube.h
+    Cubemap.h
     Handle.h
     IntrospectProgram.h
     Json.h
@@ -24,6 +25,7 @@ set(${TARGET_NAME}_HEADERS
     debug/DebugDrawing.h
     debug/DebugRenderer.h
 
+    files/Dds.h
     files/BinaryArchive.h
     files/Flags.h
     files/Loader.h
@@ -32,6 +34,7 @@ set(${TARGET_NAME}_HEADERS
 
 set(${TARGET_NAME}_SOURCES
     Camera.cpp
+    Cubemap.cpp
     IntrospectProgram.cpp
     Logging-init.cpp
     Model.cpp
@@ -43,6 +46,7 @@ set(${TARGET_NAME}_SOURCES
     debug/DebugDrawing.cpp
     debug/DebugRenderer.cpp
 
+    files/Dds.cpp
     files/Loader.cpp
 )
 

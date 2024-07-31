@@ -10,14 +10,7 @@ in vec2 ve_Uv;
 in uint in_ModelTransformIdx;
 in uint in_MaterialIdx;
 
-// WARNING: for some reason, the GLSL compiler assigns the same implicit binding
-// index to both uniform blocks if we do not set it explicitly.
-layout(std140, binding = 0) uniform ViewProjectionBlock
-{
-    mat4 worldToCamera;
-    mat4 projection;
-    mat4 viewingProjection;
-};
+#include "ViewProjectionBlock.glsl"
 
 // TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
 layout(std140, binding = 1) uniform LocalToWorldBlock
@@ -53,11 +46,11 @@ void main(void)
     gl_Position = projection * position_cam;
     ex_Position_cam = vec3(position_cam);
     // TODO Handle non-orthogonal transformations (requiring transpose of the adjoint, see rtr 4th 4.1.7 p68)
-    ex_Normal_cam = mat3(localToCamera) * ve_Normal_local;
+    ex_Normal_cam = normalize(mat3(localToCamera) * ve_Normal_local);
     // Tangents are transformed like positions, by the localToCamera matrix (unlike normals)
     // see: https://www.pbr-book.org/3ed-2018/Geometry_and_Transformations/Applying_Transformations
-    ex_Tangent_cam = mat3(localToCamera) * ve_Tangent_local;
-    ex_Bitangent_cam = mat3(localToCamera) * ve_Bitangent_local;
+    ex_Tangent_cam = normalize(mat3(localToCamera) * ve_Tangent_local);
+    ex_Bitangent_cam = normalize(mat3(localToCamera) * ve_Bitangent_local);
     ex_Color = ve_Color;
     ex_Uv[0] = ve_Uv; // only 1 uv channel input at the moment
     ex_MaterialIdx = in_MaterialIdx;

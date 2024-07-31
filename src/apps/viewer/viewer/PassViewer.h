@@ -32,7 +32,7 @@ struct ViewerPartList : public PartList
 struct ViewerDrawInstance
 {
     GLsizei mInstanceTransformIdx; // index in the instance UBO
-    GLsizei mMaterialIdx;
+    GLsizei mMaterialParametersIdx;
     GLsizei mMatrixPaletteOffset;
 };
 
@@ -45,7 +45,7 @@ struct ViewerPassCache : public PassCache
 /// @brief From a PartList, generates the PassCache for a given pass.
 /// @param aPass Pass name.
 /// @param aPartList The PartList that should be rendered.
-ViewerPassCache prepareViewerPass(StringKey aPass,
+ViewerPassCache prepareViewerPass(AnnotationsSelector aAnnotations,
                                   const ViewerPartList & aPartList,
                                   Storage & aStorage);
 

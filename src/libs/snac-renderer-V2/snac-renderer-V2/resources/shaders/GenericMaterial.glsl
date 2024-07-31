@@ -1,4 +1,4 @@
-struct PhongMaterial
+struct GenericMaterial
 {
     vec4 ambientColor;
     vec4 diffuseColor;
@@ -7,10 +7,12 @@ struct PhongMaterial
     uint diffuseUvChannel;
     uint normalTextureIndex;
     uint normalUvChannel;
+    uint mraoTextureIndex;
+    uint mraoUvChannel;
     float specularExponent;
 };
 
 layout(std140, binding = 2) uniform MaterialsBlock
 {
-    PhongMaterial ub_Phong[128];
+    GenericMaterial ub_MaterialParams[128];
 };

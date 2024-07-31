@@ -103,6 +103,8 @@ void draw(const PassCache & aPassCache,
 // Low level API
 //
 
+using AnnotationsSelector = std::span<const Technique::Annotation>;
+
 // NOTE Ad 2024/04/09: I am not fan of having generateDrawEntries as part of a class.
 // Yet, for the moment we rely on some hackish ResourceIdMap to get the integer part of the sorting key
 // and those maps state must be maintained to generate the draw call by lookup.
@@ -117,7 +119,7 @@ struct DrawEntryHelper
 
     /// @brief Returns an array with one DrawEntry per-part in the input PartList.
     /// The DrawEntries can be sorted in order to minimize state changes.
-    std::vector<PartDrawEntry> generateDrawEntries(StringKey aPass,
+    std::vector<PartDrawEntry> generateDrawEntries(AnnotationsSelector aAnnotations,
                                                    const PartList & aPartList,
                                                    Storage & aStorage);
 
@@ -129,7 +131,17 @@ struct DrawEntryHelper
     std::unique_ptr<Opaque> mImpl;
 };
 
-Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName);
+
+/// \brief Return a value convertible to AnnotationsSelector.
+/// \warning This approach is smelly for several reasons:
+/// * It decides on some underlying storage (local though)
+/// * Only an l-value can be converted, which forces to assign to a variable, which does not look nice.
+inline std::array<Technique::Annotation, 1> selectPass(StringKey aPass)
+{
+    return {{{"pass", std::move(aPass)},}};
+}
+
+Handle<ConfiguredProgram> getProgram(const Effect & aEffect, AnnotationsSelector aAnnotations);
 
 Handle<graphics::VertexArrayObject> getVao(const ConfiguredProgram & aProgram,
                                            const Part & aPart,

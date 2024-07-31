@@ -23,17 +23,21 @@ class SnacmanConan(ConanFile):
 
     requires = (
         ("entity/38ecfecf59@adnn/develop"),
-        ("graphics/c35a0fe6f1@adnn/develop"),
+        ("graphics/9553555490@adnn/develop"),
         ("handy/15a1bb8eaa@adnn/develop"),
-        ("math/d200cdb8ba@adnn/develop"),
+        ("math/4173650c1e@adnn/develop"),
         ("MarkovJunior.cpp/86f542db56@adnn/develop"),
 
         # Waiting for my PR on conan-center for assimp to get merged in
         # see: https://github.com/conan-io/conan-center-index/pull/20185
         # I manually exported the recipe and uploaded it.
         ("assimp/5.3.1@adnn/develop"),
+        ("cli11/2.4.2"),
         ("spdlog/1.13.0"),
         ("nlohmann_json/3.11.2"),
+
+        # Intel Instrumentation and Tracing Technology API
+        ("ittapi/3.24.4"),
 
         # The overrides (who will think about reviewing them?)
         ("zlib/1.3"),

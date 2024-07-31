@@ -1,5 +1,6 @@
 #include "ViewerApplication.h"
 
+#include "EnvironmentUtilities.h"
 #include "Json.h"
 #include "Logging.h"
 #include "PassViewer.h"
@@ -20,6 +21,7 @@
 
 #include <snac-renderer-V2/Cube.h>
 #include <snac-renderer-V2/Profiling.h>
+#include <snac-renderer-V2/Semantics.h>
 #include <snac-renderer-V2/debug/DebugDrawing.h>
 
 #include <utilities/Time.h>
@@ -218,6 +220,7 @@ namespace {
 
             aPartList.mInstanceTransforms.push_back(
                 math::trans3d::scaleUniform(absolutePose.mUniformScale)
+                * absolutePose.mOrientation.toRotationMatrix()
                 * math::trans3d::translate(absolutePose.mPosition));
         }
 
@@ -278,7 +281,78 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // Toggle the triangle and cube in the scene
     //mScene.addToRoot(triangle);
     //mScene.addToRoot(cube);
+    
 }
+
+namespace {
+
+    void setEnvironmentMap(ViewerApplication & aApp, graphics::Texture aMap, Environment::Type aType, std::filesystem::path aPath)
+    {
+        aApp.mStorage.mTextures.push_back(std::move(aMap));
+        Handle<const graphics::Texture> texture = &aApp.mStorage.mTextures.back();
+        aApp.mScene.mEnvironment = Environment{
+            .mType = aType,
+            .mMap = texture,
+            .mMapFile = std::move(aPath),
+        };
+        aApp.mGraph.mTextureRepository[semantic::gEnvironmentTexture] = texture;
+    }
+
+} // unnamed namespace
+
+void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment)
+{
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "Load environment map",
+                                      CpuTime, GpuTime, BufferMemoryWritten);
+    SELOG(info)("Loading environment map from cubemap strip '{}'", aEnvironment.string());
+
+    setEnvironmentMap(*this, 
+                      aEnvironment.extension() == ".dds" ?
+                        loadCubemapFromDds(aEnvironment)
+                        : loadCubemapFromStrip(aEnvironment),
+                      //loadCubemapFromSequence(aEnvironmentStrip),
+                      Environment::Cubemap,
+                      aEnvironment);
+
+    //
+    // Setup the filtered environment textures
+    //
+    const GLint gFilteredRadianceSide = 512;
+    const GLint gIntegratedBrdfSide = 512;
+    const GLint gFilteredIrradianceSide = 128;
+    // That approach is smelly: we use the Environment to compute an value we will set on the Environment
+    mScene.mEnvironment->mFilteredRadiance =
+        filterEnvironmentMapSpecular(*mScene.mEnvironment, mGraph, mStorage, gFilteredRadianceSide);
+    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mFilteredRadiance, -1, "filtered_radiance_env");
+    mGraph.mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] = 
+        mScene.mEnvironment->mFilteredRadiance;
+
+    mScene.mEnvironment->mIntegratedBrdf =
+        integrateEnvironmentBrdf(mStorage, gIntegratedBrdfSide, mLoader);
+    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mIntegratedBrdf, -1, "integrated_env_brdf");
+    mGraph.mTextureRepository[semantic::gIntegratedEnvironmentBrdf] = 
+        mScene.mEnvironment->mIntegratedBrdf;
+
+    mScene.mEnvironment->mFilteredIrradiance =
+        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mGraph, mStorage, gFilteredIrradianceSide);
+    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mFilteredIrradiance, -1, "filtered_irradiance_env");
+    mGraph.mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] = 
+        mScene.mEnvironment->mFilteredIrradiance;
+}
+
+
+void ViewerApplication::setEnvironmentEquirectangular(std::filesystem::path aEnvironmentEquirect)
+{
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, "Load environment map",
+                                      CpuTime, GpuTime, BufferMemoryWritten);
+    SELOG(info)("Loading environment map from equirectangular map '{}'", aEnvironmentEquirect.string());
+
+    setEnvironmentMap(*this, 
+                      loadEquirectangular(aEnvironmentEquirect),
+                      Environment::Equirectangular,
+                      aEnvironmentEquirect);
+}
+
 
 
 constexpr std::array<math::hdr::Rgba<float>, 4> gColorRotation
@@ -288,6 +362,7 @@ constexpr std::array<math::hdr::Rgba<float>, 4> gColorRotation
     math::hdr::gGreen<float>,
     math::hdr::gYellow<float>,
 };
+
 
 void drawJointTree(const NodeTree<Rig::Pose> & aRigTree,
                    NodeTree<Rig::Pose>::Node::Index aNodeIdx,
@@ -366,7 +441,7 @@ void showPointLights(const LightsData & aLights)
                 .mPosition = pointLight.mPosition,
                 .mColor = pointLight.mDiffuseColor,
             },
-            math::Box<float>{gLightCubeSize.as<math::Position>() / 2.f, gLightCubeSize});
+            math::Box<float>{-gLightCubeSize.as<math::Position>() / 2.f, gLightCubeSize});
     }
 }
 
@@ -407,6 +482,62 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
         }
     }
 
+    auto conditionalGuard = [](bool aCondition, 
+                               auto aEnter,
+                               Guard::release_fun aExit) -> Guard
+    {
+        if(aCondition)
+        {
+            aEnter();
+            return Guard{std::move(aExit)};
+        }
+        else
+        {
+            return Guard{[](){}};
+        }
+    };
+
+    {
+        Guard scopeDisable = conditionalGuard(
+            !mScene.mEnvironment || mScene.mEnvironment->mType != Environment::Equirectangular,
+            [](){ImGui::BeginDisabled();},
+            ImGui::EndDisabled);
+
+        if(ImGui::Button("Dump environment"))
+        {
+            assert(mScene.mEnvironment);
+            dumpEnvironmentCubemap(
+                *mScene.mEnvironment,
+                mGraph,
+                mStorage,
+                mScene.mEnvironment->mMapFile.parent_path() /
+                    "split-" += mScene.mEnvironment->mMapFile.filename());
+        }
+    }
+    {
+        Guard scopeDisable = conditionalGuard(
+            !mScene.mEnvironment,
+            [](){ImGui::BeginDisabled();},
+            ImGui::EndDisabled);
+
+        if(ImGui::Button("Highlight samples"))
+        {
+            float roughness = 1.f/9.f; // the first level of our 10 mipmaps
+            // Normal is provided right-handed: z -> -1 "into the screen" normal
+            static graphics::Texture highlights =
+                highLightSamples(*mScene.mEnvironment,
+                                 math::Vec<3, float>(0.f, 0.f, -1.f),
+                                 roughness,
+                                 mLoader);
+            glObjectLabel(GL_TEXTURE, highlights, -1, "highlight-samples");
+            dumpToFile(highlights,
+                    mScene.mEnvironment->mMapFile.parent_path() /
+                        "samples-" += 
+                            mScene.mEnvironment->mMapFile.filename().replace_extension("png"),
+                    0);
+        }
+    }
+
     mGraphGui.present(mGraph);
 
     static bool gShowScene = false;
@@ -428,11 +559,7 @@ void ViewerApplication::render()
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
-    // TODO: How to handle material/program selection while generating the part list,
-    // if the camera (or pass itself?) might override the materials?
-    // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
-    ViewerPartList partList = mScene.populatePartList();
-    mGraph.renderFrame(partList,
+    mGraph.renderFrame(mScene,
                        mCameraSystem.mCamera,
                        mScene.getLightsInCamera(mCameraSystem.mCamera,
                                                 !mSceneGui.mOptions.mAreDirectionalLightsCameraSpace),

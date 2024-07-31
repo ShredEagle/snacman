@@ -12,6 +12,36 @@ struct Loader;
 struct ViewerPartList;
 
 
+struct Environment
+{
+    enum Type
+    {
+        Cubemap,
+        Equirectangular,
+    };
+    Type mType;
+    Handle<const graphics::Texture> mMap;
+    std::filesystem::path mMapFile; // notably used when dumping the cubemap, to derive a destination
+    Handle<const graphics::Texture> mFilteredRadiance;
+    Handle<const graphics::Texture> mIntegratedBrdf;
+    Handle<const graphics::Texture> mFilteredIrradiance;
+};
+
+
+inline std::string to_string(Environment::Type aEnvironment)
+{
+    switch(aEnvironment)
+    {
+        case Environment::Cubemap:
+            return "cubemap";
+        case Environment::Equirectangular:
+            return "equirectangular";
+        default:
+            throw std::invalid_argument{"Environment type value is not known."};
+    }
+}
+
+
 struct Scene
 {
     Scene & addToRoot(Node aNode)
@@ -50,9 +80,9 @@ struct Scene
 
     
     LightsData mLights_world{
-        .mDirectionalCount = 1,
-        .mPointCount = 1,
-        .mAmbientColor = math::hdr::gWhite<GLfloat> / 3.f,
+        .mDirectionalCount = 0,
+        .mPointCount = 0,
+        .mAmbientColor = math::hdr::gWhite<GLfloat> / 12.f,
         .mDirectionalLights = {
             DirectionalLight{
                 .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.f, -0.2f, -1.f}},
@@ -71,6 +101,8 @@ struct Scene
             },
         },
     };
+
+    std::optional<Environment> mEnvironment;
 };
 
 

@@ -60,10 +60,10 @@ void setIndexBuffer(Handle<VertexStream> aStream,
 
 /// @brief Add a single vertex attributes to `aVertexStream`.
 void addVertexAttribute(Handle<VertexStream> aVertexStream, 
-                         AttributeDescription aAttribute,
-                         Handle<const graphics::BufferAny> aVertexBuffer,
-                         unsigned int aVerticesCount,
-                         GLintptr aBufferOffset = 0);
+                        AttributeDescription aAttribute,
+                        Handle<const graphics::BufferAny> aVertexBuffer,
+                        unsigned int aVerticesCount,
+                        GLintptr aBufferOffset = 0);
 
 
 using InterleavedAttributeDescription = std::pair<AttributeDescription, size_t>;

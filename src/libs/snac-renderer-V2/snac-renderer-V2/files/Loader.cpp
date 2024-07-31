@@ -1,12 +1,14 @@
 #include "Loader.h"
 
 #include "BinaryArchive.h" 
+#include "Dds.h" 
 #include "Flags.h" 
 #include "Versioning.h" 
 
 #include "../Cube.h"
 #include "../Json.h"
 #include "../Logging.h"
+#include "../Profiling.h"
 #include "../RendererReimplement.h"
 #include "../Rigging.h"
 #include "../Semantics.h"
@@ -212,8 +214,12 @@ namespace {
             }
         }
 
+        // TODO BUGFIX: there is likely an offset missing here, from the already loaded materials
+        // Maybe not, because it seems each loaded 'seum' file is creating a distinct Material UBO (associated to its context)
+        // so, it is probably okay to index locally to this UBO.
+
         // Assign the part material index to the otherwise common material
-        aPartsMaterial.mPhongMaterialIdx = materialIndex;
+        aPartsMaterial.mMaterialParametersIdx = materialIndex;
         Part part{
             .mName = std::move(meshName),
             .mMaterial = aPartsMaterial,
@@ -375,18 +381,273 @@ namespace {
     }
 
 
+    // Intended to annotate the color space of an image
+    enum class ColorSpace
+    {
+        Linear,
+        sRGB,
+    };
+
+
+    // TODO replace this smelly approach to DDS handling
+    // The complication is that, at first, we want optional support for compressed texture
+    // basically, picking a .dds variant if it present, using the original image in the material otherwise.
+    namespace hackish {
+    
+
+        struct MyDds
+        {
+            dds::Header mHeader;
+            std::ifstream mDataStream;
+        };
+
+
+        std::filesystem::path getDdsCandidate(std::filesystem::path aTexturePath)
+        {
+            return aTexturePath.replace_extension(".dds");
+        }
+
+
+        MyDds loadMyDds(std::filesystem::path aDds)
+        {
+            SELOG(debug)("Loading the DDS texture: {}", aDds.string());
+
+            std::ifstream ddsStream{aDds, std::ios_base::in | std::ios_base::binary};
+            if(!ddsStream.good())
+            {
+                throw std::runtime_error{"Unable to open DDS file: '" + aDds.string() + "'."};
+            }
+
+            dds::Header header = dds::readHeader(ddsStream);
+            return MyDds{
+                .mHeader = std::move(header),
+                .mDataStream = std::move(ddsStream),
+            };
+        }
+
+
+        /// @brief Construct a MyDds instance if `aDdsCandidate` file exists.
+        std::optional<MyDds> tryDds(std::filesystem::path aDdsCandidate)
+        {
+            if(is_regular_file(aDdsCandidate))
+            {
+                return loadMyDds(aDdsCandidate);
+            }
+            return std::nullopt;
+        }
+
+
+    } // namespace hackish
+
+
+    struct CompressedBlockInfo
+    {
+        GLenum mInternalFormat; // Not sure this member should exist
+        GLsizei mByteSize; 
+        math::Size<2, GLsizei> mDimensions;
+    };
+
+
+    GLsizei computeCompressedImageSize(math::Size<2, GLsizei> aImageDimensions,
+                                       GLsizei aBlockByteSize,          
+                                       math::Size<2, GLsizei> aBlockDimensions = {4, 4})
+    {
+        const math::Size<2, GLsizei> gCeilOffset = aBlockDimensions - math::Size<2, GLsizei>{1, 1};
+
+        // Formula for image size in bytes:
+        // ceil(<w>/4) * ceil(<h>/4) * blocksize.
+        // taken and generalized from appendix of:
+        // https://registry.khronos.org/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
+        // Ceil is implemented with the generalized +3 / 4 from:
+        // https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dds-file-layout-for-textures
+        return ((aImageDimensions + gCeilOffset).cwDiv(aBlockDimensions)).area() 
+               * aBlockByteSize;
+    }
+    
+
+    /// @brief Factorizes the test that is used to check if we are on the compressed textures path
+    bool useCompressedTextures(GLenum aInternalFormat)
+    {
+        return aInternalFormat != graphics::MappedSizedPixel_v<math::sdr::Rgba>;
+    }
+
+
+    CompressedBlockInfo getBlockInfo(GLenum aTextureTarget, GLenum aCompressedFormat)
+    {
+        // The block byte size is the reason sub-block image size
+        // are not going under a minimum value: any image in this format is at least 1 block
+        GLint blockByteSize = 0;
+        glGetInternalformativ(aTextureTarget, aCompressedFormat, 
+                              GL_TEXTURE_COMPRESSED_BLOCK_SIZE, 1, &blockByteSize);
+        // IMPORTANT: despite what OpenGL 4.6 core profile claims, it returns the size in bits, not bytes
+        assert(blockByteSize % 8 == 0);
+        blockByteSize /= 8;
+        // As of this writting, all compressed block sizes we implement are 16 bytes.
+        // Remove this assert when this is not true anymore.
+        assert(blockByteSize == 16);
+
+        // Sanity check: the block is 4x4
+        GLint blockWidth = 0;
+        glGetInternalformativ(aTextureTarget, aCompressedFormat, 
+                              GL_TEXTURE_COMPRESSED_BLOCK_WIDTH, 1, &blockWidth);
+        GLint blockHeight = 0;
+        glGetInternalformativ(aTextureTarget, aCompressedFormat, 
+                              GL_TEXTURE_COMPRESSED_BLOCK_HEIGHT, 1, &blockHeight);
+        assert(blockWidth == blockHeight && blockHeight == 4);
+
+        return {
+            .mInternalFormat = aCompressedFormat,
+            .mByteSize = blockByteSize,
+            .mDimensions = {(GLsizei)blockWidth, (GLsizei)blockHeight},
+        };
+    }
+
+
+    void loadDdsData(graphics::Texture & aTexture,
+                     GLenum aLoadedTarget, // might be a specific cubemap face
+                     math::Size<2, GLint> aMainImageDimensions,
+                     const CompressedBlockInfo & aBlockInfo,
+                     const dds::Header aDdsHeader,
+                     std::istream & aDataStream,
+                     GLint aLayerIdx = -1 /* -1 implies 2D texture target*/)
+    {
+        // The image data should be 2D
+        assert(aDdsHeader.h.dwDepth == 1);
+        assert(aDdsHeader.h_dxt10 
+                && aDdsHeader.h_dxt10->resourceDimension == DDS_DIMENSION_TEXTURE2D);
+
+        const GLsizei imageByteSize = 
+            computeCompressedImageSize(aMainImageDimensions, aBlockInfo.mByteSize, aBlockInfo.mDimensions);
+
+        graphics::ScopedBind bound{aTexture};
+        
+        // Client buffer to retrieve the compressed image data
+        std::unique_ptr<char []> imageData{new char[imageByteSize]};
+
+        // TODO: Should we handle alignment?
+        //Guard scopedAlignemnt = graphics::detail::scopeUnpackAlignment(aInput.alignment);
+
+        assert((aDdsHeader.h.dwFlags & DDSD_MIPMAPCOUNT) == DDSD_MIPMAPCOUNT);
+        const GLint mipmapCount = aDdsHeader.h.dwMipMapCount;
+        // We expect complete mipmaps to be provided
+        assert(mipmapCount == graphics::countCompleteMipmaps(aMainImageDimensions));
+
+        math::Size<2, GLsizei> levelDimensions{aMainImageDimensions};
+        GLsizei levelByteSize = imageByteSize;
+        for(GLint level = 0; level != mipmapCount; ++level)
+        {
+            aDataStream.read(imageData.get(), levelByteSize);
+            assert(aDataStream.good());
+
+            if(aLayerIdx < 0) // Assumed to mean the target is a 2D texture type
+            {
+                gl.CompressedTexSubImage2D(aLoadedTarget,
+                                           level,
+                                           0, 0, // x, y offsets
+                                           levelDimensions.width(),
+                                           levelDimensions.height(),
+                                           aBlockInfo.mInternalFormat, 
+                                           levelByteSize,
+                                           imageData.get());
+            }
+            else
+            {
+                // For 3D texture, I am unaware of a use case to make it distinct atm.
+                assert(aLoadedTarget == aTexture.mTarget);
+                gl.CompressedTexSubImage3D(aLoadedTarget,
+                                           level,
+                                           0, 0, aLayerIdx, // x, y, z offsets
+                                           levelDimensions.width(),
+                                           levelDimensions.height(),
+                                           aDdsHeader.h.dwDepth,
+                                           aBlockInfo.mInternalFormat, 
+                                           levelByteSize,
+                                           imageData.get());
+            }
+
+            // Prepare next iteration
+            levelDimensions = max((levelDimensions / 2), {1, 1});
+            levelByteSize = computeCompressedImageSize(levelDimensions, aBlockInfo.mByteSize, aBlockInfo.mDimensions);
+        }
+    }
+
     void loadTextureLayer(graphics::Texture & a3dTexture,
+                          GLenum aTextureInternalFormat,
                           GLint aLayerIdx,
                           std::filesystem::path aTexturePath,
-                          math::Size<2, int> aExpectedDimensions)
+                          math::Size<2, int> aExpectedDimensions,
+                          ColorSpace aSourceColorSpace)
     {
-        arte::Image<math::sdr::Rgba> image{aTexturePath, arte::ImageOrientation::InvertVerticalAxis};
-        assert(aExpectedDimensions == image.dimensions());
+        // If the layered texutre internal format is uncompressed SDR RGBA, load the uncompressed image and transfer it
+        if(!useCompressedTextures(aTextureInternalFormat))
+        {
+            // Ensure the file does not correspond to a compressed texture format
+            assert(aTexturePath.extension() != ".dds");
+            // Also ensure that non of the paths that will be added to this Texture Array would offer compressed alternatives
+            // (it would likely mean that we forgot to compress some)
+            assert(!std::filesystem::exists(hackish::getDdsCandidate(aTexturePath)));
 
-        proto::writeTo(a3dTexture,
-                       static_cast<const std::byte *>(image),
-                       graphics::InputImageParameters::From(image),
-                       math::Position<3, GLint>{0, 0, aLayerIdx});
+            // Image files are expected to have the usual top-left origin
+            arte::Image<math::sdr::Rgba> image{aTexturePath, arte::ImageOrientation::InvertVerticalAxis};
+
+            assert(aExpectedDimensions == image.dimensions());
+
+            if(aSourceColorSpace == ColorSpace::sRGB)
+            {
+                decodeSRGBToLinear(image);
+            }
+
+            proto::writeTo(a3dTexture,
+                           static_cast<const std::byte *>(image),
+                           graphics::InputImageParameters::From(image),
+                           math::Position<3, GLint>{0, 0, aLayerIdx});
+        }
+        // Handle compressed texture data
+        else
+        {
+            auto ddsCandidate = hackish::getDdsCandidate(aTexturePath);
+            if(auto dds = hackish::tryDds(ddsCandidate))
+            {
+                GLenum ddsFormat = dds::getCompressedFormat(dds->mHeader);
+                // In addition to better memory usage, we do that to speed-up loading:
+                // so we enforce that the compressed image data format exactly matches the texture internal format
+                if(ddsFormat != aTextureInternalFormat)
+                {
+                    SELOG(critical)("Texture internal format {} does not match DDS file '{}' internal format {}.",
+                                    aTextureInternalFormat, ddsCandidate.string(), ddsFormat);
+                    throw std::invalid_argument{"The texture internal format does not match the DDS file content."};
+                }
+
+                const math::Size<2, int> mainImageDimensions = dds::getDimensions(dds->mHeader);
+                assert(aExpectedDimensions == mainImageDimensions);
+
+                // The image data should be 2D
+                assert(dds->mHeader.h.dwDepth == 1);
+                assert(dds->mHeader.h_dxt10 
+                       && dds->mHeader.h_dxt10->resourceDimension == DDS_DIMENSION_TEXTURE2D);
+
+                // Note: This assert attempts to verify that we are at the expected byte offset
+                // from the start of the file 
+                // (128 + 20 see last example in: https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dds-file-layout-for-textures)
+                // Yet, the standard does not guarantee that tellg() returns a byte offset
+                // (Unices do, and Windows do for files opened in binary mode)
+                assert(dds->mDataStream.tellg() == 128 + 20);
+
+                const CompressedBlockInfo blockInfo = getBlockInfo(a3dTexture.mTarget, ddsFormat);
+                loadDdsData(a3dTexture,
+                            a3dTexture.mTarget, 
+                            mainImageDimensions,
+                            blockInfo,
+                            dds->mHeader,
+                            dds->mDataStream,
+                            aLayerIdx);
+            }
+            else
+            {
+                SELOG(critical)("Missing a DDS file for texture '{}'.", aTexturePath.string());
+                throw std::invalid_argument{"Missing DDS file."};
+            }
+        }
     }
 
 
@@ -399,14 +660,14 @@ namespace {
 
         graphics::UniformBufferObject & ubo = aStorage.mUbos.emplace_back();
         {
-            std::vector<PhongMaterial> materials{materialsCount};
+            std::vector<GenericMaterial> materials{materialsCount};
             aIn.read(std::span{materials});
 
             graphics::load(ubo, std::span{materials}, graphics::BufferHint::StaticDraw);
         }
 
         { // load material names
-            unsigned int namesCount; // TODO: useless, but this is because the filewritter wrote the number of elements in a vector
+            unsigned int namesCount; // TODO: redundant, but this is because the filewritter wrote the number of elements in a vector
             aIn.read(namesCount);
             assert(namesCount == materialsCount);
 
@@ -418,7 +679,17 @@ namespace {
             }
         }
 
-        auto loadTextures = [&aIn, &aStorage]() -> graphics::Texture *
+
+        auto setupFiltering = [](Handle<graphics::Texture> aTexture)
+        {
+            graphics::ScopedBind bound{*aTexture};
+            glTexParameteri(aTexture->mTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(aTexture->mTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameterf(aTexture->mTarget, GL_TEXTURE_MAX_ANISOTROPY, 16.f);
+        };
+
+
+        auto loadTextures = [&aIn, &aStorage](ColorSpace aColorSpace) -> Handle<graphics::Texture>
         {
             math::Size<2, int> imageSize;        
             aIn.read(imageSize);
@@ -428,13 +699,26 @@ namespace {
 
             if(pathsCount > 0)
             {
-                assert(imageSize.width() > 0 && imageSize.height() > 1);
+                assert(imageSize.width() > 0 && imageSize.height() > 0);
+
+                // The uncompressed internal format that would be used if no compression is available
+                GLenum internalFormat = graphics::MappedSizedPixel_v<math::sdr::Rgba>;
+
+                // With our current approach, we want ot decide on a given internal format that will be used for the
+                // array which will receive all texture for the list of paths.
+                // Unfortunately, our hackish approach requires to retrieve the first path to see if .dds candidates are
+                // expected or not.
+                std::string path = aIn.readString();
+                if(auto dds = hackish::tryDds(hackish::getDdsCandidate(aIn.mParentPath / path)))
+                {
+                    internalFormat = dds::getCompressedFormat(dds->mHeader);
+                }
 
                 graphics::Texture & textureArray = aStorage.mTextures.emplace_back(GL_TEXTURE_2D_ARRAY);
                 graphics::ScopedBind boundTextureArray{textureArray};
                 gl.TexStorage3D(textureArray.mTarget, 
                                 graphics::countCompleteMipmaps(imageSize),
-                                graphics::MappedSizedPixel_v<math::sdr::Rgba>,
+                                internalFormat,
                                 imageSize.width(), imageSize.height(), pathsCount);
                 { // scoping `isSuccess`
                     GLint isSuccess;
@@ -446,13 +730,19 @@ namespace {
                     }
                 }
 
-                for(unsigned int pathIdx = 0; pathIdx != pathsCount; ++pathIdx)
+                // We had to retrieve the first path to try the DDS candidate, so we have to handle it out of the loop
+                loadTextureLayer(textureArray, internalFormat, 0, aIn.mParentPath / path, imageSize, aColorSpace);
+                for(unsigned int pathIdx = 1; pathIdx != pathsCount; ++pathIdx)
                 {
                     std::string path = aIn.readString();
-                    loadTextureLayer(textureArray, pathIdx, aIn.mParentPath / path, imageSize);
+                    loadTextureLayer(textureArray, internalFormat, pathIdx, aIn.mParentPath / path, imageSize, aColorSpace);
                 }
 
-                glGenerateMipmap(textureArray.mTarget);
+                // When a compressed texture container was not used, mipmaps should be generated
+                if(!useCompressedTextures(internalFormat))
+                {
+                    glGenerateMipmap(textureArray.mTarget);
+                }
 
                 return &textureArray;
             }
@@ -463,15 +753,18 @@ namespace {
         };
 
         // IMPORTANT: This sequence is in the exact order of texture types in a binary.
-        static const Semantic semanticSequence[] = {
-            semantic::gDiffuseTexture,
-            semantic::gNormalTexture,
+        static const std::pair<Semantic, ColorSpace> semanticSequence[] = {
+            {semantic::gDiffuseTexture, ColorSpace::sRGB},
+            {semantic::gNormalTexture, ColorSpace::Linear}, 
+            {semantic::gMetallicRoughnessAoTexture, ColorSpace::Linear},
         };
         RepositoryTexture textureRepo;
-        for (Semantic texSemantic : semanticSequence)
+        for (auto [texSemantic, colorSpace] : semanticSequence)
         {
-            if(graphics::Texture * texture = loadTextures())
+            if(Handle<graphics::Texture> texture = loadTextures(colorSpace))
             {
+                // For the moment, set the same filtering for all texture semantics
+                setupFiltering(texture);
                 textureRepo.emplace(texSemantic, texture);
             }
         }
@@ -484,6 +777,60 @@ namespace {
 
 
 } // unnamed namespace
+
+
+graphics::Texture loadDds(std::filesystem::path aDds)
+{
+    hackish::MyDds dds = hackish::loadMyDds(aDds);
+
+    const GLenum target = dds::getTextureTarget(dds.mHeader);
+    graphics::Texture texture{target};
+
+    const math::Size<2, GLint> imageSize = dds::getDimensions(dds.mHeader);
+    const GLenum internalFormat = dds::getCompressedFormat(dds.mHeader);
+
+    graphics::ScopedBind boundTexture{texture};
+    gl.TexStorage2D(texture.mTarget, 
+                    graphics::countCompleteMipmaps(imageSize),
+                    internalFormat,
+                    imageSize.width(), imageSize.height());
+    { // scoping `isSuccess`
+        GLint isSuccess;
+        glGetTexParameteriv(texture.mTarget, GL_TEXTURE_IMMUTABLE_FORMAT, &isSuccess);
+        if(!isSuccess)
+        {
+            SELOG(error)("Cannot create immutable storage for texture to load '{}'.", aDds.string());
+            throw std::runtime_error{"Error creating immutable storage for texture."};
+        }
+    }
+
+    const CompressedBlockInfo blockInfo = getBlockInfo(texture.mTarget, internalFormat);
+    if(target == GL_TEXTURE_CUBE_MAP)
+    {
+        // For a cubemap, we need to load each face (complete with its mipmaps) in sequence
+        for(unsigned int faceIdx = 0; faceIdx != 6; ++faceIdx)
+        {
+            loadDdsData(texture,
+                        GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIdx,
+                        imageSize,
+                        blockInfo,
+                        dds.mHeader,
+                        dds.mDataStream);
+        }
+    }
+    else
+    {
+        // Load the current texture target
+        loadDdsData(texture,
+                    texture.mTarget,
+                    imageSize,
+                    blockInfo,
+                    dds.mHeader,
+                    dds.mDataStream);
+    }
+
+    return texture;
+}
 
 
 std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage, 
@@ -703,6 +1050,15 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
                                              Effect * aPartsEffect,
                                              const GenericStream & aStream)
 {
+    // A quick hack to get around the limitation that the profiler system expects the client to maintain
+    // the c-string alive.
+    // Very thread unsafe
+    static std::vector<std::string> gUnsafeSectionNames;
+    gUnsafeSectionNames.push_back(fmt::format("load_binary: {}", aBinaryFile.stem().string()));
+
+    PROFILER_SCOPE_SINGLESHOT_SECTION(gRenderProfiler, gUnsafeSectionNames.back().c_str(),
+                                      renderer::CpuTime, renderer::GpuTime);
+
     if(aBinaryFile.extension() != ".seum")
     {
         SELOG(error)("Files with extension '{}' are not supported.",
@@ -819,7 +1175,7 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
     // Prepare a MaterialContext for the whole binary, 
     // I.e. in a scene, each entry (each distinct binary) gets its own material UBO and its own Texture array.
     // TODO #azdo #perf we could load textures and materials in a single buffer for a whole scene to further consolidate
-    MaterialContext & aCommonMaterialContext = aStorage.mMaterialContexts.emplace_back();
+    MaterialContext & commonMaterialContext = aStorage.mMaterialContexts.emplace_back();
     
     // Set the common values shared by all parts in this binary.
     // (The actual phong material index will be set later, by each part)
@@ -827,7 +1183,7 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
         // The material names is a single array for all binaries
         // the binary-local material index needs to be offset to index into the common name array.
         .mNameArrayOffset = aStorage.mMaterialNames.size(),
-        .mContext = &aCommonMaterialContext,
+        .mContext = &commonMaterialContext,
         .mEffect = aPartsEffect,
     };
 
@@ -862,7 +1218,7 @@ std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBina
 
     // TODO #assetprocessor If materials were loaded first, then the empty context 
     // Then we could directly instantiate the MaterialContext with this value.
-    aCommonMaterialContext = loadMaterials(in, aStorage);
+    commonMaterialContext = loadMaterials(in, aStorage);
 
     return result;
 }
@@ -879,9 +1235,21 @@ std::vector<Technique> populateTechniques(const Loader & aLoader,
 
     for (const auto & technique : effect.at("techniques"))
     {
+        // The defines from context above are copied for each technique,
+        // otherwise technique N+1 would lso get the cumulated defines from techniques 0..N.
+        auto definesCopy{aDefines};
+        // Merge the potential defines found at the technique level into the copy
+        if(auto techniqueDefines = technique.find("defines");
+           techniqueDefines != technique.end())
+        {
+            definesCopy.insert(definesCopy.end(),
+                               techniqueDefines->begin(),
+                               techniqueDefines->end());
+        }
+
         result.push_back(Technique{
             .mConfiguredProgram =
-                storeConfiguredProgram(aLoader.loadProgram(technique.at("programfile"), aDefines), aStorage),
+                storeConfiguredProgram(aLoader.loadProgram(technique.at("programfile"), std::move(definesCopy)), aStorage),
         });
 
         if(technique.contains("annotations"))
@@ -929,9 +1297,9 @@ bool recompileEffects(const Loader & aLoader, Storage & aStorage)
 }
 
 
-Effect * Loader::loadEffect(const std::filesystem::path & aEffectFile,
-                            Storage & aStorage,
-                            const std::vector<std::string> & aDefines_temp) const
+Handle<Effect> Loader::loadEffect(const std::filesystem::path & aEffectFile,
+                                  Storage & aStorage,
+                                  const std::vector<std::string> & aDefines_temp) const
 {
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
@@ -1005,7 +1373,11 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
             graphics::ShaderSource::Preprocess(*inputStream, aDefines_temp, identifier, lookup));
     }
 
-    SELOG(debug)("Compiling shader program from '{}', containing {} stages.", lookup.top(), shaders.size());
+    SELOG(debug)("Compiling shader program from '{}', containing {} stages, {defines}.",
+                 lookup.top(), shaders.size(),
+                 fmt::arg("defines", aDefines_temp.empty() ? 
+                    "no defines" 
+                    : fmt::format("with defines '{}'", fmt::join(aDefines_temp, ", "))));
 
     return IntrospectProgram{shaders.begin(), shaders.end(), aProgFile.filename().string()};
 }
@@ -1045,7 +1417,7 @@ GenericStream makeInstanceStream(Storage & aStorage, std::size_t aInstanceCount)
                     .mBufferViewIndex = 0, // view is added above
                     .mClientDataFormat{
                         .mDimension = 1,
-                        .mOffset = offsetof(InstanceData, mMaterialIdx),
+                        .mOffset = offsetof(InstanceData, mMaterialParametersIdx),
                         .mComponentType = GL_UNSIGNED_INT,
                     },
                 }

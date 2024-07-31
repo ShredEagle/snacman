@@ -1,3 +1,10 @@
+#if !defined(HELPERS_GLSL_INCLUDE_GUARD)
+#define HELPERS_GLSL_INCLUDE_GUARD
+
+
+const float M_PI = 3.141592653589793;
+
+
 float dotPlus(vec3 a, vec3 b)
 {
     return max(0.f, dot(a, b));
@@ -25,3 +32,15 @@ vec3 remapToRgb(vec3 aInput, float aMagnitude = 1)
 {
     return (aInput + vec3(aMagnitude)) / (2 * aMagnitude);
 }
+
+
+/// @param aWorldDirection direction in world space, expected in the usual right-handed world basis.
+vec3 worldToCubemap(vec3 aWorldDirection)
+{
+    // The cubemap basis is left-handed
+    // see: https://www.khronos.org/opengl/wiki/Cubemap_Texture
+    return vec3(aWorldDirection.xy, -aWorldDirection.z);
+}
+
+
+#endif //include guard

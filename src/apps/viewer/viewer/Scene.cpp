@@ -8,13 +8,14 @@
 
 #include <math/Transformations.h>
 
-#include <snac-renderer-V2/files/Loader.h>
 #include <snac-renderer-V2/Camera.h>
+#include <snac-renderer-V2/files/Loader.h>
 
 #include <fstream>
 
 
 namespace ad::renderer {
+
 
 
 Scene loadScene(const filesystem::path & aSceneFile,
@@ -58,10 +59,25 @@ Scene loadScene(const filesystem::path & aSceneFile,
         Pose pose;
         if(entry.contains("pose"))
         {
-            pose.mPosition = entry.at("pose").value<math::Vec<3, float>>("position", {});
-            pose.mUniformScale = entry.at("pose").value("uniform_scale", 1.f);
+            auto poseJson = entry["pose"];
+            pose.mPosition = poseJson.value<math::Vec<3, float>>("position", {});
+            pose.mUniformScale = poseJson.value("uniform_scale", 1.f);
+
+            // TODO Ad 2024/07/19: Might as well implement from_json for EulerAngles
+            // (this might raise a complication regarding the Angle units)
+            // Here, it is assumed the angles are expressed as degrees in the Json scene file.
+            math::EulerAngles<float, math::Degree> eulerAngles;
+            if(auto eulerJson = poseJson.value("euler", Json{}); 
+               !eulerJson.is_null())
+            {
+                eulerAngles.roll()  = eulerJson.value("roll",  eulerAngles.roll());
+                eulerAngles.pitch() = eulerJson.value("pitch", eulerAngles.pitch());
+                eulerAngles.yaw()   = eulerJson.value("yaw",   eulerAngles.yaw());
+            }
+            pose.mOrientation = math::toQuaternion(eulerAngles);
 
             poserAabb *= math::trans3d::scaleUniform(pose.mUniformScale)
+                        * pose.mOrientation.toRotationMatrix() 
                         * math::trans3d::translate(pose.mPosition);
         }
 

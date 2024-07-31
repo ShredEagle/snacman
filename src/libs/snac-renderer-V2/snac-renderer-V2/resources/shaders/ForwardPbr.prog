@@ -1,0 +1,4 @@
+{
+    "vertex": "FullVertexTransform.vert",
+    "fragment": "Pbr.frag"
+}

@@ -130,15 +130,15 @@ struct MaterialContext
 
 struct Material
 {
-    // TODO currently, hardcodes the parameters type to be for phong model
+    // TODO currently, hardcodes the material parameters type to be for the generic model
     // later on, it should allow for different types of parameters (that will have to match the different shader program expectations)
     // TODO Ad 2023/10/12: Review how this index is passed: we should make that generic so materials can index into
-    // user defined buffers easily, not hardcoding Phong model. 
+    // user defined buffers easily, not hardcoding any model. 
     //   Note: The MaterialContext could be used to point to the "SurfaceProperties" array (UBO) applied to this material
     //         (each array might be of a different type of SurfaceProperty)
     //          Then the index would index into this array.
     // (The material context is already generic, so complete the job)
-    std::size_t mPhongMaterialIdx = (std::size_t)-1;
+    std::size_t mMaterialParametersIdx = (std::size_t)-1;
 
     // TODO Ad 2023/11/08: #name can we get rid of this index? (maybe a DOD SOA approach in storage)
     std::size_t mNameArrayOffset = (std::size_t)-1;
@@ -372,7 +372,7 @@ struct Storage
 // TODO change the first argument to an handle if materials are on day stored in an array of Storage.
 inline const Name & getName(const Material & aMaterial, const Storage & aStorage)
 {
-    return aStorage.mMaterialNames.at(aMaterial.mNameArrayOffset + aMaterial.mPhongMaterialIdx);
+    return aStorage.mMaterialNames.at(aMaterial.mNameArrayOffset + aMaterial.mMaterialParametersIdx);
 }
 
 // Providing an abstraction that should also work with a data-oriented redesign of the model

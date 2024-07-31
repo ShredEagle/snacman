@@ -101,14 +101,9 @@ namespace {
 } // unnamed namespace
 
 
-/// @brief Specializes getProgram, returning first program matching provided pass name.
-Handle<ConfiguredProgram> getProgramForPass(const Effect & aEffect, StringKey aPassName)
+Handle<ConfiguredProgram> getProgram(const Effect & aEffect, AnnotationsSelector aAnnotations)
 {
-    const std::array<Technique::Annotation, 2> annotations{/*aggregate init of std::array*/{/*aggregate init of inner C-array*/
-        {"pass", aPassName},
-        {"pass", aPassName},
-    }};
-    return getProgram(aEffect, annotations.begin(), annotations.end());
+    return getProgram(aEffect, aAnnotations.begin(), aAnnotations.end());
 }
 
 
@@ -172,7 +167,7 @@ struct DrawEntryHelper::Opaque
     ResourceIdMap<graphics::VertexArrayObject, gVaoBits> mVaoToId;
     ResourceIdMap<MaterialContext, gMaterialContextBits> mMaterialContextToId;
 
-    std::vector<PartDrawEntry> generateDrawEntries(StringKey aPass,
+    std::vector<PartDrawEntry> generateDrawEntries(AnnotationsSelector aAnnotations,
                                                    const PartList & aPartList,
                                                    Storage & aStorage)
     {
@@ -209,7 +204,7 @@ struct DrawEntryHelper::Opaque
             assert(part.mPrimitiveMode == GL_TRIANGLES);
             assert(part.mVertexStream->mIndicesType == GL_UNSIGNED_INT);
             
-            if(Handle<ConfiguredProgram> configuredProgram = getProgramForPass(*material.mEffect, aPass);
+            if(Handle<ConfiguredProgram> configuredProgram = getProgram(*material.mEffect, aAnnotations);
                 configuredProgram)
             {
                 Handle<graphics::VertexArrayObject> vao = getVao(*configuredProgram, part, aStorage);
@@ -246,11 +241,11 @@ struct DrawEntryHelper::Opaque
 };
 
 
-std::vector<PartDrawEntry> DrawEntryHelper::generateDrawEntries(StringKey aPass,
+std::vector<PartDrawEntry> DrawEntryHelper::generateDrawEntries(AnnotationsSelector aAnnotations,
                                                                 const PartList & aPartList,
                                                                 Storage & aStorage)
 {
-    return mImpl->generateDrawEntries(aPass, aPartList, aStorage);
+    return mImpl->generateDrawEntries(aAnnotations, aPartList, aStorage);
 }
 
 
@@ -273,12 +268,12 @@ void draw(const PassCache & aPassCache,
     // This would address the warnings repetitions (only issued when the compiled state is (re-)generated), and be better for perfs.
 
     GLuint firstInstance = 0; 
-    for (const DrawCall & aCall : aPassCache.mCalls)
+    for (const DrawCall & call : aPassCache.mCalls)
     {
         PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "drawcall_iteration", CpuTime);
 
-        const IntrospectProgram & selectedProgram = *aCall.mProgram;
-        const graphics::VertexArrayObject & vao = *aCall.mVao;
+        const IntrospectProgram & selectedProgram = *call.mProgram;
+        const graphics::VertexArrayObject & vao = *call.mVao;
 
         // TODO Ad 2023/10/05: #perf #azdo 
         // Only change what is necessary, instead of rebiding everything each time.
@@ -292,9 +287,9 @@ void draw(const PassCache & aPassCache,
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
                 // TODO #repos This should be consolidated
                 RepositoryUbo uboRepo{aUboRepository};
-                if(aCall.mCallContext)
+                if(call.mCallContext)
                 {
-                    RepositoryUbo callRepo{aCall.mCallContext->mUboRepo};
+                    RepositoryUbo callRepo{call.mCallContext->mUboRepo};
                     uboRepo.merge(callRepo);
                 }
                 setBufferBackedBlocks(selectedProgram, uboRepo);
@@ -304,9 +299,9 @@ void draw(const PassCache & aPassCache,
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
                 // TODO #repos This should be consolidated
                 RepositoryTexture textureRepo{aTextureRepository};
-                if(aCall.mCallContext)
+                if(call.mCallContext)
                 {
-                    RepositoryTexture callRepo{aCall.mCallContext->mTextureRepo};
+                    RepositoryTexture callRepo{call.mCallContext->mTextureRepo};
                     textureRepo.merge(callRepo);
                 }
                 setTextures(selectedProgram, textureRepo);
@@ -322,14 +317,14 @@ void draw(const PassCache & aPassCache,
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw_call", CpuTime/*, GpuTime*/);
                 
                 gl.MultiDrawElementsIndirect(
-                    aCall.mPrimitiveMode,
-                    aCall.mIndicesType,
+                    call.mPrimitiveMode,
+                    call.mIndicesType,
                     (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
-                    aCall.mDrawCount,
+                    call.mDrawCount,
                     sizeof(DrawElementsIndirectCommand));
             }
         }
-        firstInstance += aCall.mDrawCount;
+        firstInstance += call.mDrawCount;
     }
 }
 

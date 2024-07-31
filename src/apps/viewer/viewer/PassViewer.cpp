@@ -6,7 +6,8 @@
 namespace ad::renderer {
 
 
-ViewerPassCache prepareViewerPass(StringKey aPass,
+/// @param aStorage cannot be const, because new VAOs might be cached into it.
+ViewerPassCache prepareViewerPass(AnnotationsSelector aAnnotations,
                                   const ViewerPartList & aPartList,
                                   Storage & aStorage)
 {
@@ -14,7 +15,7 @@ ViewerPassCache prepareViewerPass(StringKey aPass,
 
     DrawEntryHelper helper;
     std::vector<PartDrawEntry> entries = 
-        helper.generateDrawEntries(aPass,
+        helper.generateDrawEntries(aAnnotations,
                                    aPartList,
                                    aStorage);
 
@@ -73,7 +74,7 @@ ViewerPassCache prepareViewerPass(StringKey aPass,
 
         result.mDrawInstances.push_back(ViewerDrawInstance{
             .mInstanceTransformIdx = aPartList.mTransformIdx[entry.mPartListIdx],
-            .mMaterialIdx = (GLsizei)material.mPhongMaterialIdx,
+            .mMaterialParametersIdx = (GLsizei)material.mMaterialParametersIdx,
             .mMatrixPaletteOffset = aPartList.mPaletteOffset[entry.mPartListIdx],
         });
     }

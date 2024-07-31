@@ -7,6 +7,7 @@
 #include <renderer/FrameBuffer.h>
 #include <renderer/Texture.h>
 
+#include <snac-renderer-V2/Cubemap.h>
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Repositories.h>
 #include <snac-renderer-V2/debug/DebugRenderer.h>
@@ -16,11 +17,13 @@ namespace ad::renderer {
 
 
 class Camera;
+struct Environment;
 struct LightsData;
 struct Loader;
+struct Scene;
+struct Storage;
 struct ViewerPartList;
 struct ViewerPassCache;
-struct Storage;
 
 
 struct HardcodedUbos
@@ -37,6 +40,11 @@ struct HardcodedUbos
 };
 
 
+/// @brief Load data from aCamera into aUbo.
+/// @note It is proving useful to have access to it to re-use passes outside of the main renderFrame()
+void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera);
+
+
 /// @brief The specific Render Graph for this viewer application.
 struct TheGraph
 {
@@ -50,7 +58,7 @@ struct TheGraph
 
     void setupTextures();
 
-    void renderFrame(const ViewerPartList & aPartList, 
+    void renderFrame(const Scene & aScene,
                      const Camera & aCamera,
                      const LightsData & aLights_camera,
                      Storage & aStorage);
@@ -59,9 +67,14 @@ struct TheGraph
 
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
     void passOpaqueDepth(const ViewerPartList & aPartList, Storage & mStorage);
-    void passForward(const ViewerPartList & aPartList, Storage & mStorage);
+    void passForward(const ViewerPartList & aPartList,
+                     Storage & aStorage,
+                     bool aEnvironmentMappingconst);
     void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
     void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
+    void passDrawSkybox(const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace = GL_FRONT) const;
+
+    void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const;
 
     void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache);
 
@@ -80,11 +93,12 @@ struct TheGraph
     {
         inline static const std::vector<StringKey> gForwardKeys{
             "forward",
+            "forward_pbr",
             "forward_phong",
             "forward_debug",
         };
 
-        std::vector<StringKey>::const_iterator mForwardPassKey = gForwardKeys.begin();
+        std::vector<StringKey>::const_iterator mForwardPassKey = gForwardKeys.begin() + 1;
 
         inline static const std::array<GLenum, 3> gPolygonModes{
             GL_POINT,
@@ -99,7 +113,7 @@ struct TheGraph
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
 
     HardcodedUbos mUbos;
-    RepositoryTexture mDummyTextureRepository;
+    RepositoryTexture mTextureRepository;
 
     GenericStream mInstanceStream;
 
@@ -123,6 +137,9 @@ struct TheGraph
     QuadDrawer mTransparencyResolver;
     static const GLint gAccumTextureUnit{0};
     static const GLint gRevealageTextureUnit{1};
+
+    // Skybox rendering
+    Skybox mSkybox;
 
     // Debug rendering
     DebugRenderer mDebugRenderer;

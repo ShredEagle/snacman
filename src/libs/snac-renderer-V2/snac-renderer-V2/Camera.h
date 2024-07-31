@@ -59,7 +59,7 @@ private:
     math::AffineMatrix<4, float> mParentToCamera = math::AffineMatrix<4, float>::Identity(); 
     math::Matrix<4, 4, float> mProjection = graphics::makeProjection(OrthographicParameters{
             .mAspectRatio = 1,
-            .mViewHeight = 1,
+            .mViewHeight = 2,
             .mNearZ = +1,
             .mFarZ = -1,
         }); 
@@ -85,6 +85,7 @@ struct GpuViewProjectionBlock
         math::Matrix<4, 4, GLfloat> aProjection 
     ) :
         mWorldToCamera{aWorldToCamera},
+        mCameraToWorld{aWorldToCamera.inverse()},
         mProjection{aProjection},
         mViewingProjection{aWorldToCamera * aProjection}
     {}
@@ -94,6 +95,7 @@ struct GpuViewProjectionBlock
     {}
 
     math::AffineMatrix<4, GLfloat> mWorldToCamera; 
+    math::AffineMatrix<4, GLfloat> mCameraToWorld; 
     math::Matrix<4, 4, GLfloat> mProjection; 
     math::Matrix<4, 4, GLfloat> mViewingProjection;
 };
