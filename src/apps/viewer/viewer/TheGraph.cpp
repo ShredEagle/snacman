@@ -443,7 +443,7 @@ void TheGraph::passForward(const ViewerPartList & aPartList,
     };
     if(aEnvironmentMapping)
     {
-        annotations.emplace_back("environment", "on");
+        annotations.push_back({"environment", "on"});
     }
     ViewerPassCache passCache = prepareViewerPass(annotations, aPartList, aStorage);
 

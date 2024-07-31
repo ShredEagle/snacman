@@ -138,7 +138,7 @@ struct DrawEntryHelper
 /// * Only an l-value can be converted, which forces to assign to a variable, which does not look nice.
 inline std::array<Technique::Annotation, 1> selectPass(StringKey aPass)
 {
-    return {{"pass", std::move(aPass)}};
+    return {{{"pass", std::move(aPass)},}};
 }
 
 Handle<ConfiguredProgram> getProgram(const Effect & aEffect, AnnotationsSelector aAnnotations);
