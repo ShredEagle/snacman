@@ -185,6 +185,13 @@ int runApplication(int argc, char * argv[])
     // Used as memory from one call to the next
     std::ostringstream profilerOut;
 
+    auto secondWindow = graphics::ApplicationGlfw{glfwApp, "Secondary", 800, 600};
+    glfwSwapInterval(0); // Disable V-sync
+
+    // Immediately make the main window context current
+    // It is essential when generating queries, which apparently are not shared
+    glfwApp.makeContextCurrent();
+
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME(gRenderProfiler);
@@ -225,6 +232,22 @@ int runApplication(int argc, char * argv[])
 
         PROFILER_END_SECTION(frameSection);
         PROFILER_END_FRAME(gRenderProfiler);
+
+        if(!secondWindow.shouldClose())
+        {
+            if(secondWindow.isVisible())
+            {
+                secondWindow.makeContextCurrent();
+                glClear(GL_COLOR_BUFFER_BIT);
+                secondWindow.swapBuffers();
+                glfwApp.makeContextCurrent();
+            }
+        }
+        else
+        {
+            secondWindow.hide();
+            secondWindow.markWindowShouldClose(GLFW_FALSE);
+        }
 
         // Note: the printing of the profiler content happens out of the frame, so its time is excluded from profiler's frame time
         profilerOut.str("");
