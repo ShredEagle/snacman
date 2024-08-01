@@ -15,9 +15,16 @@ struct Scene;
 
 class SceneGui
 {
-    friend struct ViewerApplication;
-
 public:
+    struct Options
+    {
+        bool mHighlightObjects = false;
+        // Not sure it should be located here: the scene gui will offer the checkbox,
+        // but it is unlikely to handle the actual rendering of light positions.
+        bool mShowPointLights = true;
+        bool mAreDirectionalLightsCameraSpace = false;
+    };
+    
     SceneGui(Handle<Effect> aHighlight, const Storage & aStorage) :
         mHighlightMaterial{
             .mNameArrayOffset = 1, // hack to index the name at 0
@@ -26,6 +33,11 @@ public:
     {}
 
     void presentSection(Scene & aScene, const Timing & aTime);
+
+    const Options & getOptions() const
+    {
+        return mOptions;
+    }
 
 private:
     /// @return Hovered node
@@ -50,15 +62,6 @@ private:
     static const int gLeafFlags;
     static const int gPartFlags;
 
-    struct Options
-    {
-        bool mHighlightObjects = false;
-        // Not sure it should be located here: the scene gui will offer the checkbox,
-        // but it is unlikely to handle the actual rendering of light positions.
-        bool mShowPointLights = true;
-        bool mAreDirectionalLightsCameraSpace = false;
-    };
-    
     Options mOptions;
 
     Handle<const Part> mSelectedPart = gNullHandle;

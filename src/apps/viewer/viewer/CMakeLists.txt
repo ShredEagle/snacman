@@ -12,7 +12,8 @@ set(${TARGET_NAME}_HEADERS
     Json.h
     Lights.h
     Logging.h
-    PassViewer.cpp
+    PassViewer.h
+    SecondaryView.h
     Scene.h
     SceneGui.h
     TheGraph.h
@@ -31,6 +32,7 @@ set(${TARGET_NAME}_SOURCES
     GraphGui.cpp
     Logging.cpp
     PassViewer.cpp
+    SecondaryView.cpp
     Scene.cpp
     SceneGui.cpp
     TheGraph.cpp

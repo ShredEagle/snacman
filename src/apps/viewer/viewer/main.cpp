@@ -1,4 +1,5 @@
 #include "Logging.h"
+#include "SecondaryView.h"
 #include "Timing.h"
 #include "ViewerApplication.h"
 
@@ -188,6 +189,8 @@ int runApplication(int argc, char * argv[])
     auto secondWindow = graphics::ApplicationGlfw{glfwApp, "Secondary", 800, 600};
     glfwSwapInterval(0); // Disable V-sync
 
+    renderer::SecondaryView secondaryView{secondWindow.getAppInterface()};
+
     // Immediately make the main window context current
     // It is essential when generating queries, which apparently are not shared
     glfwApp.makeContextCurrent();
@@ -227,6 +230,11 @@ int runApplication(int argc, char * argv[])
         // would be better to show current frame 
         // (but this implies to end the profiler frame earlier, thus not profiling ImGui UI)
         showGui(imguiUi, application, profilerOut.str(), timing);
+
+        if(secondWindow.isVisible())
+        {
+            secondaryView.render(application);
+        }
 
         glfwApp.swapBuffers();
 

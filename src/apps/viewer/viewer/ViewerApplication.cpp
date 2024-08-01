@@ -457,7 +457,7 @@ void ViewerApplication::update(const Timing & aTime)
     handleAnimations(mScene.mRoot, aTime);
 
     // handle lights
-    if(mSceneGui.mOptions.mShowPointLights)
+    if(mSceneGui.getOptions().mShowPointLights)
     {
         showPointLights(mScene.mLights_world);
     }
@@ -562,7 +562,7 @@ void ViewerApplication::render()
     mGraph.renderFrame(mScene,
                        mCameraSystem.mCamera,
                        mScene.getLightsInCamera(mCameraSystem.mCamera,
-                                                !mSceneGui.mOptions.mAreDirectionalLightsCameraSpace),
+                                                !mSceneGui.getOptions().mAreDirectionalLightsCameraSpace),
                        mStorage);
 
     mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
