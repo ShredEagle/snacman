@@ -24,13 +24,32 @@ namespace ad::renderer {
 struct PassCache;
 
 
-struct ViewerApplication
+// An attempt to separate what is related to the main view from what is transverse to views.
+struct PrimaryView
 {
     // Not easily copyable nor movable, due to the listener which binds to a subobject.
     // (Note: moving the subobject to the heap might be an easy workaround)
-    ViewerApplication(const ViewerApplication &) = delete;
-    ViewerApplication(ViewerApplication &&) = delete;
+    PrimaryView(const PrimaryView &) = delete;
+    PrimaryView(PrimaryView &&) = delete;
 
+    PrimaryView(const std::shared_ptr<graphics::AppInterface> & aGlfwAppInterface, const imguiui::ImguiUi & aImguiUi, Loader & aLoader, Storage & aStorage);
+
+    void update(const Timing & aTime);
+
+    void render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage);
+
+    CameraSystem mCameraSystem;
+    CameraSystemGui mCameraGui;
+
+    TheGraph mGraph;
+    GraphGui mGraphGui;
+
+    std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
+};
+
+
+struct ViewerApplication
+{
     ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
                       const std::filesystem::path & aSceneFile,
                       const imguiui::ImguiUi & aImguiUi);
@@ -42,24 +61,21 @@ struct ViewerApplication
     void update(const Timing & aTime);
     void render();
 
-    void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList);
+    void renderDebugDrawlist(const snac::DebugDrawer::DrawList & aDrawList,
+                             math::Rectangle<int> aViewport,
+                             const RepositoryUbo & aUboRepo);
 
     void drawUi(const Timing & aTime);
 
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     Storage mStorage;
-    Scene mScene;
     Loader mLoader;
-    SceneGui mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage};
-    GraphGui mGraphGui;
-
-    CameraSystem mCameraSystem;
-    CameraSystemGui mCameraGui;
-
-    TheGraph mGraph;
-    std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
+    Scene mScene;
+    SceneGui mSceneGui;
 
     DebugRenderer mDebugRenderer;
+
+    PrimaryView mPrimaryView;
 };
 
 

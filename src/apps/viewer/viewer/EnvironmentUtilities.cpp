@@ -29,6 +29,7 @@ namespace {
 } // unnamed namespace
 
 
+// TODO Ad 2024/08/02: #graph remove dependency to TheGraph from those utilities
 void dumpEnvironmentCubemap(const Environment & aEnvironment, 
                             const TheGraph & aGraph,
                             Storage & aStorage,

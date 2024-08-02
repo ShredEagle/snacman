@@ -249,6 +249,14 @@ ViewerPartList Scene::populatePartList() const
 }
 
 
+PrimaryView::PrimaryView(const std::shared_ptr<graphics::AppInterface> & aGlfwAppInterface, const imguiui::ImguiUi & aImguiUi, Loader & aLoader, Storage & aStorage) :
+    mCameraSystem{aGlfwAppInterface, &aImguiUi, CameraSystem::Control::FirstPerson},
+    mGraph{aGlfwAppInterface->getFramebufferSize(), aStorage, aLoader},
+    mFramebufferSizeListener{aGlfwAppInterface->listenFramebufferResize(
+        std::bind(&TheGraph::resize, &mGraph, std::placeholders::_1))}
+{}
+
+
 ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
                                      const std::filesystem::path & aSceneFile,
                                      const imguiui::ImguiUi & aImguiUi) :
@@ -256,16 +264,15 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
     mLoader{makeResourceFinder()},
-    mCameraSystem{mGlfwAppInterface, &aImguiUi, CameraSystem::Control::FirstPerson},
-    mGraph{mGlfwAppInterface->getFramebufferSize(), mStorage, mLoader},
+    mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage},
     // Track the size of the default framebuffer, which will be the destination of mGraph::render().
-    mFramebufferSizeListener{mGlfwAppInterface->listenFramebufferResize(
-        std::bind(&TheGraph::resize, &mGraph, std::placeholders::_1))},
-    mDebugRenderer{mStorage, mLoader}
+    mDebugRenderer{mStorage, mLoader},
+    mPrimaryView{mGlfwAppInterface, aImguiUi, mLoader, mStorage}
 {
     if(aSceneFile.extension() == ".sew")
     {
-        mScene = loadScene(aSceneFile, mGraph.mInstanceStream, mLoader, mStorage);
+        // TODO Ad 2024/08/02: #graph sort out this instance stream stuff
+        mScene = loadScene(aSceneFile, mPrimaryView.mGraph.mInstanceStream, mLoader, mStorage);
     }
     else
     {
@@ -276,17 +283,17 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
        children.size() == 1)
     {
         SELOG(info)("Model viewer mode (inferred from single node)");
-        mCameraSystem.setupAsModelViewer(children.front().mAabb);
+        mPrimaryView.mCameraSystem.setupAsModelViewer(children.front().mAabb);
     }
 
-    // Add basic shapes to the the scene
-    Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
-    auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mGraph.mInstanceStream);
+    //// Add basic shapes to the the scene
+    //Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
+    //auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mGraph.mInstanceStream);
     // Toggle the triangle and cube in the scene
     //mScene.addToRoot(triangle);
     //mScene.addToRoot(cube);
-    
 }
+
 
 namespace {
 
@@ -326,13 +333,14 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
 
     // That approach is smelly: we use the Environment to compute a value we then assign to the Environment
     mScene.mEnvironment->mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] =
-        filterEnvironmentMapSpecular(*mScene.mEnvironment, mGraph, mStorage, gFilteredRadianceSide);
+        // TODO Ad 2024/08/02: #graph get rid of the graph parameter in the filtering functions
+        filterEnvironmentMapSpecular(*mScene.mEnvironment, mPrimaryView.mGraph, mStorage, gFilteredRadianceSide);
 
     mScene.mEnvironment->mTextureRepository[semantic::gIntegratedEnvironmentBrdf] =
         integrateEnvironmentBrdf(mStorage, gIntegratedBrdfSide, mLoader);
 
     mScene.mEnvironment->mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] =
-        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mGraph, mStorage, gFilteredIrradianceSide);
+        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mPrimaryView.mGraph, mStorage, gFilteredIrradianceSide);
 }
 
 
@@ -441,6 +449,12 @@ void showPointLights(const LightsData & aLights)
 }
 
 
+void PrimaryView::update(const Timing & aTime)
+{
+    mCameraSystem.update(aTime.mDeltaDuration);
+}
+
+
 void ViewerApplication::update(const Timing & aTime)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "ViewerApplication::update()", CpuTime);
@@ -457,7 +471,7 @@ void ViewerApplication::update(const Timing & aTime)
         showPointLights(mScene.mLights_world);
     }
 
-    mCameraSystem.update(aTime.mDeltaDuration);
+    mPrimaryView.update(aTime);
 }
 
 
@@ -503,7 +517,7 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
             assert(mScene.mEnvironment);
             dumpEnvironmentCubemap(
                 *mScene.mEnvironment,
-                mGraph,
+                mPrimaryView.mGraph,
                 mStorage,
                 mScene.mEnvironment->mMapFile.parent_path() /
                     "split-" += mScene.mEnvironment->mMapFile.filename());
@@ -533,18 +547,29 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
         }
     }
 
-    mGraphGui.present(mGraph);
+    mPrimaryView.mGraphGui.present(mPrimaryView.mGraph);
 
     static bool gShowScene = false;
     if(imguiui::addCheckbox("Scene", gShowScene))
     {
         ImGui::Begin("Scene", nullptr, ImGuiWindowFlags_MenuBar);
 
-        mCameraGui.presentSection(mCameraSystem);
+        mPrimaryView.mCameraGui.presentSection(mPrimaryView.mCameraSystem);
         mSceneGui.presentSection(mScene, aTime);
 
         ImGui::End();
     }
+}
+
+
+void PrimaryView::render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage)
+{
+    mGraph.renderFrame(aScene,
+                       mCameraSystem.mCamera,
+                       aScene.getLightsInCamera(mCameraSystem.mCamera, !aLightsInCameraSpace),
+                       aStorage,
+                       false,
+                       graphics::FrameBuffer::Default());
 }
 
 
@@ -554,30 +579,25 @@ void ViewerApplication::render()
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
-    mGraph.renderFrame(mScene,
-                       mCameraSystem.mCamera,
-                       mScene.getLightsInCamera(mCameraSystem.mCamera,
-                                                !mSceneGui.getOptions().mAreDirectionalLightsCameraSpace),
-                       mStorage,
-                       false,
-                       graphics::FrameBuffer::Default());
+    snac::DebugDrawer::DrawList drawList = snac::DebugDrawer::EndFrame();
+    mPrimaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
 
-    renderDebugDrawlist(snac::DebugDrawer::EndFrame());
+    renderDebugDrawlist(
+        drawList,
+        // Fullscreen viewport
+        math::Rectangle<int>::AtOrigin(mGlfwAppInterface->getFramebufferSize()),
+        // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
+        // It is needed for the viewing block, so we hope it is left at the camera position
+        mPrimaryView.mGraph.mUbos.mUboRepository);
 }
 
 
-void ViewerApplication::renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList)
+void ViewerApplication::renderDebugDrawlist(const snac::DebugDrawer::DrawList & aDrawList,
+                                            math::Rectangle<int> aViewport,
+                                            const RepositoryUbo & aUboRepo)
 {
-    // Fullscreen viewport
-    glViewport(0,
-               0, 
-               mGlfwAppInterface->getFramebufferSize().width(),
-               mGlfwAppInterface->getFramebufferSize().height());
-
-    // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
-    // It is needed for the viewing block, so we hope it is left at the camera
-    // note: it will break with multiple camera / viewport
-    mDebugRenderer.render(std::move(aDrawList), mGraph.mUbos.mUboRepository, mStorage);
+    glViewport(aViewport.xMin(), aViewport.yMin(), aViewport.width(), aViewport.height());
+    mDebugRenderer.render(aDrawList, aUboRepo, mStorage);
 }
 
 } // namespace ad::renderer

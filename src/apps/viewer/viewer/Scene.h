@@ -50,6 +50,8 @@ inline std::string to_string(Environment::Type aEnvironment)
 }
 
 
+/// @note The Scene does not contain the camera: this way the same logical scene 
+/// can be rendered from multiple views.
 struct Scene
 {
     Scene & addToRoot(Node aNode)
