@@ -189,11 +189,13 @@ int runApplication(int argc, char * argv[])
     auto secondWindow = graphics::ApplicationGlfw{glfwApp, "Secondary", 800, 600};
     glfwSwapInterval(0); // Disable V-sync
 
-    renderer::SecondaryView secondaryView{secondWindow.getAppInterface()};
-
     // Immediately make the main window context current
     // It is essential when generating queries, which apparently are not shared
+    // Also, SecondaryView initialize objects that have to be on the main context
     glfwApp.makeContextCurrent();
+
+    renderer::SecondaryView secondaryView{secondWindow.getAppInterface(), application.mStorage, application.mLoader};
+    secondaryView.mGraph.mInstanceStream = application.mGraph.mInstanceStream;
 
     while (glfwApp.handleEvents())
     {

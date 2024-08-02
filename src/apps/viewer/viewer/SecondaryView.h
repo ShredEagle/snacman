@@ -2,6 +2,7 @@
 
 
 #include "CameraSystem.h"
+#include "TheGraph.h"
 
 #include <graphics/AppInterface.h>
 
@@ -14,12 +15,27 @@
 namespace ad::renderer {
 
 
+struct Loader;
+struct Storage;
 struct ViewerApplication;
 
 
 struct SecondaryView
 {
-    SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface);
+    // Not easily copyable nor movable, due to the listener which binds to this.
+    // (Note: moving the subobject to the heap might be an easy workaround)
+    SecondaryView(const SecondaryView &) = delete;
+    SecondaryView(SecondaryView &&) = delete;
+
+    SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+                  Storage & aStorage,
+                  const Loader & aLoader);
+
+    
+    void resize(math::Size<2, int> aNewSize);
+
+    // Private
+    void allocateBuffers();
 
     // TODO: const the viewer app
     void render(/*const*/ ViewerApplication & aViewerApp);
@@ -37,6 +53,8 @@ struct SecondaryView
     graphics::Renderbuffer mDepthBuffer;
 
     math::Size<2, int> mRenderSize;
+    TheGraph mGraph;
+    std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
 
     inline static constexpr GLint gColorAttachment = 0;
 };
