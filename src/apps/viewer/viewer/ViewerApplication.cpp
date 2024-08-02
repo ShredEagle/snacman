@@ -323,7 +323,7 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
     const GLint gFilteredRadianceSide = 512;
     const GLint gIntegratedBrdfSide = 512;
     const GLint gFilteredIrradianceSide = 128;
-    // That approach is smelly: we use the Environment to compute an value we will set on the Environment
+    // That approach is smelly: we use the Environment to compute a value we then assign to the Environment
     mScene.mEnvironment->mFilteredRadiance =
         filterEnvironmentMapSpecular(*mScene.mEnvironment, mGraph, mStorage, gFilteredRadianceSide);
     glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mFilteredRadiance, -1, "filtered_radiance_env");
