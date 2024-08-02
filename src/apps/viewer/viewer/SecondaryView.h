@@ -42,15 +42,12 @@ struct SecondaryView
     // TODO: const the viewer app
     void render(/*const*/ ViewerApplication & aViewerApp);
 
-    void blitIt(const graphics::FrameBuffer & aDestination);
-
     std::shared_ptr<graphics::AppInterface> mAppInterface;
     CameraSystem mCameraSystem;
 
     // TODO further split: FBOs are not shared, so they should be generated and bound on their specific contexts
     // (plus this will make this class more generic, usable even with single context)
     graphics::FrameBuffer mDrawFramebuffer;
-    graphics::FrameBuffer mReadFramebuffer;
     graphics::Renderbuffer mColorBuffer;
     graphics::Renderbuffer mDepthBuffer;
 
@@ -59,6 +56,18 @@ struct SecondaryView
     std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
 
     inline static constexpr GLint gColorAttachment = 0;
+};
+
+
+/// @brief Intended to blit a color buffer to a provided Framebuffer (default or FBO).
+/// @attention It has to be instantiated in the OpenGL context of the destination Framebuffer.
+struct ViewBlitter
+{
+    void blitIt(const graphics::Renderbuffer & aColorBuffer,
+                math::Rectangle<GLint> aViewport,
+                const graphics::FrameBuffer & aDestination);
+
+    graphics::FrameBuffer mReadFramebuffer;
 };
 
 

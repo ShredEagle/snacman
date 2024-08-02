@@ -38,9 +38,10 @@ SecondaryView::SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInt
     graphics::ScopedBind boundFbo{mDrawFramebuffer, graphics::FrameBufferTarget::Draw};
 
     glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,
-                            GL_COLOR_ATTACHMENT0 + gColorAttachment,
-                            GL_RENDERBUFFER,
-                            mColorBuffer);
+                              GL_COLOR_ATTACHMENT0 + gColorAttachment,
+                              GL_RENDERBUFFER,
+                              mColorBuffer);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0 + gColorAttachment);
 
     glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,
                               GL_DEPTH_ATTACHMENT,
@@ -93,25 +94,28 @@ void SecondaryView::render(ViewerApplication & aViewerApp)
 }
 
 
-void SecondaryView::blitIt(const graphics::FrameBuffer & aDestination)
+void ViewBlitter::blitIt(const graphics::Renderbuffer & aColorBuffer,
+                         math::Rectangle<GLint> aViewport,
+                         const graphics::FrameBuffer & aDestination)
 {
     graphics::ScopedBind boundReadFbo{mReadFramebuffer, graphics::FrameBufferTarget::Read};
-    graphics::ScopedBind boundRenderbuffer{mColorBuffer};
+    //graphics::ScopedBind boundRenderbuffer{aColorBuffer};
     glFramebufferRenderbuffer(GL_READ_FRAMEBUFFER,
-                              GL_COLOR_ATTACHMENT0 + gColorAttachment,
+                              GL_COLOR_ATTACHMENT0,
                               GL_RENDERBUFFER,
-                              mColorBuffer);
-    glReadBuffer(GL_COLOR_ATTACHMENT0 + gColorAttachment);
+                              aColorBuffer);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
 
     // We expect the size of the read renderbuffer to exactly match that of the output draw buffer.
+    // This is the reponsibility of the client
     graphics::ScopedBind boundDrawFbo{aDestination, graphics::FrameBufferTarget::Draw};
     //glDrawBuffer(GL_BACK);
     
     assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
     assert(glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
-    glBlitFramebuffer(0, 0, mRenderSize.width(), mRenderSize.height(),
-                      0, 0, mRenderSize.width(), mRenderSize.height(),
+    glBlitFramebuffer(aViewport.xMin(), aViewport.yMin(), aViewport.xMax(), aViewport.yMax(),
+                      aViewport.xMin(), aViewport.yMin(), aViewport.xMax(), aViewport.yMax(),
                       GL_COLOR_BUFFER_BIT,
                       GL_NEAREST);
 }

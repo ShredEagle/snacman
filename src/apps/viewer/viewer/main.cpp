@@ -188,6 +188,7 @@ int runApplication(int argc, char * argv[])
 
     auto secondWindow = graphics::ApplicationGlfw{glfwApp, "Secondary", 800, 600};
     glfwSwapInterval(0); // Disable V-sync
+    renderer::ViewBlitter blitter; // Created in the GL context of the destination window
 
     // Immediately make the main window context current
     // It is essential when generating queries, which apparently are not shared
@@ -251,7 +252,9 @@ int runApplication(int argc, char * argv[])
             {
                 secondWindow.makeContextCurrent();
                 glClear(GL_COLOR_BUFFER_BIT);
-                secondaryView.blitIt(graphics::FrameBuffer::Default());
+                blitter.blitIt(secondaryView.mColorBuffer,
+                               math::Rectangle<GLint>::AtOrigin(secondaryView.mRenderSize),
+                               graphics::FrameBuffer::Default());
                 secondWindow.swapBuffers();
                 glfwApp.makeContextCurrent();
             }
