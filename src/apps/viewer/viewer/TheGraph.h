@@ -48,22 +48,24 @@ void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aC
 /// @brief The specific Render Graph for this viewer application.
 struct TheGraph
 {
-    TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+    TheGraph(math::Size<2, int> aRenderSize,
              Storage & aStorage,
              const Loader & aLoader);
 
-    void onFramebufferResize(math::Size<2, int> aNewSize);
+    void resize(math::Size<2, int> aNewSize);
 
     void allocateTextures(math::Size<2, int> aSize);
 
     void setupTextures();
 
+    /// @param aFramebuffer Will be bound to DRAW for final image rendering.
+    /// Its renderable size should match the current render size of this, as defined via resize().
     void renderFrame(const Scene & aScene,
                      const Camera & aCamera,
                      const LightsData & aLights_camera,
                      Storage & aStorage,
                      bool aShowTextures,
-                     const graphics::FrameBuffer & aFramebuffer = graphics::FrameBuffer::Default());
+                     const graphics::FrameBuffer & aFramebuffer);
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 
@@ -112,16 +114,12 @@ struct TheGraph
     };
     Controls mControls;
 
-    std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
-
     HardcodedUbos mUbos;
     RepositoryTexture mTextureRepository;
 
     GenericStream mInstanceStream;
 
     graphics::BufferAny mIndirectBuffer;
-
-    std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
 
     math::Size<2, int> mRenderSize;
 

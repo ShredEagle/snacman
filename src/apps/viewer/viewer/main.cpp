@@ -247,6 +247,7 @@ int runApplication(int argc, char * argv[])
             {
                 secondWindow.makeContextCurrent();
                 glClear(GL_COLOR_BUFFER_BIT);
+                secondaryView.blitIt(graphics::FrameBuffer::Default());
                 secondWindow.swapBuffers();
                 glfwApp.makeContextCurrent();
             }

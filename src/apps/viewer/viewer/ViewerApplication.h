@@ -26,6 +26,11 @@ struct PassCache;
 
 struct ViewerApplication
 {
+    // Not easily copyable nor movable, due to the listener which binds to a subobject.
+    // (Note: moving the subobject to the heap might be an easy workaround)
+    ViewerApplication(const ViewerApplication &) = delete;
+    ViewerApplication(ViewerApplication &&) = delete;
+
     ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
                       const std::filesystem::path & aSceneFile,
                       const imguiui::ImguiUi & aImguiUi);
@@ -50,6 +55,7 @@ struct ViewerApplication
     CameraSystemGui mCameraGui;
 
     TheGraph mGraph;
+    std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
 };
 
 

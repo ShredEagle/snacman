@@ -80,16 +80,12 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
 //
 // TheGraph
 //
-TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+TheGraph::TheGraph(math::Size<2, int> aRenderSize,
                    Storage & aStorage,
                    const Loader & aLoader) :
-    mGlfwAppInterface{std::move(aGlfwAppInterface)},
     mUbos{aStorage},
     mInstanceStream{makeInstanceStream(aStorage, gMaxDrawInstances)},
-    mFramebufferSizeListener{mGlfwAppInterface->listenFramebufferResize(
-        std::bind(&TheGraph::onFramebufferResize, this, std::placeholders::_1))
-    },
-    mRenderSize{mGlfwAppInterface->getFramebufferSize()},
+    mRenderSize{aRenderSize},
     mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")},
     mSkybox{aLoader, aStorage},
     mDebugRenderer{aStorage, aLoader}
@@ -105,7 +101,7 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
 }
 
 
-void TheGraph::onFramebufferResize(math::Size<2, int> aNewSize)
+void TheGraph::resize(math::Size<2, int> aNewSize)
 {
     // Note: for the moment, we keep the render size in sync with the framebuffer size
     // (this is not necessarily true in renderers where the rendered image is blitted to the default framebuffer)

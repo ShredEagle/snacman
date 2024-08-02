@@ -257,7 +257,10 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // At the moment, hardcode a maximum number
     mLoader{makeResourceFinder()},
     mCameraSystem{mGlfwAppInterface, &aImguiUi, CameraSystem::Control::FirstPerson},
-    mGraph{mGlfwAppInterface, mStorage, mLoader}
+    mGraph{mGlfwAppInterface->getFramebufferSize(), mStorage, mLoader},
+    // Track the size of the default framebuffer, which will be the destination of mGraph::render().
+    mFramebufferSizeListener{mGlfwAppInterface->listenFramebufferResize(
+        std::bind(&TheGraph::resize, &mGraph, std::placeholders::_1))}
 {
     if(aSceneFile.extension() == ".sew")
     {
@@ -564,7 +567,8 @@ void ViewerApplication::render()
                        mScene.getLightsInCamera(mCameraSystem.mCamera,
                                                 !mSceneGui.getOptions().mAreDirectionalLightsCameraSpace),
                        mStorage,
-                       false);
+                       false,
+                       graphics::FrameBuffer::Default());
 
     mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
 }
