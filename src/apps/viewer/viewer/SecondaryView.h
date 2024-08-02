@@ -15,10 +15,11 @@
 namespace ad::renderer {
 
 
-struct Loader;
-struct Storage;
 struct ViewerApplication;
 
+// TODO #graph remove
+struct Loader;
+struct Storage;
 
 struct SecondaryView
 {
@@ -28,6 +29,7 @@ struct SecondaryView
     SecondaryView(SecondaryView &&) = delete;
 
     SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+                  // TODO #graph get rid of those, when addressing the problematic design of TheGraph coupling much too many things
                   Storage & aStorage,
                   const Loader & aLoader);
 

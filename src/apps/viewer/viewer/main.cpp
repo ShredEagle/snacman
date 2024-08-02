@@ -195,6 +195,8 @@ int runApplication(int argc, char * argv[])
     glfwApp.makeContextCurrent();
 
     renderer::SecondaryView secondaryView{secondWindow.getAppInterface(), application.mStorage, application.mLoader};
+    // TODO #graph This aspect is very problematic: the instance stream should be unique, as its buffers are deeply associated to models
+    // on load. This means all "graphs" should use the same at the moment.
     secondaryView.mGraph.mInstanceStream = application.mGraph.mInstanceStream;
 
     while (glfwApp.handleEvents())
