@@ -61,7 +61,9 @@ struct TheGraph
     void renderFrame(const Scene & aScene,
                      const Camera & aCamera,
                      const LightsData & aLights_camera,
-                     Storage & aStorage);
+                     Storage & aStorage,
+                     bool aShowTextures,
+                     const graphics::FrameBuffer & aFramebuffer = graphics::FrameBuffer::Default());
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 

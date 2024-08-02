@@ -206,7 +206,9 @@ void TheGraph::loadDrawBuffers(const ViewerPartList & aPartList,
 void TheGraph::renderFrame(const Scene & aScene, 
                            const Camera & aCamera,
                            const LightsData & aLights_camera,
-                           Storage & aStorage)
+                           Storage & aStorage,
+                           bool aShowTextures,
+                           const graphics::FrameBuffer & aFramebuffer)
 {
     // TODO: How to handle material/program selection while generating the part list,
     // if the camera (or pass itself?) might override the materials?
@@ -230,18 +232,27 @@ void TheGraph::renderFrame(const Scene & aScene,
     graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
 
     passOpaqueDepth(partList, aStorage);
-    // TODO Ad 2023/11/30: #perf Currently, this forward pass does not leverage the already available opaque depth-buffer
-    // We cannot bind our "custom" depth buffer as the default framebuffer depth-buffer, so we will need to study alternatives:
-    // render opaque depth to default FB, and blit to a texture for showing, render forward to a render target then blit to default FB, ...
-    passForward(partList, aStorage, aScene.mEnvironment.has_value());
+    {
+        // Default Framebuffer
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
+        gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // TODO Ad 2023/11/30: #perf Currently, this forward pass does not leverage the already available opaque depth-buffer
+        // We cannot bind our "custom" depth buffer as the default framebuffer depth-buffer, so we will need to study alternatives:
+        // render opaque depth to default FB, and blit to a texture for showing, render forward to a render target then blit to default FB, ...
+        passForward(partList, aStorage, aScene.mEnvironment.has_value());
+    }
     passTransparencyAccumulation(partList, aStorage);
-    passTransparencyResolve(partList, aStorage);
+    {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
+        passTransparencyResolve(partList, aStorage);
+    }
 
     if(aScene.mEnvironment)
     {
         // The Framebuffer binding should be moved out of the passes, making them more reusable
         // Default Framebuffer
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
         glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
 
         // When normally rendering the skybox, we are "inside" the cube, so only render backfaces
@@ -251,17 +262,22 @@ void TheGraph::renderFrame(const Scene & aScene,
     //
     // Debug rendering of the depth texture
     //
-    auto [nearZ, farZ] = getNearFarPlanes(aCamera);
-    showDepthTexture(mDepthMap, nearZ, farZ) ;
-    //showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
-    //showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
-
-    if(aScene.mEnvironment && aScene.mEnvironment->mFilteredRadiance != 0)
+    if(aShowTextures)
     {
-        showTexture(*aScene.mEnvironment->mMap, 1, {.mIsCubemap = true,}) ;
-        showTexture(*aScene.mEnvironment->mFilteredRadiance, 2, {.mIsCubemap = true,}) ;
-        showTexture(*aScene.mEnvironment->mFilteredIrradiance, 3, {.mIsCubemap = true,}) ;
-        //showTexture(*aScene.mEnvironment->mIntegratedBrdf, 2) ;
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
+
+        auto [nearZ, farZ] = getNearFarPlanes(aCamera);
+        showDepthTexture(mDepthMap, nearZ, farZ) ;
+        //showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
+        //showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
+
+        if(aScene.mEnvironment && aScene.mEnvironment->mFilteredRadiance != 0)
+        {
+            showTexture(*aScene.mEnvironment->mMap, 1, {.mIsCubemap = true,}) ;
+            showTexture(*aScene.mEnvironment->mFilteredRadiance, 2, {.mIsCubemap = true,}) ;
+            showTexture(*aScene.mEnvironment->mFilteredIrradiance, 3, {.mIsCubemap = true,}) ;
+            //showTexture(*aScene.mEnvironment->mIntegratedBrdf, 2) ;
+        }
     }
 }
 
@@ -337,8 +353,6 @@ void TheGraph::showTexture(const graphics::Texture & aTexture,
 
     // Note: with stencil, we could draw those rectangles first,
     // and prevent main rasterization behind them.
-
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     
     if(aTexture.mTarget == GL_TEXTURE_CUBE_MAP)
     {
@@ -450,9 +464,6 @@ void TheGraph::passForward(const ViewerPartList & aPartList,
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
 
-    // Default Framebuffer
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
     //
     // Set pipeline state
     //
@@ -468,8 +479,6 @@ void TheGraph::passForward(const ViewerPartList & aPartList,
 
     }
     auto scopedPolygonMode = graphics::scopePolygonMode(*mControls.mForwardPolygonMode);
-
-    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Might loop over cameras, or any other variation
     //for(whatever dimension)
@@ -551,8 +560,6 @@ void TheGraph::passTransparencyAccumulation(const ViewerPartList & aPartList, St
 void TheGraph::passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_transparency_resolve", CpuTime, GpuTime);
-
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
     //
     // Set pipeline state

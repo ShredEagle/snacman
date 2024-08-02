@@ -563,7 +563,8 @@ void ViewerApplication::render()
                        mCameraSystem.mCamera,
                        mScene.getLightsInCamera(mCameraSystem.mCamera,
                                                 !mSceneGui.getOptions().mAreDirectionalLightsCameraSpace),
-                       mStorage);
+                       mStorage,
+                       false);
 
     mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
 }
