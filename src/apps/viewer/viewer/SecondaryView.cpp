@@ -78,13 +78,6 @@ void SecondaryView::allocateBuffers()
 
 void SecondaryView::render(ViewerApplication & aViewerApp)
 {
-    mGraph.mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] = 
-        aViewerApp.mScene.mEnvironment->mFilteredRadiance;
-    mGraph.mTextureRepository[semantic::gIntegratedEnvironmentBrdf] = 
-        aViewerApp.mScene.mEnvironment->mIntegratedBrdf;
-    mGraph.mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] = 
-        aViewerApp.mScene.mEnvironment->mFilteredIrradiance;
-
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "SecondaryView::render()", CpuTime, GpuTime, BufferMemoryWritten);
 
     graphics::ScopedBind boundFbo{mDrawFramebuffer, graphics::FrameBufferTarget::Draw};

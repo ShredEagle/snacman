@@ -70,13 +70,21 @@ struct TheGraph
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
-    void passOpaqueDepth(const ViewerPartList & aPartList, Storage & mStorage);
+    void passOpaqueDepth(const ViewerPartList & aPartList,
+                         const RepositoryTexture & aTextureRepository,
+                         Storage & mStorage);
     void passForward(const ViewerPartList & aPartList,
+                     const RepositoryTexture & aTextureRepository,
                      Storage & aStorage,
                      bool aEnvironmentMappingconst);
-    void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
-    void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
-    void passDrawSkybox(const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace = GL_FRONT) const;
+    void passTransparencyAccumulation(const ViewerPartList & aPartList,
+                                      const RepositoryTexture & aTextureRepository,
+                                      Storage & mStorage);
+    void passTransparencyResolve(const ViewerPartList & aPartList, 
+                                 Storage & mStorage);
+    void passDrawSkybox(const Environment & aEnvironment,
+                        Storage & aStorage,
+                        GLenum aCulledFace = GL_FRONT) const;
 
     void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const;
 
@@ -115,7 +123,6 @@ struct TheGraph
     Controls mControls;
 
     HardcodedUbos mUbos;
-    RepositoryTexture mTextureRepository;
 
     GenericStream mInstanceStream;
 

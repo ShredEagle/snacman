@@ -295,10 +295,9 @@ namespace {
         Handle<const graphics::Texture> texture = &aApp.mStorage.mTextures.back();
         aApp.mScene.mEnvironment = Environment{
             .mType = aType,
-            .mMap = texture,
+            .mTextureRepository{ {semantic::gEnvironmentTexture, texture}, },
             .mMapFile = std::move(aPath),
         };
-        aApp.mGraph.mTextureRepository[semantic::gEnvironmentTexture] = texture;
     }
 
 } // unnamed namespace
@@ -323,24 +322,16 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
     const GLint gFilteredRadianceSide = 512;
     const GLint gIntegratedBrdfSide = 512;
     const GLint gFilteredIrradianceSide = 128;
+
     // That approach is smelly: we use the Environment to compute a value we then assign to the Environment
-    mScene.mEnvironment->mFilteredRadiance =
+    mScene.mEnvironment->mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] =
         filterEnvironmentMapSpecular(*mScene.mEnvironment, mGraph, mStorage, gFilteredRadianceSide);
-    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mFilteredRadiance, -1, "filtered_radiance_env");
-    mGraph.mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] = 
-        mScene.mEnvironment->mFilteredRadiance;
 
-    mScene.mEnvironment->mIntegratedBrdf =
+    mScene.mEnvironment->mTextureRepository[semantic::gIntegratedEnvironmentBrdf] =
         integrateEnvironmentBrdf(mStorage, gIntegratedBrdfSide, mLoader);
-    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mIntegratedBrdf, -1, "integrated_env_brdf");
-    mGraph.mTextureRepository[semantic::gIntegratedEnvironmentBrdf] = 
-        mScene.mEnvironment->mIntegratedBrdf;
 
-    mScene.mEnvironment->mFilteredIrradiance =
+    mScene.mEnvironment->mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] =
         filterEnvironmentMapDiffuse(*mScene.mEnvironment, mGraph, mStorage, gFilteredIrradianceSide);
-    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mFilteredIrradiance, -1, "filtered_irradiance_env");
-    mGraph.mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] = 
-        mScene.mEnvironment->mFilteredIrradiance;
 }
 
 
