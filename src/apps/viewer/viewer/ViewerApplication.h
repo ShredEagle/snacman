@@ -42,6 +42,8 @@ struct ViewerApplication
     void update(const Timing & aTime);
     void render();
 
+    void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList);
+
     void drawUi(const Timing & aTime);
 
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
@@ -56,6 +58,8 @@ struct ViewerApplication
 
     TheGraph mGraph;
     std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
+
+    DebugRenderer mDebugRenderer;
 };
 
 

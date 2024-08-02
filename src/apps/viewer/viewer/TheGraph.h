@@ -147,10 +147,6 @@ struct TheGraph
 
     // Skybox rendering
     Skybox mSkybox;
-
-    // Debug rendering
-    DebugRenderer mDebugRenderer;
-
 };
 
 

@@ -260,7 +260,8 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     mGraph{mGlfwAppInterface->getFramebufferSize(), mStorage, mLoader},
     // Track the size of the default framebuffer, which will be the destination of mGraph::render().
     mFramebufferSizeListener{mGlfwAppInterface->listenFramebufferResize(
-        std::bind(&TheGraph::resize, &mGraph, std::placeholders::_1))}
+        std::bind(&TheGraph::resize, &mGraph, std::placeholders::_1))},
+    mDebugRenderer{mStorage, mLoader}
 {
     if(aSceneFile.extension() == ".sew")
     {
@@ -561,8 +562,22 @@ void ViewerApplication::render()
                        false,
                        graphics::FrameBuffer::Default());
 
-    mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
+    renderDebugDrawlist(snac::DebugDrawer::EndFrame());
 }
 
+
+void ViewerApplication::renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList)
+{
+    // Fullscreen viewport
+    glViewport(0,
+               0, 
+               mGlfwAppInterface->getFramebufferSize().width(),
+               mGlfwAppInterface->getFramebufferSize().height());
+
+    // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
+    // It is needed for the viewing block, so we hope it is left at the camera
+    // note: it will break with multiple camera / viewport
+    mDebugRenderer.render(std::move(aDrawList), mGraph.mUbos.mUboRepository, mStorage);
+}
 
 } // namespace ad::renderer

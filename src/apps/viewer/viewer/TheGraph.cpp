@@ -87,8 +87,7 @@ TheGraph::TheGraph(math::Size<2, int> aRenderSize,
     mInstanceStream{makeInstanceStream(aStorage, gMaxDrawInstances)},
     mRenderSize{aRenderSize},
     mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")},
-    mSkybox{aLoader, aStorage},
-    mDebugRenderer{aStorage, aLoader}
+    mSkybox{aLoader, aStorage}
 {
     allocateTextures(mRenderSize);
     setupTextures();
@@ -288,6 +287,7 @@ void TheGraph::renderFrame(const Scene & aScene,
 }
 
 
+// TODO: rewrite using our model and abstractions
 void TheGraph::passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_skybox", CpuTime, GpuTime);
@@ -340,15 +340,6 @@ void TheGraph::passDrawSkybox(const Environment & aEnvironment, Storage & aStora
     Handle<ConfiguredProgram> confProgram = getProgram(*mSkybox.mEffect, annotations);
 
     passSkyboxBase(confProgram->mProgram, aEnvironment, aStorage, aCulledFace);
-}
-
-
-void TheGraph::renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage)
-{
-    // Fullscreen viewport
-    glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
-
-    mDebugRenderer.render(std::move(aDrawList), mUbos.mUboRepository, aStorage);
 }
 
 
