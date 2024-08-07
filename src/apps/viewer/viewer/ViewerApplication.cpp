@@ -459,6 +459,16 @@ void showPointLights(const LightsData & aLights)
 void PrimaryView::update(const Timing & aTime)
 {
     mCameraSystem.update(aTime.mDeltaDuration);
+
+    // Debugdraw the camera basis
+    {
+        auto cameraToWorld = mCameraSystem.mCamera.getParentToCamera().inverse();
+        // TODO we might want to used another channel for that
+        DBGDRAW_INFO(drawer::gLight).addBasis({
+            .mPosition = cameraToWorld.getAffine().as<math::Position>(),
+            .mOrientation = math::toQuaternion(cameraToWorld.getLinear()),
+        });
+    }
 }
 
 
@@ -615,6 +625,17 @@ void ViewerApplication::render()
         // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
         // It is needed for the viewing block, so we hope it is left at the camera position
         mPrimaryView.mGraph.mUbos.mUboRepository);
+
+    {
+        graphics::ScopedBind boundFbo{mSecondaryView.mDrawFramebuffer};
+        renderDebugDrawlist(
+            drawList,
+            // Fullscreen viewport
+            math::Rectangle<int>::AtOrigin(mSecondaryView.mRenderSize),
+            // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
+            // It is needed for the viewing block, so we hope it is left at the camera position
+            mSecondaryView.mGraph.mUbos.mUboRepository);
+    }
 }
 
 
