@@ -77,18 +77,17 @@ void SecondaryView::allocateBuffers()
 }
 
 
-void SecondaryView::render(ViewerApplication & aViewerApp)
+void SecondaryView::render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "SecondaryView::render()", CpuTime, GpuTime, BufferMemoryWritten);
 
     graphics::ScopedBind boundFbo{mDrawFramebuffer, graphics::FrameBufferTarget::Draw};
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    mGraph.renderFrame(aViewerApp.mScene,
+    mGraph.renderFrame(aScene,
                        mCameraSystem.mCamera,
-                       aViewerApp.mScene.getLightsInCamera(mCameraSystem.mCamera,
-                                                           !aViewerApp.mSceneGui.getOptions().mAreDirectionalLightsCameraSpace),
-                       aViewerApp.mStorage,
+                       aScene.getLightsInCamera(mCameraSystem.mCamera, !aLightsInCameraSpace),
+                       aStorage,
                        false,
                        mDrawFramebuffer);
 }

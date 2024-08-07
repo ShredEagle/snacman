@@ -1,5 +1,4 @@
 #include "Logging.h"
-#include "SecondaryView.h"
 #include "Timing.h"
 #include "ViewerApplication.h"
 
@@ -155,6 +154,17 @@ int runApplication(int argc, char * argv[])
 
     imguiui::ImguiUi imguiUi{glfwApp};
 
+
+    // 2nd window
+    auto secondWindow = graphics::ApplicationGlfw{glfwApp, "Secondary", 800, 600};
+    glfwSwapInterval(0); // Disable V-sync
+    renderer::ViewBlitter blitter; // Created in the GL context of the destination window
+
+    // Immediately make the main window context current
+    // It is essential when generating queries, which apparently are not shared
+    // Also, SecondaryView initialize objects that have to be on the main context
+    glfwApp.makeContextCurrent();
+
     auto renderProfilerScope = SCOPE_PROFILER(gRenderProfiler, renderer::Profiler::Providers::All);
 
     auto loadingSection = PROFILER_BEGIN_SINGLESHOT_SECTION(gRenderProfiler, , "rendergraph_loading", renderer::CpuTime);
@@ -162,6 +172,7 @@ int runApplication(int argc, char * argv[])
     __itt_task_begin(itt_domain, __itt_null, __itt_null, itt_handleLoadingSection);
     renderer::ViewerApplication application{
         glfwApp.getAppInterface(),
+        secondWindow.getAppInterface(),
         args.mSceneFile,
         imguiUi,
     };
@@ -185,20 +196,6 @@ int runApplication(int argc, char * argv[])
 
     // Used as memory from one call to the next
     std::ostringstream profilerOut;
-
-    auto secondWindow = graphics::ApplicationGlfw{glfwApp, "Secondary", 800, 600};
-    glfwSwapInterval(0); // Disable V-sync
-    renderer::ViewBlitter blitter; // Created in the GL context of the destination window
-
-    // Immediately make the main window context current
-    // It is essential when generating queries, which apparently are not shared
-    // Also, SecondaryView initialize objects that have to be on the main context
-    glfwApp.makeContextCurrent();
-
-    renderer::SecondaryView secondaryView{secondWindow.getAppInterface(), application.mStorage, application.mLoader};
-    // TODO #graph This aspect is very problematic: the instance stream should be unique, as its buffers are deeply associated to models
-    // on load. This means all "graphs" should use the same at the moment.
-    secondaryView.mGraph.mInstanceStream = application.mPrimaryView.mGraph.mInstanceStream;
 
     while (glfwApp.handleEvents())
     {
@@ -236,11 +233,6 @@ int runApplication(int argc, char * argv[])
         // (but this implies to end the profiler frame earlier, thus not profiling ImGui UI)
         showGui(imguiUi, application, profilerOut.str(), timing);
 
-        if(secondWindow.isVisible())
-        {
-            secondaryView.render(application);
-        }
-
         glfwApp.swapBuffers();
 
         PROFILER_END_SECTION(frameSection);
@@ -252,8 +244,8 @@ int runApplication(int argc, char * argv[])
             {
                 secondWindow.makeContextCurrent();
                 glClear(GL_COLOR_BUFFER_BIT);
-                blitter.blitIt(secondaryView.mColorBuffer,
-                               math::Rectangle<GLint>::AtOrigin(secondaryView.mRenderSize),
+                blitter.blitIt(application.mSecondaryView.mColorBuffer,
+                               math::Rectangle<GLint>::AtOrigin(application.mSecondaryView.mRenderSize),
                                graphics::FrameBuffer::Default());
                 secondWindow.swapBuffers();
                 glfwApp.makeContextCurrent();

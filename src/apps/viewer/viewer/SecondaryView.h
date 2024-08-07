@@ -39,8 +39,7 @@ struct SecondaryView
     // Private
     void allocateBuffers();
 
-    // TODO: const the viewer app
-    void render(/*const*/ ViewerApplication & aViewerApp);
+    void render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage);
 
     std::shared_ptr<graphics::AppInterface> mAppInterface;
     CameraSystem mCameraSystem;

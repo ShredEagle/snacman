@@ -3,6 +3,7 @@
 
 #include "CameraSystem.h"
 #include "GraphGui.h"
+#include "SecondaryView.h"
 #include "Scene.h"
 #include "SceneGui.h"
 #include "TheGraph.h"
@@ -51,6 +52,7 @@ struct PrimaryView
 struct ViewerApplication
 {
     ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+                      std::shared_ptr<graphics::AppInterface> aSecondViewAppInterface,
                       const std::filesystem::path & aSceneFile,
                       const imguiui::ImguiUi & aImguiUi);
 
@@ -68,6 +70,7 @@ struct ViewerApplication
     void drawUi(const Timing & aTime);
 
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
+    std::shared_ptr<graphics::AppInterface> mSecondViewAppInterface;
     Storage mStorage;
     Loader mLoader;
     Scene mScene;
@@ -76,6 +79,7 @@ struct ViewerApplication
     DebugRenderer mDebugRenderer;
 
     PrimaryView mPrimaryView;
+    SecondaryView mSecondaryView;
 };
 
 

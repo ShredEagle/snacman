@@ -258,17 +258,24 @@ PrimaryView::PrimaryView(const std::shared_ptr<graphics::AppInterface> & aGlfwAp
 
 
 ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+                                     std::shared_ptr<graphics::AppInterface> aSecondViewAppInterface,
                                      const std::filesystem::path & aSceneFile,
                                      const imguiui::ImguiUi & aImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
+    mSecondViewAppInterface{std::move(aSecondViewAppInterface)},
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
     mLoader{makeResourceFinder()},
     mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage},
     // Track the size of the default framebuffer, which will be the destination of mGraph::render().
     mDebugRenderer{mStorage, mLoader},
-    mPrimaryView{mGlfwAppInterface, aImguiUi, mLoader, mStorage}
+    mPrimaryView{mGlfwAppInterface, aImguiUi, mLoader, mStorage},
+    mSecondaryView{mSecondViewAppInterface, mStorage, mLoader}
 {
+    // TODO #graph This aspect is very problematic: the instance stream should be unique, as its buffers are deeply associated to models
+    // on load. This means all "graphs" should use the same at the moment.
+    mSecondaryView.mGraph.mInstanceStream = mPrimaryView.mGraph.mInstanceStream;
+
     if(aSceneFile.extension() == ".sew")
     {
         // TODO Ad 2024/08/02: #graph sort out this instance stream stuff
@@ -559,6 +566,19 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
 
         ImGui::End();
     }
+
+    bool showSecondWindow = !mSecondViewAppInterface->isWindowHidden();
+    if(ImGui::Checkbox("Second window", &showSecondWindow))
+    {
+        if(showSecondWindow)
+        {
+            mSecondViewAppInterface->showWindow();
+        }
+        else
+        {
+            mSecondViewAppInterface->hideWindow();
+        }
+    }
 }
 
 
@@ -580,7 +600,13 @@ void ViewerApplication::render()
     NVTX3_FUNC_RANGE();
 
     snac::DebugDrawer::DrawList drawList = snac::DebugDrawer::EndFrame();
+
     mPrimaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
+
+    if(mSecondViewAppInterface->isWindowOnDisplay())
+    {
+        mSecondaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
+    }
 
     renderDebugDrawlist(
         drawList,
@@ -599,5 +625,6 @@ void ViewerApplication::renderDebugDrawlist(const snac::DebugDrawer::DrawList & 
     glViewport(aViewport.xMin(), aViewport.yMin(), aViewport.width(), aViewport.height());
     mDebugRenderer.render(aDrawList, aUboRepo, mStorage);
 }
+
 
 } // namespace ad::renderer
