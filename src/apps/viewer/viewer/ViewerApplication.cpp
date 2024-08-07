@@ -489,6 +489,7 @@ void ViewerApplication::update(const Timing & aTime)
     }
 
     mPrimaryView.update(aTime);
+    mSecondaryView.update(aTime);
 }
 
 

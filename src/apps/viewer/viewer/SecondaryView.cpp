@@ -15,7 +15,14 @@ SecondaryView::SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInt
                              Storage & aStorage,
                              const Loader & aLoader) : 
     mAppInterface{std::move(aGlfwAppInterface)},
-    mCameraSystem{mAppInterface, nullptr /* no inhibiter*/, CameraSystem::Control::FirstPerson},
+    mCameraSystem{
+        mAppInterface,
+        nullptr /* no inhibiter*/,
+        CameraSystem::Control::Orbital,
+        Orbital{
+            5.f,
+            math::Degree{0.f}
+        }},
     mRenderSize{mAppInterface->getFramebufferSize()},
     mGraph{mRenderSize, aStorage, aLoader},
     mFramebufferSizeListener{mAppInterface->listenFramebufferResize(
@@ -29,10 +36,6 @@ SecondaryView::SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInt
         .mNearZ = 0,
         .mFarZ = -100,
     });
-    mCameraSystem.mCamera.setPose(
-        graphics::getCameraTransform<GLfloat>({0.f, 5.f, 0.f},
-                                              {0.f, -1.f, 0.f},
-                                              {0.f, 0.f, -1.f}));
 
     // Attach the render buffers to FBO
     graphics::ScopedBind boundFbo{mDrawFramebuffer, graphics::FrameBufferTarget::Draw};
@@ -74,6 +77,14 @@ void SecondaryView::allocateBuffers()
             GL_DEPTH_COMPONENT32,
             mRenderSize.width(), mRenderSize.height());
     }
+}
+
+
+void SecondaryView::update(const Timing & aTime)
+{
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "SecondaryView::update()", CpuTime);
+
+    mCameraSystem.update(aTime.mDeltaDuration);
 }
 
 

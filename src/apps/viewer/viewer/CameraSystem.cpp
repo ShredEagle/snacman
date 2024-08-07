@@ -9,7 +9,6 @@ namespace ad::renderer {
 namespace {
 
     constexpr math::Degree<float> gInitialVFov{50.f};
-    constexpr float gInitialRadius{2.f};
     constexpr float gNearZ{-0.1f};
     constexpr float gMinFarZ{-25.f};
 
@@ -33,16 +32,17 @@ constexpr float gDepthFactor{20.f};
 
 CameraSystem::CameraSystem(std::shared_ptr<graphics::AppInterface> aAppInterface,
                            const imguiui::ImguiUi * aImguiUi,
-                           Control aMode) :
+                           Control aMode,
+                           Orbital aInitialOrbitalPose) :
     mAppInterface{std::move(aAppInterface)},
     mImguiUi{aImguiUi},
     mActive{aMode},
-    mOrbitalHome{gInitialRadius},
+    mOrbitalHome{aInitialOrbitalPose},
     mOrbitalControl{mOrbitalHome},
     mFramebufferSizeListener{mAppInterface->listenFramebufferResize(
         std::bind(&CameraSystem::onFramebufferResize, this, std::placeholders::_1))
     },
-    mPreviousRadius{gInitialRadius}
+    mPreviousRadius{aInitialOrbitalPose.mSpherical.radius()}
 {
         setControlMode(mActive);
 

@@ -3,6 +3,7 @@
 
 #include "CameraSystem.h"
 #include "TheGraph.h"
+#include "Timing.h"
 
 #include <graphics/AppInterface.h>
 
@@ -38,6 +39,8 @@ struct SecondaryView
 
     // Private
     void allocateBuffers();
+
+    void update(const Timing & aTime);
 
     void render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage);
 
