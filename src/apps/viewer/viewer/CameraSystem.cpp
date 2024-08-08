@@ -299,14 +299,19 @@ void CameraSystemGui::presentSection(CameraSystem & aCameraSystem)
             };
             int projectionId = std::holds_alternative<graphics::OrthographicParameters>(projectionParams) ?
                 Orthographic : Perspective;
+            const int previousProjectionId = projectionId;
 
-            bool changed = ImGui::RadioButton("Orthographic",
-                                              &projectionId,
-                                              Orthographic);
+            ImGui::RadioButton("Orthographic",
+                               &projectionId,
+                               Orthographic);
             ImGui::SameLine();
-            changed |= ImGui::RadioButton("Perspective",
-                                          &projectionId,
-                                          Perspective);
+            ImGui::RadioButton("Perspective",
+                               &projectionId,
+                               Perspective);
+
+            // Note: initially, we used the return value from ImGui::RadioButton to detect change
+            // but clicking the already selected button would also return true.
+            bool changed = (projectionId != previousProjectionId);
 
             // If a change occured, convert from one projection parameter type to the other
             if(changed)
