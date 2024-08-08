@@ -47,6 +47,7 @@ struct SecondaryView
 
     std::shared_ptr<graphics::AppInterface> mAppInterface;
     CameraSystem mCameraSystem;
+    CameraSystemGui mCameraGui;
 
     // TODO further split: FBOs are not shared, so they should be generated and bound on their specific contexts
     // (plus this will make this class more generic, usable even with single context)

@@ -71,7 +71,9 @@ struct ViewerApplication
                              math::Rectangle<int> aViewport,
                              const RepositoryUbo & aUboRepo);
 
-    void drawUi(const Timing & aTime);
+    void drawMainUi(const Timing & aTime);
+
+    void drawSecondaryUi();
 
     std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
     std::shared_ptr<graphics::AppInterface> mSecondViewAppInterface;

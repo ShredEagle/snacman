@@ -494,7 +494,7 @@ void ViewerApplication::update(const Timing & aTime)
 }
 
 
-void ViewerApplication::drawUi(const renderer::Timing & aTime)
+void ViewerApplication::drawMainUi(const renderer::Timing & aTime)
 {
     if(ImGui::Button("Recompile effects"))
     {
@@ -591,6 +591,12 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
             mSecondViewAppInterface->hideWindow();
         }
     }
+}
+
+
+void ViewerApplication::drawSecondaryUi()
+{
+    mSecondaryView.mCameraGui.presentSection(mSecondaryView.mCameraSystem);
 }
 
 

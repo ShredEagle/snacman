@@ -79,7 +79,7 @@ void showGui(imguiui::ImguiUi & imguiUi,
 
     ImGui::Begin("Main control");
     {
-        aApplication.drawUi(aTime);
+        aApplication.drawMainUi(aTime);
 
         static bool showProfiler = false;
         if(imguiui::addCheckbox("Profiler", showProfiler))
@@ -118,11 +118,15 @@ void showGui(imguiui::ImguiUi & imguiUi,
 }
 
 
-void showSecondGui(imguiui::ImguiUi & imguiUi)
+void showSecondGui(imguiui::ImguiUi & imguiUi,
+                   renderer::ViewerApplication & aApplication)
 {
     imguiUi.newFrame();
 
-    ImGui::Begin("Second control");
+    ImGui::Begin("Debug");
+    {
+        aApplication.drawSecondaryUi();
+    }
     ImGui::End();
 
     imguiUi.render();
@@ -273,7 +277,7 @@ int runApplication(int argc, char * argv[])
                                math::Rectangle<GLint>::AtOrigin(application.mSecondaryView.mRenderSize),
                                graphics::FrameBuffer::Default());
                 // Prepare the GUI for the 2nd window.
-                showSecondGui(secondImguiUi);
+                showSecondGui(secondImguiUi, application);
                 secondWindow.swapBuffers();
                 glfwApp.makeContextCurrent();
             }
