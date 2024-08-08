@@ -461,7 +461,7 @@ namespace {
 
 
     // TODO Ad 2024/08/08: This should be moved to a more general library
-    /// @brief Render the view frustum of a camera, provided the inverse of its view-projection matrix.
+    /// @brief Debug-draw the view frustum of a camera, provided the inverse of its view-projection matrix.
     void debugDrawCameraFrustum(const math::Matrix<4, 4, float> & aViewProjectionInverse)
     {
         std::array<math::Position<4, float>, 8> ndcCorners{{
