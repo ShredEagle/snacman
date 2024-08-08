@@ -11,6 +11,7 @@ namespace {
 
     void initializeDebugDrawers_impl()
     {
+        snac::DebugDrawer::AddDrawer(drawer::gCamera);
         snac::DebugDrawer::AddDrawer(drawer::gLight);
         snac::DebugDrawer::AddDrawer(drawer::gRig);
     }

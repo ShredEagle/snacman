@@ -457,18 +457,72 @@ void showPointLights(const LightsData & aLights)
 }
 
 
+namespace {
+
+
+    // TODO Ad 2024/08/08: This should be moved to a more general library
+    /// @brief Render the view frustum of a camera, provided the inverse of its view-projection matrix.
+    void debugDrawCameraFrustum(const math::Matrix<4, 4, float> & aViewProjectionInverse)
+    {
+        std::array<math::Position<4, float>, 8> ndcCorners{{
+            {-1.f, -1.f, -1.f, 1.f}, // Near bottom left
+            { 1.f, -1.f, -1.f, 1.f}, // Near bottom right
+            { 1.f,  1.f, -1.f, 1.f}, // Near top right
+            {-1.f,  1.f, -1.f, 1.f}, // Near top left
+            {-1.f, -1.f,  1.f, 1.f}, // Far bottom left
+            { 1.f, -1.f,  1.f, 1.f}, // Far bottom right
+            { 1.f,  1.f,  1.f, 1.f}, // Far top right
+            {-1.f,  1.f,  1.f, 1.f}, // Far top left
+        }};
+
+        // Transform corners from NDC to world
+        for(std::size_t idx = 0; idx != ndcCorners.size(); ++idx)
+        {
+            ndcCorners[idx] *= aViewProjectionInverse;
+        }
+
+        auto drawFace = [&ndcCorners](const std::size_t aStartIdx)
+        {
+            for(std::size_t idx = 0; idx != 4; ++idx)
+            {
+                DBGDRAW_INFO(drawer::gCamera).addLine(
+                    math::homogeneous::normalize(ndcCorners[idx + aStartIdx]).xyz(),
+                    math::homogeneous::normalize(ndcCorners[(idx + 1) % 4 + aStartIdx]).xyz());
+            }
+        };
+
+        // Near plane
+        drawFace(0);
+        // Far plane
+        drawFace(4);
+        // Sides
+        for(std::size_t idx = 0; idx != 4; ++idx)
+        {
+            DBGDRAW_INFO(drawer::gCamera).addLine(math::homogeneous::normalize(ndcCorners[idx]).xyz(),
+                                                math::homogeneous::normalize(ndcCorners[(idx + 4)]).xyz());
+        }
+    }
+
+
+} // unnamed namespace
+
+
 void PrimaryView::update(const Timing & aTime)
 {
     mCameraSystem.update(aTime.mDeltaDuration);
 
-    // Debugdraw the camera basis
+    // Debugdraw the camera
     {
         auto cameraToWorld = mCameraSystem.mCamera.getParentToCamera().inverse();
-        // TODO we might want to used another channel for that
-        DBGDRAW_INFO(drawer::gLight).addBasis({
+
+        // Show basis
+        DBGDRAW_INFO(drawer::gCamera).addBasis({
             .mPosition = cameraToWorld.getAffine().as<math::Position>(),
             .mOrientation = math::toQuaternion(cameraToWorld.getLinear()),
         });
+
+        auto viewProjectionInverse = mCameraSystem.mCamera.assembleViewProjection().inverse();
+        debugDrawCameraFrustum(viewProjectionInverse);
     }
 }
 
