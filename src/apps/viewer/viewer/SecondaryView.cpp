@@ -12,12 +12,13 @@ namespace ad::renderer {
 
 
 SecondaryView::SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+                             const imguiui::ImguiUi & aImguiUi,
                              Storage & aStorage,
                              const Loader & aLoader) : 
     mAppInterface{std::move(aGlfwAppInterface)},
     mCameraSystem{
         mAppInterface,
-        nullptr /* no inhibiter*/,
+        &aImguiUi,
         CameraSystem::Control::Orbital,
         Orbital{
             5.f,

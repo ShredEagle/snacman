@@ -30,6 +30,7 @@ struct SecondaryView
     SecondaryView(SecondaryView &&) = delete;
 
     SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+                  const imguiui::ImguiUi & aImguiUi,
                   // TODO #graph get rid of those, when addressing the problematic design of TheGraph coupling much too many things
                   Storage & aStorage,
                   const Loader & aLoader);

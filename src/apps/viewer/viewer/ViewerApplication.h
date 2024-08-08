@@ -33,7 +33,10 @@ struct PrimaryView
     PrimaryView(const PrimaryView &) = delete;
     PrimaryView(PrimaryView &&) = delete;
 
-    PrimaryView(const std::shared_ptr<graphics::AppInterface> & aGlfwAppInterface, const imguiui::ImguiUi & aImguiUi, Loader & aLoader, Storage & aStorage);
+    PrimaryView(const std::shared_ptr<graphics::AppInterface> & aGlfwAppInterface,
+                const imguiui::ImguiUi & aImguiUi,
+                Loader & aLoader,
+                Storage & aStorage);
 
     void update(const Timing & aTime);
 
@@ -54,7 +57,8 @@ struct ViewerApplication
     ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
                       std::shared_ptr<graphics::AppInterface> aSecondViewAppInterface,
                       const std::filesystem::path & aSceneFile,
-                      const imguiui::ImguiUi & aImguiUi);
+                      const imguiui::ImguiUi & aMainImguiUi,
+                      const imguiui::ImguiUi & aSecondViewImguiUi);
 
     void setEnvironmentCubemap(std::filesystem::path aEnvironmentStrip);
     void setEnvironmentEquirectangular(std::filesystem::path aEnvironmentEquirect);

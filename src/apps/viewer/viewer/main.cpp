@@ -118,24 +118,38 @@ void showGui(imguiui::ImguiUi & imguiUi,
 }
 
 
+void showSecondGui(imguiui::ImguiUi & imguiUi)
+{
+    imguiUi.newFrame();
+
+    ImGui::Begin("Second control");
+    ImGui::End();
+
+    imguiUi.render();
+    imguiUi.renderBackend();
+}
+
+
 int runApplication(int argc, char * argv[])
 {
     SELOG(info)("Starting application '{}'.", gApplicationName);
 
     __itt_domain * itt_domain = __itt_domain_create("se::viewer");
 
+    // CLI arguments
     Arguments args;
     if(int result = handleArguments(argc, argv, args))
     {
         return result;
     }
 
+    // DebugDrawer
     renderer::initializeDebugDrawers();
 
+    // Instantiate main window
     constexpr unsigned int gMsaaSamples = 1;
 
     __itt_string_handle* itt_handleGlfwApp = __itt_string_handle_create("glfwApp-ctor");
-    // Application and window initialization
     graphics::ApplicationFlag glfwFlags = graphics::ApplicationFlag::None;
     __itt_task_begin(itt_domain, __itt_null, __itt_null, itt_handleGlfwApp);
     graphics::ApplicationGlfw glfwApp{
@@ -152,10 +166,12 @@ int runApplication(int argc, char * argv[])
     // This makes debug stepping much more feasible.
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
+    // Associate an ImguiUi to the main window
     imguiui::ImguiUi imguiUi{glfwApp};
+    imguiUi.registerGlfwCallbacks(glfwApp);
 
 
-    // 2nd window
+    // Instantiate 2nd window
     auto secondWindow = graphics::ApplicationGlfw{glfwApp, "Secondary", 800, 600};
     glfwSwapInterval(0); // Disable V-sync
     renderer::ViewBlitter blitter; // Created in the GL context of the destination window
@@ -165,8 +181,13 @@ int runApplication(int argc, char * argv[])
     // Also, SecondaryView initialize objects that have to be on the main context
     glfwApp.makeContextCurrent();
 
+    // Associate an ImguiUi to the 2nd window
+    imguiui::ImguiUi secondImguiUi{secondWindow};
+    secondImguiUi.registerGlfwCallbacks(secondWindow);
+
     auto renderProfilerScope = SCOPE_PROFILER(gRenderProfiler, renderer::Profiler::Providers::All);
 
+    // Instantiate the ViewerApplication, that will load assets
     auto loadingSection = PROFILER_BEGIN_SINGLESHOT_SECTION(gRenderProfiler, , "rendergraph_loading", renderer::CpuTime);
     __itt_string_handle* itt_handleLoadingSection = __itt_string_handle_create("loadingSection");
     __itt_task_begin(itt_domain, __itt_null, __itt_null, itt_handleLoadingSection);
@@ -175,6 +196,7 @@ int runApplication(int argc, char * argv[])
         secondWindow.getAppInterface(),
         args.mSceneFile,
         imguiUi,
+        secondImguiUi
     };
     if(auto environment = args.mCubemapEnv)
     {
@@ -197,6 +219,7 @@ int runApplication(int argc, char * argv[])
     // Used as memory from one call to the next
     std::ostringstream profilerOut;
 
+    // Main loop
     while (glfwApp.handleEvents())
     {
         PROFILER_BEGIN_FRAME(gRenderProfiler);
@@ -238,15 +261,19 @@ int runApplication(int argc, char * argv[])
         PROFILER_END_SECTION(frameSection);
         PROFILER_END_FRAME(gRenderProfiler);
 
+        // Handle the second window: closing it does not terminate the app, but hide the window
         if(!secondWindow.shouldClose())
         {
             if(secondWindow.isVisible())
             {
+                // Make the second window OpenGL context current, to fill its default framebuffer.
                 secondWindow.makeContextCurrent();
-                glClear(GL_COLOR_BUFFER_BIT);
+                //glClear(GL_COLOR_BUFFER_BIT); // Useless, we blit the whole framebuffer
                 blitter.blitIt(application.mSecondaryView.mColorBuffer,
                                math::Rectangle<GLint>::AtOrigin(application.mSecondaryView.mRenderSize),
                                graphics::FrameBuffer::Default());
+                // Prepare the GUI for the 2nd window.
+                showSecondGui(secondImguiUi);
                 secondWindow.swapBuffers();
                 glfwApp.makeContextCurrent();
             }

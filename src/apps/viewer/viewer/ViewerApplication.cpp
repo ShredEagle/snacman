@@ -260,7 +260,8 @@ PrimaryView::PrimaryView(const std::shared_ptr<graphics::AppInterface> & aGlfwAp
 ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
                                      std::shared_ptr<graphics::AppInterface> aSecondViewAppInterface,
                                      const std::filesystem::path & aSceneFile,
-                                     const imguiui::ImguiUi & aImguiUi) :
+                                     const imguiui::ImguiUi & aImguiUi,
+                                     const imguiui::ImguiUi & aSecondViewImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
     mSecondViewAppInterface{std::move(aSecondViewAppInterface)},
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
@@ -270,7 +271,7 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // Track the size of the default framebuffer, which will be the destination of mGraph::render().
     mDebugRenderer{mStorage, mLoader},
     mPrimaryView{mGlfwAppInterface, aImguiUi, mLoader, mStorage},
-    mSecondaryView{mSecondViewAppInterface, mStorage, mLoader}
+    mSecondaryView{mSecondViewAppInterface, aSecondViewImguiUi, mStorage, mLoader}
 {
     // TODO #graph This aspect is very problematic: the instance stream should be unique, as its buffers are deeply associated to models
     // on load. This means all "graphs" should use the same at the moment.
