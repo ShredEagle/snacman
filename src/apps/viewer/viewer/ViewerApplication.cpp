@@ -126,7 +126,8 @@ namespace {
     }
 
 
-    Handle<Effect> makeSimpleEffect(Storage & aStorage)
+    // GCC complains about unused functions in unnamed namespaces
+    [[maybe_unused]] Handle<Effect> makeSimpleEffect(Storage & aStorage)
     {
         aStorage.mProgramConfigs.emplace_back();
         // Compiler error (msvc) workaround, by taking the initializer list out
