@@ -22,7 +22,7 @@ SecondaryView::SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInt
         CameraSystem::Control::Orbital,
         Orbital{
             5.f,
-            math::Degree{0.f}
+            math::Degree<float>{0.f}
         }},
     mRenderSize{mAppInterface->getFramebufferSize()},
     mGraph{mRenderSize, aStorage, aLoader},
