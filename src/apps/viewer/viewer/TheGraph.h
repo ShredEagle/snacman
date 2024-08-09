@@ -48,31 +48,43 @@ void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aC
 /// @brief The specific Render Graph for this viewer application.
 struct TheGraph
 {
-    TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+    TheGraph(math::Size<2, int> aRenderSize,
              Storage & aStorage,
              const Loader & aLoader);
 
-    void onFramebufferResize(math::Size<2, int> aNewSize);
+    void resize(math::Size<2, int> aNewSize);
 
     void allocateTextures(math::Size<2, int> aSize);
 
     void setupTextures();
 
+    /// @param aFramebuffer Will be bound to DRAW for final image rendering.
+    /// Its renderable size should match the current render size of this, as defined via resize().
     void renderFrame(const Scene & aScene,
                      const Camera & aCamera,
                      const LightsData & aLights_camera,
-                     Storage & aStorage);
+                     Storage & aStorage,
+                     bool aShowTextures,
+                     const graphics::FrameBuffer & aFramebuffer);
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
-    void passOpaqueDepth(const ViewerPartList & aPartList, Storage & mStorage);
+    void passOpaqueDepth(const ViewerPartList & aPartList,
+                         const RepositoryTexture & aTextureRepository,
+                         Storage & mStorage);
     void passForward(const ViewerPartList & aPartList,
+                     const RepositoryTexture & aTextureRepository,
                      Storage & aStorage,
                      bool aEnvironmentMappingconst);
-    void passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage);
-    void passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage);
-    void passDrawSkybox(const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace = GL_FRONT) const;
+    void passTransparencyAccumulation(const ViewerPartList & aPartList,
+                                      const RepositoryTexture & aTextureRepository,
+                                      Storage & mStorage);
+    void passTransparencyResolve(const ViewerPartList & aPartList, 
+                                 Storage & mStorage);
+    void passDrawSkybox(const Environment & aEnvironment,
+                        Storage & aStorage,
+                        GLenum aCulledFace = GL_FRONT) const;
 
     void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const;
 
@@ -110,16 +122,11 @@ struct TheGraph
     };
     Controls mControls;
 
-    std::shared_ptr<graphics::AppInterface> mGlfwAppInterface;
-
     HardcodedUbos mUbos;
-    RepositoryTexture mTextureRepository;
 
     GenericStream mInstanceStream;
 
     graphics::BufferAny mIndirectBuffer;
-
-    std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
 
     math::Size<2, int> mRenderSize;
 
@@ -140,10 +147,6 @@ struct TheGraph
 
     // Skybox rendering
     Skybox mSkybox;
-
-    // Debug rendering
-    DebugRenderer mDebugRenderer;
-
 };
 
 

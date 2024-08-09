@@ -29,6 +29,7 @@ namespace {
 } // unnamed namespace
 
 
+// TODO Ad 2024/08/02: #graph remove dependency to TheGraph from those utilities
 void dumpEnvironmentCubemap(const Environment & aEnvironment, 
                             const TheGraph & aGraph,
                             Storage & aStorage,
@@ -124,7 +125,7 @@ namespace {
         // Get the internal format of the provided environment texture
         GLint environmentInternalFormat = 0;
         {
-            graphics::ScopedBind boundEnvironment{*aEnvironment.mMap};
+            graphics::ScopedBind boundEnvironment{*aEnvironment.getEnvMap()};
             glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X,
                                      0,
                                      GL_TEXTURE_INTERNAL_FORMAT,
@@ -136,7 +137,7 @@ namespace {
                 default:
                 {
                     GLint isCompressed = GL_TRUE;
-                    glGetInternalformativ(aEnvironment.mMap->mTarget, environmentInternalFormat, 
+                    glGetInternalformativ(aEnvironment.getEnvMap()->mTarget, environmentInternalFormat, 
                                           GL_TEXTURE_COMPRESSED, 1, &isCompressed);
                     if(isCompressed)
                     {
@@ -253,6 +254,7 @@ Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvi
         //glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY, 16.f);
     }
 
+    glObjectLabel(GL_TEXTURE, filteredCubemap, -1, "filtered_radiance_specular_env");
     return &aStorage.mTextures.emplace_back(std::move(filteredCubemap));
 }
 
@@ -288,6 +290,7 @@ Handle<graphics::Texture> filterEnvironmentMapDiffuse(const Environment & aEnvir
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }
 
+    glObjectLabel(GL_TEXTURE, filteredCubemap, -1, "filtered_irradiance_diffuse_env");
     return &aStorage.mTextures.emplace_back(std::move(filteredCubemap));
 }
 
@@ -344,6 +347,7 @@ Handle<graphics::Texture> integrateEnvironmentBrdf(Storage & aStorage,
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
 
+    glObjectLabel(GL_TEXTURE, result, -1, "integrated_env_brdf");
     return &aStorage.mTextures.emplace_back(std::move(result));
 }
 
@@ -362,7 +366,7 @@ graphics::Texture highLightSamples(const Environment & aEnvironment,
     GLint environmentInternalFormat = 0;
     GLint environmentSideSize = 0;
     {
-        graphics::ScopedBind boundEnvironment{*aEnvironment.mMap};
+        graphics::ScopedBind boundEnvironment{*aEnvironment.getEnvMap()};
         glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X,
                                  0,
                                  GL_TEXTURE_INTERNAL_FORMAT,

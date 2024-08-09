@@ -126,7 +126,8 @@ namespace {
     }
 
 
-    Handle<Effect> makeSimpleEffect(Storage & aStorage)
+    // GCC complains about unused functions in unnamed namespaces
+    [[maybe_unused]] Handle<Effect> makeSimpleEffect(Storage & aStorage)
     {
         aStorage.mProgramConfigs.emplace_back();
         // Compiler error (msvc) workaround, by taking the initializer list out
@@ -249,19 +250,38 @@ ViewerPartList Scene::populatePartList() const
 }
 
 
+PrimaryView::PrimaryView(const std::shared_ptr<graphics::AppInterface> & aGlfwAppInterface, const imguiui::ImguiUi & aImguiUi, Loader & aLoader, Storage & aStorage) :
+    mCameraSystem{aGlfwAppInterface, &aImguiUi, CameraSystem::Control::FirstPerson},
+    mGraph{aGlfwAppInterface->getFramebufferSize(), aStorage, aLoader},
+    mFramebufferSizeListener{aGlfwAppInterface->listenFramebufferResize(
+        std::bind(&TheGraph::resize, &mGraph, std::placeholders::_1))}
+{}
+
+
 ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+                                     std::shared_ptr<graphics::AppInterface> aSecondViewAppInterface,
                                      const std::filesystem::path & aSceneFile,
-                                     const imguiui::ImguiUi & aImguiUi) :
+                                     const imguiui::ImguiUi & aImguiUi,
+                                     const imguiui::ImguiUi & aSecondViewImguiUi) :
     mGlfwAppInterface{std::move(aGlfwAppInterface)},
+    mSecondViewAppInterface{std::move(aSecondViewAppInterface)},
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
     mLoader{makeResourceFinder()},
-    mCameraSystem{mGlfwAppInterface, &aImguiUi, CameraSystem::Control::FirstPerson},
-    mGraph{mGlfwAppInterface, mStorage, mLoader}
+    mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage},
+    // Track the size of the default framebuffer, which will be the destination of mGraph::render().
+    mDebugRenderer{mStorage, mLoader},
+    mPrimaryView{mGlfwAppInterface, aImguiUi, mLoader, mStorage},
+    mSecondaryView{mSecondViewAppInterface, aSecondViewImguiUi, mStorage, mLoader}
 {
+    // TODO #graph This aspect is very problematic: the instance stream should be unique, as its buffers are deeply associated to models
+    // on load. This means all "graphs" should use the same at the moment.
+    mSecondaryView.mGraph.mInstanceStream = mPrimaryView.mGraph.mInstanceStream;
+
     if(aSceneFile.extension() == ".sew")
     {
-        mScene = loadScene(aSceneFile, mGraph.mInstanceStream, mLoader, mStorage);
+        // TODO Ad 2024/08/02: #graph sort out this instance stream stuff
+        mScene = loadScene(aSceneFile, mPrimaryView.mGraph.mInstanceStream, mLoader, mStorage);
     }
     else
     {
@@ -272,17 +292,17 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
        children.size() == 1)
     {
         SELOG(info)("Model viewer mode (inferred from single node)");
-        mCameraSystem.setupAsModelViewer(children.front().mAabb);
+        mPrimaryView.mCameraSystem.setupAsModelViewer(children.front().mAabb);
     }
 
-    // Add basic shapes to the the scene
-    Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
-    auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mGraph.mInstanceStream);
+    //// Add basic shapes to the the scene
+    //Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
+    //auto [triangle, cube] = loadTriangleAndCube(mStorage, simpleEffect, mGraph.mInstanceStream);
     // Toggle the triangle and cube in the scene
     //mScene.addToRoot(triangle);
     //mScene.addToRoot(cube);
-    
 }
+
 
 namespace {
 
@@ -292,10 +312,9 @@ namespace {
         Handle<const graphics::Texture> texture = &aApp.mStorage.mTextures.back();
         aApp.mScene.mEnvironment = Environment{
             .mType = aType,
-            .mMap = texture,
+            .mTextureRepository{ {semantic::gEnvironmentTexture, texture}, },
             .mMapFile = std::move(aPath),
         };
-        aApp.mGraph.mTextureRepository[semantic::gEnvironmentTexture] = texture;
     }
 
 } // unnamed namespace
@@ -320,24 +339,17 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
     const GLint gFilteredRadianceSide = 512;
     const GLint gIntegratedBrdfSide = 512;
     const GLint gFilteredIrradianceSide = 128;
-    // That approach is smelly: we use the Environment to compute an value we will set on the Environment
-    mScene.mEnvironment->mFilteredRadiance =
-        filterEnvironmentMapSpecular(*mScene.mEnvironment, mGraph, mStorage, gFilteredRadianceSide);
-    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mFilteredRadiance, -1, "filtered_radiance_env");
-    mGraph.mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] = 
-        mScene.mEnvironment->mFilteredRadiance;
 
-    mScene.mEnvironment->mIntegratedBrdf =
+    // That approach is smelly: we use the Environment to compute a value we then assign to the Environment
+    mScene.mEnvironment->mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] =
+        // TODO Ad 2024/08/02: #graph get rid of the graph parameter in the filtering functions
+        filterEnvironmentMapSpecular(*mScene.mEnvironment, mPrimaryView.mGraph, mStorage, gFilteredRadianceSide);
+
+    mScene.mEnvironment->mTextureRepository[semantic::gIntegratedEnvironmentBrdf] =
         integrateEnvironmentBrdf(mStorage, gIntegratedBrdfSide, mLoader);
-    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mIntegratedBrdf, -1, "integrated_env_brdf");
-    mGraph.mTextureRepository[semantic::gIntegratedEnvironmentBrdf] = 
-        mScene.mEnvironment->mIntegratedBrdf;
 
-    mScene.mEnvironment->mFilteredIrradiance =
-        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mGraph, mStorage, gFilteredIrradianceSide);
-    glObjectLabel(GL_TEXTURE, *mScene.mEnvironment->mFilteredIrradiance, -1, "filtered_irradiance_env");
-    mGraph.mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] = 
-        mScene.mEnvironment->mFilteredIrradiance;
+    mScene.mEnvironment->mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] =
+        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mPrimaryView.mGraph, mStorage, gFilteredIrradianceSide);
 }
 
 
@@ -446,6 +458,76 @@ void showPointLights(const LightsData & aLights)
 }
 
 
+namespace {
+
+
+    // TODO Ad 2024/08/08: This should be moved to a more general library
+    /// @brief Debug-draw the view frustum of a camera, provided the inverse of its view-projection matrix.
+    void debugDrawCameraFrustum(const math::Matrix<4, 4, float> & aViewProjectionInverse)
+    {
+        std::array<math::Position<4, float>, 8> ndcCorners{{
+            {-1.f, -1.f, -1.f, 1.f}, // Near bottom left
+            { 1.f, -1.f, -1.f, 1.f}, // Near bottom right
+            { 1.f,  1.f, -1.f, 1.f}, // Near top right
+            {-1.f,  1.f, -1.f, 1.f}, // Near top left
+            {-1.f, -1.f,  1.f, 1.f}, // Far bottom left
+            { 1.f, -1.f,  1.f, 1.f}, // Far bottom right
+            { 1.f,  1.f,  1.f, 1.f}, // Far top right
+            {-1.f,  1.f,  1.f, 1.f}, // Far top left
+        }};
+
+        // Transform corners from NDC to world
+        for(std::size_t idx = 0; idx != ndcCorners.size(); ++idx)
+        {
+            ndcCorners[idx] *= aViewProjectionInverse;
+        }
+
+        auto drawFace = [&ndcCorners](const std::size_t aStartIdx)
+        {
+            for(std::size_t idx = 0; idx != 4; ++idx)
+            {
+                DBGDRAW_INFO(drawer::gCamera).addLine(
+                    math::homogeneous::normalize(ndcCorners[idx + aStartIdx]).xyz(),
+                    math::homogeneous::normalize(ndcCorners[(idx + 1) % 4 + aStartIdx]).xyz());
+            }
+        };
+
+        // Near plane
+        drawFace(0);
+        // Far plane
+        drawFace(4);
+        // Sides
+        for(std::size_t idx = 0; idx != 4; ++idx)
+        {
+            DBGDRAW_INFO(drawer::gCamera).addLine(math::homogeneous::normalize(ndcCorners[idx]).xyz(),
+                                                math::homogeneous::normalize(ndcCorners[(idx + 4)]).xyz());
+        }
+    }
+
+
+} // unnamed namespace
+
+
+void PrimaryView::update(const Timing & aTime)
+{
+    mCameraSystem.update(aTime.mDeltaDuration);
+
+    // Debugdraw the camera
+    {
+        auto cameraToWorld = mCameraSystem.mCamera.getParentToCamera().inverse();
+
+        // Show basis
+        DBGDRAW_INFO(drawer::gCamera).addBasis({
+            .mPosition = cameraToWorld.getAffine().as<math::Position>(),
+            .mOrientation = math::toQuaternion(cameraToWorld.getLinear()),
+        });
+
+        auto viewProjectionInverse = mCameraSystem.mCamera.assembleViewProjection().inverse();
+        debugDrawCameraFrustum(viewProjectionInverse);
+    }
+}
+
+
 void ViewerApplication::update(const Timing & aTime)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "ViewerApplication::update()", CpuTime);
@@ -457,16 +539,17 @@ void ViewerApplication::update(const Timing & aTime)
     handleAnimations(mScene.mRoot, aTime);
 
     // handle lights
-    if(mSceneGui.mOptions.mShowPointLights)
+    if(mSceneGui.getOptions().mShowPointLights)
     {
         showPointLights(mScene.mLights_world);
     }
 
-    mCameraSystem.update(aTime.mDeltaDuration);
+    mPrimaryView.update(aTime);
+    mSecondaryView.update(aTime);
 }
 
 
-void ViewerApplication::drawUi(const renderer::Timing & aTime)
+void ViewerApplication::drawMainUi(const renderer::Timing & aTime)
 {
     if(ImGui::Button("Recompile effects"))
     {
@@ -508,7 +591,7 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
             assert(mScene.mEnvironment);
             dumpEnvironmentCubemap(
                 *mScene.mEnvironment,
-                mGraph,
+                mPrimaryView.mGraph,
                 mStorage,
                 mScene.mEnvironment->mMapFile.parent_path() /
                     "split-" += mScene.mEnvironment->mMapFile.filename());
@@ -538,18 +621,48 @@ void ViewerApplication::drawUi(const renderer::Timing & aTime)
         }
     }
 
-    mGraphGui.present(mGraph);
+    mPrimaryView.mGraphGui.present(mPrimaryView.mGraph);
 
     static bool gShowScene = false;
     if(imguiui::addCheckbox("Scene", gShowScene))
     {
         ImGui::Begin("Scene", nullptr, ImGuiWindowFlags_MenuBar);
 
-        mCameraGui.presentSection(mCameraSystem);
+        mPrimaryView.mCameraGui.presentSection(mPrimaryView.mCameraSystem);
         mSceneGui.presentSection(mScene, aTime);
 
         ImGui::End();
     }
+
+    bool showSecondWindow = !mSecondViewAppInterface->isWindowHidden();
+    if(ImGui::Checkbox("Second window", &showSecondWindow))
+    {
+        if(showSecondWindow)
+        {
+            mSecondViewAppInterface->showWindow();
+        }
+        else
+        {
+            mSecondViewAppInterface->hideWindow();
+        }
+    }
+}
+
+
+void ViewerApplication::drawSecondaryUi()
+{
+    mSecondaryView.mCameraGui.presentSection(mSecondaryView.mCameraSystem);
+}
+
+
+void PrimaryView::render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage)
+{
+    mGraph.renderFrame(aScene,
+                       mCameraSystem.mCamera,
+                       aScene.getLightsInCamera(mCameraSystem.mCamera, !aLightsInCameraSpace),
+                       aStorage,
+                       false,
+                       graphics::FrameBuffer::Default());
 }
 
 
@@ -559,13 +672,42 @@ void ViewerApplication::render()
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
-    mGraph.renderFrame(mScene,
-                       mCameraSystem.mCamera,
-                       mScene.getLightsInCamera(mCameraSystem.mCamera,
-                                                !mSceneGui.mOptions.mAreDirectionalLightsCameraSpace),
-                       mStorage);
+    snac::DebugDrawer::DrawList drawList = snac::DebugDrawer::EndFrame();
 
-    mGraph.renderDebugDrawlist(snac::DebugDrawer::EndFrame(), mStorage);
+    mPrimaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
+
+    if(mSecondViewAppInterface->isWindowOnDisplay())
+    {
+        mSecondaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
+    }
+
+    renderDebugDrawlist(
+        drawList,
+        // Fullscreen viewport
+        math::Rectangle<int>::AtOrigin(mGlfwAppInterface->getFramebufferSize()),
+        // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
+        // It is needed for the viewing block, so we hope it is left at the camera position
+        mPrimaryView.mGraph.mUbos.mUboRepository);
+
+    {
+        graphics::ScopedBind boundFbo{mSecondaryView.mDrawFramebuffer};
+        renderDebugDrawlist(
+            drawList,
+            // Fullscreen viewport
+            math::Rectangle<int>::AtOrigin(mSecondaryView.mRenderSize),
+            // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
+            // It is needed for the viewing block, so we hope it is left at the camera position
+            mSecondaryView.mGraph.mUbos.mUboRepository);
+    }
+}
+
+
+void ViewerApplication::renderDebugDrawlist(const snac::DebugDrawer::DrawList & aDrawList,
+                                            math::Rectangle<int> aViewport,
+                                            const RepositoryUbo & aUboRepo)
+{
+    glViewport(aViewport.xMin(), aViewport.yMin(), aViewport.width(), aViewport.height());
+    mDebugRenderer.render(aDrawList, aUboRepo, mStorage);
 }
 
 

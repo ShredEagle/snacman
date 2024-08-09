@@ -3,6 +3,7 @@
 #include "Lights.h"
 
 #include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/Semantics.h>
 
 
 namespace ad::renderer {
@@ -19,12 +20,19 @@ struct Environment
         Cubemap,
         Equirectangular,
     };
+
+    Handle<const graphics::Texture> getEnvMap() const
+    { return mTextureRepository.at(semantic::gEnvironmentTexture); }
+
+    Handle<const graphics::Texture> getFilteredRadiance() const
+    { return mTextureRepository.at(semantic::gFilteredRadianceEnvironmentTexture); }
+
+    Handle<const graphics::Texture> getFilteredIrradiance() const
+    { return mTextureRepository.at(semantic::gFilteredIrradianceEnvironmentTexture); }
+
     Type mType;
-    Handle<const graphics::Texture> mMap;
+    RepositoryTexture mTextureRepository;
     std::filesystem::path mMapFile; // notably used when dumping the cubemap, to derive a destination
-    Handle<const graphics::Texture> mFilteredRadiance;
-    Handle<const graphics::Texture> mIntegratedBrdf;
-    Handle<const graphics::Texture> mFilteredIrradiance;
 };
 
 
@@ -42,6 +50,8 @@ inline std::string to_string(Environment::Type aEnvironment)
 }
 
 
+/// @note The Scene does not contain the camera: this way the same logical scene 
+/// can be rendered from multiple views.
 struct Scene
 {
     Scene & addToRoot(Node aNode)

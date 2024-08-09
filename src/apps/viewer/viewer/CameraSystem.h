@@ -23,7 +23,8 @@ struct CameraSystem
 
     CameraSystem(std::shared_ptr<graphics::AppInterface> aAppInterface,
                  const imguiui::ImguiUi * aImguiUi,
-                 Control aMode);
+                 Control aMode,
+                 Orbital aInitialOrbitalPose = {gInitialOrbitalRadius});
 
     
     /// \brief High-level function configuring the CameraSystem to view a model
@@ -54,6 +55,8 @@ struct CameraSystem
     std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
     // Hackish member, saving the last orbital radius to be able to recompute equivalent FOV for orthographic zoom.
     float mPreviousRadius;
+
+    inline static constexpr float gInitialOrbitalRadius{2.f};
 };
 
 

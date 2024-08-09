@@ -80,19 +80,14 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
 //
 // TheGraph
 //
-TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
+TheGraph::TheGraph(math::Size<2, int> aRenderSize,
                    Storage & aStorage,
                    const Loader & aLoader) :
-    mGlfwAppInterface{std::move(aGlfwAppInterface)},
     mUbos{aStorage},
     mInstanceStream{makeInstanceStream(aStorage, gMaxDrawInstances)},
-    mFramebufferSizeListener{mGlfwAppInterface->listenFramebufferResize(
-        std::bind(&TheGraph::onFramebufferResize, this, std::placeholders::_1))
-    },
-    mRenderSize{mGlfwAppInterface->getFramebufferSize()},
+    mRenderSize{aRenderSize},
     mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")},
-    mSkybox{aLoader, aStorage},
-    mDebugRenderer{aStorage, aLoader}
+    mSkybox{aLoader, aStorage}
 {
     allocateTextures(mRenderSize);
     setupTextures();
@@ -105,7 +100,7 @@ TheGraph::TheGraph(std::shared_ptr<graphics::AppInterface> aGlfwAppInterface,
 }
 
 
-void TheGraph::onFramebufferResize(math::Size<2, int> aNewSize)
+void TheGraph::resize(math::Size<2, int> aNewSize)
 {
     // Note: for the moment, we keep the render size in sync with the framebuffer size
     // (this is not necessarily true in renderers where the rendered image is blitted to the default framebuffer)
@@ -206,7 +201,9 @@ void TheGraph::loadDrawBuffers(const ViewerPartList & aPartList,
 void TheGraph::renderFrame(const Scene & aScene, 
                            const Camera & aCamera,
                            const LightsData & aLights_camera,
-                           Storage & aStorage)
+                           Storage & aStorage,
+                           bool aShowTextures,
+                           const graphics::FrameBuffer & aFramebuffer)
 {
     // TODO: How to handle material/program selection while generating the part list,
     // if the camera (or pass itself?) might override the materials?
@@ -224,24 +221,43 @@ void TheGraph::renderFrame(const Scene & aScene,
         proto::load(*mUbos.mJointMatrixPaletteUbo, std::span{partList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
     }
 
+    // Currently, the environment is the only *contextual* provider of a texture repo
+    // (The other texture repo is part of the material)
+    // TODO #repos This should be consolidated
+    RepositoryTexture textureRepository;
+    if(aScene.mEnvironment)
+    {
+        textureRepository = aScene.mEnvironment->mTextureRepository;
+    }
+
     // Use the same indirect buffer for all drawings
     // Its content will be rewritten by distinct passes though
-    // With the current approach, this binding could be done only once at construction
+    // With the current approach, this binding could be done only once at construction,
+    // unless several "Graph" instances are allowed
     graphics::bind(mIndirectBuffer, graphics::BufferType::DrawIndirect);
 
-    passOpaqueDepth(partList, aStorage);
-    // TODO Ad 2023/11/30: #perf Currently, this forward pass does not leverage the already available opaque depth-buffer
-    // We cannot bind our "custom" depth buffer as the default framebuffer depth-buffer, so we will need to study alternatives:
-    // render opaque depth to default FB, and blit to a texture for showing, render forward to a render target then blit to default FB, ...
-    passForward(partList, aStorage, aScene.mEnvironment.has_value());
-    passTransparencyAccumulation(partList, aStorage);
-    passTransparencyResolve(partList, aStorage);
+    passOpaqueDepth(partList, textureRepository, aStorage);
+    {
+        // Default Framebuffer
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
+        gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // TODO Ad 2023/11/30: #perf Currently, this forward pass does not leverage the already available opaque depth-buffer
+        // We cannot bind our "custom" depth buffer as the default framebuffer depth-buffer, so we will need to study alternatives:
+        // render opaque depth to default FB, and blit to a texture for showing, render forward to a render target then blit to default FB, ...
+        passForward(partList, textureRepository, aStorage, aScene.mEnvironment.has_value());
+    }
+    passTransparencyAccumulation(partList, textureRepository, aStorage);
+    {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
+        passTransparencyResolve(partList, aStorage);
+    }
 
     if(aScene.mEnvironment)
     {
         // The Framebuffer binding should be moved out of the passes, making them more reusable
         // Default Framebuffer
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
         glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
 
         // When normally rendering the skybox, we are "inside" the cube, so only render backfaces
@@ -251,28 +267,35 @@ void TheGraph::renderFrame(const Scene & aScene,
     //
     // Debug rendering of the depth texture
     //
-    auto [nearZ, farZ] = getNearFarPlanes(aCamera);
-    showDepthTexture(mDepthMap, nearZ, farZ) ;
-    //showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
-    //showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
-
-    if(aScene.mEnvironment && aScene.mEnvironment->mFilteredRadiance != 0)
+    if(aShowTextures)
     {
-        showTexture(*aScene.mEnvironment->mMap, 1, {.mIsCubemap = true,}) ;
-        showTexture(*aScene.mEnvironment->mFilteredRadiance, 2, {.mIsCubemap = true,}) ;
-        showTexture(*aScene.mEnvironment->mFilteredIrradiance, 3, {.mIsCubemap = true,}) ;
-        //showTexture(*aScene.mEnvironment->mIntegratedBrdf, 2) ;
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
+
+        auto [nearZ, farZ] = getNearFarPlanes(aCamera);
+        showDepthTexture(mDepthMap, nearZ, farZ) ;
+        //showTexture(mTransparencyAccum, 1, {.mOperation = DrawQuadParameters::AccumNormalize}) ;
+        //showTexture(mTransparencyRevealage, 2, {.mSourceChannel = 0}) ;
+
+        if(aScene.mEnvironment 
+           && aScene.mEnvironment->mTextureRepository.count(semantic::gFilteredRadianceEnvironmentTexture) != 0)
+        {
+            showTexture(*aScene.mEnvironment->getEnvMap(),             1, {.mIsCubemap = true,}) ;
+            showTexture(*aScene.mEnvironment->getFilteredRadiance(),   2, {.mIsCubemap = true,}) ;
+            showTexture(*aScene.mEnvironment->getFilteredIrradiance(), 3, {.mIsCubemap = true,}) ;
+        }
     }
 }
 
 
+// TODO: rewrite using our model and abstractions
 void TheGraph::passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_skybox", CpuTime, GpuTime);
 
     glUseProgram(aProgram);
 
-    Handle<const graphics::Texture> envMap = aEnvironment.mMap;
+    Handle<const graphics::Texture> envMap = 
+        aEnvironment.mTextureRepository.at(semantic::gEnvironmentTexture);
 
     glBindVertexArray(*mSkybox.mCubeVao);
     glActiveTexture(GL_TEXTURE5);
@@ -320,15 +343,6 @@ void TheGraph::passDrawSkybox(const Environment & aEnvironment, Storage & aStora
 }
 
 
-void TheGraph::renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage)
-{
-    // Fullscreen viewport
-    glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
-
-    mDebugRenderer.render(std::move(aDrawList), mUbos.mUboRepository, aStorage);
-}
-
-
 void TheGraph::showTexture(const graphics::Texture & aTexture,
                            unsigned int aStackPosition,
                            DrawQuadParameters aDrawParams)
@@ -337,8 +351,6 @@ void TheGraph::showTexture(const graphics::Texture & aTexture,
 
     // Note: with stencil, we could draw those rectangles first,
     // and prevent main rasterization behind them.
-
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     
     if(aTexture.mTarget == GL_TEXTURE_CUBE_MAP)
     {
@@ -387,7 +399,9 @@ void TheGraph::showDepthTexture(const graphics::Texture & aTexture,
 }
 
 
-void TheGraph::passOpaqueDepth(const ViewerPartList & aPartList, Storage & aStorage)
+void TheGraph::passOpaqueDepth(const ViewerPartList & aPartList,
+                               const RepositoryTexture & aTextureRepository,
+                               Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_depth", CpuTime, GpuTime);
 
@@ -425,13 +439,14 @@ void TheGraph::passOpaqueDepth(const ViewerPartList & aPartList, Storage & aStor
     {
         {
             PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
-            draw(passCache, mUbos.mUboRepository, mTextureRepository);
+            draw(passCache, mUbos.mUboRepository, aTextureRepository);
         }
     }
 }
 
 
 void TheGraph::passForward(const ViewerPartList & aPartList,
+                           const RepositoryTexture & aTextureRepository,
                            Storage & aStorage,
                            bool aEnvironmentMapping)
 {
@@ -450,9 +465,6 @@ void TheGraph::passForward(const ViewerPartList & aPartList,
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
 
-    // Default Framebuffer
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
     //
     // Set pipeline state
     //
@@ -469,8 +481,6 @@ void TheGraph::passForward(const ViewerPartList & aPartList,
     }
     auto scopedPolygonMode = graphics::scopePolygonMode(*mControls.mForwardPolygonMode);
 
-    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     // Might loop over cameras, or any other variation
     //for(whatever dimension)
     {
@@ -484,13 +494,15 @@ void TheGraph::passForward(const ViewerPartList & aPartList,
 
         {
             PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
-            draw(passCache, mUbos.mUboRepository, mTextureRepository);
+            draw(passCache, mUbos.mUboRepository, aTextureRepository);
         }
     }
 }
 
 
-void TheGraph::passTransparencyAccumulation(const ViewerPartList & aPartList, Storage & mStorage)
+void TheGraph::passTransparencyAccumulation(const ViewerPartList & aPartList,
+                                            const RepositoryTexture & aTextureRepository,
+                                            Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_transparency_accum", CpuTime, GpuTime);
 
@@ -530,7 +542,7 @@ void TheGraph::passTransparencyAccumulation(const ViewerPartList & aPartList, St
 
     // Can be done once for distinct camera, if there is no culling
     auto annotations = selectPass("transparent");
-    ViewerPassCache passCache = prepareViewerPass(annotations, aPartList, mStorage);
+    ViewerPassCache passCache = prepareViewerPass(annotations, aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
     loadDrawBuffers(aPartList, passCache);
@@ -542,17 +554,16 @@ void TheGraph::passTransparencyAccumulation(const ViewerPartList & aPartList, St
 
         {
             PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "draw_instances", CpuTime, GpuTime, GpuPrimitiveGen, DrawCalls, BufferMemoryWritten);
-            draw(passCache, mUbos.mUboRepository, mTextureRepository);
+            draw(passCache, mUbos.mUboRepository, aTextureRepository);
         }
     }
 }
 
 
-void TheGraph::passTransparencyResolve(const ViewerPartList & aPartList, Storage & mStorage)
+void TheGraph::passTransparencyResolve(const ViewerPartList & aPartList,
+                                       Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_transparency_resolve", CpuTime, GpuTime);
-
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
     //
     // Set pipeline state
