@@ -73,7 +73,9 @@ void showGui(imguiui::ImguiUi & imguiUi,
              const std::string & aProfilerOutput,
              const renderer::Timing & aTime)
 {
-    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "imgui ui", renderer::CpuTime, renderer::GpuTime);
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "imgui main ui", renderer::CpuTime, renderer::GpuTime);
+
+    assert(ImGui::GetCurrentContext() == nullptr);
 
     imguiUi.newFrame();
 
@@ -115,12 +117,19 @@ void showGui(imguiui::ImguiUi & imguiUi,
 
     imguiUi.render();
     imguiUi.renderBackend();
+
+    // We want to make sure the context is always explicitly set by our ImguiUi implementation
+    ImGui::SetCurrentContext(nullptr);
 }
 
 
 void showSecondGui(imguiui::ImguiUi & imguiUi,
                    renderer::ViewerApplication & aApplication)
 {
+    PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "imgui secondary ui", renderer::CpuTime);
+
+    assert(ImGui::GetCurrentContext() == nullptr);
+
     imguiUi.newFrame();
 
     ImGui::Begin("Debug");
@@ -131,6 +140,9 @@ void showSecondGui(imguiui::ImguiUi & imguiUi,
 
     imguiUi.render();
     imguiUi.renderBackend();
+
+    // We want to make sure the context is always explicitly set by our ImguiUi implementation
+    ImGui::SetCurrentContext(nullptr);
 }
 
 
@@ -158,7 +170,7 @@ int runApplication(int argc, char * argv[])
     __itt_task_begin(itt_domain, __itt_null, __itt_null, itt_handleGlfwApp);
     graphics::ApplicationGlfw glfwApp{
         getVersionedName(),
-        1920, 1024,
+        1280, 1024,
         glfwFlags,
         4, 6,
         { {GLFW_SAMPLES, gMsaaSamples} },
