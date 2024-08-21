@@ -49,12 +49,15 @@ void main()
     //
     // Normal mapping
     //
-
+#ifdef TEXTURED
     // Fetch from normal map, and remap fro [0, 1]^3 to [-1, 1]^3.
     vec3 normal_tbn = 
         texture(u_NormalTexture, 
                 vec3(ex_Uv[material.normalUvChannel], material.normalTextureIndex)).xyz
         * 2 - vec3(1);
+#else
+    vec3 normal_tbn = vec3(0, 0, 1);
+#endif
 
     // MikkT see: http://www.mikktspace.com/
 
