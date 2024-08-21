@@ -155,6 +155,7 @@ void main()
 
 // Defines for BC5 Red-Green texture compression, which only store 2 channels
 // The third component has to be reconstructed.
+#if defined(TEXTURED)
 #define BC5_RGTC;
 #if defined(BC5_RGTC)
     // Fetch from Red-Green channels, and remap from [0, 1]^2 to [-1, 1]^2.
@@ -172,6 +173,9 @@ void main()
                 vec3(ex_Uv[material.normalUvChannel], material.normalTextureIndex)).xyz
         * 2 - vec3(1);
 #endif // BC5_RGTC
+#else // not textured
+    vec3 normal_tbn = vec3(0, 0, 1);
+#endif // TEXURED
 
     // MikkT see: http://www.mikktspace.com/
 
@@ -224,9 +228,13 @@ void main()
     //
 
     // Extract PBR parameters
+#if defined(TEXTURED)
     vec3 mrao = 
         texture(u_MetallicRoughnessAoTexture, 
                 vec3(ex_Uv[material.mraoUvChannel], material.mraoTextureIndex)).xyz;
+#else // not textured
+    vec3 mrao = vec3(0, 0.2, 0);
+#endif // TEXTURED
 
 #define PBR_CHANNELS_GLTF
 
