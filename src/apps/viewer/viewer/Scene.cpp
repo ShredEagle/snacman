@@ -32,7 +32,7 @@ Scene loadScene(const filesystem::path & aSceneFile,
 
     for (const auto & entry : description.at("entries"))
     {
-        std::vector<std::string> defines = entry["features"].get<std::vector<std::string>>();
+        std::vector<std::string> defines = entry.value<std::vector<std::string>>("features", {});
         filesystem::path modelFile = entry.at("model");
 
         Node model;
