@@ -53,6 +53,10 @@ namespace {
                         gMaxShadowLights);
         assert(graphics::isImmutableFormat(aShadowMap));
 
+        // Set texture comparison mode, allowing to compare the depth component to a reference value
+        glTexParameteri(aShadowMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+        glTexParameteri(aShadowMap.mTarget, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
         glTexParameteri(aShadowMap.mTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(aShadowMap.mTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
         glTexParameterfv(aShadowMap.mTarget, 
