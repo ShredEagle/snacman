@@ -1,4 +1,5 @@
 {
+    "defines": ["SHADOW_MAPPING"],
     "vertex": "FullVertexTransform.vert",
     "fragment": "Pbr.frag"
 }

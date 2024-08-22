@@ -1,3 +1,5 @@
+#include "Constants.glsl"
+
 struct LightColors
 {
     vec4 diffuse;
@@ -20,7 +22,6 @@ struct PointLight
 };
 
 
-#define MAX_LIGHTS 16
 layout(std140, binding = 4) uniform LightsBlock
 {
     uint ub_DirectionalCount;

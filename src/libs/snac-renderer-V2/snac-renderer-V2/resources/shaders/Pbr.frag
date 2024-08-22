@@ -1,5 +1,6 @@
 #version 430
 
+#include "Constants.glsl"
 #include "Gamma.glsl"
 #include "HelpersIbl.glsl"
 #include "HelpersPbr.glsl"
@@ -26,13 +27,17 @@ uniform sampler2DArray u_NormalTexture;
 uniform sampler2DArray u_MetallicRoughnessAoTexture;
 #endif
 
+#ifdef SHADOW_MAPPING
+uniform sampler2DArrayShadow u_ShadowMap;
+in vec4[MAX_SHADOWS] ex_Position_lightClip;
+#endif //SHADOW_MAPPING
+
 #if defined(ENVIRONMENT_MAPPING)
 uniform samplerCube u_EnvironmentTexture;
 uniform samplerCube u_FilteredRadianceEnvironmentTexture;
 uniform samplerCube u_FilteredIrradianceEnvironmentTexture;
 uniform sampler2D u_IntegratedEnvironmentBrdf;
-
-#endif
+#endif //ENVIRONMENT_MAPPING
 
 out vec4 out_Color;
 
@@ -51,6 +56,23 @@ struct PbrMaterial
     vec3 f90;
     float alpha;
 };
+
+
+float getShadowAttenuation(vec4 fragPosition_lightClip, uint shadowMapIdx, float bias)
+{
+    // The position is in homogeneous clip space (from the light POV).
+    // We apply the perspective divide to get to NDC, and remap from [-1, 1]^3 to [0, 1]^3.
+    // Note that even the depth (z) is remapped ot [0, 1], because the viewport transformation
+    // did it for values stored in the shadow map.
+    vec3 fragPosition_shadowMap = 
+        (fragPosition_lightClip.xyz / fragPosition_lightClip.w + 1.) 
+        / 2.;
+
+    return texture(u_ShadowMap, 
+                   vec4(fragPosition_shadowMap.xy, // uv
+                        shadowMapIdx, // array layer
+                        fragPosition_shadowMap.z - bias /* reference value */));
+}
 
 
 LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
@@ -319,6 +341,17 @@ void main()
     {
         DirectionalLight directional = ub_DirectionalLights[directionalIdx];
         vec3 lightDir_cam = -directional.direction.xyz;
+    
+        float shadowAttenuation = 1.0;
+#if defined(SHADOW_MAPPING)
+        // TODO handle providing the shadow map texture index with the light
+        //if(projectShadow(directional.shadowMapIndex))
+        if(directionalIdx < MAX_SHADOWS)
+        {
+            shadowAttenuation = 
+                getShadowAttenuation(ex_Position_lightClip[directionalIdx], directionalIdx, 0.005);
+        }
+#endif // SHADOW_MAPPING
 
 #if defined(MATERIAL_BLEND_PARAMETERS)
         // evaluate the model only once, with interpolated material parameters
@@ -340,8 +373,8 @@ void main()
         lighting.specular += mix(lightingDielec.specular, lightingMetal.specular, metallic);
 #endif
 
-        diffuseAccum += lighting.diffuse;
-        specularAccum += lighting.specular;
+        diffuseAccum += lighting.diffuse * shadowAttenuation;
+        specularAccum += lighting.specular * shadowAttenuation;
     }
 
     // Point lights
