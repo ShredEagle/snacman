@@ -29,7 +29,7 @@ uniform sampler2DArray u_MetallicRoughnessAoTexture;
 
 #ifdef SHADOW_MAPPING
 uniform sampler2DArrayShadow u_ShadowMap;
-in vec4[MAX_SHADOWS] ex_Position_lightClip;
+in vec3[MAX_SHADOWS] ex_Position_lightTex;
 #endif //SHADOW_MAPPING
 
 #if defined(ENVIRONMENT_MAPPING)
@@ -58,20 +58,13 @@ struct PbrMaterial
 };
 
 
-float getShadowAttenuation(vec4 fragPosition_lightClip, uint shadowMapIdx, float bias)
+//float getShadowAttenuation(vec4 fragPosition_lightClip, uint shadowMapIdx, float bias)
+float getShadowAttenuation(vec3 fragPosition_lightTex, uint shadowMapIdx, float bias)
 {
-    // The position is in homogeneous clip space (from the light POV).
-    // We apply the perspective divide to get to NDC, and remap from [-1, 1]^3 to [0, 1]^3.
-    // Note that even the depth (z) is remapped ot [0, 1], because the viewport transformation
-    // did it for values stored in the shadow map.
-    vec3 fragPosition_shadowMap = 
-        (fragPosition_lightClip.xyz / fragPosition_lightClip.w + 1.) 
-        / 2.;
-
     return texture(u_ShadowMap, 
-                   vec4(fragPosition_shadowMap.xy, // uv
+                   vec4(fragPosition_lightTex.xy, // uv
                         shadowMapIdx, // array layer
-                        fragPosition_shadowMap.z - bias /* reference value */));
+                        fragPosition_lightTex.z - bias /* reference value */));
 }
 
 
@@ -349,7 +342,7 @@ void main()
         if(directionalIdx < MAX_SHADOWS)
         {
             shadowAttenuation = 
-                getShadowAttenuation(ex_Position_lightClip[directionalIdx], directionalIdx, 0.005);
+                getShadowAttenuation(ex_Position_lightTex[directionalIdx], directionalIdx, 0.005);
         }
 #endif // SHADOW_MAPPING
 
