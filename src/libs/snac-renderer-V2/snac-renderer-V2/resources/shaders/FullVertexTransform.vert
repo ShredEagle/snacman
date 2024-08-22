@@ -29,7 +29,7 @@ layout(std140, binding = 5) uniform LightViewProjectionBlock
     mat4 lightViewProjections[MAX_SHADOWS];
 };
 
-out vec4[MAX_SHADOWS] ex_Position_lightClip;
+out vec3[MAX_SHADOWS] ex_Position_lightTex;
 
 #endif //SHADOW_MAPPING
 
@@ -75,7 +75,13 @@ void main(void)
     vec4 position_world = localToWorld * vec4(ve_Position_local, 1.f); // TODO can be consolidated with the main code
     for(uint lightIdx = 0; lightIdx != lightViewProjectionCount; ++lightIdx)
     {
-        ex_Position_lightClip[lightIdx] = lightViewProjections[lightIdx] * position_world;
+        vec4 position_lightClip = lightViewProjections[lightIdx] * position_world;
+        // The position is in homogeneous clip space (from the light POV).
+        // We apply the perspective divide to get to NDC, and remap from [-1, 1]^3 to [0, 1]^3.
+        // Note: even the depth (z) is remapped to [0, 1], because the viewport transformation
+        // did it for the depth values stored in the shadow map.
+        ex_Position_lightTex[lightIdx] = 
+            (position_lightClip.xyz / position_lightClip.w + 1.) / 2.;
     }
 #endif //SHADOW_MAPPING
 
