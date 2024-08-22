@@ -661,7 +661,7 @@ void PrimaryView::render(const Scene & aScene, bool aLightsInCameraSpace, Storag
                        mCameraSystem.mCamera,
                        aScene.getLightsInCamera(mCameraSystem.mCamera, !aLightsInCameraSpace),
                        aStorage,
-                       false,
+                       true,
                        graphics::FrameBuffer::Default());
 }
 
