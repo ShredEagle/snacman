@@ -5,6 +5,7 @@
 #include <graphics/ApplicationGlfw.h>
 
 #include <renderer/FrameBuffer.h>
+#include <renderer/Sampler.h>
 #include <renderer/Texture.h>
 
 #include <snac-renderer-V2/Cubemap.h>
@@ -151,6 +152,9 @@ struct TheGraph
 
     // Skybox rendering
     Skybox mSkybox;
+
+    // Debug texture rendering (this should be encapsulated somewhere else)
+    graphics::Sampler mShowTextureSampler;
 };
 
 
