@@ -99,6 +99,11 @@ struct Scene
                 .mDiffuseColor = math::hdr::gWhite<GLfloat>,
                 .mSpecularColor = math::hdr::gWhite<GLfloat> / 2.f,
             },
+            DirectionalLight{
+                .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.2f, -0.4f, -0.8f}},
+                .mDiffuseColor = math::hdr::Rgb_f{1.f, 0.45f, 0.f},
+                .mSpecularColor = math::hdr::Rgb_f{1.f, 0.45f, 0.f},
+            },
         },
         .mPointLights = {
             PointLight{

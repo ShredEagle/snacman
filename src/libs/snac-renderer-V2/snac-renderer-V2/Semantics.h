@@ -39,6 +39,7 @@ namespace semantic
     const BlockSemantic gLocalToWorld{"LocalToWorld"};
     BLOCK_SEM(JointMatrices);
     BLOCK_SEM(Lights);
+    BLOCK_SEM(LightViewProjection);
 
     #undef BLOCK_SEM
 

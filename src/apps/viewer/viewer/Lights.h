@@ -15,8 +15,8 @@ namespace ad::renderer {
 
 
 // TODO Ad 2024/06/05: How to keep that in sync with the shader code?
+// TODO can we use the define system to forward those upper limit to shaders?
 constexpr unsigned int gMaxLights = 16;
-
 constexpr unsigned int gMaxShadowLights = 4;
 
 // TODO there are obvious ways to pack the values much more tightly
@@ -127,6 +127,15 @@ void r(T_visitor & aV, LightsData & aLights)
     give(aV, Clamped<GLuint>{aLights.mPointCount, 0, gMaxLights}, "point count");
     give(aV, aLights.spanPointLights(), "point lights");
 }
+
+
+/// @brief Layout compatible with shader's `LightViewProjectionBlock`
+struct LightViewProjection
+{
+    GLuint mLightViewProjectionCount{0};
+    // TODO can we use the define system to forward this upper limit to shaders?
+    alignas(16) math::Matrix<4, 4, GLfloat> mLightViewProjections[gMaxShadowLights];
+};
 
 
 } // namespace ad::renderer

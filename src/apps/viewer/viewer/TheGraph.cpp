@@ -42,6 +42,12 @@ namespace {
     }
 
 
+    void loadLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo, const LightViewProjection & aLightViewProjection)
+    {
+        proto::loadSingle(aUbo, aLightViewProjection, graphics::BufferHint::DynamicDraw);
+    }
+
+
     void prepareShadowMap(const graphics::Texture & aShadowMap)
     {
         graphics::ScopedBind boundTexture{aShadowMap};
@@ -105,6 +111,10 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
     aStorage.mUbos.emplace_back();
     mLightsUbo = &aStorage.mUbos.back();
     mUboRepository.emplace(semantic::gLights, mLightsUbo);
+
+    aStorage.mUbos.emplace_back();
+    mLightViewProjectionUbo = &aStorage.mUbos.back();
+    mUboRepository.emplace(semantic::gLightViewProjection, mLightViewProjectionUbo);
 }
 
 
@@ -254,6 +264,8 @@ void TheGraph::renderFrame(const Scene & aScene,
 
     RepositoryTexture textureRepository;
 
+    LightViewProjection lightViewProjection;
+
     // Shadow map
     {
         GLfloat clearDepth = 1.f;
@@ -285,18 +297,23 @@ void TheGraph::renderFrame(const Scene & aScene,
             // TODO handle the size of the orthographic projection
             lightViewpoint.setupOrthographicProjection({
                 .mAspectRatio = 1.f,
-                .mViewHeight = 3.f,
+                .mViewHeight = 6.f,
                 .mNearZ = 0.f,
                 .mFarZ = -10.f,
             });
 
             // Note: We probably only need the assembled view-projection matrix for lights 
             // (since we do not do any fragment computation in light space)
+            // We could probably consolidate that with the "LightViewProjection" populated below
             loadCameraUbo(*mUbos.mViewingUbo, lightViewpoint);
 
             graphics::ScopedBind boundFbo{mShadowMapFbo, graphics::FrameBufferTarget::Draw};
             glViewport(0, 0, gShadowMapSize.width(), gShadowMapSize.height());
             passOpaqueDepth(partList, textureRepository, aStorage);
+
+            // Add the light view-projection to the collection, for main rendering
+            lightViewProjection.mLightViewProjectionCount++;
+            lightViewProjection.mLightViewProjections[directionalIdx] = lightViewpoint.assembleViewProjection();
         }
     }
 
@@ -307,6 +324,9 @@ void TheGraph::renderFrame(const Scene & aScene,
         loadCameraUbo(*mUbos.mViewingUbo, aCamera);
 
         loadLightsUbo(*mUbos.mLightsUbo, aLights_camera);
+
+        // For lights casting a shadow
+        loadLightViewProjectionUbo(*mUbos.mLightViewProjectionUbo, lightViewProjection);
 
         proto::load(*mUbos.mJointMatrixPaletteUbo, std::span{partList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
     }

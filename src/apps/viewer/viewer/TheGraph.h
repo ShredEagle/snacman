@@ -38,6 +38,7 @@ struct HardcodedUbos
 
     graphics::UniformBufferObject * mJointMatrixPaletteUbo;
     graphics::UniformBufferObject * mLightsUbo;
+    graphics::UniformBufferObject * mLightViewProjectionUbo;
 };
 
 

@@ -1,5 +1,7 @@
 #version 420
 
+#include "Constants.glsl"
+
 in vec3 ve_Position_local;
 in vec3 ve_Normal_local;
 in vec3 ve_Tangent_local;
@@ -18,12 +20,26 @@ layout(std140, binding = 1) uniform LocalToWorldBlock
     mat4 modelTransforms[512];
 };
 
+
+#ifdef SHADOW_MAPPING
+
+layout(std140, binding = 5) uniform LightViewProjectionBlock
+{
+    uint lightViewProjectionCount;
+    mat4 lightViewProjections[MAX_SHADOWS];
+};
+
+out vec4[MAX_SHADOWS] ex_Position_lightClip;
+
+#endif //SHADOW_MAPPING
+
+
 out vec3 ex_Position_cam;
 out vec3 ex_Normal_cam;
 out vec3 ex_Tangent_cam;
 out vec3 ex_Bitangent_cam;
 out vec4 ex_Color;
-out vec2[4] ex_Uv; // simulates 4 UV channels, not implement atm
+out vec2[4] ex_Uv; // simulates 4 UV channels, not implemented atm
 out flat uint ex_MaterialIdx;
 
 
@@ -54,4 +70,13 @@ void main(void)
     ex_Color = ve_Color;
     ex_Uv[0] = ve_Uv; // only 1 uv channel input at the moment
     ex_MaterialIdx = in_MaterialIdx;
+
+#ifdef SHADOW_MAPPING
+    vec4 position_world = localToWorld * vec4(ve_Position_local, 1.f); // TODO can be consolidated with the main code
+    for(uint lightIdx = 0; lightIdx != lightViewProjectionCount; ++lightIdx)
+    {
+        ex_Position_lightClip[lightIdx] = lightViewProjections[lightIdx] * position_world;
+    }
+#endif //SHADOW_MAPPING
+
 }
