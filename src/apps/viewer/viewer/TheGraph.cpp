@@ -65,6 +65,13 @@ namespace {
     }
 
 
+    void setupShowTextureSampler(const graphics::Sampler & aSampler)
+    {
+        glSamplerParameteri(aSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        glObjectLabel(GL_SAMPLER, aSampler, -1, "show_texture_sampler");
+    }
+
+
 } // unnamed namespace
 
 
@@ -124,6 +131,8 @@ TheGraph::TheGraph(math::Size<2, int> aRenderSize,
         graphics::setUniform(mTransparencyResolver.mProgram, "u_AccumTexture", gAccumTextureUnit);
         graphics::setUniform(mTransparencyResolver.mProgram, "u_RevealageTexture", gRevealageTextureUnit);
     }
+
+    setupShowTextureSampler(mShowTextureSampler);
 }
 
 
@@ -270,7 +279,7 @@ void TheGraph::renderFrame(const Scene & aScene,
             Camera lightViewpoint;
             // TODO handle lights for which the default up direction does not work (because it is the light gaze direction)
             lightViewpoint.setPose(graphics::getCameraTransform(
-                {0.f, 0.f, 5.f},
+                -5 * light.mDirection.as<math::Position>(),
                 light.mDirection
             ));
             // TODO handle the size of the orthographic projection
@@ -459,6 +468,10 @@ void TheGraph::showTexture(const graphics::Texture & aTexture,
     }
     glActiveTexture(GL_TEXTURE0 + aDrawParams.mSampler);
     glBindTexture(aTexture.mTarget, aTexture);
+
+    // Force custom sampler parameters, notably allowing to control GL_TEXTURE_COMPARE_MODE.
+    // Note: glBindSampler expects the **zero-based** texture unit, not an enum starting form GL_TEXTURE0.
+    graphics::ScopedBind boundSampler{mShowTextureSampler, aDrawParams.mSampler};
 
     // Would require scissor test to clear only part of the screen.
     //gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

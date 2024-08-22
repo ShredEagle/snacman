@@ -157,6 +157,12 @@ void drawQuad(DrawQuadParameters aParameters)
     glProgramUniform1ui(program, glGetUniformLocation(program, "u_Sampler"),       aParameters.mSampler);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    // Reset default program, to avoid potential issues when calling glClear() with warnings such as:
+    // > "The current GL state uses a sampler (0) that has depth comparisons enabled, with a texture object (shadow_map) with a depth format,"
+    // > " by a shader that samples it with a non-shadow sampler. Using this state to sample would result in undefined behavior"
+    // Yes, glClear() should not validate anything related to the active program, but who am I to judge the driver.
+    glUseProgram(0);
 }
 
 
