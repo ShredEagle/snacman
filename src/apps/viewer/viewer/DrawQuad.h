@@ -20,12 +20,20 @@ struct DrawQuadParameters
         AccumNormalize = 3, // For transparency accum texture
     };
 
+    enum SamplerType : GLuint
+    {
+        Sampler2D = 0,
+        Sampler2DArray = 1,
+        CubeMap = 2,
+        _EndSamplerType/* has to be last */
+    };
+
     GLuint mTextureUnit = 0;
     GLint mSourceChannel = -1; // use all channels
     Operation mOperation = None;
     GLfloat mNearDistance;
     GLfloat mFarDistance;
-    GLboolean mIsCubemap = false;
+    SamplerType mSampler = Sampler2D;
 };
 
 

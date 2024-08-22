@@ -279,9 +279,9 @@ void TheGraph::renderFrame(const Scene & aScene,
         if(aScene.mEnvironment 
            && aScene.mEnvironment->mTextureRepository.count(semantic::gFilteredRadianceEnvironmentTexture) != 0)
         {
-            showTexture(*aScene.mEnvironment->getEnvMap(),             1, {.mIsCubemap = true,}) ;
-            showTexture(*aScene.mEnvironment->getFilteredRadiance(),   2, {.mIsCubemap = true,}) ;
-            showTexture(*aScene.mEnvironment->getFilteredIrradiance(), 3, {.mIsCubemap = true,}) ;
+            showTexture(*aScene.mEnvironment->getEnvMap(),             1) ;
+            showTexture(*aScene.mEnvironment->getFilteredRadiance(),   2) ;
+            showTexture(*aScene.mEnvironment->getFilteredIrradiance(), 3) ;
         }
     }
 }
@@ -349,17 +349,26 @@ void TheGraph::showTexture(const graphics::Texture & aTexture,
 {
     assert(aStackPosition < 4);
 
+    // Unbind any texture, to avoid warning with samplers that would not be used
+    // but are nonetheless declared in the drawquad fragment shader.
+    glBindTextures(0, DrawQuadParameters::_EndSamplerType, NULL);
+
     // Note: with stencil, we could draw those rectangles first,
     // and prevent main rasterization behind them.
     
-    if(aTexture.mTarget == GL_TEXTURE_CUBE_MAP)
+    switch(aTexture.mTarget)
     {
-        glActiveTexture(GL_TEXTURE1);
+        default:
+            aDrawParams.mSampler = DrawQuadParameters::Sampler2D;
+            break;
+        case GL_TEXTURE_2D_ARRAY:
+            aDrawParams.mSampler = DrawQuadParameters::Sampler2DArray;
+            break;
+        case GL_TEXTURE_CUBE_MAP:
+            aDrawParams.mSampler = DrawQuadParameters::CubeMap;
+            break;
     }
-    else
-    {
-        glActiveTexture(GL_TEXTURE0);
-    }
+    glActiveTexture(GL_TEXTURE0 + aDrawParams.mSampler);
     glBindTexture(aTexture.mTarget, aTexture);
 
     // Would require scissor test to clear only part of the screen.
