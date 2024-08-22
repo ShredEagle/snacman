@@ -1,24 +1,26 @@
-#include "Serialization.h"
-#include "entity/Entity.h"
+#include "Json.h"
+#include "../reflexion/Reflexion.h"
+#include "../reflexion/Reflexion_impl.h"
+
 #include "handy/StringId.h"
-#include "Reflexion.h"
-#include "Reflexion_impl.h"
+#include "entity/Entity.h"
+#include "serial/serialization/JsonWitness.h"
 
 #include <nlohmann/json.hpp>
 #include <string>
 
-using json = nlohmann::json;
+using nlohmann::json;
 
-void from_json(ad::ent::EntityManager & aWorld, const json & aData)
+void from_json(ad::ent::EntityManager & aWorld, const JsonWitness && aData)
 {
     std::unordered_map<std::string, ad::ent::Handle<ad::ent::Entity>>
         nameHandleMap;
 
-    for (auto & [name, ent] : aData.items())
+    for (auto & [name, ent] : aData.mData.items())
     {
         ad::ent::Handle<ad::ent::Entity> handle =
             aWorld.addEntity(name.c_str());
-        from_json(handle, ent);
+        from_json(handle, JsonWitness::make_const(ent));
         nameHandleMap.insert_or_assign(name, handle);
     }
 
@@ -30,35 +32,35 @@ void from_json(ad::ent::EntityManager & aWorld, const json & aData)
     handleRequestsInstance().clear();
 }
 
-void from_json(ad::ent::Handle<ad::ent::Entity> & aHandle, const json & aData)
+void from_json(ad::ent::Handle<ad::ent::Entity> & aHandle, const JsonWitness && aData)
 {
-    json components = aData["components"];
+    json & components = aData.mData["components"];
 
     for (auto & [name, comp] : components.items())
     {
         std::type_index index =
             reflexion::nameTypeIndexStore().at(name.c_str());
         reflexion::typedProcessorStore().at(index)->addComponentToHandle(
-            aHandle, comp);
+            aHandle, JsonWitness::make_const(comp));
     }
 }
 
-void to_json(ad::ent::EntityManager & aWorld, json & aData)
+void to_json(ad::ent::EntityManager & aWorld, JsonWitness && aData)
 {
     std::unordered_map<ad::ent::Handle<ad::ent::Entity>, std::string> handleNameMap;
 
     aWorld.forEachHandle([&aData](ad::ent::Handle<ad::ent::Entity> aHandle, const char * aName){
-        to_json(aHandle, aData[aName]);
+        to_json(aHandle, JsonWitness::make(aData.mData[aName]));
     });
 }
 
-void to_json(ad::ent::Handle<ad::ent::Entity> & aHandle, json & aData)
+void to_json(ad::ent::Handle<ad::ent::Entity> & aHandle, JsonWitness && aData)
 {
-    json & componentJson = aData["components"];
+    json & componentJson = aData.mData["components"];
 
     for (std::type_index type : aHandle.getTypeSet())
     {
         reflexion::typedProcessorStore().at(type)->serializeComponent(
-            componentJson, aHandle);
+            JsonWitness::make(componentJson), aHandle);
     }
 }

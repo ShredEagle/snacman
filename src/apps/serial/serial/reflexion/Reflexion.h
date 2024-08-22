@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Serialization.h"
+#include "serial/serialization/JsonWitness.h"
 
 #include <entity/Entity.h>
 #include <handy/StringId.h>
@@ -8,7 +8,6 @@
 #include <nlohmann/json_fwd.hpp>
 #include <typeindex>
 #include <unordered_map>
-#include <utility>
 
 namespace reflexion {
 
@@ -47,6 +46,7 @@ nameTypeIndexStore()
     return nameTypeIndexStoreInstance;
 }
 
+
 /// \brief Abstract component processor provides a type erased
 /// interface for component creation and serialization
 class TypeErasedProcessor
@@ -60,8 +60,8 @@ public:
     TypeErasedProcessor & operator=(TypeErasedProcessor &&) = delete;
     virtual ~TypeErasedProcessor() = default;
     virtual void addComponentToHandle(ad::ent::Handle<ad::ent::Entity> aHandle,
-                           const json & aData) = 0;
-    virtual void serializeComponent(json & aJson,
+                           const JsonWitness && aData) = 0;
+    virtual void serializeComponent(JsonWitness && aJson,
                            ad::ent::Handle<ad::ent::Entity> aHandle) = 0;
 };
 
@@ -76,9 +76,9 @@ public:
     static std::shared_ptr<TypedProcessor<T_type>> bind(const char * aName);
 
     void addComponentToHandle(ad::ent::Handle<ad::ent::Entity> aHandle,
-                   const json & aData) override;
+                   const JsonWitness && aData) override;
 
-    void serializeComponent(json & aData,
+    void serializeComponent(JsonWitness && aData,
                    ad::ent::Handle<ad::ent::Entity> aHandle) override;
 
     const char * mName;
@@ -100,7 +100,7 @@ std::shared_ptr<TypedProcessor<T_type>> TypedProcessor<T_type>::bind(const char 
         addConstructor<T_type>(aName));
 }
 
-#define SNAC_SERIAL_REGISTER(name)                                             \
+#define REFLEXION_REGISTER(name)                                             \
     struct InitConstructor##name                                               \
     {                                                                          \
         static inline const std::shared_ptr<reflexion::TypedProcessor<name>> \

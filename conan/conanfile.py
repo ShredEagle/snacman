@@ -42,6 +42,7 @@ class SnacmanConan(ConanFile):
 
         # The overrides (who will think about reviewing them?)
         ("zlib/1.3"),
+        ("reflexion/b2aa059210@adnn/develop"),
     )
 
     # Note: It seems conventionnal to add CMake build requirement

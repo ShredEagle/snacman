@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Reflexion.h"
-#include "entity/Entity.h"
-#include "Serialization.h"
+#include "serialization/Serialization.h"
+#include "reflexion/Reflexion.h"
+
+#include <reflexion/Concept.h>
+#include <entity/Entity.h>
 
 namespace component {
 
@@ -10,14 +12,14 @@ struct CompPart
 {
     std::string a;
 
-    template <SnacSerial T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness & aWitness)
     {
-        archive & SERIAL_PARAM(a);
+        aWitness & NVP(a);
     }
 };
 
-SNAC_SERIAL_REGISTER(CompPart)
+REFLEXION_REGISTER(CompPart)
 
 struct CompA
 {
@@ -40,18 +42,19 @@ struct CompA
     }
 
 
-    template <SnacSerial T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness & aWitness)
     {
-        archive & SERIAL_PARAM(a);
-        archive & SERIAL_PARAM(b);
-        archive & SERIAL_PARAM(c);
-        archive & SERIAL_PARAM(other);
-        archive & SERIAL_FN_PARAM(x);
-        archive & SERIAL_FN_PARAM(y);
-        archive & SERIAL_FN_PARAM(z);
+        aWitness & NVP(a);
+        aWitness & NVP(b);
+        aWitness & NVP(c);
+        aWitness & NVP(array);
+        aWitness & NVP(other);
+        aWitness & NVP_FN(x);
+        aWitness & NVP_FN(y);
+        aWitness & NVP_FN(z);
     }
 };
 
-SNAC_SERIAL_REGISTER(CompA)
+REFLEXION_REGISTER(CompA)
 };

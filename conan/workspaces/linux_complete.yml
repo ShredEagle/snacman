@@ -1,7 +1,7 @@
 editables:
     MarkovJunior.cpp/86f542db56@adnn/develop:
         path: ../../../MarkovJunior.cpp/conan
-    entity/38ecfecf59@adnn/develop:
+    entity/38ecfecf58@adnn/develop:
         path: ../../../entity/conan
     graphics/c35a0fe6f1@adnn/develop:
         path: ../../../graphics/conan
@@ -9,6 +9,8 @@ editables:
         path: ../../../handy/conan
     math/d200cdb8ba@adnn/develop:
         path: ../../../math/conan
+    reflexion/b2aa059210@adnn/develop:
+        path: ../../../reflexion/conan
     snacman/local:
         path: ../../conan
 layout: linux_layout
