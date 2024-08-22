@@ -15,6 +15,7 @@ namespace semantic
     SEM(Bitangent);
     const Semantic gColor{"Color"};
     const Semantic gUv{"Uv"};
+    SEM(ShadowMap);
     SEM(Joints0);
     SEM(Weights0);
     const Semantic gDiffuseTexture{"DiffuseTexture"};

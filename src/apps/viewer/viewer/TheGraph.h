@@ -54,9 +54,9 @@ struct TheGraph
 
     void resize(math::Size<2, int> aNewSize);
 
-    void allocateTextures(math::Size<2, int> aSize);
+    void allocateSizeDependentTextures(math::Size<2, int> aSize);
 
-    void setupTextures();
+    void setupSizeDependentTextures();
 
     /// @param aFramebuffer Will be bound to DRAW for final image rendering.
     /// Its renderable size should match the current render size of this, as defined via resize().
@@ -131,7 +131,7 @@ struct TheGraph
     math::Size<2, int> mRenderSize;
 
     // Note Ad 2023/11/28: Might become a RenderTarger for optimal access if it is never sampled
-    graphics::Texture mDepthMap{GL_TEXTURE_2D};
+    graphics::Texture mDepthMap{GL_TEXTURE_2D}; // The camera depth-map
     graphics::FrameBuffer mDepthFbo;
 
     //
@@ -144,6 +144,10 @@ struct TheGraph
     QuadDrawer mTransparencyResolver;
     static const GLint gAccumTextureUnit{0};
     static const GLint gRevealageTextureUnit{1};
+
+    // Shadow mapping
+    Handle<graphics::Texture> mShadowMap;
+    graphics::FrameBuffer mShadowMapFbo;
 
     // Skybox rendering
     Skybox mSkybox;
