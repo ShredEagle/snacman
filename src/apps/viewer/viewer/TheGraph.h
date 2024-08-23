@@ -92,7 +92,7 @@ struct TheGraph
 
     void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const;
 
-    void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache) const;
+    void loadDrawBuffers(const ViewerPassCache & aPassCache) const;
 
     void showTexture(const graphics::Texture & aTexture,
                      unsigned int aStackPosition,
