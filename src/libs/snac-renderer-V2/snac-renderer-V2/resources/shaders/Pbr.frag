@@ -341,8 +341,10 @@ void main()
         //if(projectShadow(directional.shadowMapIndex))
         if(directionalIdx < MAX_SHADOWS)
         {
+            //const float bias = 0.002;
+            const float bias = 0.;
             shadowAttenuation = 
-                getShadowAttenuation(ex_Position_lightTex[directionalIdx], directionalIdx, 0.005);
+                getShadowAttenuation(ex_Position_lightTex[directionalIdx], directionalIdx, bias);
         }
 #endif // SHADOW_MAPPING
 
