@@ -46,7 +46,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                                   const RepositoryTexture & aTextureRepository,
                                   Storage & aStorage,
                                   const TheGraph & aGraph,  // TODO Ad 2024/08/23: This should be decoupled, but requires a redesign
-                                  const ViewerPartList & aPartList, // TODO remove by better splitting
+                                  const ViewerPartList & aPartList,
                                   Handle<const graphics::Texture> aShadowMap,
                                   std::span<const DirectionalLight> aDirectionalLights,
                                   bool aDebugDrawFrusta);

@@ -217,19 +217,11 @@ void TheGraph::setupSizeDependentTextures()
 
 // TODO Ad 2023/09/26: Could be splitted between the part list load (which should be valid accross passes)
 // and the pass cache load (which might only be valid for a single pass)
-// TODO Ad 2023/11/26: Even more, since the model transform is to world space (i.e. constant accross viewpoints)
-// and it is fetched from a buffer in the shaders, it could actually be pushed once per frame.
-// (and the pass would only index the transform for the objects it actually draws).
-void TheGraph::loadDrawBuffers(const ViewerPartList & aPartList,
-                               const ViewerPassCache & aPassCache) const
+void TheGraph::loadDrawBuffers(const ViewerPassCache & aPassCache) const
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_draw_buffers", CpuTime, BufferMemoryWritten);
 
     assert(aPassCache.mDrawInstances.size() <= gMaxDrawInstances);
-
-    proto::load(*mUbos.mModelTransformUbo,
-                std::span{aPartList.mInstanceTransforms},
-                graphics::BufferHint::DynamicDraw);
 
     // TODO Ad 2023/11/23: this hardcoded access to first buffer view is ugly
     proto::load(*mInstanceStream.mVertexBufferViews.at(0).mGLBuffer,
@@ -282,8 +274,16 @@ void TheGraph::renderFrame(const Scene & aScene,
 
         loadLightsUbo(*mUbos.mLightsUbo, aLights_camera);
 
+        // Load model transforms
+        // Note: the model matrix transforms to world space, so it is independant of viewpoint.
+        // (the pass indexes the transform for the objects it actually draws, so culling could still be implemented on top).
+        proto::load(*mUbos.mModelTransformUbo,
+                    std::span{partList.mInstanceTransforms},
+                    graphics::BufferHint::DynamicDraw);
+
         // For lights casting a shadow
         loadLightViewProjectionUbo(*mUbos.mLightViewProjectionUbo, lightViewProjection);
+
 
         proto::load(*mUbos.mJointMatrixPaletteUbo, std::span{partList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
     }
@@ -498,8 +498,7 @@ void TheGraph::passOpaqueDepth(const ViewerPartList & aPartList,
     ViewerPassCache passCache = prepareViewerPass(annotations , aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
-    loadDrawBuffers(aPartList, passCache);
-
+    loadDrawBuffers(passCache);
 
     //
     // Set pipeline state
@@ -547,7 +546,7 @@ void TheGraph::passForward(const ViewerPartList & aPartList,
     ViewerPassCache passCache = prepareViewerPass(annotations, aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
-    loadDrawBuffers(aPartList, passCache);
+    loadDrawBuffers(passCache);
 
     //
     // Set pipeline state
@@ -629,7 +628,7 @@ void TheGraph::passTransparencyAccumulation(const ViewerPartList & aPartList,
     ViewerPassCache passCache = prepareViewerPass(annotations, aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)
-    loadDrawBuffers(aPartList, passCache);
+    loadDrawBuffers(passCache);
 
     // Draw
     {
