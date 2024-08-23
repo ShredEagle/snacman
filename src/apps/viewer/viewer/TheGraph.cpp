@@ -1,6 +1,7 @@
 #include "TheGraph.h"
 
 
+#include "DebugDrawUtilities.h"
 #include "DrawQuad.h"
 #include "PassViewer.h"
 #include "Scene.h"
@@ -302,6 +303,7 @@ void TheGraph::renderFrame(const Scene & aScene,
                 .mFarZ = -10.f,
             });
 
+
             // Note: We probably only need the assembled view-projection matrix for lights 
             // (since we do not do any fragment computation in light space)
             // We could probably consolidate that with the "LightViewProjection" populated below
@@ -314,6 +316,13 @@ void TheGraph::renderFrame(const Scene & aScene,
             // Add the light view-projection to the collection, for main rendering
             lightViewProjection.mLightViewProjectionCount++;
             lightViewProjection.mLightViewProjections[directionalIdx] = lightViewpoint.assembleViewProjection();
+
+            if(aShowTextures) // Semantically incorrect, but we take it to also mean "we are the main view"
+            {
+                debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx].inverse(),
+                                     drawer::gLight,
+                                     light.mDiffuseColor);
+            }
         }
     }
 
@@ -375,7 +384,7 @@ void TheGraph::renderFrame(const Scene & aScene,
     }
 
     //
-    // Debug rendering of the depth texture
+    // Debug rendering of selected textures
     //
     if(aShowTextures)
     {

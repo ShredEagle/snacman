@@ -1,5 +1,6 @@
 #include "ViewerApplication.h"
 
+#include "DebugDrawUtilities.h"
 #include "EnvironmentUtilities.h"
 #include "Json.h"
 #include "Logging.h"
@@ -458,56 +459,6 @@ void showPointLights(const LightsData & aLights)
 }
 
 
-namespace {
-
-
-    // TODO Ad 2024/08/08: This should be moved to a more general library
-    /// @brief Debug-draw the view frustum of a camera, provided the inverse of its view-projection matrix.
-    void debugDrawCameraFrustum(const math::Matrix<4, 4, float> & aViewProjectionInverse)
-    {
-        std::array<math::Position<4, float>, 8> ndcCorners{{
-            {-1.f, -1.f, -1.f, 1.f}, // Near bottom left
-            { 1.f, -1.f, -1.f, 1.f}, // Near bottom right
-            { 1.f,  1.f, -1.f, 1.f}, // Near top right
-            {-1.f,  1.f, -1.f, 1.f}, // Near top left
-            {-1.f, -1.f,  1.f, 1.f}, // Far bottom left
-            { 1.f, -1.f,  1.f, 1.f}, // Far bottom right
-            { 1.f,  1.f,  1.f, 1.f}, // Far top right
-            {-1.f,  1.f,  1.f, 1.f}, // Far top left
-        }};
-
-        // Transform corners from NDC to world
-        for(std::size_t idx = 0; idx != ndcCorners.size(); ++idx)
-        {
-            ndcCorners[idx] *= aViewProjectionInverse;
-        }
-
-        auto drawFace = [&ndcCorners](const std::size_t aStartIdx)
-        {
-            for(std::size_t idx = 0; idx != 4; ++idx)
-            {
-                DBGDRAW_INFO(drawer::gCamera).addLine(
-                    math::homogeneous::normalize(ndcCorners[idx + aStartIdx]).xyz(),
-                    math::homogeneous::normalize(ndcCorners[(idx + 1) % 4 + aStartIdx]).xyz());
-            }
-        };
-
-        // Near plane
-        drawFace(0);
-        // Far plane
-        drawFace(4);
-        // Sides
-        for(std::size_t idx = 0; idx != 4; ++idx)
-        {
-            DBGDRAW_INFO(drawer::gCamera).addLine(math::homogeneous::normalize(ndcCorners[idx]).xyz(),
-                                                math::homogeneous::normalize(ndcCorners[(idx + 4)]).xyz());
-        }
-    }
-
-
-} // unnamed namespace
-
-
 void PrimaryView::update(const Timing & aTime)
 {
     mCameraSystem.update(aTime.mDeltaDuration);
@@ -523,7 +474,7 @@ void PrimaryView::update(const Timing & aTime)
         });
 
         auto viewProjectionInverse = mCameraSystem.mCamera.assembleViewProjection().inverse();
-        debugDrawCameraFrustum(viewProjectionInverse);
+        debugDrawViewFrustum(viewProjectionInverse, drawer::gCamera);
     }
 }
 
@@ -646,6 +597,8 @@ void ViewerApplication::drawMainUi(const renderer::Timing & aTime)
             mSecondViewAppInterface->hideWindow();
         }
     }
+
+    mDebugDrawGui.present();
 }
 
 
@@ -672,23 +625,32 @@ void ViewerApplication::render()
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
-    snac::DebugDrawer::DrawList drawList = snac::DebugDrawer::EndFrame();
-
     mPrimaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
+
+    // Not sure if we want to also include the secondary view render in the debugdrawer frame.
+    // Since at the moment of writing it calls the same code, we do not include it, to avoid duplicated debug drawing.
+    snac::DebugDrawer::DrawList drawList = snac::DebugDrawer::EndFrame();
 
     if(mSecondViewAppInterface->isWindowOnDisplay())
     {
         mSecondaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
     }
 
-    renderDebugDrawlist(
-        drawList,
-        // Fullscreen viewport
-        math::Rectangle<int>::AtOrigin(mGlfwAppInterface->getFramebufferSize()),
-        // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
-        // It is needed for the viewing block, so we hope it is left at the camera position
-        mPrimaryView.mGraph.mUbos.mUboRepository);
+    // TODO Ad 2024/08/23: This manual management of each window should be generalized behind a notion of "sink"
+    // so we can separately control which channel/level goes to each sink (instead of completely toggling on/off)
+    if(mDebugDrawGui.mRenderToMainView)
+    {
+        renderDebugDrawlist(
+            drawList,
+            // Fullscreen viewport
+            math::Rectangle<int>::AtOrigin(mGlfwAppInterface->getFramebufferSize()),
+            // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
+            // It is needed for the viewing block, so we hope it is left at the camera position
+            mPrimaryView.mGraph.mUbos.mUboRepository);
+    }
 
+    if(mSecondViewAppInterface->isWindowOnDisplay()
+        && mDebugDrawGui.mRenderToSecondaryView)
     {
         graphics::ScopedBind boundFbo{mSecondaryView.mDrawFramebuffer};
         renderDebugDrawlist(

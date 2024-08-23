@@ -1,3 +1,6 @@
+#pragma once
+
+
 // TODO #debugdraw There should be a debug drawer direclty in this lib
 #include <snac-renderer-V1/DebugDrawer.h>
 
