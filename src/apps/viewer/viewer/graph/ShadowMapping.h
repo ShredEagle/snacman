@@ -22,8 +22,8 @@ struct ShadowMapping
 {
     struct Controls
     {
-        GLfloat mSlopeScale{0.01f};
-        GLfloat mUnitScale{2.f};
+        GLfloat mSlopeScale{5.0f};
+        GLfloat mUnitScale{5000.f};
     };
 
     Controls mControls;
@@ -32,6 +32,14 @@ struct ShadowMapping
 
     static constexpr math::Size<2, GLsizei> gTextureSize{2048, 2048};
 };
+
+
+template <class T_visitor>
+void r(T_visitor & aV, ShadowMapping::Controls & aControls)
+{
+    give(aV, aControls.mSlopeScale, "slope scale");
+    give(aV, aControls.mUnitScale,  "unit scale");
+}
 
 
 LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
