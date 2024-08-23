@@ -2,6 +2,7 @@
 set(TARGET_NAME utilities)
 
 set(${TARGET_NAME}_HEADERS
+    ImguiUtilities.h
     Time.h
 )
 

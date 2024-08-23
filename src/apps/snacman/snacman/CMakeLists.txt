@@ -10,7 +10,6 @@ set(${TARGET_NAME}_HEADERS
     DevmodeControl.h
     EntityUtilities.h
     GraphicState.h
-    ImguiUtilities.h
     Input.h
     Logging.h
     LoopSettings.h
@@ -214,7 +213,7 @@ cmc_cpp_sanitizer(${TARGET_NAME} ${BUILD_CONF_Sanitizer})
 
 get_target_property(RENDERER_SOURCE_DIR ad::snac-renderer-V2 SOURCE_DIR)
 
-file(GENERATE 
+file(GENERATE
      OUTPUT $<TARGET_FILE_DIR:${TARGET_NAME}>/assets.json
      # TODO: should we remove the snacman local V2_resources folder?
      #       for the moment we cannot, we have dedicated custom shaders for snacman (not the base renderer versions)
@@ -243,6 +242,7 @@ target_link_libraries(${TARGET_NAME}
         ad::snac-renderer-V1 # TODO #RV2 remove
         ad::snac-renderer-V2
         ad::snac-reflexion
+        ad::utilities
 
         ad::arte
         ad::entity

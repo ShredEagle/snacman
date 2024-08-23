@@ -598,7 +598,7 @@ void ViewerApplication::drawMainUi(const renderer::Timing & aTime)
         }
     }
 
-    mDebugDrawGui.present();
+    mDebugAndLogGui.present();
 }
 
 
@@ -638,7 +638,7 @@ void ViewerApplication::render()
 
     // TODO Ad 2024/08/23: This manual management of each window should be generalized behind a notion of "sink"
     // so we can separately control which channel/level goes to each sink (instead of completely toggling on/off)
-    if(mDebugDrawGui.mRenderToMainView)
+    if(mDebugAndLogGui.mRenderToMainView)
     {
         renderDebugDrawlist(
             drawList,
@@ -650,7 +650,7 @@ void ViewerApplication::render()
     }
 
     if(mSecondViewAppInterface->isWindowOnDisplay()
-        && mDebugDrawGui.mRenderToSecondaryView)
+        && mDebugAndLogGui.mRenderToSecondaryView)
     {
         graphics::ScopedBind boundFbo{mSecondaryView.mDrawFramebuffer};
         renderDebugDrawlist(
