@@ -4,11 +4,12 @@
 namespace ad::renderer {
 
 
-struct DebugDrawGui
+struct DebugAndLogGui
 {
     void present();
 
-    bool mShow = false;
+    bool mShowDebugDraw = false;
+    bool mShowLog = false;
 
     bool mRenderToMainView = false;
     bool mRenderToSecondaryView = true;

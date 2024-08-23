@@ -10,7 +10,6 @@ set(${TARGET_NAME}_HEADERS
     DevmodeControl.h
     EntityUtilities.h
     GraphicState.h
-    ImguiUtilities.h
     Input.h
     Logging.h
     LoopSettings.h
@@ -231,6 +230,7 @@ target_link_libraries(${TARGET_NAME}
         ad::profiler
         ad::snac-renderer-V1 # TODO #RV2 remove
         ad::snac-renderer-V2
+        ad::utilities
 
         ad::arte
         ad::entity
