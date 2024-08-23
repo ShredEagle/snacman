@@ -1,7 +1,6 @@
 #include "TheGraph.h"
 
 
-#include "DebugDrawUtilities.h"
 #include "DrawQuad.h"
 #include "PassViewer.h"
 #include "Scene.h"
@@ -25,8 +24,6 @@ constexpr std::size_t gMaxDrawInstances = 2048;
 
 
 namespace {
-
-    constexpr math::Size<2, GLsizei> gShadowMapSize{2048, 2048};
 
     void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
     {
@@ -55,8 +52,8 @@ namespace {
         gl.TexStorage3D(aShadowMap.mTarget,
                         1,
                         GL_DEPTH_COMPONENT24,
-                        gShadowMapSize.width(),
-                        gShadowMapSize.height(),
+                        ShadowMapping::gTextureSize.width(),
+                        ShadowMapping::gTextureSize.height(),
                         gMaxShadowLights);
         assert(graphics::isImmutableFormat(aShadowMap));
 
@@ -224,7 +221,7 @@ void TheGraph::setupSizeDependentTextures()
 // and it is fetched from a buffer in the shaders, it could actually be pushed once per frame.
 // (and the pass would only index the transform for the objects it actually draws).
 void TheGraph::loadDrawBuffers(const ViewerPartList & aPartList,
-                               const ViewerPassCache & aPassCache)
+                               const ViewerPassCache & aPassCache) const
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_draw_buffers", CpuTime, BufferMemoryWritten);
 
@@ -265,66 +262,17 @@ void TheGraph::renderFrame(const Scene & aScene,
 
     RepositoryTexture textureRepository;
 
-    LightViewProjection lightViewProjection;
-
-    // Shadow map
-    {
-        GLfloat clearDepth = 1.f;
-        glClearTexImage(*mShadowMap, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &clearDepth);
-
-        // Will remain the bound FBO while all the shadow maps are rendered
-        graphics::ScopedBind boundFbo{mShadowMapFbo};
-
-        for(GLuint directionalIdx = 0; directionalIdx != aScene.mLights_world.mDirectionalCount; ++directionalIdx)
-        {
-            // TODO this should disappear when we have a better approach to defining which lights can cast shadow.
-            // Atm, we hardcode that each directional light cast a shadow, thus allowing to index shadow with directionalIdx
-            assert(directionalIdx < gMaxShadowLights);
-
-            // Attach a texture as the logical buffer of the FBO
-            {
-                // The attachment is permanent, no need to recreate it each time the FBO is bound
-                gl.FramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *mShadowMap, /*mip map level*/0, directionalIdx);
-                assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-            }
-
-            const DirectionalLight light = aScene.mLights_world.mDirectionalLights[directionalIdx];
-            Camera lightViewpoint;
-            // TODO handle lights for which the default up direction does not work (because it is the light gaze direction)
-            lightViewpoint.setPose(graphics::getCameraTransform(
-                -5 * light.mDirection.as<math::Position>(),
-                light.mDirection
-            ));
-            // TODO handle the size of the orthographic projection
-            lightViewpoint.setupOrthographicProjection({
-                .mAspectRatio = 1.f,
-                .mViewHeight = 6.f,
-                .mNearZ = 0.f,
-                .mFarZ = -10.f,
-            });
-
-
-            // Note: We probably only need the assembled view-projection matrix for lights 
-            // (since we do not do any fragment computation in light space)
-            // We could probably consolidate that with the "LightViewProjection" populated below
-            loadCameraUbo(*mUbos.mViewingUbo, lightViewpoint);
-
-            graphics::ScopedBind boundFbo{mShadowMapFbo, graphics::FrameBufferTarget::Draw};
-            glViewport(0, 0, gShadowMapSize.width(), gShadowMapSize.height());
-            passOpaqueDepth(partList, textureRepository, aStorage);
-
-            // Add the light view-projection to the collection, for main rendering
-            lightViewProjection.mLightViewProjectionCount++;
-            lightViewProjection.mLightViewProjections[directionalIdx] = lightViewpoint.assembleViewProjection();
-
-            if(aShowTextures) // Semantically incorrect, but we take it to also mean "we are the main view"
-            {
-                debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx].inverse(),
-                                     drawer::gLight,
-                                     light.mDiffuseColor);
-            }
-        }
-    }
+    // Shadow mapping
+    LightViewProjection lightViewProjection = fillShadowMap(
+        mShadowPass,
+        textureRepository,
+        aStorage,
+        *this,
+        partList,
+        mShadowMap,
+        std::span{aScene.mLights_world.mDirectionalLights.data(), aScene.mLights_world.mDirectionalCount},
+        aShowTextures /*debug draw*/ // Semantically incorrect, but we take it to also mean "we are the main view"
+    );
 
     {
         PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
@@ -541,7 +489,7 @@ void TheGraph::showDepthTexture(const graphics::Texture & aTexture,
 
 void TheGraph::passOpaqueDepth(const ViewerPartList & aPartList,
                                const RepositoryTexture & aTextureRepository,
-                               Storage & aStorage)
+                               Storage & aStorage) const
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_depth", CpuTime, GpuTime);
 
