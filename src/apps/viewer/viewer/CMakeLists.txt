@@ -21,6 +21,8 @@ set(${TARGET_NAME}_HEADERS
     TheGraph.h
     ViewerApplication.h
 
+    graph/ShadowMapping.h
+
     runtime_reflect/DearImguiVisitor.h
     runtime_reflect/ReflectHelpers.h
 )
@@ -40,6 +42,8 @@ set(${TARGET_NAME}_SOURCES
     SceneGui.cpp
     TheGraph.cpp
     ViewerApplication.cpp
+
+    graph/ShadowMapping.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

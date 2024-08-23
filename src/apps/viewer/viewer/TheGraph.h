@@ -2,6 +2,8 @@
 
 #include "DrawQuad.h"
 
+#include "graph/ShadowMapping.h"
+
 #include <graphics/ApplicationGlfw.h>
 
 #include <renderer/FrameBuffer.h>
@@ -74,7 +76,7 @@ struct TheGraph
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
     void passOpaqueDepth(const ViewerPartList & aPartList,
                          const RepositoryTexture & aTextureRepository,
-                         Storage & mStorage);
+                         Storage & mStorage) const;
     void passForward(const ViewerPartList & aPartList,
                      const RepositoryTexture & aTextureRepository,
                      Storage & aStorage,
@@ -90,7 +92,7 @@ struct TheGraph
 
     void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const;
 
-    void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache);
+    void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache) const;
 
     void showTexture(const graphics::Texture & aTexture,
                      unsigned int aStackPosition,
@@ -148,8 +150,8 @@ struct TheGraph
     static const GLint gRevealageTextureUnit{1};
 
     // Shadow mapping
+    ShadowMapping mShadowPass;
     Handle<graphics::Texture> mShadowMap;
-    graphics::FrameBuffer mShadowMapFbo;
 
     // Skybox rendering
     Skybox mSkybox;
