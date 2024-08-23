@@ -2,6 +2,7 @@
 
 
 #include "CameraSystem.h"
+#include "DebugDrawGui.h"
 #include "GraphGui.h"
 #include "SecondaryView.h"
 #include "Scene.h"
@@ -83,6 +84,7 @@ struct ViewerApplication
     SceneGui mSceneGui;
 
     DebugRenderer mDebugRenderer;
+    DebugDrawGui mDebugDrawGui;
 
     PrimaryView mPrimaryView;
     SecondaryView mSecondaryView;

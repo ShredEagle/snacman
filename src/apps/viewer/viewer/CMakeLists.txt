@@ -6,6 +6,8 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     CameraSystem.h
+    DebugDrawGui.h
+    DebugDrawUtilities.h
     DrawQuad.h
     EnvironmentUtilities.h
     GraphGui.h
@@ -27,6 +29,7 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     CameraSystem.cpp
+    DebugDrawGui.cpp
     DrawQuad.cpp
     EnvironmentUtilities.cpp
     GraphGui.cpp
