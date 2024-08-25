@@ -17,6 +17,11 @@
 namespace ad::renderer {
 
 
+math::Box<GLfloat> getAabbInParent(const Node & aNode)
+{
+    return aNode.mAabb * static_cast<math::AffineMatrix<4, float>>(aNode.mInstance.mPose);
+}
+
 
 Scene loadScene(const filesystem::path & aSceneFile,
                 const GenericStream & aStream,
@@ -75,10 +80,6 @@ Scene loadScene(const filesystem::path & aSceneFile,
                 eulerAngles.yaw()   = eulerJson.value("yaw",   eulerAngles.yaw());
             }
             pose.mOrientation = math::toQuaternion(eulerAngles);
-
-            poserAabb *= math::trans3d::scaleUniform(pose.mUniformScale)
-                        * pose.mOrientation.toRotationMatrix() 
-                        * math::trans3d::translate(pose.mPosition);
         }
 
         Node modelPoser{

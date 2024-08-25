@@ -236,23 +236,31 @@ namespace {
     // Note: I would have liked to merge it with "populatePartList"
     // but it might be called from several "views" in a single frame, thus duplicating the debug draws...
     void debugDrawAabb(const Node & aNode,
-                       const Pose & aParentAbsolutePose)
+                       const Pose & aParentAbsolutePose,
+                       const Node * aHighlightedNode)
     {
+        using ::ad::snac::DebugDrawer;
+
         const Instance & instance = aNode.mInstance;
         const Pose & localPose = instance.mPose;
         Pose absolutePose = aParentAbsolutePose.transform(localPose);
 
-        // Important: We use the **parent** absolute pose, because the Node AABB is in parent's space
-        // (i.e., it already contains its local transformation.)
-        DBGDRAW_DEBUG(drawer::gScene).addBox(
+        // All AABB are expressed in the **local** space (and thus, aligned on the axis of local space).
+
+        // For the highlighted Node, we raise the drawing level
+        // This way, it is possible to filter and see only the highlighted node AABB.
+        DebugDrawer::Level nodeLevel = 
+            aHighlightedNode == &aNode ? DebugDrawer::Level::info : DebugDrawer::Level::debug;
+
+        DBGDRAW(drawer::gScene, nodeLevel).addBox(
             // TODO Ad 2024/08/24: #pose This should become a simple assignment when Pose is consolidated
             snac::DebugDrawer::Entry{
-                .mPosition = aParentAbsolutePose.mPosition.as<math::Position>(),
+                .mPosition = absolutePose.mPosition.as<math::Position>(),
                 .mScaling = math::Size<3, float>{
-                    aParentAbsolutePose.mUniformScale,
-                    aParentAbsolutePose.mUniformScale,
-                    aParentAbsolutePose.mUniformScale},
-                .mOrientation = aParentAbsolutePose.mOrientation,
+                    absolutePose.mUniformScale,
+                    absolutePose.mUniformScale,
+                    absolutePose.mUniformScale},
+                .mOrientation = absolutePose.mOrientation,
                 .mColor = math::hdr::gBlue<float>,
             },
             aNode.mAabb);
@@ -260,8 +268,6 @@ namespace {
         if(const Object * object = aNode.mInstance.mObject;
            object != nullptr)
         {
-            // For objects, we use the **complete** absolute pose, because the instance object does not contain
-            // the Node local transform.
             DBGDRAW_TRACE(drawer::gScene).addBox(
                 // TODO Ad 2024/08/24: #pose This should become a simple assignment when Pose is consolidated
                 snac::DebugDrawer::Entry{
@@ -277,7 +283,7 @@ namespace {
 
         for(const auto & child : aNode.mChildren)
         {
-            debugDrawAabb(child, absolutePose);
+            debugDrawAabb(child, absolutePose, aHighlightedNode);
         }
     }
 
@@ -547,7 +553,7 @@ void ViewerApplication::update(const Timing & aTime)
     mPrimaryView.update(aTime);
     mSecondaryView.update(aTime);
 
-    debugDrawAabb(mScene.mRoot, Pose{});
+    debugDrawAabb(mScene.mRoot, Pose{}, mSceneGui.getHighlighted());
 }
 
 
