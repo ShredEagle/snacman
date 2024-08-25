@@ -50,13 +50,16 @@ inline std::string to_string(Environment::Type aEnvironment)
 }
 
 
+math::Box<GLfloat> getAabbInParent(const Node & aNode);
+
+
 /// @note The Scene does not contain the camera: this way the same logical scene 
 /// can be rendered from multiple views.
 struct Scene
 {
     Scene & addToRoot(Node aNode)
     {
-        mRoot.mAabb.uniteAssign(aNode.mAabb);
+        mRoot.mAabb.uniteAssign(getAabbInParent(aNode));
         mRoot.mChildren.push_back(std::move(aNode));
         return *this;
     }

@@ -39,6 +39,9 @@ public:
         return mOptions;
     }
 
+    const Node * getHighlighted() const
+    { return mHighlightedNode; }
+
 private:
     /// @return Hovered node
     Node * presentNodeTree(Node & aNode, unsigned int aIndex, const Timing & aTime);
