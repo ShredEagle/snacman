@@ -35,21 +35,23 @@ math::Rectangle<GLfloat> getFrustumSideBounds(math::Matrix<4, 4, GLfloat> aFrust
 
 
 // TODO Ad 2024/08/29: Consolidate with function above
-math::Rectangle<GLfloat> getBoxSideBounds(math::Box<GLfloat> aBox, math::AffineMatrix<4, GLfloat> aBoxToLightSpace)
+math::Box<GLfloat> getBoxSideBounds(math::Box<GLfloat> aBox, math::AffineMatrix<4, GLfloat> aBoxToLightSpace)
 {
     using math::homogeneous::normalize;
 
-    math::Position<2, GLfloat> low = normalize(math::homogeneous::makePosition(aBox.cornerAt(0)) * aBoxToLightSpace).xy();
-    math::Position<2, GLfloat> high = low;
+    math::Position<3, GLfloat> low = 
+        normalize(math::homogeneous::makePosition(aBox.cornerAt(0)) * aBoxToLightSpace).xyz();
+    math::Position<3, GLfloat> high = low;
 
     for(std::size_t idx = 1; idx != aBox.gCornerCount; ++idx)
     {
-        math::Position<2, GLfloat> cornerInLightSpace = normalize(math::homogeneous::makePosition(aBox.cornerAt(idx)) * aBoxToLightSpace).xy();
+        math::Position<3, GLfloat> cornerInLightSpace = 
+            normalize(math::homogeneous::makePosition(aBox.cornerAt(idx)) * aBoxToLightSpace).xyz();
         low = min(low, cornerInLightSpace);
         high = max(high, cornerInLightSpace);
     }
 
-    return math::Rectangle<GLfloat>{
+    return math::Box<GLfloat>{
         .mPosition = low,
         .mDimension = (high - low).as<math::Size>(),
     };
@@ -156,8 +158,9 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         const math::Rectangle<GLfloat> cameraFrustumSides_light = 
             getFrustumSideBounds(aViewProjectionInverse * math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
 
-        const math::Rectangle<GLfloat> sceneAabbSide_light =
+        const math::Box<GLfloat> sceneAabb_light =
             getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
+        const math::Rectangle<GLfloat> sceneAabbSide_light = sceneAabb_light.frontRectangle();
 
         const math::Rectangle<GLfloat> effectiveRectangle_light = 
             c.mTightenLightFrustumToScene ?
@@ -188,13 +191,13 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                 );
             };
 
-            drawPlane(orientationLightToWorld, cameraFrustumSides_light, Level::debug);
-            drawPlane(orientationLightToWorld, sceneAabbSide_light, Level::debug);
-            drawPlane(orientationLightToWorld, effectiveRectangle_light, Level::info);
+            drawPlane(orientationLightToWorld, cameraFrustumSides_light, Level::trace);
+            drawPlane(orientationLightToWorld, sceneAabbSide_light, Level::trace);
+            drawPlane(orientationLightToWorld, effectiveRectangle_light, Level::debug);
         }
 
-        math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, -10.f};
-        math::Size<3, GLfloat> frustumBoxDimension{effectiveRectangle_light.mDimension, 20.f};
+        math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, sceneAabb_light.zMin()};
+        math::Size<3, GLfloat> frustumBoxDimension{effectiveRectangle_light.mDimension, sceneAabb_light.depth()};
         // We assemble a view projection block, with camera transformation being just the rotation
         // and the orthographic view frustum set to the tight box computed abovd
         GpuViewProjectionBlock viewProjectionBlock{
