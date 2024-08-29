@@ -24,6 +24,8 @@ struct ShadowMapping
     {
         GLfloat mSlopeScale{5.0f};
         GLfloat mUnitScale{5000.f};
+
+        bool mTightenLightFrustumToScene{true};
     };
 
     Controls mControls;
@@ -39,6 +41,7 @@ void r(T_visitor & aV, ShadowMapping::Controls & aControls)
 {
     give(aV, aControls.mSlopeScale, "slope scale");
     give(aV, aControls.mUnitScale,  "unit scale");
+    give(aV, aControls.mTightenLightFrustumToScene,  "frustum to scene");
 }
 
 
@@ -47,6 +50,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                                   Storage & aStorage,
                                   const TheGraph & aGraph,  // TODO Ad 2024/08/23: This should be decoupled, but requires a redesign
                                   const ViewerPartList & aPartList,
+                                  math::Box<GLfloat> aSceneAabb,
                                   math::Matrix<4, 4, GLfloat> aViewProjectionInverse,
                                   Handle<const graphics::Texture> aShadowMap,
                                   std::span<const DirectionalLight> aDirectionalLights,

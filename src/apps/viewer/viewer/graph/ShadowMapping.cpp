@@ -34,7 +34,49 @@ math::Rectangle<GLfloat> getFrustumSideBounds(math::Matrix<4, 4, GLfloat> aFrust
 }
 
 
+// TODO Ad 2024/08/29: Consolidate with function above
+math::Rectangle<GLfloat> getBoxSideBounds(math::Box<GLfloat> aBox, math::AffineMatrix<4, GLfloat> aBoxToLightSpace)
+{
+    using math::homogeneous::normalize;
 
+    math::Position<2, GLfloat> low = normalize(math::homogeneous::makePosition(aBox.cornerAt(0)) * aBoxToLightSpace).xy();
+    math::Position<2, GLfloat> high = low;
+
+    for(std::size_t idx = 1; idx != aBox.gCornerCount; ++idx)
+    {
+        math::Position<2, GLfloat> cornerInLightSpace = normalize(math::homogeneous::makePosition(aBox.cornerAt(idx)) * aBoxToLightSpace).xy();
+        low = min(low, cornerInLightSpace);
+        high = max(high, cornerInLightSpace);
+    }
+
+    return math::Rectangle<GLfloat>{
+        .mPosition = low,
+        .mDimension = (high - low).as<math::Size>(),
+    };
+}
+
+
+// TODO Ad 2024/08/29: Move to math
+math::Rectangle<GLfloat> intersect(math::Rectangle<GLfloat> aLhs, const math::Rectangle<GLfloat> & aRhs)
+{
+    const math::Position<2, GLfloat> topRight = math::min(aLhs.topRight(), aRhs.topRight());
+    aLhs.mPosition = math::max(aLhs.mPosition, aRhs.mPosition);
+    aLhs.mDimension = (topRight - aLhs.mPosition).as<math::Size>();
+
+    if(aLhs.mDimension.width() <= 0.f || aLhs.mDimension.height() <= 0.f)
+    {
+        aLhs.mDimension = {0.f, 0.f};
+    }
+    return aLhs;
+}
+
+
+/// @brief Construct a rotation matrix from canonical space to camera space.
+/// @param aGazeDirection The camera view direction, expressed in canonical space.
+///
+/// The rotation matrix transforms coordinates from the basis in which
+/// `aGazeDirection`  is defined, to a basis whose -Z is `aGazeDirection`.
+/// (Alternatively, this matrix actively rotates aGazeDirection onto -Z.)
 math::LinearMatrix<3, 3, GLfloat> alignMinusZ(math::Vec<3, GLfloat> aGazeDirection)
 {
     
@@ -63,6 +105,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                                   Storage & aStorage,
                                   const TheGraph & aGraph,
                                   const ViewerPartList & aPartList,
+                                  math::Box<GLfloat> aSceneAabb,
                                   math::Matrix<4, 4, GLfloat> aViewProjectionInverse,
                                   Handle<const graphics::Texture> aShadowMap,
                                   std::span<const DirectionalLight> aDirectionalLights,
@@ -113,26 +156,45 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         const math::Rectangle<GLfloat> cameraFrustumSides_light = 
             getFrustumSideBounds(aViewProjectionInverse * math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
 
+        const math::Rectangle<GLfloat> sceneAabbSide_light =
+            getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
+
+        const math::Rectangle<GLfloat> effectiveRectangle_light = 
+            c.mTightenLightFrustumToScene ?
+                intersect(cameraFrustumSides_light, sceneAabbSide_light)
+                : cameraFrustumSides_light;
+
         if(aDebugDrawFrusta) 
         {
+            using Level = ::ad::snac::DebugDrawer::Level;
+
             // For a rotation matrix, the transpose is the inverse
             const math::LinearMatrix<3, 3, GLfloat> orientationLightToWorld = orientationWorldToLight.transpose();
 
-            math::Position<3, GLfloat> center_world = 
-                math::Position<3, GLfloat>{cameraFrustumSides_light.center(), 0.f} 
-                * orientationLightToWorld;
+            static auto drawPlane = [](math::LinearMatrix<3, 3, GLfloat> aLightToWorld,
+                                       math::Rectangle<GLfloat> aRectangle_light,
+                                       Level aLevel)
+            {
+                math::Position<3, GLfloat> center_world = 
+                    math::Position<3, GLfloat>{aRectangle_light.center(), 0.f} 
+                    * aLightToWorld;
 
-            DBGDRAW_INFO(drawer::gLight).addPlane(
-                  center_world,
-                  math::Vec<3, float>{1.f, 0.f, 0.f} * orientationLightToWorld, 
-                  math::Vec<3, float>{0.f, 1.f, 0.f} * orientationLightToWorld,
-                  5, 5, // subdivisions count
-                  cameraFrustumSides_light.width(), cameraFrustumSides_light.height() // assumes no scaling
-            );
+                DBGDRAW(drawer::gLight, aLevel).addPlane(
+                    center_world,
+                    math::Vec<3, float>{1.f, 0.f, 0.f} * aLightToWorld, 
+                    math::Vec<3, float>{0.f, 1.f, 0.f} * aLightToWorld,
+                    5, 5, // subdivisions count
+                    aRectangle_light.width(), aRectangle_light.height() // assumes no scaling in light to world
+                );
+            };
+
+            drawPlane(orientationLightToWorld, cameraFrustumSides_light, Level::debug);
+            drawPlane(orientationLightToWorld, sceneAabbSide_light, Level::debug);
+            drawPlane(orientationLightToWorld, effectiveRectangle_light, Level::info);
         }
 
-        math::Position<3, GLfloat> frustumBoxPosition{cameraFrustumSides_light.mPosition, -10.f};
-        math::Size<3, GLfloat> frustumBoxDimension{cameraFrustumSides_light.mDimension, 20.f};
+        math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, -10.f};
+        math::Size<3, GLfloat> frustumBoxDimension{effectiveRectangle_light.mDimension, 20.f};
         // We assemble a view projection block, with camera transformation being just the rotation
         // and the orthographic view frustum set to the tight box computed abovd
         GpuViewProjectionBlock viewProjectionBlock{
