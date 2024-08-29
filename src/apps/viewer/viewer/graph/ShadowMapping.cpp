@@ -107,61 +107,47 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         //
         
         // Compute the matrix transforming from the camera view clip space to the light space.
+        // This is a pure orientation: a directional light has no "position", we can set its origin to world origin.
         const math::LinearMatrix<3, 3, GLfloat> orientationWorldToLight = alignMinusZ(light.mDirection);
-        //const math::AffineMatrix<4, GLfloat> affineOrientationWorldToLight{orientationWorldToLight};
-        const math::Rectangle<GLfloat> lightFrustumSides_light = 
+        // The min/max of the camera view frustum in light space
+        const math::Rectangle<GLfloat> cameraFrustumSides_light = 
             getFrustumSideBounds(aViewProjectionInverse * math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
-
-        // For a rotation matrix, the transpose is the inverse
-        const math::LinearMatrix<3, 3, GLfloat> orientationLightToWorld = orientationWorldToLight.transpose();
-        math::Position<3, GLfloat> center_world = 
-            math::Position<3, GLfloat>{lightFrustumSides_light.center(), 0.f} 
-            * orientationLightToWorld;
 
         if(aDebugDrawFrusta) 
         {
-            //auto orientationLightToWorld = orientationWorldToLight.inverse();
-            //math::Position<3, GLfloat> origin_world = 
-            //    math::homogeneous::normalize(
-            //        math::homogeneous::makePosition(math::Position<3, GLfloat>{lightFrustumSides_light.center(), 0.f}) 
-            //        * orientationLightToWorld
-            //    ).xyz();
+            // For a rotation matrix, the transpose is the inverse
+            const math::LinearMatrix<3, 3, GLfloat> orientationLightToWorld = orientationWorldToLight.transpose();
+
+            math::Position<3, GLfloat> center_world = 
+                math::Position<3, GLfloat>{cameraFrustumSides_light.center(), 0.f} 
+                * orientationLightToWorld;
+
             DBGDRAW_INFO(drawer::gLight).addPlane(
                   center_world,
                   math::Vec<3, float>{1.f, 0.f, 0.f} * orientationLightToWorld, 
                   math::Vec<3, float>{0.f, 1.f, 0.f} * orientationLightToWorld,
                   5, 5, // subdivisions count
-                  lightFrustumSides_light.width(), lightFrustumSides_light.height() // assumes no scaling
+                  cameraFrustumSides_light.width(), cameraFrustumSides_light.height() // assumes no scaling
             );
         }
 
-        const math::AffineMatrix<4, GLfloat> worldToLight{orientationWorldToLight, -center_world.as<math::Vec>()};
-        //const math::AffineMatrix<4, GLfloat> worldToLight{orientationWorldToLight, -math::Vec<3, GLfloat>{center_world.xy(), 0.f}};
+        math::Position<3, GLfloat> frustumBoxPosition{cameraFrustumSides_light.mPosition, -10.f};
+        math::Size<3, GLfloat> frustumBoxDimension{cameraFrustumSides_light.mDimension, 20.f};
+        // We assemble a view projection block, with camera transformation being just the rotation
+        // and the orthographic view frustum set to the tight box computed abovd
+        GpuViewProjectionBlock viewProjectionBlock{
+            orientationWorldToLight,
+            graphics::makeOrthographicProjection({frustumBoxPosition, frustumBoxDimension})};
 
-        Camera lightViewpoint;
-
-        // TODO handle lights for which the default up direction does not work (because it is the light gaze direction)
-        lightViewpoint.setPose(worldToLight);
-
-        lightViewpoint.setupOrthographicProjection({
-            .mAspectRatio = math::getRatio<GLfloat>(lightFrustumSides_light.mDimension),
-            .mViewHeight = lightFrustumSides_light.mDimension.height(),
-            .mNearZ = 0.f,
-            .mFarZ = -10.f,
-        });
+        loadCameraUbo(*aGraph.mUbos.mViewingUbo, viewProjectionBlock);
 
         // TODO: The actual pass is somewhere down there:
-
-        // Note: We probably only need the assembled view-projection matrix for lights 
-        // (since we do not do any fragment computation in light space)
-        // We could probably consolidate that with the "LightViewProjection" populated below
-        loadCameraUbo(*aGraph.mUbos.mViewingUbo, lightViewpoint);
 
         aGraph.passOpaqueDepth(aPartList, aTextureRepository, aStorage);
 
         // Add the light view-projection to the collection, for main rendering
         lightViewProjection.mLightViewProjectionCount++;
-        lightViewProjection.mLightViewProjections[directionalIdx] = lightViewpoint.assembleViewProjection();
+        lightViewProjection.mLightViewProjections[directionalIdx] = viewProjectionBlock.mViewingProjection;
 
         if(aDebugDrawFrusta) 
         {
