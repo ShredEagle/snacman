@@ -47,6 +47,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                                   Storage & aStorage,
                                   const TheGraph & aGraph,  // TODO Ad 2024/08/23: This should be decoupled, but requires a redesign
                                   const ViewerPartList & aPartList,
+                                  math::Matrix<4, 4, GLfloat> aViewProjectionInverse,
                                   Handle<const graphics::Texture> aShadowMap,
                                   std::span<const DirectionalLight> aDirectionalLights,
                                   bool aDebugDrawFrusta);
