@@ -38,6 +38,12 @@ void give(DearImguiVisitor & aV, const std::span<T, Extent> & aSpan, const char 
 }
 
 
+inline void give(DearImguiVisitor &, bool & aBool, const char * aName)
+{
+    ImGui::Checkbox(aName, &aBool);
+}
+
+
 template <std::integral T>
 void give(DearImguiVisitor & aV, const Clamped<T> & aClamped, const char * aName)
 {
