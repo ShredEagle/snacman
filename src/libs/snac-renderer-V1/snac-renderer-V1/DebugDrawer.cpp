@@ -139,7 +139,7 @@ void DebugDrawer::addLine(const LineVertex & aP1, const LineVertex & aP2)
 }
 
 
-void DebugDrawer::addPlane(math::Position<3, float> aOrigin,
+void DebugDrawer::addPlane(math::Position<3, float> aRectangleCenter,
                            math::Vec<3, float> aDir1, math::Vec<3, float> aDir2,
                            int aSubdiv1, int aSubdiv2,
                            float aSize1, float aSize2,
@@ -148,17 +148,17 @@ void DebugDrawer::addPlane(math::Position<3, float> aOrigin,
 {
     // Implementation from 3DRC (1st) Ch4
     // Draw the outlines
-    addLine(aOrigin - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
-            aOrigin - aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
+    addLine(aRectangleCenter - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+            aRectangleCenter - aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
             aOutlineColor);
-    addLine(aOrigin + aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
-            aOrigin + aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
+    addLine(aRectangleCenter + aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+            aRectangleCenter + aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
             aOutlineColor);
-    addLine(aOrigin - aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
-            aOrigin + aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
+    addLine(aRectangleCenter - aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
+            aRectangleCenter + aSize1 / 2.0f * aDir1 + aSize2 / 2.0f * aDir2,
             aOutlineColor);
-    addLine(aOrigin - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
-            aOrigin + aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+    addLine(aRectangleCenter - aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
+            aRectangleCenter + aSize1 / 2.0f * aDir1 - aSize2 / 2.0f * aDir2,
             aOutlineColor);
 
 
@@ -166,7 +166,7 @@ void DebugDrawer::addPlane(math::Position<3, float> aOrigin,
     for(int i = 1 ; i < aSubdiv1 ; i++) 
     {
         const float t = ((float)i - (float)aSubdiv1 / 2.0f) * aSize1 / (float)aSubdiv1;
-        const auto o1 = aOrigin + t * aDir1;
+        const auto o1 = aRectangleCenter + t * aDir1;
         addLine(o1 - aSize2 / 2.0f * aDir2,
                 o1 + aSize2 / 2.0f * aDir2,
                 aSubdivColor);
@@ -175,7 +175,7 @@ void DebugDrawer::addPlane(math::Position<3, float> aOrigin,
     for(int i = 1 ; i < aSubdiv2 ; i++)
     {
         const float t = ((float)i - (float)aSubdiv2 / 2.0f) * aSize2 / (float)aSubdiv2;
-        const auto o2 = aOrigin + t * aDir2;
+        const auto o2 = aRectangleCenter + t * aDir2;
         addLine(o2 - aSize1 / 2.0f * aDir1,
                 o2 + aSize1 / 2.0f * aDir1,
                 aSubdivColor);

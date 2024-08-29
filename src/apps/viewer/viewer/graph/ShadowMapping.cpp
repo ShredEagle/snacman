@@ -34,6 +34,30 @@ math::Rectangle<GLfloat> getFrustumSideBounds(math::Matrix<4, 4, GLfloat> aFrust
 }
 
 
+
+math::LinearMatrix<3, 3, GLfloat> alignMinusZ(math::Vec<3, GLfloat> aGazeDirection)
+{
+    
+    math::Vec<3, GLfloat> up{0.f, 1.f, 0.f};
+    if(std::abs(aGazeDirection.dot(up)) > 0.9f)
+    {
+        up = {0.f, 0.f, -1.f};
+    }
+    auto cameraBase = 
+        math::OrthonormalBase<3, GLfloat>::MakeFromWUp(-aGazeDirection, up);
+    
+    const auto & u = cameraBase.u();
+    const auto & v = cameraBase.v();
+    const auto & w = cameraBase.w();
+
+    // TODO Ad 2024/08/29: This should be a math function
+    return {
+        u.x(),          v.x(),          w.x(),
+        u.y(),          v.y(),          w.y(),
+        u.z(),          v.z(),          w.z(),
+    };
+}
+
 LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
                                   const RepositoryTexture & aTextureRepository,
                                   Storage & aStorage,
@@ -76,13 +100,6 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         }
 
         const DirectionalLight light = aDirectionalLights[directionalIdx];
-        Camera lightViewpoint;
-
-        // TODO handle lights for which the default up direction does not work (because it is the light gaze direction)
-        lightViewpoint.setPose(graphics::getCameraTransform(
-            -5 * light.mDirection.as<math::Position>(),
-            light.mDirection
-        ));
 
         //
         // Handle the orthographic projection.
@@ -90,21 +107,45 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         //
         
         // Compute the matrix transforming from the camera view clip space to the light space.
-        const math::Rectangle<GLfloat> lightFrustumSides = getFrustumSideBounds(aViewProjectionInverse * lightViewpoint.getParentToCamera());
+        const math::LinearMatrix<3, 3, GLfloat> orientationWorldToLight = alignMinusZ(light.mDirection);
+        //const math::AffineMatrix<4, GLfloat> affineOrientationWorldToLight{orientationWorldToLight};
+        const math::Rectangle<GLfloat> lightFrustumSides_light = 
+            getFrustumSideBounds(aViewProjectionInverse * math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
+
+        // For a rotation matrix, the transpose is the inverse
+        const math::LinearMatrix<3, 3, GLfloat> orientationLightToWorld = orientationWorldToLight.transpose();
+        math::Position<3, GLfloat> center_world = 
+            math::Position<3, GLfloat>{lightFrustumSides_light.center(), 0.f} 
+            * orientationLightToWorld;
 
         if(aDebugDrawFrusta) 
         {
+            //auto orientationLightToWorld = orientationWorldToLight.inverse();
+            //math::Position<3, GLfloat> origin_world = 
+            //    math::homogeneous::normalize(
+            //        math::homogeneous::makePosition(math::Position<3, GLfloat>{lightFrustumSides_light.center(), 0.f}) 
+            //        * orientationLightToWorld
+            //    ).xyz();
             DBGDRAW_INFO(drawer::gLight).addPlane(
-                  {0.f, 0.f, 0.f},
-                  (math::Vec<4, float>{1.f, 0.f, 0.f, 0.f} * lightViewpoint.getParentToCamera().inverse()).xyz(), 
-                  (math::Vec<4, float>{0.f, 1.f, 0.f, 0.f} * lightViewpoint.getParentToCamera().inverse()).xyz(),
-                  5, 5,
-                  lightFrustumSides.width(), lightFrustumSides.height());
+                  center_world,
+                  math::Vec<3, float>{1.f, 0.f, 0.f} * orientationLightToWorld, 
+                  math::Vec<3, float>{0.f, 1.f, 0.f} * orientationLightToWorld,
+                  5, 5, // subdivisions count
+                  lightFrustumSides_light.width(), lightFrustumSides_light.height() // assumes no scaling
+            );
         }
 
+        const math::AffineMatrix<4, GLfloat> worldToLight{orientationWorldToLight, -center_world.as<math::Vec>()};
+        //const math::AffineMatrix<4, GLfloat> worldToLight{orientationWorldToLight, -math::Vec<3, GLfloat>{center_world.xy(), 0.f}};
+
+        Camera lightViewpoint;
+
+        // TODO handle lights for which the default up direction does not work (because it is the light gaze direction)
+        lightViewpoint.setPose(worldToLight);
+
         lightViewpoint.setupOrthographicProjection({
-            .mAspectRatio = math::getRatio<GLfloat>(lightFrustumSides.mDimension),
-            .mViewHeight = lightFrustumSides.mDimension.height(),
+            .mAspectRatio = math::getRatio<GLfloat>(lightFrustumSides_light.mDimension),
+            .mViewHeight = lightFrustumSides_light.mDimension.height(),
             .mNearZ = 0.f,
             .mFarZ = -10.f,
         });
