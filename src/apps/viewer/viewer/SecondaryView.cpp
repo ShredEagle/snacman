@@ -35,7 +35,7 @@ SecondaryView::SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInt
         .mAspectRatio = math::getRatio<float>(mRenderSize.as<math::Size, float>()),
         .mViewHeight = 2,
         .mNearZ = 0,
-        .mFarZ = -100,
+        .mFarZ = -200,
     });
 
     // Attach the render buffers to FBO
