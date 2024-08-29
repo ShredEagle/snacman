@@ -79,9 +79,15 @@ namespace {
 } // unnamed namespace
 
 
+void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const GpuViewProjectionBlock & aViewProjection)
+{
+    proto::loadSingle(aUbo, aViewProjection, graphics::BufferHint::DynamicDraw);
+}
+
+
 void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
 {
-    proto::loadSingle(aUbo, GpuViewProjectionBlock{aCamera}, graphics::BufferHint::DynamicDraw);
+    loadCameraUbo(aUbo, GpuViewProjectionBlock{aCamera});
 }
 
 
