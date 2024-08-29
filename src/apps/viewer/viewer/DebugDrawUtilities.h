@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "FrustumUtilities.h"
+
 #include <snac-renderer-V2/debug/DebugDrawing.h>
 
 
@@ -14,30 +16,21 @@ inline void debugDrawViewFrustum(const math::Matrix<4, 4, float> & aViewProjecti
                                  const char * aDrawer,
                                  math::hdr::Rgba_f aColor = math::hdr::gMagenta<float>)
 {
-    std::array<math::Position<4, float>, 8> ndcCorners{{
-        {-1.f, -1.f, -1.f, 1.f}, // Near bottom left
-        { 1.f, -1.f, -1.f, 1.f}, // Near bottom right
-        { 1.f,  1.f, -1.f, 1.f}, // Near top right
-        {-1.f,  1.f, -1.f, 1.f}, // Near top left
-        {-1.f, -1.f,  1.f, 1.f}, // Far bottom left
-        { 1.f, -1.f,  1.f, 1.f}, // Far bottom right
-        { 1.f,  1.f,  1.f, 1.f}, // Far top right
-        {-1.f,  1.f,  1.f, 1.f}, // Far top left
-    }};
+    std::array<math::Position<4, float>, 8> corners_worldSpace;
 
     // Transform corners from NDC to world
-    for(std::size_t idx = 0; idx != ndcCorners.size(); ++idx)
+    for(std::size_t idx = 0; idx != corners_worldSpace.size(); ++idx)
     {
-        ndcCorners[idx] *= aViewProjectionInverse;
+        corners_worldSpace[idx] = gNdcUnitCorners[idx] * aViewProjectionInverse;
     }
 
-    auto drawFace = [&ndcCorners, aDrawer, aColor](const std::size_t aStartIdx)
+    auto drawFace = [&corners_worldSpace, aDrawer, aColor](const std::size_t aStartIdx)
     {
         for(std::size_t idx = 0; idx != 4; ++idx)
         {
             DBGDRAW_INFO(aDrawer).addLine(
-                math::homogeneous::normalize(ndcCorners[idx + aStartIdx]).xyz(),
-                math::homogeneous::normalize(ndcCorners[(idx + 1) % 4 + aStartIdx]).xyz(),
+                math::homogeneous::normalize(corners_worldSpace[idx + aStartIdx]).xyz(),
+                math::homogeneous::normalize(corners_worldSpace[(idx + 1) % 4 + aStartIdx]).xyz(),
                 aColor);
         }
     };
@@ -50,8 +43,8 @@ inline void debugDrawViewFrustum(const math::Matrix<4, 4, float> & aViewProjecti
     for(std::size_t idx = 0; idx != 4; ++idx)
     {
         DBGDRAW_INFO(aDrawer).addLine(
-            math::homogeneous::normalize(ndcCorners[idx]).xyz(),
-            math::homogeneous::normalize(ndcCorners[(idx + 4)]).xyz(),
+            math::homogeneous::normalize(corners_worldSpace[idx]).xyz(),
+            math::homogeneous::normalize(corners_worldSpace[(idx + 4)]).xyz(),
             aColor);
     }
 }
