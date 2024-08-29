@@ -25,6 +25,9 @@ struct ShadowMapping
         GLfloat mSlopeScale{5.0f};
         GLfloat mUnitScale{5000.f};
 
+        // Note: it is not always recommended, because it can change the light frustum size
+        // frame to frame, which might degrade light texel grid alignment techniques.
+        // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/common-techniques-to-improve-shadow-depth-maps?redirectedfrom=MSDN#calculating-a-tight-projection
         bool mTightenLightFrustumToScene{true};
     };
 
