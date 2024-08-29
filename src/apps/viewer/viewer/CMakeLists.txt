@@ -10,6 +10,7 @@ set(${TARGET_NAME}_HEADERS
     DebugDrawUtilities.h
     DrawQuad.h
     EnvironmentUtilities.h
+    FrustumUtilities.h
     GraphGui.h
     Json.h
     Lights.h
