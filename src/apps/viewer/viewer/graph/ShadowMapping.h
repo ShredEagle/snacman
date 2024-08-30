@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "Clipping.h"
+
 #include "../Lights.h"
 
 #include <renderer/FrameBuffer.h>

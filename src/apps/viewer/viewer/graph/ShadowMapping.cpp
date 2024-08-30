@@ -102,6 +102,26 @@ math::LinearMatrix<3, 3, GLfloat> alignMinusZ(math::Vec<3, GLfloat> aGazeDirecti
     };
 }
 
+
+//void tightenNearFar(math::Box<GLfloat> aAabb,
+//{
+//    static constexpr std::size_t gBoxTesselationIndices[] = 
+//    {
+//        0,1,2,  1,2,3,
+//        4,5,6,  5,6,7,
+//        0,2,4,  2,4,6,
+//        1,3,5,  3,5,7,
+//        0,1,4,  1,4,5,
+//        2,3,6,  3,6,7 
+//    };
+//    //static constexpr std::size_t gTriangleCount = gBoxTesselationIndices.size() / 3;
+//
+//    for(std::size_t idx = 0; idx != gBoxTesselationIndices.size(); ++idx)
+//    {
+//        clip({aAabb.cornerAt()})
+//    }
+//}
+
 LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
                                   const RepositoryTexture & aTextureRepository,
                                   Storage & aStorage,
@@ -158,6 +178,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         const math::Rectangle<GLfloat> cameraFrustumSides_light = 
             getFrustumSideBounds(aViewProjectionInverse * math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
 
+        // TODO can we replace with the aabb generic transformation?
         const math::Box<GLfloat> sceneAabb_light =
             getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
         const math::Rectangle<GLfloat> sceneAabbSide_light = sceneAabb_light.frontRectangle();
