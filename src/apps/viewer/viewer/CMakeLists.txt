@@ -23,6 +23,7 @@ set(${TARGET_NAME}_HEADERS
     ViewerApplication.h
 
     graph/ShadowMapping.h
+    graph/Clipping.h
 
     runtime_reflect/DearImguiVisitor.h
     runtime_reflect/ReflectHelpers.h
