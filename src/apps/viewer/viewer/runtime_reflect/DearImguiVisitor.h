@@ -38,6 +38,12 @@ void give(DearImguiVisitor & aV, const std::span<T, Extent> & aSpan, const char 
 }
 
 
+inline void give(DearImguiVisitor &, bool & aBool, const char * aName)
+{
+    ImGui::Checkbox(aName, &aBool);
+}
+
+
 template <std::integral T>
 void give(DearImguiVisitor & aV, const Clamped<T> & aClamped, const char * aName)
 {
@@ -46,32 +52,32 @@ void give(DearImguiVisitor & aV, const Clamped<T> & aClamped, const char * aName
 }
 
 
-void give(DearImguiVisitor & aV, float  & aFloat, const char * aName)
+inline void give(DearImguiVisitor & aV, float  & aFloat, const char * aName)
 {
     ImGui::InputFloat(aName, &aFloat);
 }
 
 
-void give(DearImguiVisitor & aV, math::Position<3, GLfloat> & aPos, const char * aName)
+inline void give(DearImguiVisitor & aV, math::Position<3, GLfloat> & aPos, const char * aName)
 {
     ImGui::InputFloat3(aName, aPos.data());
 }
 
 
-void give(DearImguiVisitor & aV, math::Vec<3, GLfloat> & aVec, const char * aName)
+inline void give(DearImguiVisitor & aV, math::Vec<3, GLfloat> & aVec, const char * aName)
 {
     ImGui::InputFloat3(aName, aVec.data());
 }
 
 
-void give(DearImguiVisitor & aV, math::UnitVec<3, GLfloat> & aVec, const char * aName)
+inline void give(DearImguiVisitor & aV, math::UnitVec<3, GLfloat> & aVec, const char * aName)
 {
     ImGui::InputFloat3(aName, aVec.data());
     aVec.normalize();
 }
 
 
-void give(DearImguiVisitor & aV, math::hdr::Rgb<GLfloat> & aRgb, const char * aName)
+inline void give(DearImguiVisitor & aV, math::hdr::Rgb<GLfloat> & aRgb, const char * aName)
 {
     ImGui::ColorEdit3(aName, aRgb.data());
 }

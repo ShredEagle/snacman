@@ -10,7 +10,7 @@ namespace {
 
     constexpr math::Degree<float> gInitialVFov{50.f};
     constexpr float gNearZ{-0.1f};
-    constexpr float gMinFarZ{-25.f};
+    constexpr float gMinFarZ{-20.f};
 
     // GUI related values
     constexpr float gMinZ{-0.01f};

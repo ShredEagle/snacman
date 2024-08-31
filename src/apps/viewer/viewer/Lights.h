@@ -15,9 +15,16 @@ namespace ad::renderer {
 
 
 // TODO Ad 2024/06/05: How to keep that in sync with the shader code?
+// TODO can we use the define system to forward those upper limit to shaders?
 constexpr unsigned int gMaxLights = 16;
+constexpr unsigned int gMaxShadowLights = 4;
 
 // TODO there are obvious ways to pack the values much more tightly
+
+
+using Index = GLuint;
+inline constexpr Index gNoEntryIndex = std::numeric_limits<Index>::max();
+
 
 struct DirectionalLight
 {
@@ -25,6 +32,9 @@ struct DirectionalLight
     alignas(16) math::UnitVec<3, GLfloat> mDirection{{0.f, 0.f, 1.f}};
     alignas(16) math::hdr::Rgb<GLfloat> mDiffuseColor = math::hdr::gWhite<GLfloat>;
     alignas(16) math::hdr::Rgb<GLfloat> mSpecularColor = math::hdr::gWhite<GLfloat>;
+    // alignment rules for std140 UB are defined by core glspec 7.6.2.2
+    // In Lights.glsl, the colors are defined ad vec4 (4 floats), so the alignment of the next member is 16 (4 * 4).
+    alignas(16) Index mShadowMapIndex = gNoEntryIndex;
 };
 
 
@@ -117,6 +127,15 @@ void r(T_visitor & aV, LightsData & aLights)
     give(aV, Clamped<GLuint>{aLights.mPointCount, 0, gMaxLights}, "point count");
     give(aV, aLights.spanPointLights(), "point lights");
 }
+
+
+/// @brief Layout compatible with shader's `LightViewProjectionBlock`
+struct LightViewProjection
+{
+    GLuint mLightViewProjectionCount{0};
+    // TODO can we use the define system to forward this upper limit to shaders?
+    alignas(16) math::Matrix<4, 4, GLfloat> mLightViewProjections[gMaxShadowLights];
+};
 
 
 } // namespace ad::renderer

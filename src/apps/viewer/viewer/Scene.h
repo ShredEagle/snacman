@@ -50,13 +50,16 @@ inline std::string to_string(Environment::Type aEnvironment)
 }
 
 
+math::Box<GLfloat> getAabbInParent(const Node & aNode);
+
+
 /// @note The Scene does not contain the camera: this way the same logical scene 
 /// can be rendered from multiple views.
 struct Scene
 {
     Scene & addToRoot(Node aNode)
     {
-        mRoot.mAabb.uniteAssign(aNode.mAabb);
+        mRoot.mAabb.uniteAssign(getAabbInParent(aNode));
         mRoot.mChildren.push_back(std::move(aNode));
         return *this;
     }
@@ -90,7 +93,7 @@ struct Scene
 
     
     LightsData mLights_world{
-        .mDirectionalCount = 0,
+        .mDirectionalCount = 1,
         .mPointCount = 0,
         .mAmbientColor = math::hdr::gWhite<GLfloat> / 12.f,
         .mDirectionalLights = {
@@ -98,6 +101,11 @@ struct Scene
                 .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.f, -0.2f, -1.f}},
                 .mDiffuseColor = math::hdr::gWhite<GLfloat>,
                 .mSpecularColor = math::hdr::gWhite<GLfloat> / 2.f,
+            },
+            DirectionalLight{
+                .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.77f, -0.4f, -0.5f}},
+                .mDiffuseColor = math::hdr::Rgb_f{1.f, 0.45f, 0.f},
+                .mSpecularColor = math::hdr::Rgb_f{1.f, 0.45f, 0.f},
             },
         },
         .mPointLights = {

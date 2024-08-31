@@ -2,9 +2,12 @@
 
 #include "DrawQuad.h"
 
+#include "graph/ShadowMapping.h"
+
 #include <graphics/ApplicationGlfw.h>
 
 #include <renderer/FrameBuffer.h>
+#include <renderer/Sampler.h>
 #include <renderer/Texture.h>
 
 #include <snac-renderer-V2/Cubemap.h>
@@ -18,6 +21,7 @@ namespace ad::renderer {
 
 class Camera;
 struct Environment;
+struct GpuViewProjectionBlock;
 struct LightsData;
 struct Loader;
 struct Scene;
@@ -37,12 +41,15 @@ struct HardcodedUbos
 
     graphics::UniformBufferObject * mJointMatrixPaletteUbo;
     graphics::UniformBufferObject * mLightsUbo;
+    graphics::UniformBufferObject * mLightViewProjectionUbo;
 };
 
 
 /// @brief Load data from aCamera into aUbo.
 /// @note It is proving useful to have access to it to re-use passes outside of the main renderFrame()
 void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera);
+
+void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const GpuViewProjectionBlock & aViewProjection);
 
 
 /// @brief The specific Render Graph for this viewer application.
@@ -54,9 +61,9 @@ struct TheGraph
 
     void resize(math::Size<2, int> aNewSize);
 
-    void allocateTextures(math::Size<2, int> aSize);
+    void allocateSizeDependentTextures(math::Size<2, int> aSize);
 
-    void setupTextures();
+    void setupSizeDependentTextures();
 
     /// @param aFramebuffer Will be bound to DRAW for final image rendering.
     /// Its renderable size should match the current render size of this, as defined via resize().
@@ -72,7 +79,7 @@ struct TheGraph
     // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
     void passOpaqueDepth(const ViewerPartList & aPartList,
                          const RepositoryTexture & aTextureRepository,
-                         Storage & mStorage);
+                         Storage & mStorage) const;
     void passForward(const ViewerPartList & aPartList,
                      const RepositoryTexture & aTextureRepository,
                      Storage & aStorage,
@@ -88,7 +95,7 @@ struct TheGraph
 
     void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const;
 
-    void loadDrawBuffers(const ViewerPartList & aPartList, const ViewerPassCache & aPassCache);
+    void loadDrawBuffers(const ViewerPassCache & aPassCache) const;
 
     void showTexture(const graphics::Texture & aTexture,
                      unsigned int aStackPosition,
@@ -131,7 +138,7 @@ struct TheGraph
     math::Size<2, int> mRenderSize;
 
     // Note Ad 2023/11/28: Might become a RenderTarger for optimal access if it is never sampled
-    graphics::Texture mDepthMap{GL_TEXTURE_2D};
+    graphics::Texture mDepthMap{GL_TEXTURE_2D}; // The camera depth-map
     graphics::FrameBuffer mDepthFbo;
 
     //
@@ -145,8 +152,15 @@ struct TheGraph
     static const GLint gAccumTextureUnit{0};
     static const GLint gRevealageTextureUnit{1};
 
+    // Shadow mapping
+    ShadowMapping mShadowPass;
+    Handle<graphics::Texture> mShadowMap;
+
     // Skybox rendering
     Skybox mSkybox;
+
+    // Debug texture rendering (this should be encapsulated somewhere else)
+    graphics::Sampler mShowTextureSampler;
 };
 
 

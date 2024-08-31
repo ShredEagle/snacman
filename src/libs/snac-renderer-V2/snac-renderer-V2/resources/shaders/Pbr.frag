@@ -1,5 +1,6 @@
 #version 430
 
+#include "Constants.glsl"
 #include "Gamma.glsl"
 #include "HelpersIbl.glsl"
 #include "HelpersPbr.glsl"
@@ -26,13 +27,17 @@ uniform sampler2DArray u_NormalTexture;
 uniform sampler2DArray u_MetallicRoughnessAoTexture;
 #endif
 
+#ifdef SHADOW_MAPPING
+uniform sampler2DArrayShadow u_ShadowMap;
+in vec3[MAX_SHADOWS] ex_Position_lightTex;
+#endif //SHADOW_MAPPING
+
 #if defined(ENVIRONMENT_MAPPING)
 uniform samplerCube u_EnvironmentTexture;
 uniform samplerCube u_FilteredRadianceEnvironmentTexture;
 uniform samplerCube u_FilteredIrradianceEnvironmentTexture;
 uniform sampler2D u_IntegratedEnvironmentBrdf;
-
-#endif
+#endif //ENVIRONMENT_MAPPING
 
 out vec4 out_Color;
 
@@ -51,6 +56,16 @@ struct PbrMaterial
     vec3 f90;
     float alpha;
 };
+
+
+//float getShadowAttenuation(vec4 fragPosition_lightClip, uint shadowMapIdx, float bias)
+float getShadowAttenuation(vec3 fragPosition_lightTex, uint shadowMapIdx, float bias)
+{
+    return texture(u_ShadowMap, 
+                   vec4(fragPosition_lightTex.xy, // uv
+                        shadowMapIdx, // array layer
+                        fragPosition_lightTex.z - bias /* reference value */));
+}
 
 
 LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
@@ -155,6 +170,7 @@ void main()
 
 // Defines for BC5 Red-Green texture compression, which only store 2 channels
 // The third component has to be reconstructed.
+#if defined(TEXTURED)
 #define BC5_RGTC;
 #if defined(BC5_RGTC)
     // Fetch from Red-Green channels, and remap from [0, 1]^2 to [-1, 1]^2.
@@ -172,6 +188,9 @@ void main()
                 vec3(ex_Uv[material.normalUvChannel], material.normalTextureIndex)).xyz
         * 2 - vec3(1);
 #endif // BC5_RGTC
+#else // not textured
+    vec3 normal_tbn = vec3(0, 0, 1);
+#endif // TEXURED
 
     // MikkT see: http://www.mikktspace.com/
 
@@ -224,9 +243,13 @@ void main()
     //
 
     // Extract PBR parameters
+#if defined(TEXTURED)
     vec3 mrao = 
         texture(u_MetallicRoughnessAoTexture, 
                 vec3(ex_Uv[material.mraoUvChannel], material.mraoTextureIndex)).xyz;
+#else // not textured
+    vec3 mrao = vec3(0, 0.2, 0);
+#endif // TEXTURED
 
 #define PBR_CHANNELS_GLTF
 
@@ -311,6 +334,19 @@ void main()
     {
         DirectionalLight directional = ub_DirectionalLights[directionalIdx];
         vec3 lightDir_cam = -directional.direction.xyz;
+    
+        float shadowAttenuation = 1.0;
+#if defined(SHADOW_MAPPING)
+        // TODO handle providing the shadow map texture index with the light
+        //if(projectShadow(directional.shadowMapIndex))
+        if(directionalIdx < MAX_SHADOWS)
+        {
+            //const float bias = 0.002;
+            const float bias = 0.;
+            shadowAttenuation = 
+                getShadowAttenuation(ex_Position_lightTex[directionalIdx], directionalIdx, bias);
+        }
+#endif // SHADOW_MAPPING
 
 #if defined(MATERIAL_BLEND_PARAMETERS)
         // evaluate the model only once, with interpolated material parameters
@@ -332,8 +368,8 @@ void main()
         lighting.specular += mix(lightingDielec.specular, lightingMetal.specular, metallic);
 #endif
 
-        diffuseAccum += lighting.diffuse;
-        specularAccum += lighting.specular;
+        diffuseAccum += lighting.diffuse * shadowAttenuation;
+        specularAccum += lighting.specular * shadowAttenuation;
     }
 
     // Point lights

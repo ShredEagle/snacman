@@ -227,7 +227,7 @@ public:
                 LineVertex{.mPosition = aP2, .mColor = aColor});
     }
         
-    void addPlane(math::Position<3, float> aOrigin,
+    void addPlane(math::Position<3, float> aRectangleCenter,
                   math::Vec<3, float> aDir1, math::Vec<3, float> aDir2,
                   int aSubdiv1, int aSubdiv2,
                   float aSize1, float aSize2,

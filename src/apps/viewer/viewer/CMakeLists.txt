@@ -6,8 +6,11 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     CameraSystem.h
+    DebugAndLogGui.h
+    DebugDrawUtilities.h
     DrawQuad.h
     EnvironmentUtilities.h
+    FrustumUtilities.h
     GraphGui.h
     Json.h
     Lights.h
@@ -19,6 +22,9 @@ set(${TARGET_NAME}_HEADERS
     TheGraph.h
     ViewerApplication.h
 
+    graph/ShadowMapping.h
+    graph/Clipping.h
+
     runtime_reflect/DearImguiVisitor.h
     runtime_reflect/ReflectHelpers.h
 )
@@ -27,6 +33,7 @@ set(${TARGET_NAME}_SOURCES
     main.cpp
 
     CameraSystem.cpp
+    DebugAndLogGui.cpp
     DrawQuad.cpp
     EnvironmentUtilities.cpp
     GraphGui.cpp
@@ -37,6 +44,8 @@ set(${TARGET_NAME}_SOURCES
     SceneGui.cpp
     TheGraph.cpp
     ViewerApplication.cpp
+
+    graph/ShadowMapping.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
