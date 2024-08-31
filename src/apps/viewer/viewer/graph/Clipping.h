@@ -16,7 +16,25 @@ namespace ad::renderer {
 
 
 // TODO this using is too broad
-using Triangle = std::span<math::Position<4, float>>;
+using Triangle = std::array<math::Position<4, float>, 3>;
+
+inline float minForComponent(std::size_t aComponentIdx, const Triangle & aTriangle)
+{
+    return std::min(
+        std::min(
+            aTriangle[0][aComponentIdx],
+            aTriangle[1][aComponentIdx]),
+        aTriangle[2][aComponentIdx]);
+}
+
+inline float maxForComponent(std::size_t aComponentIdx, const Triangle & aTriangle)
+{
+    return std::max(
+        std::max(
+            aTriangle[0][aComponentIdx],
+            aTriangle[1][aComponentIdx]),
+        aTriangle[2][aComponentIdx]);
+}
 
 // TODO Ad 2024/08/30: Review that.
 // In particular, it seems that one is zero and one positive should be considered same side.
@@ -39,6 +57,7 @@ inline float evaluatePlane(std::size_t aPlaneIdx,
                            math::Position<4, float> aPos,
                            math::Box<float> aVolume)
 { 
+    assert(aPlaneIdx < 6);
     switch(aPlaneIdx)
     {
         case 0:
@@ -53,6 +72,8 @@ inline float evaluatePlane(std::size_t aPlaneIdx,
             return -aPos.z() + aVolume.borderAt(aPlaneIdx) * aPos.w();
         case 5: // Z max
             return  aPos.z() - aVolume.borderAt(aPlaneIdx) * aPos.w();
+        default:
+            return 0;
     }
 }
 
@@ -93,12 +114,15 @@ inline float solveIntersection(std::size_t aPlaneIdx,
 // unit volume [-1, 1]^3. For the moment, we implemented the general approach,
 // but it might be better to instead transform the triangle so it clips against the unit volume.
 
+// TODO Ad 2024/08/30: I do not like the callback based interface. 
+// Should we simply return a collection of clipped triangles?
 /// @brief Clip an homogeneous triangle to a box.
-template <auto F_ClippedFunctor>
-inline void clip(Triangle aTriangle,
+template <class T_ClippedFunctor>
+inline void clip(const Triangle & aTriangle,
                  const math::Box<float> & aClippingVolume,
-                 std::size_t aBeginPlane = 0,
-                 std::size_t aEndPlane = 6)
+                 T_ClippedFunctor aClippedFunctor,
+                 std::size_t aBeginPlane,
+                 std::size_t aEndPlane)
 {
     using Vertex_t = math::Position<4, float>;
 
@@ -112,13 +136,13 @@ inline void clip(Triangle aTriangle,
     //   component_at_t / w_at_t = plane_boundary (component being either x, y, z)
     // The line between a and b is parameterized as: p(t) = a + t * (b - a)
 
-    for (const std::size_t planeIdx = aBeginPlane;
+    for (std::size_t planeIdx = aBeginPlane;
          planeIdx != aEndPlane;
          ++planeIdx)
     {
-        double fa = evaluatePlane(planeIdx, aTriangle[0], aClippingVolume);
-        double fb = evaluatePlane(planeIdx, aTriangle[1], aClippingVolume);
-        double fc = evaluatePlane(planeIdx, aTriangle[2], aClippingVolume);
+        float fa = evaluatePlane(planeIdx, aTriangle[0], aClippingVolume);
+        float fb = evaluatePlane(planeIdx, aTriangle[1], aClippingVolume);
+        float fc = evaluatePlane(planeIdx, aTriangle[2], aClippingVolume);
 
         // TODO Ad 2024/08/30: It seems all >= 0 is actually outside
         if (fa > 0. && fb > 0. && fc > 0.) // all vertices are outside
@@ -160,8 +184,8 @@ inline void clip(Triangle aTriangle,
             );
 
 
-            double t_ac = solveIntersection(planeIdx, a, c, aClippingVolume);
-            double t_bc = solveIntersection(planeIdx, b, c, aClippingVolume);
+            float t_ac = solveIntersection(planeIdx, a, c, aClippingVolume);
+            float t_bc = solveIntersection(planeIdx, b, c, aClippingVolume);
 
             // NOTE: The solution must strictly be on the line segment.
             assert( 0.0 <= t_ac && t_ac <= 1.0 && 0.0 <= t_bc && t_bc <= 1.0 );
@@ -176,20 +200,20 @@ inline void clip(Triangle aTriangle,
             // The clipped triangle(s) are now clipped against remaining planes.
             if (fc <= 0) // c is on the in side of the plane, spawn a single triangle.
             {
-                clip<F_ClippedFunctor>({vertexAC, vertexBC, c}, aClippingVolume, aBeginPlane + 1);
+                clip({vertexAC, vertexBC, c}, aClippingVolume, aClippedFunctor, aBeginPlane + 1, aEndPlane);
                 return;
             }
             else // c is outside, spawn two triangles.
             {
-                clip<F_ClippedFunctor>({a, b,        vertexAC}, aClippingVolume, aBeginPlane + 1, aEndPlane);
-                clip<F_ClippedFunctor>({b, vertexBC, vertexAC}, aClippingVolume, aBeginPlane + 1, aEndPlane);
+                clip({a, b,        vertexAC}, aClippingVolume, aClippedFunctor, aBeginPlane + 1, aEndPlane);
+                clip({b, vertexBC, vertexAC}, aClippingVolume, aClippedFunctor, aBeginPlane + 1, aEndPlane);
                 return;
             }
         }
     }
     // If there are no more planes to clip against, 
     // the surviving triangle is entirely inside the clipping volume.
-    F_ClippedFunctor(aTriangle);
+    aClippedFunctor(aTriangle);
 }
 
 
