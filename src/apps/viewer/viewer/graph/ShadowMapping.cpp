@@ -1,6 +1,7 @@
 #include "ShadowMapping.h"
 
 #include "../DebugDrawUtilities.h"
+#include "../Logging.h"
 // This is almost circular, but we need a lot of stuff, such as passes and HardcodedUbos
 // This should vanish when we end-up with a cleaner design of the Graph / Passes abstractions.
 #include "../TheGraph.h"
@@ -11,6 +12,21 @@
 
 
 namespace ad::renderer {
+
+
+
+void debugDrawTriangle(const Triangle & aTri, math::hdr::Rgb_f aColor = math::hdr::gGreen<GLfloat>)
+{
+    DBGDRAW_INFO(drawer::gShadow).addLine(
+        aTri[0].xyz(), aTri[1].xyz(),
+        aColor);
+    DBGDRAW_INFO(drawer::gShadow).addLine(
+        aTri[0].xyz(), aTri[2].xyz(),
+        aColor);
+    DBGDRAW_INFO(drawer::gShadow).addLine(
+        aTri[1].xyz(), aTri[2].xyz(),
+        aColor);
+}
 
 
 math::Rectangle<GLfloat> getFrustumSideBounds(math::Matrix<4, 4, GLfloat> aFrustumClipToLightSpace)
@@ -103,24 +119,80 @@ math::LinearMatrix<3, 3, GLfloat> alignMinusZ(math::Vec<3, GLfloat> aGazeDirecti
 }
 
 
-//void tightenNearFar(math::Box<GLfloat> aAabb,
-//{
-//    static constexpr std::size_t gBoxTesselationIndices[] = 
-//    {
-//        0,1,2,  1,2,3,
-//        4,5,6,  5,6,7,
-//        0,2,4,  2,4,6,
-//        1,3,5,  3,5,7,
-//        0,1,4,  1,4,5,
-//        2,3,6,  3,6,7 
-//    };
-//    //static constexpr std::size_t gTriangleCount = gBoxTesselationIndices.size() / 3;
-//
-//    for(std::size_t idx = 0; idx != gBoxTesselationIndices.size(); ++idx)
-//    {
-//        clip({aAabb.cornerAt()})
-//    }
-//}
+/// @param aAabb The axis aligned box to be clipped, in a space where the scene AABB is tight (usually, world-space)
+/// @param
+std::pair<GLfloat /*near*/, GLfloat /* far */> tightenNearFar(
+    math::Box<GLfloat> aAabb,
+    math::LinearMatrix<3, 3, GLfloat> aBoxToLight,
+    math::Rectangle<GLfloat> aClippingFrustumXYBorders,
+    bool aDebugDrawClippedTriangles)
+{
+    // Indices of corners to tessellate a Box.
+    static constexpr std::size_t gTriIdx[] = 
+    {
+        0,1,2,  1,2,3, // Z-min
+        4,5,6,  5,6,7, // Z-max
+        0,2,4,  2,4,6, // Left 
+        1,3,5,  3,5,7, // Right
+        0,1,4,  1,4,5, // Bottom
+        2,3,6,  3,6,7  // Top
+    };
+    
+    std::array<math::Position<4, GLfloat>, 8> corners_light;
+    for(std::size_t cornerIdx = 0; cornerIdx != aAabb.gCornerCount; ++cornerIdx)
+    {
+        corners_light[cornerIdx] = 
+            math::homogeneous::makePosition(aAabb.cornerAt(cornerIdx) * aBoxToLight);
+    }
+
+    // The clip interface requires a Box. But since we will not clip against the Z axis border,
+    // a depth of zero is okay.
+    const math::Box<GLfloat> clippingVolume{
+        .mPosition  = {aClippingFrustumXYBorders.mPosition, 0.f},
+        .mDimension = {aClippingFrustumXYBorders.mDimension, 0.f},
+    };
+
+    GLfloat near{std::numeric_limits<GLfloat>::max()};
+    GLfloat far{std::numeric_limits<GLfloat>::min()};
+    std::vector<Triangle> clipped;
+    auto trackNearFar = [&near, &far, &clipped](const Triangle & aClippedTriangle)
+    {
+        near = std::min(near, minForComponent(2, aClippedTriangle));
+        far  = std::max(far, maxForComponent(2, aClippedTriangle));
+        clipped.push_back(aClippedTriangle);
+    };
+
+    for(std::size_t idx = 0; idx != std::size(gTriIdx); idx += 3)
+    {
+        std::array<math::Position<4, GLfloat>, 3> triangle{{
+            corners_light[gTriIdx[idx]],
+            corners_light[gTriIdx[idx + 1]],
+            corners_light[gTriIdx[idx + 2]],
+        }};
+
+        clip(
+            triangle,
+            clippingVolume,
+            trackNearFar,
+            0,
+            4 /* Only clip on l, r, b, t, not on near/far */);
+    }
+
+    if(aDebugDrawClippedTriangles)
+    {
+        const math::LinearMatrix<3, 3, GLfloat> lightToBox = aBoxToLight.inverse();
+        for (const auto & tri : clipped)
+        {
+            debugDrawTriangle(Triangle{
+                math::homogeneous::makePosition(tri[0].xyz() * lightToBox),
+                math::homogeneous::makePosition(tri[1].xyz() * lightToBox),
+                math::homogeneous::makePosition(tri[2].xyz() * lightToBox),
+            });
+        }
+    }
+
+    return {near, far};
+}
 
 LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
                                   const RepositoryTexture & aTextureRepository,
@@ -184,7 +256,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         const math::Rectangle<GLfloat> sceneAabbSide_light = sceneAabb_light.frontRectangle();
 
         const math::Rectangle<GLfloat> effectiveRectangle_light = 
-            c.mTightenLightFrustumToScene ?
+            c.mTightenLightFrustumXYToScene ?
                 intersect(cameraFrustumSides_light, sceneAabbSide_light)
                 : cameraFrustumSides_light;
 
@@ -217,8 +289,39 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
             drawPlane(orientationLightToWorld, effectiveRectangle_light, Level::debug);
         }
 
-        math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, sceneAabb_light.zMin()};
-        math::Size<3, GLfloat> frustumBoxDimension{effectiveRectangle_light.mDimension, sceneAabb_light.depth()};
+        auto near = sceneAabb_light.zMin();
+        auto depth = sceneAabb_light.depth();
+
+        if(c.mTightenFrustumDepthToClippedScene && /* patch to avoid testing in 2nd view */ aDebugDrawFrusta)
+        {
+            // Note: Here, we have to provide the corners of the **world** AABB for the scene,
+            // expressed in light space (transformation from world to light frame currently occurs in the function).
+            // Not the **light** AABB for the scene.
+            // (The side of the light AABB are already parallel to any other light AABB, including the shadow frustum.)
+            GLfloat far;
+            std::tie(near, far) = tightenNearFar(aSceneAabb, 
+                                                 orientationWorldToLight,
+                                                 effectiveRectangle_light,
+                                                 aDebugDrawFrusta && c.mDebugDrawClippedTriangles);
+            depth = far - near;
+
+            // TODO turn the inverse condition into simple assertions
+            if(near < sceneAabb_light.zMin() && !math::absoluteTolerance(near, sceneAabb_light.zMin(), 1.E-5f))
+            {
+                SELOG(warn)("Whole scene shadow near plane '{}' was tighter than clipped-scene near plane '{}'.", 
+                            sceneAabb_light.zMin(),
+                            near);
+            }
+            if(far > sceneAabb_light.zMax() && !math::absoluteTolerance(far, sceneAabb_light.zMax(), 1.E-5f))
+            {
+                SELOG(warn)("Whole scene shadow far  plane '{}' was tighter than clipped-scene far  plane '{}'.", 
+                            sceneAabb_light.zMax(),
+                            far);
+            }
+        }
+
+        math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, near};
+        math::Size<3, GLfloat> frustumBoxDimension{effectiveRectangle_light.mDimension, depth};
         // We assemble a view projection block, with camera transformation being just the rotation
         // and the orthographic view frustum set to the tight box computed abovd
         GpuViewProjectionBlock viewProjectionBlock{
