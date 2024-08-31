@@ -14,6 +14,7 @@ namespace drawer
     constexpr const char * gLight = "light";
     constexpr const char * gRig = "rig";
     constexpr const char * gScene = "scene";
+    constexpr const char * gShadow = "shadow";
 }
 
 void initializeDebugDrawers();

@@ -15,6 +15,7 @@ namespace {
         snac::DebugDrawer::AddDrawer(drawer::gLight);
         snac::DebugDrawer::AddDrawer(drawer::gRig);
         snac::DebugDrawer::AddDrawer(drawer::gScene);
+        snac::DebugDrawer::AddDrawer(drawer::gShadow);
     }
 
 } // unnamed namespace
