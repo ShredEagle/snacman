@@ -180,14 +180,19 @@
 			// Has a bug with /c...
             //"console": "externalTerminal"
             "console": "integratedTerminal"
-			}{
+			},
+			{
             "name": "(sew) WB cube neon",
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [
-				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
-				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/split-neon_photostudio_8k.hdr"
+				//"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				//"D:/projects/Gamedev/2/proto-assets/models/concrete_cat_statue_4k.gltf/concrete_cat_statue_4k.sew",
+				//"D:/projects/Gamedev/2/proto-assets/models/cannon_01_4k.gltf/cannon_01_4k.sew"
+				"D:/projects/Gamedev/2/proto-assets/models/shadow_scene.sew",
+				//"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/split-neon_photostudio_8k.hdr"
+				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/neon_photostudio_8k-cubemap.dds"
 			],
             "stopAtEntry": false,
             "cwd": "${command:cmake.launchTargetDirectory}",
@@ -202,7 +207,8 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [
-				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				//"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"D:/projects/Gamedev/2/proto-assets/models/concrete_cat_statue_4k.fbx/concrete_cat_statue_4k.sew",
 				"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/neon_photostudio_8k.hdr"
 				//"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/river_walk_1/river_walk_1_8k.hdr"
 			],
@@ -214,12 +220,59 @@
             "console": "integratedTerminal"
 			},
 			{
+            "name": "(sew) WB cube goldbay",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/golden_bay/split-golden_bay_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB equi goldbay",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/golden_bay/golden_bay_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+
+			{
             "name": "(mdl) Bomb fbx",
             "type": "cppvsdbg",
             "request": "launch",
             // Resolved by CMake Tools:
             "program": "${command:cmake.launchTargetPath}",
             "args": ["D:/projects/Gamedev/2/artistic-zone/export/Bomb/Bomb.fbx"],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(mdl) Cat statue fbx",
+            "type": "cppvsdbg",
+            "request": "launch",
+            // Resolved by CMake Tools:
+            "program": "${command:cmake.launchTargetPath}",
+            "args": ["D:/projects/Gamedev/2/proto-assets/models/concrete_cat_statue_4k.gltf/concrete_cat_statue_4k.gltf"],
             "stopAtEntry": false,
             "cwd": "${command:cmake.launchTargetDirectory}",
             "environment": [],
