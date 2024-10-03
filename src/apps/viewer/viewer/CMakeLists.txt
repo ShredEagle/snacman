@@ -6,6 +6,7 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     CameraSystem.h
+    ColorPalettes.h
     DebugAndLogGui.h
     DebugDrawUtilities.h
     DrawQuad.h

@@ -114,7 +114,7 @@ inline float solveIntersection(std::size_t aPlaneIdx,
 // unit volume [-1, 1]^3. For the moment, we implemented the general approach,
 // but it might be better to instead transform the triangle so it clips against the unit volume.
 
-// TODO Ad 2024/08/30: I do not like the callback based interface. 
+// TODO Ad 2024/08/30: I do not like the callback-based interface. 
 // Should we simply return a collection of clipped triangles?
 /// @brief Clip an homogeneous triangle to a box.
 template <class T_ClippedFunctor>

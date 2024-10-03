@@ -268,7 +268,7 @@ void TheGraph::renderFrame(const Scene & aScene,
         *this,
         partList,
         aScene.mRoot.mAabb,
-        aCamera.assembleViewProjection().inverse(),
+        aCamera,
         mShadowMap,
         std::span{aScene.mLights_world.mDirectionalLights.data(), aScene.mLights_world.mDirectionalCount},
         aShowTextures /*debug draw*/ // Semantically incorrect, but we take it to also mean "we are the main view"

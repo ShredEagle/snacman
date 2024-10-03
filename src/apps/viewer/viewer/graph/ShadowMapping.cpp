@@ -1,5 +1,6 @@
 #include "ShadowMapping.h"
 
+#include "../ColorPalettes.h"
 #include "../DebugDrawUtilities.h"
 #include "../Logging.h"
 // This is almost circular, but we need a lot of stuff, such as passes and HardcodedUbos
@@ -119,8 +120,11 @@ math::LinearMatrix<3, 3, GLfloat> alignMinusZ(math::Vec<3, GLfloat> aGazeDirecti
 }
 
 
-/// @param aAabb The axis aligned box to be clipped, in a space where the scene AABB is tight (usually, world-space)
-/// @param
+/// @param aAabb The axis aligned box to be clipped, in a space where the scene AABB is tight (usually, world-space).
+/// Note: providing it in light space would not be productive, since an AABB in light space is already parallel to the light frustum.
+/// @param aBoxToLight Transformation matrix from the space in which box is defined to light space.
+/// @param aClippingFrustumXYBorders The X and Y borders of the light frustum (sometime called the shadow rectangle),
+/// against which aAabb will be clipped.
 std::pair<GLfloat /*near*/, GLfloat /* far */> tightenNearFar(
     math::Box<GLfloat> aAabb,
     math::LinearMatrix<3, 3, GLfloat> aBoxToLight,
@@ -194,18 +198,181 @@ std::pair<GLfloat /*near*/, GLfloat /* far */> tightenNearFar(
     return {near, far};
 }
 
+
+/// @brief Return a projection matrix matching the current projection parameters of aCamera,
+/// but with custom near & far planes.
+math::Matrix<4, 4, float> getProjectionChangeNearFar(const Camera & aCamera, float aNearZ, float aFarZ)
+{
+    return std::visit(
+        [aNearZ, aFarZ](auto params) -> math::Matrix<4, 4, float>
+        {
+            params.mNearZ = aNearZ;
+            params.mFarZ = aFarZ;
+            return graphics::makeProjection(params);
+        },
+        aCamera.getProjectionParameters()
+    );
+}
+
+
+/// @brief Compute the view projection block used to render the shadow map of a light,
+/// illuminating a scene that is viewed by a camera.
+/// @param aCameraFrustum The view-projection matrix of the camera, defining its frustum.
+GpuViewProjectionBlock computeLightViewProjection(DirectionalLight light,
+                                                  math::Box<GLfloat> aSceneAabb,
+                                                  math::Matrix<4, 4, GLfloat> aCameraViewProjection,
+                                                  const ShadowMapping::Controls & c,
+                                                  bool aDebugDraw
+                                                  )
+{
+    //
+    // Handle the orthographic projection.
+    // The bounding box will determinate the size of the projection, and the position of the viewpoint.
+    //
+
+    
+    math::Matrix<4, 4, GLfloat> viewProjectionInverse = aCameraViewProjection.inverse();
+
+    // This is a pure orientation: a directional light has no "position", we can set its origin to the other space origin.
+    const math::LinearMatrix<3, 3, GLfloat> orientationWorldToLight = alignMinusZ(light.mDirection);
+    // The min/max of the camera view frustum in light space
+    const math::Rectangle<GLfloat> cameraFrustumSides_light = 
+        getFrustumSideBounds(
+            // The matrix transforming from the camera view clip space to the light space.
+            viewProjectionInverse * math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
+
+    // TODO can we replace with the aabb generic transformation?
+    const math::Box<GLfloat> sceneAabb_light =
+        getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
+    const math::Rectangle<GLfloat> sceneAabbSide_light = sceneAabb_light.frontRectangle();
+
+    const math::Rectangle<GLfloat> effectiveRectangle_light = 
+        c.mTightenLightFrustumXYToScene ?
+            intersect(cameraFrustumSides_light, sceneAabbSide_light)
+            : cameraFrustumSides_light;
+
+    if(aDebugDraw) 
+    {
+        using Level = ::ad::snac::DebugDrawer::Level;
+
+        // For a rotation matrix, the transpose is the inverse
+        const math::LinearMatrix<3, 3, GLfloat> orientationLightToWorld = orientationWorldToLight.transpose();
+
+        static auto drawPlane = [](math::LinearMatrix<3, 3, GLfloat> aLightToWorld,
+                                    math::Rectangle<GLfloat> aRectangle_light,
+                                    Level aLevel)
+        {
+            math::Position<3, GLfloat> center_world = 
+                math::Position<3, GLfloat>{aRectangle_light.center(), 0.f} 
+                * aLightToWorld;
+
+            DBGDRAW(drawer::gLight, aLevel).addPlane(
+                center_world,
+                math::Vec<3, float>{1.f, 0.f, 0.f} * aLightToWorld, 
+                math::Vec<3, float>{0.f, 1.f, 0.f} * aLightToWorld,
+                5, 5, // subdivisions count
+                aRectangle_light.width(), aRectangle_light.height() // assumes no scaling in light to world
+            );
+        };
+
+        drawPlane(orientationLightToWorld, cameraFrustumSides_light, Level::trace);
+        drawPlane(orientationLightToWorld, sceneAabbSide_light, Level::trace);
+        drawPlane(orientationLightToWorld, effectiveRectangle_light, Level::debug);
+    }
+
+    auto near = sceneAabb_light.zMin();
+    auto depth = sceneAabb_light.depth();
+
+    if(c.mTightenFrustumDepthToClippedScene && /* patch to avoid testing in 2nd view */ aDebugDraw)
+    {
+        // Note: Here, we have to provide the corners of the **world** AABB for the scene,
+        // expressed in light space (transformation from world to light frame currently occurs in the function).
+        // Not the **light** AABB for the scene.
+        // (The side of the light AABB are already parallel to any other light AABB, including the shadow frustum.)
+        GLfloat far;
+        std::tie(near, far) = tightenNearFar(aSceneAabb, 
+                                             orientationWorldToLight,
+                                             effectiveRectangle_light,
+                                             aDebugDraw && c.mDebugDrawClippedTriangles);
+        depth = far - near;
+
+        // TODO turn the inverse condition into simple assertions
+        if(near < sceneAabb_light.zMin() && !math::absoluteTolerance(near, sceneAabb_light.zMin(), 1.E-5f))
+        {
+            SELOG(warn)("Whole scene shadow near plane '{}' was tighter than clipped-scene near plane '{}'.", 
+                        sceneAabb_light.zMin(),
+                        near);
+        }
+        if(far > sceneAabb_light.zMax() && !math::absoluteTolerance(far, sceneAabb_light.zMax(), 1.E-5f))
+        {
+            SELOG(warn)("Whole scene shadow far  plane '{}' was tighter than clipped-scene far  plane '{}'.", 
+                        sceneAabb_light.zMax(),
+                        far);
+        }
+    }
+
+    math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, near};
+    math::Size<3, GLfloat> frustumBoxDimension{effectiveRectangle_light.mDimension, depth};
+    // We assemble a view projection block, with camera transformation being just the rotation
+    // and the orthographic view frustum set to the tight box computed abovd
+    return GpuViewProjectionBlock{
+        orientationWorldToLight,
+        graphics::makeOrthographicProjection({frustumBoxPosition, frustumBoxDimension})};
+}
+
+
 LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
                                   const RepositoryTexture & aTextureRepository,
                                   Storage & aStorage,
                                   const TheGraph & aGraph,
                                   const ViewerPartList & aPartList,
                                   math::Box<GLfloat> aSceneAabb,
-                                  math::Matrix<4, 4, GLfloat> aViewProjectionInverse,
+                                  const Camera & aCamera,
                                   Handle<const graphics::Texture> aShadowMap,
                                   std::span<const DirectionalLight> aDirectionalLights,
                                   bool aDebugDrawFrusta)
 {
     const ShadowMapping::Controls & c = aPass.mControls;
+
+    math::Matrix<4, 4, GLfloat> cameraViewProjection = aCamera.assembleViewProjection();
+    auto [cameraNear, cameraFar] = getNearFarPlanes(aCamera);
+
+    constexpr unsigned int gCascadesCount = 4;
+    std::array<math::Matrix<4, 4, GLfloat>, gCascadesCount> frustaCascade;
+
+    // Decide on the Z-partitioning ratio
+    const float distanceRatio = std::pow(cameraFar/cameraNear, 1.f/gCascadesCount);
+
+    const math::AffineMatrix<4, float> cameraToWorld = aCamera.getParentToCamera().inverse();
+    const math::Vec<3, float> camRight_world = math::Vec<3, float>{1.f, 0.f, 0.f} * cameraToWorld.getLinear();
+    const math::Vec<3, float> camUp_world = math::Vec<3, float>{0.f, 1.f, 0.f} * cameraToWorld.getLinear();
+
+    // For each cascade, calculate the view-frustum bounds
+    // We follow fit-to-cascade, where cascade N-1 far-plane becomes cascade N near-plane.
+    // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/cascaded-shadow-maps#fit-to-cascade
+    float near = cameraNear; 
+    for(unsigned int cascadeIdx = 0; cascadeIdx != gCascadesCount; ++cascadeIdx)
+    {
+        const float far = near * distanceRatio;
+        frustaCascade[cascadeIdx] = aCamera.getParentToCamera() * getProjectionChangeNearFar(aCamera, near, far);
+
+        if(aDebugDrawFrusta) 
+        {
+            debugDrawViewFrustum(
+                frustaCascade[cascadeIdx].inverse(),
+                drawer::gShadow,
+                // TODO Ad 2024/10/03: There seem to be a bug here, the colors appear washed out.
+                hdr::gColorBrewerSet1[cascadeIdx]);
+            //DBGDRAW_DEBUG(drawer::gShadow).addPlane(
+            //    math::homogeneous::normalize(math::homogeneous::makePosition<3, float>({0.f, 0.f, far}) * cameraToWorld).xyz(),
+            //    camRight_world, camUp_world,
+            //    4, 4,
+            //    5.f, 5.f);
+        }
+        near = far;
+    }
+    // The last far value, which was assigned to near, should match the overall camera far
+    assert(near = cameraFar);
 
     LightViewProjection lightViewProjection;
 
@@ -238,96 +405,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
 
         const DirectionalLight light = aDirectionalLights[directionalIdx];
 
-        //
-        // Handle the orthographic projection.
-        // The bounding box will determinate the size of the projection, and the position of the viewpoint.
-        //
-        
-        // Compute the matrix transforming from the camera view clip space to the light space.
-        // This is a pure orientation: a directional light has no "position", we can set its origin to world origin.
-        const math::LinearMatrix<3, 3, GLfloat> orientationWorldToLight = alignMinusZ(light.mDirection);
-        // The min/max of the camera view frustum in light space
-        const math::Rectangle<GLfloat> cameraFrustumSides_light = 
-            getFrustumSideBounds(aViewProjectionInverse * math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
-
-        // TODO can we replace with the aabb generic transformation?
-        const math::Box<GLfloat> sceneAabb_light =
-            getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
-        const math::Rectangle<GLfloat> sceneAabbSide_light = sceneAabb_light.frontRectangle();
-
-        const math::Rectangle<GLfloat> effectiveRectangle_light = 
-            c.mTightenLightFrustumXYToScene ?
-                intersect(cameraFrustumSides_light, sceneAabbSide_light)
-                : cameraFrustumSides_light;
-
-        if(aDebugDrawFrusta) 
-        {
-            using Level = ::ad::snac::DebugDrawer::Level;
-
-            // For a rotation matrix, the transpose is the inverse
-            const math::LinearMatrix<3, 3, GLfloat> orientationLightToWorld = orientationWorldToLight.transpose();
-
-            static auto drawPlane = [](math::LinearMatrix<3, 3, GLfloat> aLightToWorld,
-                                       math::Rectangle<GLfloat> aRectangle_light,
-                                       Level aLevel)
-            {
-                math::Position<3, GLfloat> center_world = 
-                    math::Position<3, GLfloat>{aRectangle_light.center(), 0.f} 
-                    * aLightToWorld;
-
-                DBGDRAW(drawer::gLight, aLevel).addPlane(
-                    center_world,
-                    math::Vec<3, float>{1.f, 0.f, 0.f} * aLightToWorld, 
-                    math::Vec<3, float>{0.f, 1.f, 0.f} * aLightToWorld,
-                    5, 5, // subdivisions count
-                    aRectangle_light.width(), aRectangle_light.height() // assumes no scaling in light to world
-                );
-            };
-
-            drawPlane(orientationLightToWorld, cameraFrustumSides_light, Level::trace);
-            drawPlane(orientationLightToWorld, sceneAabbSide_light, Level::trace);
-            drawPlane(orientationLightToWorld, effectiveRectangle_light, Level::debug);
-        }
-
-        auto near = sceneAabb_light.zMin();
-        auto depth = sceneAabb_light.depth();
-
-        if(c.mTightenFrustumDepthToClippedScene && /* patch to avoid testing in 2nd view */ aDebugDrawFrusta)
-        {
-            // Note: Here, we have to provide the corners of the **world** AABB for the scene,
-            // expressed in light space (transformation from world to light frame currently occurs in the function).
-            // Not the **light** AABB for the scene.
-            // (The side of the light AABB are already parallel to any other light AABB, including the shadow frustum.)
-            GLfloat far;
-            std::tie(near, far) = tightenNearFar(aSceneAabb, 
-                                                 orientationWorldToLight,
-                                                 effectiveRectangle_light,
-                                                 aDebugDrawFrusta && c.mDebugDrawClippedTriangles);
-            depth = far - near;
-
-            // TODO turn the inverse condition into simple assertions
-            if(near < sceneAabb_light.zMin() && !math::absoluteTolerance(near, sceneAabb_light.zMin(), 1.E-5f))
-            {
-                SELOG(warn)("Whole scene shadow near plane '{}' was tighter than clipped-scene near plane '{}'.", 
-                            sceneAabb_light.zMin(),
-                            near);
-            }
-            if(far > sceneAabb_light.zMax() && !math::absoluteTolerance(far, sceneAabb_light.zMax(), 1.E-5f))
-            {
-                SELOG(warn)("Whole scene shadow far  plane '{}' was tighter than clipped-scene far  plane '{}'.", 
-                            sceneAabb_light.zMax(),
-                            far);
-            }
-        }
-
-        math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, near};
-        math::Size<3, GLfloat> frustumBoxDimension{effectiveRectangle_light.mDimension, depth};
-        // We assemble a view projection block, with camera transformation being just the rotation
-        // and the orthographic view frustum set to the tight box computed abovd
-        GpuViewProjectionBlock viewProjectionBlock{
-            orientationWorldToLight,
-            graphics::makeOrthographicProjection({frustumBoxPosition, frustumBoxDimension})};
-
+        GpuViewProjectionBlock viewProjectionBlock = computeLightViewProjection(light, aSceneAabb, cameraViewProjection, c, aDebugDrawFrusta);
         loadCameraUbo(*aGraph.mUbos.mViewingUbo, viewProjectionBlock);
 
         // TODO: The actual pass is somewhere down there:
