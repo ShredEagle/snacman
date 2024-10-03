@@ -79,49 +79,6 @@ namespace {
 } // unnamed namespace
 
 
-void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const GpuViewProjectionBlock & aViewProjection)
-{
-    proto::loadSingle(aUbo, aViewProjection, graphics::BufferHint::DynamicDraw);
-}
-
-
-void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
-{
-    loadCameraUbo(aUbo, GpuViewProjectionBlock{aCamera});
-}
-
-
-//
-// HardcodedUbos
-//
-HardcodedUbos::HardcodedUbos(Storage & aStorage)
-{
-    aStorage.mUbos.emplace_back();
-    mFrameUbo = &aStorage.mUbos.back();
-    mUboRepository.emplace(semantic::gFrame, mFrameUbo);
-
-    aStorage.mUbos.emplace_back();
-    mViewingUbo = &aStorage.mUbos.back();
-    mUboRepository.emplace(semantic::gViewProjection, mViewingUbo);
-
-    aStorage.mUbos.emplace_back();
-    mModelTransformUbo = &aStorage.mUbos.back();
-    mUboRepository.emplace(semantic::gLocalToWorld, mModelTransformUbo);
-
-    aStorage.mUbos.emplace_back();
-    mJointMatrixPaletteUbo = &aStorage.mUbos.back();
-    mUboRepository.emplace(semantic::gJointMatrices, mJointMatrixPaletteUbo);
-
-    aStorage.mUbos.emplace_back();
-    mLightsUbo = &aStorage.mUbos.back();
-    mUboRepository.emplace(semantic::gLights, mLightsUbo);
-
-    aStorage.mUbos.emplace_back();
-    mLightViewProjectionUbo = &aStorage.mUbos.back();
-    mUboRepository.emplace(semantic::gLightViewProjection, mLightViewProjectionUbo);
-}
-
-
 //
 // TheGraph
 //
@@ -313,7 +270,6 @@ void TheGraph::renderFrame(const Scene & aScene,
     }
 
     {
-        // Default Framebuffer
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
         gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -546,6 +502,7 @@ void TheGraph::passForward(const ViewerPartList & aPartList,
     // Can be done once for distinct camera, if there is no culling
     std::vector<Technique::Annotation> annotations{
         {"pass", *mControls.mForwardPassKey},
+        {"shadows", "on"}
     };
     if(aEnvironmentMapping)
     {

@@ -58,6 +58,7 @@ struct PbrMaterial
 };
 
 
+#if defined(SHADOW_MAPPING)
 //float getShadowAttenuation(vec4 fragPosition_lightClip, uint shadowMapIdx, float bias)
 float getShadowAttenuation(vec3 fragPosition_lightTex, uint shadowMapIdx, float bias)
 {
@@ -66,6 +67,7 @@ float getShadowAttenuation(vec3 fragPosition_lightTex, uint shadowMapIdx, float 
                         shadowMapIdx, // array layer
                         fragPosition_lightTex.z - bias /* reference value */));
 }
+#endif //SHADOW_MAPPING
 
 
 LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,

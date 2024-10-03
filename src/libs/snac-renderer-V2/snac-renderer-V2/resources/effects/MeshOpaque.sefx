@@ -16,10 +16,11 @@
         {
             "annotations": {
                 "pass": "forward_pbr",
-                "environment": "on"
+                "environment": "on",
+                "shadows": "on"
             },
             "programfile": "shaders/ForwardPbr.prog",
-            "defines": ["ENVIRONMENT_MAPPING"]
+            "defines": ["ENVIRONMENT_MAPPING", "SHADOW_MAPPING"]
         },
         {
             "annotations": {

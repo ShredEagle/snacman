@@ -12,11 +12,13 @@ set(${TARGET_NAME}_HEADERS
     DrawQuad.h
     EnvironmentUtilities.h
     FrustumUtilities.h
+    GraphCommon.h
     GraphGui.h
     Json.h
     Lights.h
     Logging.h
     PassViewer.h
+    SecondaryGraph.h
     SecondaryView.h
     Scene.h
     SceneGui.h
@@ -37,9 +39,11 @@ set(${TARGET_NAME}_SOURCES
     DebugAndLogGui.cpp
     DrawQuad.cpp
     EnvironmentUtilities.cpp
+    GraphCommon.cpp
     GraphGui.cpp
     Logging.cpp
     PassViewer.cpp
+    SecondaryGraph.cpp
     SecondaryView.cpp
     Scene.cpp
     SceneGui.cpp

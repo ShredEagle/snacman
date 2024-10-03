@@ -22,6 +22,7 @@ namespace ad::renderer {
 
 class Camera;
 struct Environment;
+struct GpuViewProjectionBlock;
 struct LightsData;
 struct Loader;
 struct Scene;
@@ -31,11 +32,11 @@ struct ViewerPassCache;
 
 
 /// @brief The specific Render Graph for this viewer application.
-struct TheGraph
+struct SecondaryGraph
 {
-    TheGraph(math::Size<2, int> aRenderSize,
-             Storage & aStorage,
-             const Loader & aLoader);
+    SecondaryGraph(math::Size<2, int> aRenderSize,
+                   Storage & aStorage,
+                   const Loader & aLoader);
 
     void resize(math::Size<2, int> aNewSize);
 
@@ -62,27 +63,9 @@ struct TheGraph
                      const RepositoryTexture & aTextureRepository,
                      Storage & aStorage,
                      bool aEnvironmentMappingconst);
-    void passTransparencyAccumulation(const ViewerPartList & aPartList,
-                                      const RepositoryTexture & aTextureRepository,
-                                      Storage & mStorage);
-    void passTransparencyResolve(const ViewerPartList & aPartList, 
-                                 Storage & mStorage);
-    void passDrawSkybox(const Environment & aEnvironment,
-                        Storage & aStorage,
-                        GLenum aCulledFace = GL_FRONT) const;
-
-    void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const;
 
     void loadDrawBuffers(const ViewerPassCache & aPassCache) const;
 
-    void showTexture(const graphics::Texture & aTexture,
-                     unsigned int aStackPosition,
-                     DrawQuadParameters aDrawParams = {});
-
-    void showDepthTexture(const graphics::Texture & aTexture,
-                          float aNearZ, float aFarZ,
-                          unsigned int aStackPosition = 0);
-                        
     void drawUi();
 
 // Data members:
@@ -118,27 +101,6 @@ struct TheGraph
     // Note Ad 2023/11/28: Might become a RenderTarger for optimal access if it is never sampled
     graphics::Texture mDepthMap{GL_TEXTURE_2D}; // The camera depth-map
     graphics::FrameBuffer mDepthFbo;
-
-    //
-    // Blended Order Independent Transparency
-    // see: https://casual-effects.blogspot.com/2015/03/implemented-weighted-blended-order.html
-    //
-    graphics::Texture mTransparencyAccum{GL_TEXTURE_2D};
-    graphics::Texture mTransparencyRevealage{GL_TEXTURE_2D};
-    graphics::FrameBuffer mTransparencyFbo;
-    QuadDrawer mTransparencyResolver;
-    static const GLint gAccumTextureUnit{0};
-    static const GLint gRevealageTextureUnit{1};
-
-    // Shadow mapping
-    ShadowMapping mShadowPass;
-    Handle<graphics::Texture> mShadowMap;
-
-    // Skybox rendering
-    Skybox mSkybox;
-
-    // Debug texture rendering (this should be encapsulated somewhere else)
-    graphics::Sampler mShowTextureSampler;
 };
 
 

@@ -2,7 +2,7 @@
 
 
 #include "CameraSystem.h"
-#include "TheGraph.h"
+#include "SecondaryGraph.h"
 #include "Timing.h"
 
 #include <graphics/AppInterface.h>
@@ -56,7 +56,7 @@ struct SecondaryView
     graphics::Renderbuffer mDepthBuffer;
 
     math::Size<2, int> mRenderSize;
-    TheGraph mGraph;
+    SecondaryGraph mGraph;
     std::shared_ptr<graphics::AppInterface::SizeListener> mFramebufferSizeListener;
 
     inline static constexpr GLint gColorAttachment = 0;
