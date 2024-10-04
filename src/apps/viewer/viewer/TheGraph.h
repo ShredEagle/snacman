@@ -43,37 +43,26 @@ struct TheGraph
 
     void setupSizeDependentTextures();
 
+    // TODO Ad 2024/10/04: Sort-out this function signature. In particular, scene and partlist are a repetition
+    // (the partlist is likely common to all graphs rendering the same scene, so is computed above)
     /// @param aFramebuffer Will be bound to DRAW for final image rendering.
     /// Its renderable size should match the current render size of this, as defined via resize().
     void renderFrame(const Scene & aScene,
+                     const ViewerPartList & aPartList,
                      const Camera & aCamera,
                      const LightsData & aLights_camera,
+                     const GraphShared & aGraphShared,
                      Storage & aStorage,
                      bool aShowTextures,
                      const graphics::FrameBuffer & aFramebuffer);
 
     void renderDebugDrawlist(snac::DebugDrawer::DrawList aDrawList, Storage & aStorage);
 
-    // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
-    void passOpaqueDepth(const ViewerPartList & aPartList,
-                         const RepositoryTexture & aTextureRepository,
-                         Storage & mStorage) const;
-    void passForward(const ViewerPartList & aPartList,
-                     const RepositoryTexture & aTextureRepository,
-                     Storage & aStorage,
-                     bool aEnvironmentMappingconst);
     void passTransparencyAccumulation(const ViewerPartList & aPartList,
                                       const RepositoryTexture & aTextureRepository,
                                       Storage & mStorage);
     void passTransparencyResolve(const ViewerPartList & aPartList, 
                                  Storage & mStorage);
-    void passDrawSkybox(const Environment & aEnvironment,
-                        Storage & aStorage,
-                        GLenum aCulledFace = GL_FRONT) const;
-
-    void passSkyboxBase(const IntrospectProgram & aProgram, const Environment & aEnvironment, Storage & aStorage, GLenum aCulledFace) const;
-
-    void loadDrawBuffers(const ViewerPassCache & aPassCache) const;
 
     void showTexture(const graphics::Texture & aTexture,
                      unsigned int aStackPosition,
@@ -86,32 +75,7 @@ struct TheGraph
     void drawUi();
 
 // Data members:
-    struct Controls
-    {
-        inline static const std::vector<StringKey> gForwardKeys{
-            "forward",
-            "forward_pbr",
-            "forward_phong",
-            "forward_debug",
-        };
-
-        std::vector<StringKey>::const_iterator mForwardPassKey = gForwardKeys.begin() + 1;
-
-        inline static const std::array<GLenum, 3> gPolygonModes{
-            GL_POINT,
-            GL_LINE,
-            GL_FILL,
-        };
-
-        std::array<GLenum, 3>::const_iterator mForwardPolygonMode = gPolygonModes.begin() + 2;
-    };
-    Controls mControls;
-
-    HardcodedUbos mUbos;
-
-    GenericStream mInstanceStream;
-
-    graphics::BufferAny mIndirectBuffer;
+    GraphControls mControls;
 
     math::Size<2, int> mRenderSize;
 
@@ -133,9 +97,6 @@ struct TheGraph
     // Shadow mapping
     ShadowMapping mShadowPass;
     Handle<graphics::Texture> mShadowMap;
-
-    // Skybox rendering
-    Skybox mSkybox;
 
     // Debug texture rendering (this should be encapsulated somewhere else)
     graphics::Sampler mShowTextureSampler;

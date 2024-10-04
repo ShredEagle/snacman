@@ -15,6 +15,7 @@ namespace ad::renderer {
 
 // Forward declaration of the problematic coupled class
 class Camera;
+struct GraphShared;
 struct TheGraph;
 struct ViewerPartList;
 
@@ -62,7 +63,7 @@ void r(T_visitor & aV, ShadowMapping::Controls & aControls)
 LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
                                   const RepositoryTexture & aTextureRepository,
                                   Storage & aStorage,
-                                  const TheGraph & aGraph,  // TODO Ad 2024/08/23: This should be decoupled, but requires a redesign
+                                  const GraphShared & aGraphShared,
                                   const ViewerPartList & aPartList,
                                   math::Box<GLfloat> aSceneAabb,
                                   const Camera & aCamera,

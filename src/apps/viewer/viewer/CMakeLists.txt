@@ -25,8 +25,9 @@ set(${TARGET_NAME}_HEADERS
     TheGraph.h
     ViewerApplication.h
 
-    graph/ShadowMapping.h
     graph/Clipping.h
+    graph/Passes.h
+    graph/ShadowMapping.h
 
     runtime_reflect/DearImguiVisitor.h
     runtime_reflect/ReflectHelpers.h
@@ -50,6 +51,7 @@ set(${TARGET_NAME}_SOURCES
     TheGraph.cpp
     ViewerApplication.cpp
 
+    graph/Passes.cpp
     graph/ShadowMapping.cpp
 )
 

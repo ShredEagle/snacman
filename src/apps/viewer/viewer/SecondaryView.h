@@ -43,7 +43,11 @@ struct SecondaryView
 
     void update(const Timing & aTime);
 
-    void render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage);
+    void render(const Scene & aScene,
+                const ViewerPartList & aPartList,
+                bool aLightsInCameraSpace,
+                const GraphShared & aGraphShared,
+                Storage & aStorage);
 
     std::shared_ptr<graphics::AppInterface> mAppInterface;
     CameraSystem mCameraSystem;

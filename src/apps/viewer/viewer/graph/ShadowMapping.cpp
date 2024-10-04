@@ -1,5 +1,7 @@
 #include "ShadowMapping.h"
 
+#include "Passes.h"
+
 #include "../ColorPalettes.h"
 #include "../DebugDrawUtilities.h"
 #include "../Logging.h"
@@ -324,7 +326,7 @@ GpuViewProjectionBlock computeLightViewProjection(DirectionalLight light,
 LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
                                   const RepositoryTexture & aTextureRepository,
                                   Storage & aStorage,
-                                  const TheGraph & aGraph,
+                                  const GraphShared & aGraphShared,
                                   const ViewerPartList & aPartList,
                                   math::Box<GLfloat> aSceneAabb,
                                   const Camera & aCamera,
@@ -406,11 +408,11 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         const DirectionalLight light = aDirectionalLights[directionalIdx];
 
         GpuViewProjectionBlock viewProjectionBlock = computeLightViewProjection(light, aSceneAabb, cameraViewProjection, c, aDebugDrawFrusta);
-        loadCameraUbo(*aGraph.mUbos.mViewingUbo, viewProjectionBlock);
+        loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, viewProjectionBlock);
 
         // TODO: The actual pass is somewhere down there:
 
-        aGraph.passOpaqueDepth(aPartList, aTextureRepository, aStorage);
+        passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage);
 
         // Add the light view-projection to the collection, for main rendering
         lightViewProjection.mLightViewProjectionCount++;

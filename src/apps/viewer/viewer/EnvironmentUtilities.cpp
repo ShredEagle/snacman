@@ -4,6 +4,8 @@
 #include "Scene.h"
 #include "TheGraph.h"
 
+#include "graph/Passes.h"
+
 #include <math/Color.h>
 #include <math/Vector.h>
 
@@ -31,7 +33,7 @@ namespace {
 
 // TODO Ad 2024/08/02: #graph remove dependency to TheGraph from those utilities
 void dumpEnvironmentCubemap(const Environment & aEnvironment, 
-                            const TheGraph & aGraph,
+                            const GraphShared & aGraphShared,
                             Storage & aStorage,
                             std::filesystem::path aOutputStrip)
 {
@@ -95,12 +97,12 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
     {
         // Make a pass with the appropriate camera pose
         orthographicFace.setPose(gCubeCaptureViewsNegateY[faceIdx]);
-        loadCameraUbo(*aGraph.mUbos.mViewingUbo, orthographicFace);
+        loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, orthographicFace);
 
         // When drawing the skybox, we are "inside" the cube, so only render backfaces (cull GL_FRONT)
         // Yet, we use a camera transform that negates the Y coordinates, turning backfaces into frontfaces
         // i.e., we only render frontfaces (cull GL_BACK).
-        aGraph.passDrawSkybox(aEnvironment, aStorage, GL_BACK);
+        passDrawSkybox(aGraphShared, aEnvironment, aStorage, GL_BACK, GraphControls{});
 
         glReadPixels(0, 0, renderSize.width(), renderSize.height(),
                      GL_RGB, graphics::MappedPixelComponentType_v<Pixel>,
@@ -166,7 +168,7 @@ namespace {
         
 
     void renderCubemapFaces(const IntrospectProgram & aProgram,
-                            const TheGraph & aGraph,
+                            const GraphShared & aGraphShared,
                             const Environment & aEnvironment,
                             Storage & aStorage,
                             const graphics::Texture & aTargetCubemap,
@@ -195,18 +197,18 @@ namespace {
             // BUGFIXED: It is required to write the destination cubemap images as having top-left origin
             // This is implemented by negating the Y coordinate of gl_Position (via the provided camera transform)
             orthographicFace.setPose(gCubeCaptureViewsNegateY[faceIdx]);
-            loadCameraUbo(*aGraph.mUbos.mViewingUbo, orthographicFace);
+            loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, orthographicFace);
             glClear(GL_COLOR_BUFFER_BIT);
 
             // We need to render cube inner-faces (backfaces), but they are turned into frontfaces by the negated Y camera
-            aGraph.passSkyboxBase(aProgram, aEnvironment, aStorage, GL_BACK);
+            passSkyboxBase(aGraphShared, aProgram, aEnvironment, aStorage, GL_BACK, GraphControls{});
         }
     }
 
 } // unnamed namespace
 
 Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvironment,
-                                                       const TheGraph & aGraph,
+                                                       const GraphShared & aGraphShared,
                                                        Storage & aStorage,
                                                        GLsizei aOutputSideLength)
 {
@@ -226,7 +228,7 @@ Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvi
     static const std::vector<Technique::Annotation> annotations{
         {"pass", "prefilter_specular_radiance"},
     };
-    Handle<ConfiguredProgram> confProgram = getProgram(*aGraph.mSkybox.mEffect, annotations);
+    Handle<ConfiguredProgram> confProgram = getProgram(*aGraphShared.mSkybox.mEffect, annotations);
 
     for(GLint level = 0; level != textureLevels; ++level)
     {
@@ -239,7 +241,7 @@ Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvi
         // TODO: find a more dynamic way to bind those plain uniforms
         graphics::setUniform(confProgram->mProgram, "u_Roughness", roughness);
 
-        renderCubemapFaces(confProgram->mProgram, aGraph, aEnvironment, aStorage, filteredCubemap, level);
+        renderCubemapFaces(confProgram->mProgram, aGraphShared, aEnvironment, aStorage, filteredCubemap, level);
 
         // This is the mipmap size derivation described in: 
         // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexStorage2D.xhtml
@@ -260,7 +262,7 @@ Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvi
 
 
 Handle<graphics::Texture> filterEnvironmentMapDiffuse(const Environment & aEnvironment,
-                                                      const TheGraph & aGraph,
+                                                      const GraphShared & aGraphShared,
                                                       Storage & aStorage,
                                                       GLsizei aOutputSideLength)
 {
@@ -277,12 +279,12 @@ Handle<graphics::Texture> filterEnvironmentMapDiffuse(const Environment & aEnvir
     static const std::vector<Technique::Annotation> annotations{
         {"pass", "prefilter_diffuse_irradiance"},
     };
-    Handle<ConfiguredProgram> confProgram = getProgram(*aGraph.mSkybox.mEffect, annotations);
+    Handle<ConfiguredProgram> confProgram = getProgram(*aGraphShared.mSkybox.mEffect, annotations);
 
     glViewport(0, 0, size.width(), size.height());
 
     constexpr GLint level = 0;
-    renderCubemapFaces(confProgram->mProgram, aGraph, aEnvironment, aStorage, filteredCubemap, level);
+    renderCubemapFaces(confProgram->mProgram, aGraphShared, aEnvironment, aStorage, filteredCubemap, level);
 
     {
         graphics::ScopedBind boundCubemap{filteredCubemap};

@@ -41,7 +41,11 @@ struct PrimaryView
 
     void update(const Timing & aTime);
 
-    void render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage);
+    void render(const Scene & aScene,
+                const ViewerPartList & aPartList,
+                bool aLightsInCameraSpace,
+                const GraphShared & aGraphShared,
+                Storage & aStorage);
 
     CameraSystem mCameraSystem;
     CameraSystemGui mCameraGui;
@@ -86,6 +90,7 @@ struct ViewerApplication
     DebugRenderer mDebugRenderer;
     DebugAndLogGui mDebugAndLogGui;
 
+    GraphShared mGraphShared;
     PrimaryView mPrimaryView;
     SecondaryView mSecondaryView;
 };

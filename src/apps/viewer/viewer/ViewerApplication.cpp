@@ -22,6 +22,7 @@
 
 #include <snac-renderer-V2/Cube.h>
 #include <snac-renderer-V2/Profiling.h>
+#include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/Semantics.h>
 #include <snac-renderer-V2/debug/DebugDrawing.h>
 
@@ -327,17 +328,14 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage},
     // Track the size of the default framebuffer, which will be the destination of mGraph::render().
     mDebugRenderer{mStorage, mLoader},
+    mGraphShared{mLoader, mStorage},
     mPrimaryView{mGlfwAppInterface, aImguiUi, mLoader, mStorage},
     mSecondaryView{mSecondViewAppInterface, aSecondViewImguiUi, mStorage, mLoader}
 {
-    // TODO #graph This aspect is very problematic: the instance stream should be unique, as its buffers are deeply associated to models
-    // on load. This means all "graphs" should use the same at the moment.
-    mSecondaryView.mGraph.mInstanceStream = mPrimaryView.mGraph.mInstanceStream;
-
     if(aSceneFile.extension() == ".sew")
     {
         // TODO Ad 2024/08/02: #graph sort out this instance stream stuff
-        mScene = loadScene(aSceneFile, mPrimaryView.mGraph.mInstanceStream, mLoader, mStorage);
+        mScene = loadScene(aSceneFile, mGraphShared.mInstanceStream, mLoader, mStorage);
     }
     else
     {
@@ -399,13 +397,13 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
     // That approach is smelly: we use the Environment to compute a value we then assign to the Environment
     mScene.mEnvironment->mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] =
         // TODO Ad 2024/08/02: #graph get rid of the graph parameter in the filtering functions
-        filterEnvironmentMapSpecular(*mScene.mEnvironment, mPrimaryView.mGraph, mStorage, gFilteredRadianceSide);
+        filterEnvironmentMapSpecular(*mScene.mEnvironment, mGraphShared, mStorage, gFilteredRadianceSide);
 
     mScene.mEnvironment->mTextureRepository[semantic::gIntegratedEnvironmentBrdf] =
         integrateEnvironmentBrdf(mStorage, gIntegratedBrdfSide, mLoader);
 
     mScene.mEnvironment->mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] =
-        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mPrimaryView.mGraph, mStorage, gFilteredIrradianceSide);
+        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mGraphShared, mStorage, gFilteredIrradianceSide);
 }
 
 
@@ -599,7 +597,7 @@ void ViewerApplication::drawMainUi(const renderer::Timing & aTime)
             assert(mScene.mEnvironment);
             dumpEnvironmentCubemap(
                 *mScene.mEnvironment,
-                mPrimaryView.mGraph,
+                mGraphShared,
                 mStorage,
                 mScene.mEnvironment->mMapFile.parent_path() /
                     "split-" += mScene.mEnvironment->mMapFile.filename());
@@ -665,11 +663,17 @@ void ViewerApplication::drawSecondaryUi()
 }
 
 
-void PrimaryView::render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage)
+void PrimaryView::render(const Scene & aScene,
+                         const ViewerPartList & aPartList,
+                         bool aLightsInCameraSpace,
+                         const GraphShared & aGraphShared,
+                         Storage & aStorage)
 {
     mGraph.renderFrame(aScene,
+                       aPartList,
                        mCameraSystem.mCamera,
                        aScene.getLightsInCamera(mCameraSystem.mCamera, !aLightsInCameraSpace),
+                       aGraphShared,
                        aStorage,
                        true,
                        graphics::FrameBuffer::Default());
@@ -682,7 +686,37 @@ void ViewerApplication::render()
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
-    mPrimaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
+    // 
+    // Prepare what is intended to be shared by all the graphs
+    //
+
+    // TODO: How to handle material/program selection while generating the part list,
+    // if the camera (or pass itself?) might override the materials?
+    // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
+    ViewerPartList partList = mScene.populatePartList();
+
+    // Use the same indirect buffer for all drawings
+    // Its content will be rewritten by distinct passes though
+    // With the current approach, this binding could be done only once at construction,
+    // unless several "Graph" instances use distinct indirect buffers
+    graphics::bind(mGraphShared.mIndirectBuffer, graphics::BufferType::DrawIndirect);
+    {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
+        loadFrameUbo(*mGraphShared.mUbos.mFrameUbo);
+        // Load model transforms
+        // Note: the model matrix transforms to world space, so it is independant of viewpoint.
+        // (the pass indexes the transform for the objects it actually draws, so culling could still be implemented on top).
+        proto::load(*mGraphShared.mUbos.mModelTransformUbo,
+                    std::span{partList.mInstanceTransforms},
+                    graphics::BufferHint::DynamicDraw);
+
+        proto::load(*mGraphShared.mUbos.mJointMatrixPaletteUbo, std::span{partList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
+    }
+
+    //
+    // Render the views (via their graph)
+    //
+    mPrimaryView.render(mScene, partList, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mGraphShared, mStorage);
 
     // Not sure if we want to also include the secondary view render in the debugdrawer frame.
     // Since at the moment of writing it calls the same code, we do not include it, to avoid duplicated debug drawing.
@@ -690,25 +724,29 @@ void ViewerApplication::render()
 
     if(mSecondViewAppInterface->isWindowOnDisplay())
     {
-        mSecondaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
+        mSecondaryView.render(mScene, partList, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mGraphShared, mStorage);
     }
 
     // TODO Ad 2024/08/23: This manual management of each window should be generalized behind a notion of "sink"
     // so we can separately control which channel/level goes to each sink (instead of completely toggling on/off)
     if(mDebugAndLogGui.mRenderToMainView)
     {
+        // We reset the camera to the main view, this is a smell
+        loadCameraUbo(*mGraphShared.mUbos.mViewingUbo, mPrimaryView.mCameraSystem.mCamera);
+        graphics::ScopedBind boundFbo{graphics::FrameBuffer::Default()};
         renderDebugDrawlist(
             drawList,
             // Fullscreen viewport
             math::Rectangle<int>::AtOrigin(mGlfwAppInterface->getFramebufferSize()),
             // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
-            // It is needed for the viewing block, so we hope it is left at the camera position
-            mPrimaryView.mGraph.mUbos.mUboRepository);
+            mGraphShared.mUbos.mUboRepository);
     }
 
     if(mSecondViewAppInterface->isWindowOnDisplay()
         && mDebugAndLogGui.mRenderToSecondaryView)
     {
+        // We reset the camera to the secondary view
+        loadCameraUbo(*mGraphShared.mUbos.mViewingUbo, mSecondaryView.mCameraSystem.mCamera);
         graphics::ScopedBind boundFbo{mSecondaryView.mDrawFramebuffer};
         renderDebugDrawlist(
             drawList,
@@ -716,7 +754,7 @@ void ViewerApplication::render()
             math::Rectangle<int>::AtOrigin(mSecondaryView.mRenderSize),
             // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
             // It is needed for the viewing block, so we hope it is left at the camera position
-            mSecondaryView.mGraph.mUbos.mUboRepository);
+            mGraphShared.mUbos.mUboRepository);
     }
 }
 
