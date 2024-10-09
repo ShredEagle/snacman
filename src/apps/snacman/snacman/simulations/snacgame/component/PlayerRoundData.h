@@ -1,13 +1,15 @@
 #pragma once
 
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
 #include "PowerUp.h"
 
 #include "../GameParameters.h"
 #include "../InputConstants.h"
-
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
 
 #include <entity/Entity.h>
 
@@ -25,13 +27,11 @@ constexpr float gTeleportChangeTargetDelay = 1.f;
 struct DogPowerUpInfo
 {
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
-
-SNAC_SERIAL_REGISTER(DogPowerUpInfo)
 
 struct TeleportPowerUpInfo
 {
@@ -42,48 +42,41 @@ struct TeleportPowerUpInfo
     float mDelayChangeTarget = 0.f;
     ent::Handle<ent::Entity> mTargetArrow;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mCurrentTarget);
-        archive & SERIAL_PARAM(mDelayChangeTarget);
-        archive & SERIAL_PARAM(mTargetArrow);
+        aWitness.witness(NVP(mCurrentTarget));
+        aWitness.witness(NVP(mDelayChangeTarget));
+        aWitness.witness(NVP(mTargetArrow));
     }
 };
-
-SNAC_SERIAL_REGISTER(TeleportPowerUpInfo)
 
 struct MissilePowerUpInfo
 {
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
-
-SNAC_SERIAL_REGISTER(MissilePowerUpInfo)
 
 struct PlayerPowerUp
 {
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
-
-SNAC_SERIAL_REGISTER(PlayerPowerUp)
 
 struct ControllingMissile
 {
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
-
-SNAC_SERIAL_REGISTER(ControllingMissile)
 
 struct PlayerRoundData
 {
@@ -115,26 +108,26 @@ struct PlayerRoundData
 
     void drawUi() const;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mRoundScore);
-        archive & SERIAL_PARAM(mInvulFrameCounter);
-        archive & SERIAL_PARAM(mMoveState);
-        archive & SERIAL_PARAM(mModel);
-        archive & SERIAL_PARAM(mCrown);
-        archive & SERIAL_PARAM(mSlot);
-        archive & SERIAL_PARAM(mPowerUp);
-        archive & SERIAL_PARAM(mType);
-        archive & SERIAL_PARAM(mInfo);
-        archive & SERIAL_PARAM(mPortalImage);
-        archive & SERIAL_PARAM(mCurrentPortalPos);
-        archive & SERIAL_PARAM(mCurrentPortal);
-        archive & SERIAL_PARAM(mDestinationPortal);
+        aWitness.witness(NVP(mRoundScore));
+        aWitness.witness(NVP(mInvulFrameCounter));
+        aWitness.witness(NVP(mMoveState));
+        aWitness.witness(NVP(mModel));
+        aWitness.witness(NVP(mCrown));
+        aWitness.witness(NVP(mSlot));
+        aWitness.witness(NVP(mPowerUp));
+        aWitness.witness(NVP(mType));
+        aWitness.witness(NVP(mInfo));
+        aWitness.witness(NVP(mPortalImage));
+        aWitness.witness(NVP(mCurrentPortalPos));
+        aWitness.witness(NVP(mCurrentPortal));
+        aWitness.witness(NVP(mDestinationPortal));
     }
 };
 
-SNAC_SERIAL_REGISTER(PlayerRoundData)
+REFLEXION_REGISTER(PlayerRoundData)
 
 } // namespace component
 } // namespace snacgame

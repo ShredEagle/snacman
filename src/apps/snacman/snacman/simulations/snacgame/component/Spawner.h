@@ -1,8 +1,10 @@
 #pragma once
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 #include "math/Vector.h"
 
@@ -15,16 +17,15 @@ struct Spawner
     math::Position<3, float> mSpawnPosition;
     bool mSpawnedPlayer = false;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mSpawnPosition);
-        archive & SERIAL_PARAM(mSpawnedPlayer);
+        aWitness.witness(NVP(mSpawnPosition));
+        aWitness.witness(NVP(mSpawnedPlayer));
     }
 };
 
-SNAC_SERIAL_REGISTER(Spawner)
-
+REFLEXION_REGISTER(Spawner)
 
 } // namespace component
 } // namespace snacgame

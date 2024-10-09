@@ -1,6 +1,7 @@
 #include "entity/Entity.h"
 #include "entity/Wrap.h"
 #include "snacman/EntityUtilities.h"
+#include "../system/SceneStack.h"
 #include "snacman/simulations/snacgame/SceneGraph.h"
 #include "snacman/simulations/snacgame/component/Context.h"
 #include "snacman/simulations/snacgame/Entities.h"

@@ -1,10 +1,12 @@
 #pragma once
 
-#include <entity/Entity.h>
+#include "snacman/serialization/Witness.h"
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
+#include <entity/Entity.h>
 
 namespace ad {
 namespace snacgame {
@@ -13,14 +15,15 @@ struct PlayerJoinData
 {
     ent::Handle<ent::Entity> mJoinPlayerModel;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mJoinPlayerModel);
+        aWitness.witness(NVP(mJoinPlayerModel));
     }
 };
 
-SNAC_SERIAL_REGISTER(PlayerJoinData)
+REFLEXION_REGISTER(PlayerJoinData)
+
 } // namespace component
 } // namespace snacgame
 } // namespace ad

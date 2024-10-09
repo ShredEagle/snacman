@@ -1,13 +1,15 @@
 #pragma once
 
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
 #include <math/Homogeneous.h>
 #include <math/Transformations.h>
 #include <math/Vector.h>
 #include <math/Box.h>
-
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
 
 namespace ad {
 namespace snacgame {
@@ -17,14 +19,14 @@ struct Collision
 {
     math::Box<float> mHitbox;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mHitbox);
+        aWitness.witness(NVP(mHitbox));
     }
 };
 
-SNAC_SERIAL_REGISTER(Collision)
+REFLEXION_REGISTER(Collision)
 
 constexpr const math::Box<float> gPlayerHitbox{{-0.35f, 0.f, -0.35f},
                                                {0.7f, 0.7f, 0.7f}};

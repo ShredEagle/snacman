@@ -1,8 +1,10 @@
 #pragma once
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 #include <math/Quaternion.h>
 
@@ -18,11 +20,11 @@ struct AxisAngle
     math::UnitVec<3, float> mAxis;
     math::Radian<float> mAngle;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mAxis);
-        archive & SERIAL_PARAM(mAngle);
+        aWitness.witness(NVP(mAxis));
+        aWitness.witness(NVP(mAngle));
     }
 };
 
@@ -39,15 +41,15 @@ struct Speed
         .mAxis = math::UnitVec<3, float>::MakeFromUnitLength({1.f, 0.f, 0.f}),
         .mAngle = math::Radian<float>{0.f}};
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mSpeed);
-        archive & SERIAL_PARAM(mRotation);
+        aWitness.witness(NVP(mSpeed));
+        aWitness.witness(NVP(mRotation));
     }
 };
 
-SNAC_SERIAL_REGISTER(Speed)
+REFLEXION_REGISTER(Speed)
 
 } // namespace component
 } // namespace snacgame

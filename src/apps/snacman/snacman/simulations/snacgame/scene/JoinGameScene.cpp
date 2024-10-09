@@ -16,6 +16,7 @@
 #include "../component/SceneNode.h"
 #include "../component/Controller.h"
 #include "../component/PlayerRoundData.h"
+#include "../system/SceneStack.h"
 
 #include "snacman/EntityUtilities.h"
 #include "snacman/simulations/snacgame/Entities.h"

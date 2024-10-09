@@ -1,8 +1,10 @@
 #pragma once
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 #include <entity/Entity.h>
 
@@ -33,27 +35,25 @@ struct PowerUp
     float mSwapPeriod = 1.f;
     float mSwapTimer = mSwapPeriod;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mType);
-        archive & SERIAL_PARAM(mSwapPeriod);
-        archive & SERIAL_PARAM(mSwapTimer);
+        aWitness.witness(NVP(mType));
+        aWitness.witness(NVP(mSwapPeriod));
+        aWitness.witness(NVP(mSwapTimer));
     }
 };
 
-SNAC_SERIAL_REGISTER(PowerUp)
+REFLEXION_REGISTER(PowerUp)
 
 struct InGameDog
 {
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
-
-SNAC_SERIAL_REGISTER(InGameDog)
 
 constexpr float gMissileDelayFlashing = 4.f;
 constexpr float gMissileDelayExplosion = 5.f;
@@ -64,16 +64,14 @@ struct InGameMissile
     ent::Handle<ent::Entity> mDamageArea;
     float mDelayExplosion = gMissileDelayExplosion;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mModel);
-        archive & SERIAL_PARAM(mDamageArea);
-        archive & SERIAL_PARAM(mDelayExplosion);
+        aWitness.witness(NVP(mModel));
+        aWitness.witness(NVP(mDamageArea));
+        aWitness.witness(NVP(mDelayExplosion));
     }
 };
-
-SNAC_SERIAL_REGISTER(InGameMissile)
 
 struct InGamePowerup
 {
@@ -81,16 +79,16 @@ struct InGamePowerup
     PowerUpType mType;
     std::variant<InGameMissile, InGameDog> mInfo;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mOwner);
-        archive & SERIAL_PARAM(mType);
-        archive & SERIAL_PARAM(mInfo);
+        aWitness.witness(NVP(mOwner));
+        aWitness.witness(NVP(mType));
+        aWitness.witness(NVP(mInfo));
     }
 };
 
-SNAC_SERIAL_REGISTER(InGamePowerup)
+REFLEXION_REGISTER(InGamePowerup)
 
 } // namespace component
 } // namespace snacgame

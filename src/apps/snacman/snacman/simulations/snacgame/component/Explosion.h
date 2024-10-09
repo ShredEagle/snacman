@@ -1,10 +1,13 @@
 #pragma once
 
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
 #include "math/Interpolation/ParameterAnimation.h"
 #include <snacman/Timing.h>
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
 
 namespace ad {
 namespace snacgame {
@@ -13,17 +16,17 @@ namespace component {
 struct Explosion
 {
     snac::Clock::time_point mStartTime;
-    math::ParameterAnimation<float, math::AnimationResult::Clamp> mParameter;
+    math::ParameterAnimation<float, math::AnimationResult::Clamp> mParameter = math::ParameterAnimation<float, math::AnimationResult::Clamp>{0.f};
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mStartTime);
-        archive & SERIAL_PARAM(mParameter);
+        aWitness.witness(NVP(mStartTime));
+        aWitness.witness(NVP(mParameter));
     }
 };
 
-SNAC_SERIAL_REGISTER(Explosion)
+REFLEXION_REGISTER(Explosion)
 
 } // namespace component
 } // namespace snacgame

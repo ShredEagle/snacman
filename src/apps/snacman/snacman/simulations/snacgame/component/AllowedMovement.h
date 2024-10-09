@@ -1,14 +1,17 @@
 #pragma once
 
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
 #include "handy/StringId.h"
 
 #include "../GameParameters.h"
 #include "../InputCommandConverter.h"
 
 #include <memory>
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
 
 namespace ad {
 namespace snacgame {
@@ -21,15 +24,15 @@ struct AllowedMovement
 
     void drawUi() const;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mAllowedMovement);
-        archive & SERIAL_PARAM(mWindow);
+        aWitness.witness(NVP(mAllowedMovement));
+        aWitness.witness(NVP(mWindow));
     }
 };
 
-SNAC_SERIAL_REGISTER(AllowedMovement)
+REFLEXION_REGISTER(AllowedMovement)
 
 } // namespace component
 } // namespace snacgame

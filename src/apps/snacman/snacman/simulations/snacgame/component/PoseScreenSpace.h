@@ -1,8 +1,10 @@
 #pragma once
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 #include <math/Angle.h>
 #include <math/Vector.h>
@@ -23,17 +25,16 @@ struct PoseScreenSpace
     // Plus for non-origin aligned rotations, it is hard to express the origin in screen unit square...
     //math::AffineMatrix<3, float> mLocalToScreenUnit{math::AffineMatrix<3, float>::Identity}; // screen unit square, from [-1, -1] to [1, 1]
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mPosition_u);
-        archive & SERIAL_PARAM(mScale);
-        archive & SERIAL_PARAM(mRotationCCW);
+        aWitness.witness(NVP(mPosition_u));
+        aWitness.witness(NVP(mScale));
+        aWitness.witness(NVP(mRotationCCW));
     }
 };
 
-SNAC_SERIAL_REGISTER(PoseScreenSpace)
-
+REFLEXION_REGISTER(PoseScreenSpace)
 
 } // namespace component
 } // namespace cubes

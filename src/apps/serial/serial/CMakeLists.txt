@@ -7,18 +7,23 @@ set(REPO_FOLDER ${PROJECT_SOURCE_DIR})
 set(${TARGET_NAME}_HEADERS
   reflexion/Reflexion.h
   reflexion/Reflexion_impl.h
-  serialization/Serialization.h
+  serialization/Imgui.h
+  serialization/ImguiSerialization.h
   serialization/Json.h
-  serialization/JsonWitness.h
+  serialization/JsonSerialization.h
+  serialization/Witness.h
   catch.hpp
-  ReflexionFunctions.h
   SnacArchive.h
+  Comp.h
+  Imgui_test.h
 )
 
 set(${TARGET_NAME}_SOURCES
-    main.cpp
-    serialization/Json.cpp
-    Json.cpp
+  main.cpp
+  Json.cpp
+  Imgui_test.cpp
+  serialization/ImguiSerialization.cpp
+  serialization/Witness.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -62,6 +67,7 @@ find_package(Entity CONFIG REQUIRED entity)
 find_package(Math CONFIG REQUIRED math)
 find_package(Handy CONFIG REQUIRED platform)
 find_package(Reflexion CONFIG REQUIRED reflexion)
+find_package(Graphics CONFIG REQUIRED graphics imguiui)
 
 find_package(nlohmann_json 3.11.2 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
@@ -72,6 +78,8 @@ target_link_libraries(${TARGET_NAME}
         ad::entity
         ad::math
         ad::platform
+        ad::graphics
+        ad::imguiui
 
         spdlog::spdlog
         nlohmann_json::nlohmann_json

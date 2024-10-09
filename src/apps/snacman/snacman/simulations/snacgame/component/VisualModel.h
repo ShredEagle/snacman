@@ -1,8 +1,10 @@
 #pragma once
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 #include <snac-renderer-V2/Model.h>
 
@@ -16,16 +18,16 @@ struct VisualModel
     renderer::Handle<const renderer::Object> mModel;
     bool mDisableInterpolation = false;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mModel);
-        archive & SERIAL_PARAM(mDisableInterpolation);
+        //TODO(franz): add serialization of model
+        aWitness.witness(NVP(mModel));
+        aWitness.witness(NVP(mDisableInterpolation));
     }
 };
 
-SNAC_SERIAL_REGISTER(VisualModel)
-
+REFLEXION_REGISTER(VisualModel)
 
 } // namespace component
 } // namespace cubes

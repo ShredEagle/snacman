@@ -25,7 +25,18 @@ namespace snac {
 
 struct Effect;
 struct Font;
+struct FontSerialData
+{
+    filesystem::path mFontPath;
+    unsigned int mPixelHeight;
+    filesystem::path mEffectPath;
+};
 struct Model;
+struct ModelData
+{
+    filesystem::path mModelPath;
+    filesystem::path mEffectPath;
+};
 template <class T_renderer> class RenderThread;
 
 constexpr unsigned int gDefaultPixelHeight = 64;
@@ -54,12 +65,16 @@ public:
     /// At the moment, the effect path is not considered when looking up in the map,
     /// so the model will always have the effect it was loaded with the first time.
     snacgame::Renderer_t::Handle_t<const renderer::Object> getModel(filesystem::path aModel, filesystem::path aEffect);
+    ModelData getModelDataFromResource(snacgame::Renderer_t::Handle_t<const renderer::Object> aResource)
+    { return mModelDataFromResource.at(aResource); }
 
     // TODO Ad 2024/03/28: #RV2 #text
     std::shared_ptr<Font> getFont(filesystem::path aFont,
                                   unsigned int aPixelHeight = gDefaultPixelHeight,
                                   filesystem::path aEffect = "effects/Text.sefx");
-    std::shared_ptr<Font> getBlueprint(filesystem::path aBpFile);
+    FontSerialData getFontDataFromResource(std::shared_ptr<Font> & aResource)
+    { return mFontDataFromResource.at(aResource); }
+    ent::Handle<ent::Entity> getBlueprint(filesystem::path aBpFile);
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
     // TODO Ad 2024/03/28: #RV2 #decommissionRV1 Finish porting to V2 resources (not even sure we need a this anymore)
@@ -84,6 +99,7 @@ private:
         filesystem::path aEffect,
         RenderThread<snacgame::Renderer_t> & aRenderThread,
         Resources & aResources);
+    std::unordered_map<std::shared_ptr<Font>, FontSerialData> mFontDataFromResource;
 
     static std::shared_ptr<Effect> EffectLoader(
         filesystem::path aProgram, 
@@ -95,6 +111,7 @@ private:
         filesystem::path aEffect,
         RenderThread<snacgame::Renderer_t> & aRenderThread,
         snacgame::Resources_V2 & aResources);
+    std::unordered_map<snacgame::Renderer_t::Handle_t<const renderer::Object>, ModelData> mModelDataFromResource;
 
     static ent::Handle<ent::Entity> BpLoader(
         filesystem::path aBpFile, 

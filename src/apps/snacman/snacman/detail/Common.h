@@ -7,4 +7,6 @@ using serialNvp = std::pair<const char *, T_type *>;
     serialNvp<std::decay_t<decltype(name)>> { #name, &name }
 #define SERIAL_FN_PARAM(name)                                                  \
     serialNvp<std::decay_t<decltype(name())>> { #name, &name() }
+#define SERIAL_NAME_PARAM(name, value)                                                  \
+    serialNvp<std::decay_t<decltype(value)>> { #name, &value }
 

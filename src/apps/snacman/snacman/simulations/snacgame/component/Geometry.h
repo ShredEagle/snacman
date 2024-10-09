@@ -1,12 +1,16 @@
 #pragma once
 
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
 #include <math/Color.h>
 #include <math/Quaternion.h>
 #include <math/Vector.h>
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include <nlohmann/json_fwd.hpp>
 
 namespace ad {
 namespace snacgame {
@@ -29,18 +33,18 @@ struct Geometry
 
     void drawUi() const;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mPosition);
-        archive & SERIAL_PARAM(mScaling);
-        archive & SERIAL_PARAM(mInstanceScaling);
-        archive & SERIAL_PARAM(mOrientation);
-        archive & SERIAL_PARAM(mColor);
+        aWitness.witness(NVP(mPosition));
+        aWitness.witness(NVP(mScaling));
+        aWitness.witness(NVP(mInstanceScaling));
+        aWitness.witness(NVP(mOrientation));
+        aWitness.witness(NVP(mColor));
     }
 };
 
-SNAC_SERIAL_REGISTER(Geometry)
+REFLEXION_REGISTER(Geometry)
 
 } // namespace component
 } // namespace cubes

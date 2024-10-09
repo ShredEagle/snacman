@@ -1,12 +1,12 @@
 #pragma once
 
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 #include <entity/Entity.h>
-
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
-
 
 namespace ad {
 namespace snacgame {
@@ -20,16 +20,15 @@ struct PlayerGameData
     // The HUD showing player informations (score, power-up)
     ent::Handle<ent::Entity> mHud;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mRoundsWon);
-        archive & SERIAL_PARAM(mHud);
+        aWitness.witness(NVP(mRoundsWon));
+        aWitness.witness(NVP(mHud));
     }
 };
 
-SNAC_SERIAL_REGISTER(PlayerGameData)
-
+REFLEXION_REGISTER(PlayerGameData)
 
 } // namespace component
 } // namespace snacgame

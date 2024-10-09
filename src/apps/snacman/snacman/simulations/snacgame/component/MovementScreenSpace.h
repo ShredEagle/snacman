@@ -1,10 +1,12 @@
 #pragma once
 
-#include <math/Angle.h>
+#include "snacman/serialization/Witness.h"
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
+#include <math/Angle.h>
 
 namespace ad {
 namespace snacgame {
@@ -15,15 +17,14 @@ struct MovementScreenSpace
 {
     math::Radian<float> mAngularSpeed; // radian/second
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mAngularSpeed);
+        aWitness.witness(NVP(mAngularSpeed));
     }
 };
 
-SNAC_SERIAL_REGISTER(MovementScreenSpace)
-
+REFLEXION_REGISTER(MovementScreenSpace)
 
 } // namespace component
 } // namespace cubes

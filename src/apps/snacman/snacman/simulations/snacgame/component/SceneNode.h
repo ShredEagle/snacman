@@ -1,8 +1,10 @@
 #pragma once
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 #include <entity/Entity.h>
 
@@ -25,19 +27,18 @@ struct SceneNode
     // TODO There should not be a name here directly, but this makes debugging easier
     std::string mName;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mFirstChild);
-        archive & SERIAL_PARAM(mNextChild);
-        archive & SERIAL_PARAM(mPrevChild);
-        archive & SERIAL_PARAM(mParent);
-        archive & SERIAL_PARAM(mName);
+        aWitness.witness(NVP(mFirstChild));
+        aWitness.witness(NVP(mNextChild));
+        aWitness.witness(NVP(mPrevChild));
+        aWitness.witness(NVP(mParent));
+        aWitness.witness(NVP(mName));
     }
 };
 
-SNAC_SERIAL_REGISTER(SceneNode)
-
+REFLEXION_REGISTER(SceneNode)
 
 }
 } // namespace snacgame

@@ -1,8 +1,10 @@
 #pragma once
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 namespace ad {
 namespace snacgame {
@@ -10,57 +12,57 @@ namespace component {
 
 struct Pill
 {
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
 
-SNAC_SERIAL_REGISTER(Pill)
+REFLEXION_REGISTER(Pill)
 
 struct LevelTile
 {
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
 
-SNAC_SERIAL_REGISTER(LevelTile)
+REFLEXION_REGISTER(LevelTile)
 
 // Entity that should be deleted during
 // a round transition
 struct RoundTransient
 {
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
 
-SNAC_SERIAL_REGISTER(RoundTransient)
+REFLEXION_REGISTER(RoundTransient)
 
 // Entity that should be deleted on
 // game scene teardown
 struct GameTransient
 {
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
 
-SNAC_SERIAL_REGISTER(GameTransient)
+REFLEXION_REGISTER(GameTransient)
 
 struct Crown
 {
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
     }
 };
 
-SNAC_SERIAL_REGISTER(Crown)
+REFLEXION_REGISTER(Crown)
 
 } // namespace component
 } // namespace snacgame

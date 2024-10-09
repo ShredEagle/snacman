@@ -1,11 +1,13 @@
 #pragma once
 
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
 #include <entity/Entity.h>
 #include <math/Vector.h>
-
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
 
 namespace ad {
 namespace snacgame {
@@ -17,16 +19,16 @@ struct PathToOnGrid
     math::Position<2, float> mCurrentTarget;
     bool mTargetFound = false;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mEntityTarget);
-        archive & SERIAL_PARAM(mCurrentTarget);
-        archive & SERIAL_PARAM(mTargetFound);
+        aWitness.witness(NVP(mEntityTarget));
+        aWitness.witness(NVP(mCurrentTarget));
+        aWitness.witness(NVP(mTargetFound));
     }
 };
 
-SNAC_SERIAL_REGISTER(PathToOnGrid)
+REFLEXION_REGISTER(PathToOnGrid)
 
 } // namespace component
 } // namespace snacgame

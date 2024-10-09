@@ -1,11 +1,13 @@
 #pragma once
 
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
 #include "../GameParameters.h"
 #include "snacman/simulations/snacgame/component/PowerUp.h"
-
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
 
 #include <entity/Entity.h>
 
@@ -60,17 +62,16 @@ struct PlayerHud
     ent::Handle<ent::Entity> mRoundText;
     ent::Handle<ent::Entity> mPowerupText;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mScoreText);
-        archive & SERIAL_PARAM(mRoundText);
-        archive & SERIAL_PARAM(mPowerupText);
+        aWitness.witness(NVP(mScoreText));
+        aWitness.witness(NVP(mRoundText));
+        aWitness.witness(NVP(mPowerupText));
     }
 };
 
-SNAC_SERIAL_REGISTER(PlayerHud)
-
+REFLEXION_REGISTER(PlayerHud)
 
 } // namespace component
 } // namespace snacgame

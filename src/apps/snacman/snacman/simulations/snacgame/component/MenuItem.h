@@ -1,10 +1,12 @@
 #pragma once
 
-#include "../scene/Scene.h"
+#include "snacman/serialization/Witness.h"
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
+#include "../scene/Scene.h"
 
 #include <unordered_map>
 
@@ -20,17 +22,17 @@ struct MenuItem
     std::unordered_map<int, std::string> mNeighbors;
     scene::Transition mTransition;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mName);
-        archive & SERIAL_PARAM(mSelected);
-        archive & SERIAL_PARAM(mNeighbors);
-        archive & SERIAL_PARAM(mTransition);
+        aWitness.witness(NVP(mName));
+        aWitness.witness(NVP(mSelected));
+        aWitness.witness(NVP(mNeighbors));
+        aWitness.witness(NVP(mTransition));
     }
 };
 
-SNAC_SERIAL_REGISTER(MenuItem)
+REFLEXION_REGISTER(MenuItem)
 
 } // namespace component
 } // namespace snacgame

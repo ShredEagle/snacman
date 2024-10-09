@@ -1,8 +1,10 @@
 #pragma once
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 #include <math/Box.h>
 
@@ -16,7 +18,6 @@ namespace component {
 constexpr const math::Box<float> gPortalHitbox{{-0.5f, 0.f, -0.5f},
                                                {1.f, 1.f, 1.f}};
 
-
 struct Portal
 {
     int portalIndex;
@@ -24,17 +25,18 @@ struct Portal
     math::Box<float> mEnterHitbox;
     math::Box<float> mExitHitbox;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(portalIndex);
-        archive & SERIAL_PARAM(mMirrorSpawnPosition);
-        archive & SERIAL_PARAM(mEnterHitbox);
-        archive & SERIAL_PARAM(mExitHitbox);
+        aWitness.witness(NVP(portalIndex));
+        aWitness.witness(NVP(mMirrorSpawnPosition));
+        aWitness.witness(NVP(mEnterHitbox));
+        aWitness.witness(NVP(mExitHitbox));
     }
 };
 
-SNAC_SERIAL_REGISTER(Portal)
+REFLEXION_REGISTER(Portal)
+
 }
 }
 }

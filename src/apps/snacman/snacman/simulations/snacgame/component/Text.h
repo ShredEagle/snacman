@@ -1,8 +1,10 @@
 #pragma once
 
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
 
 #include <snac-renderer-V1/text/Text.h>
 
@@ -21,16 +23,16 @@ struct Text
     std::shared_ptr<snac::Font> mFont;
     math::hdr::Rgba_f mColor;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mString);
-        archive & SERIAL_PARAM(mFont);
-        archive & SERIAL_PARAM(mColor);
+        aWitness.witness(NVP(mString));
+        aWitness.witness(NVP(mFont));
+        aWitness.witness(NVP(mColor));
     }
 };
 
-SNAC_SERIAL_REGISTER(Text)
+REFLEXION_REGISTER(Text)
 
 
 } // namespace component

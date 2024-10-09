@@ -4,12 +4,8 @@
 #include "SimulationControl.h"
 #include "PlayerSlotManager.h"
 
-#include "component/PlayerGameData.h"
-#include "component/PlayerSlot.h"
-
 #include "handy/Guard.h"
 #include "snacman/EntityUtilities.h"
-#include "system/SceneStack.h"
 
 #include <entity/Entity.h>
 #include <entity/Query.h>
@@ -28,6 +24,10 @@ class RenderThread;
 }
 
 namespace snacgame {
+
+namespace system {
+struct SceneStack;
+}
 
 namespace component {
 struct LevelSetupData;

@@ -1,12 +1,14 @@
 #pragma once
 
+#include "snacman/serialization/Witness.h"
+
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <reflexion/NameValuePair.h>
+
 #include "Tags.h"
 #include "../InputConstants.h"
 #include "../LevelHelper.h"
-
-#include <snacman/detail/Reflexion.h>
-#include <snacman/detail/Reflexion_impl.h>
-#include <snacman/detail/Serialization.h>
 
 #include <math/Vector.h>
 #include <platform/Filesystem.h>
@@ -35,16 +37,16 @@ struct Tile
     int mAllowedMove = gAllowedMovementNone;
     math::Position<2, float> mPos = math::Position<2, float>::Zero();
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mType);
-        archive & SERIAL_PARAM(mAllowedMove);
-        archive & SERIAL_PARAM(mPos);
+        aWitness.witness(NVP(mType));
+        aWitness.witness(NVP(mAllowedMove));
+        aWitness.witness(NVP(mPos));
     }
 };
 
-SNAC_SERIAL_REGISTER(Tile)
+REFLEXION_REGISTER(Tile)
 
 struct PathfindNode
 {
@@ -56,23 +58,25 @@ struct PathfindNode
     bool mPathable = false;
     bool mOpened = false;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mReducedCost);
-        archive & SERIAL_PARAM(mCost);
-        archive & SERIAL_PARAM(mPrev);
-        archive & SERIAL_PARAM(mIndex);
-        archive & SERIAL_PARAM(mPos);
-        archive & SERIAL_PARAM(mPathable);
-        archive & SERIAL_PARAM(mOpened);
+        aWitness.witness(NVP(mReducedCost));
+        aWitness.witness(NVP(mCost));
+        aWitness.witness(NVP(mIndex));
+        aWitness.witness(NVP(mPos));
+        aWitness.witness(NVP(mPathable));
+        aWitness.witness(NVP(mOpened));
     }
 };
 
-SNAC_SERIAL_REGISTER(PathfindNode)
+REFLEXION_REGISTER(PathfindNode)
 
 struct LevelSetupData
 {
+    LevelSetupData()
+    {}
+
     // Level grid stored as
     // 0 1 2 ... mColCount - 1 (0th row)
     // mColCount mColCount + 1 ... 2 * mColCount - 1 (1th row)
@@ -91,18 +95,17 @@ struct LevelSetupData
     std::vector<math::Size<3, int>> mAvailableSizes;
     int mSeed;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mAssetRoot);
-        archive & SERIAL_PARAM(mAvailableSizes);
-        archive & SERIAL_PARAM(mFile);
-        archive & SERIAL_PARAM(mSeed);
+        aWitness.witness(NVP(mAssetRoot));
+        aWitness.witness(NVP(mFile));
+        aWitness.witness(NVP(mAvailableSizes));
+        aWitness.witness(NVP(mSeed));
     }
-
 };
 
-SNAC_SERIAL_REGISTER(LevelSetupData)
+REFLEXION_REGISTER(LevelSetupData)
 
 struct Level
 {
@@ -113,18 +116,18 @@ struct Level
     std::vector<int> mPortalIndex;
     float mCellSize = 1.f;
 
-    template <SnacArchive T_archive>
-    void serialize(T_archive & archive)
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
     {
-        archive & SERIAL_PARAM(mSize);
-        archive & SERIAL_PARAM(mTiles);
-        archive & SERIAL_PARAM(mNodes);
-        archive & SERIAL_PARAM(mPortalIndex);
-        archive & SERIAL_PARAM(mCellSize);
+        aWitness.witness(NVP(mSize));
+        aWitness.witness(NVP(mTiles));
+        aWitness.witness(NVP(mNodes));
+        aWitness.witness(NVP(mPortalIndex));
+        aWitness.witness(NVP(mCellSize));
     }
 };
 
-SNAC_SERIAL_REGISTER(Level)
+REFLEXION_REGISTER(Level)
 
 } // namespace component
 } // namespace snacgame
