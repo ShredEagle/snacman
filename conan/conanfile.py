@@ -22,11 +22,11 @@ class SnacmanConan(ConanFile):
     }
 
     requires = (
-        ("entity/38ecfecf58@adnn/develop"),
-        ("graphics/c35a0fe6f1@adnn/develop"),
+        ("entity/0f3525cba1@adnn/develop"),
+        ("graphics/6421179122@adnn/develop"),
         ("handy/15a1bb8eaa@adnn/develop"),
-        ("math/d200cdb8ba@adnn/develop"),
-        ("MarkovJunior.cpp/86f542db56@adnn/develop"),
+        ("math/d5fa5b3887@adnn/develop"),
+        ("MarkovJunior.cpp/54207a0487@adnn/develop"),
 
         ("implot/0.16"),  # MIT
         ("imgui/1.89.8"),
@@ -42,7 +42,7 @@ class SnacmanConan(ConanFile):
 
         # The overrides (who will think about reviewing them?)
         ("zlib/1.3"),
-        ("reflexion/b2aa059210@adnn/develop"),
+        ("reflexion/57198786a6@adnn/develop"),
     )
 
     # Note: It seems conventionnal to add CMake build requirement
