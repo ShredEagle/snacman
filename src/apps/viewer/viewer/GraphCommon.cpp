@@ -100,4 +100,10 @@ void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aC
 }
 
 
+void loadLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo, const LightViewProjection & aLightViewProjection)
+{
+    proto::loadSingle(aUbo, aLightViewProjection, graphics::BufferHint::DynamicDraw);
+}
+
+
 } // namespace ad::renderer

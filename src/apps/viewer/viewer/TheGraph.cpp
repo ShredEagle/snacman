@@ -25,12 +25,6 @@ namespace ad::renderer {
 namespace {
 
 
-    void loadLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo, const LightViewProjection & aLightViewProjection)
-    {
-        proto::loadSingle(aUbo, aLightViewProjection, graphics::BufferHint::DynamicDraw);
-    }
-
-
     void prepareShadowMap(const graphics::Texture & aShadowMap)
     {
         graphics::ScopedBind boundTexture{aShadowMap};
