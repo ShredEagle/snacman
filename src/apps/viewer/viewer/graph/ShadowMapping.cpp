@@ -219,6 +219,13 @@ math::Matrix<4, 4, float> getProjectionChangeNearFar(const Camera & aCamera, flo
 }
 
 
+struct DebugPlaneColors
+{
+    math::hdr::Rgb_f mOutline;
+    math::hdr::Rgb_f mSubdiv;
+};
+
+
 /// @brief Compute a tight view projection block, used to render the shadow map of a light
 /// illuminating a scene that is viewed by a camera.
 /// @param aCameraFrustum The view-projection matrix of the camera, defining its frustum.
@@ -226,8 +233,7 @@ math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GL
                                                      math::Box<GLfloat> aSceneAabb,
                                                      math::Matrix<4, 4, GLfloat> aCameraViewProjection,
                                                      const ShadowMapping::Controls & c,
-                                                     std::optional<math::hdr::Rgb_f> aDebugDrawColor // nullopt to disable debug drawing
-                                                     // TODO extend with grid color: use it to match light color
+                                                     std::optional<DebugPlaneColors> aDebugDrawColors // nullopt to disable debug drawing
                                                      )
 {
     //
@@ -253,16 +259,16 @@ math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GL
             intersect(cameraFrustumSides_light, sceneAabbSide_light)
             : cameraFrustumSides_light;
 
-    if(aDebugDrawColor) 
+    if(aDebugDrawColors) 
     {
         using Level = ::ad::snac::DebugDrawer::Level;
 
         // For a rotation matrix, the transpose is the inverse
         const math::LinearMatrix<3, 3, GLfloat> orientationLightToWorld = aOrientationWorldToLight.transpose();
 
-        static auto drawPlane = [&aDebugDrawColor](math::LinearMatrix<3, 3, GLfloat> aLightToWorld,
-                                                   math::Rectangle<GLfloat> aRectangle_light,
-                                                   Level aLevel)
+        static auto drawPlane = [&aDebugDrawColors](math::LinearMatrix<3, 3, GLfloat> aLightToWorld,
+                                                    math::Rectangle<GLfloat> aRectangle_light,
+                                                    Level aLevel)
         {
             math::Position<3, GLfloat> center_world = 
                 math::Position<3, GLfloat>{aRectangle_light.center(), 0.f} 
@@ -274,7 +280,9 @@ math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GL
                 math::Vec<3, float>{0.f, 1.f, 0.f} * aLightToWorld,
                 3, 3, // subdivisions count
                 aRectangle_light.width(), aRectangle_light.height(), // assumes no scaling in light to world
-                {*aDebugDrawColor, 1.f}
+                {aDebugDrawColors->mOutline, 1.f},
+                {aDebugDrawColors->mSubdiv, 1.f}
+
             );
         };
 
@@ -412,7 +420,9 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                                                                                          frustaCascade[cascadeIdx],
                                                                                          c,
                                                                                          aDebugDrawFrusta ?
-                                                                                             std::optional<math::hdr::Rgb_f>{hdr::gColorBrewerSet1_linear[cascadeIdx]}
+                                                                                             std::optional<DebugPlaneColors>{{
+                                                                                                .mOutline = hdr::gColorBrewerSet1_linear[cascadeIdx],
+                                                                                                .mSubdiv = light.mDiffuseColor * 0.5f}}
                                                                                              : std::nullopt
                                                                                         );
 
@@ -426,10 +436,10 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         loadLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo, lightViewProjection);
         passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Cascaded);
 
-        if(aDebugDrawFrusta) 
+        if(aDebugDrawFrusta && (c.mDebugDrawWhichCascade >= 0)) 
         {
-            const std::size_t whichCascade = 3; // largest
-            debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + whichCascade].inverse(),
+            const std::size_t whichCascade = c.mDebugDrawClippedTriangles; // largest
+            debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + c.mDebugDrawWhichCascade].inverse(),
                                  drawer::gLight,
                                  light.mDiffuseColor);
         }

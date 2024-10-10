@@ -44,10 +44,22 @@ inline void give(DearImguiVisitor &, bool & aBool, const char * aName)
 }
 
 
+template <class T>
+struct ImguiDataType;
+
+template <>
+struct ImguiDataType<unsigned int>
+{ constexpr static ImGuiDataType_ value = ImGuiDataType_U32; };
+
+template <>
+struct ImguiDataType<int>
+{ constexpr static ImGuiDataType_ value = ImGuiDataType_S32; };
+
+
 template <std::integral T>
 void give(DearImguiVisitor & aV, const Clamped<T> & aClamped, const char * aName)
 {
-    ImGui::InputScalar(aName, ImGuiDataType_U32, &aClamped.mValue);
+    ImGui::InputScalar(aName, ImguiDataType<T>::value, &aClamped.mValue);
     aClamped.mValue = std::clamp(aClamped.mValue, aClamped.mMin, aClamped.mMax);
 }
 

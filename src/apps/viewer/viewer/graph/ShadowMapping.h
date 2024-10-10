@@ -39,6 +39,7 @@ struct ShadowMapping
         // (Otherwise, Near and Far are determined by the whole unclipped scene bounding box)
         bool mTightenFrustumDepthToClippedScene{true};
         bool mDebugDrawClippedTriangles{false};
+        int mDebugDrawWhichCascade{0};
     };
 
     Controls mControls;
@@ -57,6 +58,7 @@ void r(T_visitor & aV, ShadowMapping::Controls & aControls)
     give(aV, aControls.mTightenLightFrustumXYToScene,  "frustum XY to scene");
     give(aV, aControls.mTightenFrustumDepthToClippedScene,  "frustum Z to clipped scene");
     give(aV, aControls.mDebugDrawClippedTriangles,  "debugdraw clipped triangles");
+    give(aV, Clamped<int>{aControls.mDebugDrawWhichCascade, -1, gMaxCascadesPerShadow - 1},  "debugdraw shadow cascade frustum");
 }
 
 
