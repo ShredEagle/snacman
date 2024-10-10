@@ -110,7 +110,7 @@ void SecondaryGraph::renderFrame(const Scene & aScene,
     {
         graphics::ScopedBind boundFbo{mDepthFbo};
         glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
-        passOpaqueDepth(aGraphShared,  aPartList, textureRepository, aStorage);
+        passOpaqueDepth(aGraphShared,  aPartList, textureRepository, aStorage, DepthMethod::Single);
     }
 
     {

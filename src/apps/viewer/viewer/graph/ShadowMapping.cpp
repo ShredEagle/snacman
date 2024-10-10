@@ -1,6 +1,7 @@
 #include "ShadowMapping.h"
 
 #include "Passes.h"
+#include "ShadowCascadeBlock.h"
 
 #include "../ColorPalettes.h"
 #include "../DebugDrawUtilities.h"
@@ -12,6 +13,7 @@
 #include <profiler/GlApi.h>
 
 #include <snac-renderer-V2/Camera.h>
+#include <snac-renderer-V2/RendererReimplement.h>
 
 
 namespace ad::renderer {
@@ -217,35 +219,33 @@ math::Matrix<4, 4, float> getProjectionChangeNearFar(const Camera & aCamera, flo
 }
 
 
-/// @brief Compute the view projection block used to render the shadow map of a light,
+/// @brief Compute a tight view projection block, used to render the shadow map of a light
 /// illuminating a scene that is viewed by a camera.
 /// @param aCameraFrustum The view-projection matrix of the camera, defining its frustum.
-GpuViewProjectionBlock computeLightViewProjection(DirectionalLight light,
-                                                  math::Box<GLfloat> aSceneAabb,
-                                                  math::Matrix<4, 4, GLfloat> aCameraViewProjection,
-                                                  const ShadowMapping::Controls & c,
-                                                  bool aDebugDraw
-                                                  )
+math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GLfloat> aOrientationWorldToLight,
+                                                     math::Box<GLfloat> aSceneAabb,
+                                                     math::Matrix<4, 4, GLfloat> aCameraViewProjection,
+                                                     const ShadowMapping::Controls & c,
+                                                     std::optional<math::hdr::Rgb_f> aDebugDrawColor // nullopt to disable debug drawing
+                                                     // TODO extend with grid color: use it to match light color
+                                                     )
 {
     //
     // Handle the orthographic projection.
     // The bounding box will determinate the size of the projection, and the position of the viewpoint.
     //
-
     
     math::Matrix<4, 4, GLfloat> viewProjectionInverse = aCameraViewProjection.inverse();
 
-    // This is a pure orientation: a directional light has no "position", we can set its origin to the other space origin.
-    const math::LinearMatrix<3, 3, GLfloat> orientationWorldToLight = alignMinusZ(light.mDirection);
     // The min/max of the camera view frustum in light space
     const math::Rectangle<GLfloat> cameraFrustumSides_light = 
         getFrustumSideBounds(
             // The matrix transforming from the camera view clip space to the light space.
-            viewProjectionInverse * math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
+            viewProjectionInverse * math::AffineMatrix<4, GLfloat>{aOrientationWorldToLight});
 
     // TODO can we replace with the aabb generic transformation?
     const math::Box<GLfloat> sceneAabb_light =
-        getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{orientationWorldToLight});
+        getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{aOrientationWorldToLight});
     const math::Rectangle<GLfloat> sceneAabbSide_light = sceneAabb_light.frontRectangle();
 
     const math::Rectangle<GLfloat> effectiveRectangle_light = 
@@ -253,16 +253,16 @@ GpuViewProjectionBlock computeLightViewProjection(DirectionalLight light,
             intersect(cameraFrustumSides_light, sceneAabbSide_light)
             : cameraFrustumSides_light;
 
-    if(aDebugDraw) 
+    if(aDebugDrawColor) 
     {
         using Level = ::ad::snac::DebugDrawer::Level;
 
         // For a rotation matrix, the transpose is the inverse
-        const math::LinearMatrix<3, 3, GLfloat> orientationLightToWorld = orientationWorldToLight.transpose();
+        const math::LinearMatrix<3, 3, GLfloat> orientationLightToWorld = aOrientationWorldToLight.transpose();
 
-        static auto drawPlane = [](math::LinearMatrix<3, 3, GLfloat> aLightToWorld,
-                                    math::Rectangle<GLfloat> aRectangle_light,
-                                    Level aLevel)
+        static auto drawPlane = [&aDebugDrawColor](math::LinearMatrix<3, 3, GLfloat> aLightToWorld,
+                                                   math::Rectangle<GLfloat> aRectangle_light,
+                                                   Level aLevel)
         {
             math::Position<3, GLfloat> center_world = 
                 math::Position<3, GLfloat>{aRectangle_light.center(), 0.f} 
@@ -272,8 +272,9 @@ GpuViewProjectionBlock computeLightViewProjection(DirectionalLight light,
                 center_world,
                 math::Vec<3, float>{1.f, 0.f, 0.f} * aLightToWorld, 
                 math::Vec<3, float>{0.f, 1.f, 0.f} * aLightToWorld,
-                5, 5, // subdivisions count
-                aRectangle_light.width(), aRectangle_light.height() // assumes no scaling in light to world
+                3, 3, // subdivisions count
+                aRectangle_light.width(), aRectangle_light.height(), // assumes no scaling in light to world
+                {*aDebugDrawColor, 1.f}
             );
         };
 
@@ -285,7 +286,7 @@ GpuViewProjectionBlock computeLightViewProjection(DirectionalLight light,
     auto near = sceneAabb_light.zMin();
     auto depth = sceneAabb_light.depth();
 
-    if(c.mTightenFrustumDepthToClippedScene && /* patch to avoid testing in 2nd view */ aDebugDraw)
+    if(c.mTightenFrustumDepthToClippedScene)
     {
         // Note: Here, we have to provide the corners of the **world** AABB for the scene,
         // expressed in light space (transformation from world to light frame currently occurs in the function).
@@ -293,9 +294,9 @@ GpuViewProjectionBlock computeLightViewProjection(DirectionalLight light,
         // (The side of the light AABB are already parallel to any other light AABB, including the shadow frustum.)
         GLfloat far;
         std::tie(near, far) = tightenNearFar(aSceneAabb, 
-                                             orientationWorldToLight,
+                                             aOrientationWorldToLight,
                                              effectiveRectangle_light,
-                                             aDebugDraw && c.mDebugDrawClippedTriangles);
+                                             c.mDebugDrawClippedTriangles);
         depth = far - near;
 
         // TODO turn the inverse condition into simple assertions
@@ -315,11 +316,7 @@ GpuViewProjectionBlock computeLightViewProjection(DirectionalLight light,
 
     math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, near};
     math::Size<3, GLfloat> frustumBoxDimension{effectiveRectangle_light.mDimension, depth};
-    // We assemble a view projection block, with camera transformation being just the rotation
-    // and the orthographic view frustum set to the tight box computed abovd
-    return GpuViewProjectionBlock{
-        orientationWorldToLight,
-        graphics::makeOrthographicProjection({frustumBoxPosition, frustumBoxDimension})};
+    return graphics::makeOrthographicProjection({frustumBoxPosition, frustumBoxDimension});
 }
 
 
@@ -336,24 +333,26 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
 {
     const ShadowMapping::Controls & c = aPass.mControls;
 
-    math::Matrix<4, 4, GLfloat> cameraViewProjection = aCamera.assembleViewProjection();
-    auto [cameraNear, cameraFar] = getNearFarPlanes(aCamera);
-
-    constexpr unsigned int gCascadesCount = 4;
-    std::array<math::Matrix<4, 4, GLfloat>, gCascadesCount> frustaCascade;
-
-    // Decide on the Z-partitioning ratio
-    const float distanceRatio = std::pow(cameraFar/cameraNear, 1.f/gCascadesCount);
-
     const math::AffineMatrix<4, float> cameraToWorld = aCamera.getParentToCamera().inverse();
     const math::Vec<3, float> camRight_world = math::Vec<3, float>{1.f, 0.f, 0.f} * cameraToWorld.getLinear();
     const math::Vec<3, float> camUp_world = math::Vec<3, float>{0.f, 1.f, 0.f} * cameraToWorld.getLinear();
+
+    math::Matrix<4, 4, GLfloat> cameraViewProjection = aCamera.assembleViewProjection();
+    auto [cameraNear, cameraFar] = getNearFarPlanes(aCamera);
+
+    std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> frustaCascade;
+    // Warning: #cascade_hardcode_4 we are hardcoding the fact there are exactly 4 cascades here.
+    static_assert(gMaxCascadesPerShadow == 4);
+    ShadowCascadeBlock shadowCascadeBlock;
+
+    // Decide on the Z-partitioning ratio
+    const float distanceRatio = std::pow(cameraFar/cameraNear, 1.f/gMaxCascadesPerShadow);
 
     // For each cascade, calculate the view-frustum bounds
     // We follow fit-to-cascade, where cascade N-1 far-plane becomes cascade N near-plane.
     // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/cascaded-shadow-maps#fit-to-cascade
     float near = cameraNear; 
-    for(unsigned int cascadeIdx = 0; cascadeIdx != gCascadesCount; ++cascadeIdx)
+    for(unsigned int cascadeIdx = 0; cascadeIdx != gMaxCascadesPerShadow; ++cascadeIdx)
     {
         const float far = near * distanceRatio;
         frustaCascade[cascadeIdx] = aCamera.getParentToCamera() * getProjectionChangeNearFar(aCamera, near, far);
@@ -364,13 +363,9 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                 frustaCascade[cascadeIdx].inverse(),
                 drawer::gShadow,
                 // TODO Ad 2024/10/03: There seem to be a bug here, the colors appear washed out.
-                hdr::gColorBrewerSet1[cascadeIdx]);
-            //DBGDRAW_DEBUG(drawer::gShadow).addPlane(
-            //    math::homogeneous::normalize(math::homogeneous::makePosition<3, float>({0.f, 0.f, far}) * cameraToWorld).xyz(),
-            //    camRight_world, camUp_world,
-            //    4, 4,
-            //    5.f, 5.f);
+                hdr::gColorBrewerSet1_linear[cascadeIdx]);
         }
+        shadowCascadeBlock.mCascadeFarPlaneDepths_view[cascadeIdx] = far;
         near = far;
     }
     // The last far value, which was assigned to near, should match the overall camera far
@@ -387,6 +382,13 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
     // Will remain the bound FBO while all the shadow maps are rendered
     graphics::ScopedBind boundFbo{aPass.mFbo, graphics::FrameBufferTarget::Draw};
 
+    // Attach a texture as the logical buffer of the FBO
+    {
+        // TODO: The attachment is permanent, no need to recreate it each time the FBO is bound
+        glFramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *aShadowMap, /*mip map level*/0);
+        assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+    }
+
     // The viewport size is be the same for each shadow map.
     glViewport(0, 0, ShadowMapping::gTextureSize.width(), ShadowMapping::gTextureSize.height());
 
@@ -398,32 +400,43 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         // Atm, we hardcode that each directional light cast a shadow, thus allowing to index shadow with directionalIdx
         assert(directionalIdx < gMaxShadowLights);
 
-        // Attach a texture as the logical buffer of the FBO
-        {
-            // The attachment is permanent, no need to recreate it each time the FBO is bound
-            gl.FramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *aShadowMap, /*mip map level*/0, directionalIdx);
-            assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-        }
-
         const DirectionalLight light = aDirectionalLights[directionalIdx];
 
-        GpuViewProjectionBlock viewProjectionBlock = computeLightViewProjection(light, aSceneAabb, cameraViewProjection, c, aDebugDrawFrusta);
-        loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, viewProjectionBlock);
+        // This is a pure orientation: a directional light has no "position", we can set its origin to the other space origin.
+        const math::LinearMatrix<3, 3, GLfloat> orientationWorldToLight = alignMinusZ(light.mDirection);
 
-        // TODO: The actual pass is somewhere down there:
+        for(unsigned int cascadeIdx = 0; cascadeIdx != gMaxCascadesPerShadow; ++cascadeIdx)
+        {
+            math::Matrix<4, 4, float> cascadeViewProjection = computeLightViewProjection(orientationWorldToLight,
+                                                                                         aSceneAabb,
+                                                                                         frustaCascade[cascadeIdx],
+                                                                                         c,
+                                                                                         aDebugDrawFrusta ?
+                                                                                             std::optional<math::hdr::Rgb_f>{hdr::gColorBrewerSet1_linear[cascadeIdx]}
+                                                                                             : std::nullopt
+                                                                                        );
 
-        passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage);
+            // Add the light view-projection to the collection
+            lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + cascadeIdx] =
+                math::AffineMatrix<4, GLfloat>{orientationWorldToLight}
+                * cascadeViewProjection;
+            lightViewProjection.mLightViewProjectionCount++;
+        }
 
-        // Add the light view-projection to the collection, for main rendering
-        lightViewProjection.mLightViewProjectionCount++;
-        lightViewProjection.mLightViewProjections[directionalIdx] = viewProjectionBlock.mViewingProjection;
+        loadLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo, lightViewProjection);
+        passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Cascaded);
 
         if(aDebugDrawFrusta) 
         {
-            debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx].inverse(),
+            const std::size_t whichCascade = 3; // largest
+            debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + whichCascade].inverse(),
                                  drawer::gLight,
                                  light.mDiffuseColor);
         }
+
+        // loadShadowCascadeUbo()
+        proto::loadSingle(*aGraphShared.mUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
+
     }
 
     return lightViewProjection;

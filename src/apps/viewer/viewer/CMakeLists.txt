@@ -27,6 +27,7 @@ set(${TARGET_NAME}_HEADERS
 
     graph/Clipping.h
     graph/Passes.h
+    graph/ShadowCascadeBlock.h
     graph/ShadowMapping.h
 
     runtime_reflect/DearImguiVisitor.h

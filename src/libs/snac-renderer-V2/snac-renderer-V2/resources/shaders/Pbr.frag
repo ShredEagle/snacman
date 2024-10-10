@@ -1,5 +1,6 @@
 #version 430
 
+#include "ColorPalettes.glsl"
 #include "Constants.glsl"
 #include "Gamma.glsl"
 #include "HelpersIbl.glsl"
@@ -28,8 +29,14 @@ uniform sampler2DArray u_MetallicRoughnessAoTexture;
 #endif
 
 #ifdef SHADOW_MAPPING
+
+#if defined(SHADOW_CASCADE)
+#include "ShadowCascadeBlock.glsl"
+#endif //SHADOW_CASCADE
+
 uniform sampler2DArrayShadow u_ShadowMap;
-in vec3[MAX_SHADOWS] ex_Position_lightTex;
+in vec3[MAX_SHADOW_MAPS] ex_Position_lightTex;
+
 #endif //SHADOW_MAPPING
 
 #if defined(ENVIRONMENT_MAPPING)
@@ -59,6 +66,7 @@ struct PbrMaterial
 
 
 #if defined(SHADOW_MAPPING)
+
 //float getShadowAttenuation(vec4 fragPosition_lightClip, uint shadowMapIdx, float bias)
 float getShadowAttenuation(vec3 fragPosition_lightTex, uint shadowMapIdx, float bias)
 {
@@ -331,6 +339,27 @@ void main()
     vec3 diffuseAccum = vec3(0.);
     vec3 specularAccum = vec3(0.);
 
+#if defined(SHADOW_CASCADE)
+    //
+    // Cascade selection
+    //
+
+    // Interval-based, 
+    // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/cascaded-shadow-maps#interval-based-cascade-selection
+    vec4 fragmentDepth_view = vec4(ex_Position_cam.z);
+    // A vector with 1 where the pixel depth exceeds the cascade far plane
+    // Note: we could probably do away with vec3 here
+    // #cascade_hardcode_4
+    vec4 depthComparison = vec4(lessThan(fragmentDepth_view, cascadeFarPlaneDepths_view));
+    const vec4 availableCascadeIndices = vec4(1, 1, 1, 0);
+    uint shadowCascadeIdx = uint(dot(availableCascadeIndices, depthComparison));
+
+    vec3 cascadeSelectionDebugColor = gColorBrewerSet1_linear[shadowCascadeIdx]; 
+#else
+    vec3 cascadeSelectionDebugColor = vec3(1.); 
+#endif //SHADOW_CASCADE
+
+
     // Directional lights
     for(uint directionalIdx = 0; directionalIdx != ub_DirectionalCount.x; ++directionalIdx)
     {
@@ -338,15 +367,21 @@ void main()
         vec3 lightDir_cam = -directional.direction.xyz;
     
         float shadowAttenuation = 1.0;
+
 #if defined(SHADOW_MAPPING)
         // TODO handle providing the shadow map texture index with the light
         //if(projectShadow(directional.shadowMapIndex))
         if(directionalIdx < MAX_SHADOWS)
         {
+#if defined(SHADOW_CASCADE)
+    uint shadowMapIdx = MAX_CASCADES_PER_SHADOW * directionalIdx + shadowCascadeIdx;
+#else
+    uint shadowMapIdx = directionalIdx;
+#endif //SHADOW_CASCADE
             //const float bias = 0.002;
             const float bias = 0.;
             shadowAttenuation = 
-                getShadowAttenuation(ex_Position_lightTex[directionalIdx], directionalIdx, bias);
+                getShadowAttenuation(ex_Position_lightTex[shadowMapIdx], shadowMapIdx, bias);
         }
 #endif // SHADOW_MAPPING
 
@@ -380,7 +415,7 @@ void main()
         PointLight point = ub_PointLights[pointIdx];
 
         // see rtr 4th p110 (5.10)
-        vec3 lightRay_cam = point.position.xyz - ex_Position_cam;
+        vec3 lightRay_cam = point.position.xyz - ex_Position_cam.xyz;
         float radius = sqrt(dot(lightRay_cam, lightRay_cam));
         vec3 lightDir_cam = lightRay_cam / radius;
 
@@ -501,5 +536,6 @@ void main()
 #endif // ENVIRONMENT_MAPPING_MIRROR
 #endif // ENVIRONMENT_MAPPING
 
-    out_Color = correctGamma(vec4(fragmentColor, albedo.a * material.diffuseColor.a));
+    out_Color = correctGamma(vec4(fragmentColor * cascadeSelectionDebugColor,
+                                  albedo.a * material.diffuseColor.a));
 }

@@ -14,11 +14,18 @@ struct Storage;
 struct ViewerPartList;
 
 
+enum class DepthMethod
+{
+    Single,
+    Cascaded,
+};
+
 // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
 void passOpaqueDepth(const GraphShared & aGraphShared,
                      const ViewerPartList & aPartList,
                      const RepositoryTexture & aTextureRepository,
-                     Storage & aStorage);
+                     Storage & aStorage,
+                     DepthMethod aMethod);
 
 
 void passForward(const GraphShared & aGraphShared,

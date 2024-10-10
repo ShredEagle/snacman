@@ -44,6 +44,10 @@ HardcodedUbos::HardcodedUbos(Storage & aStorage)
     aStorage.mUbos.emplace_back();
     mLightViewProjectionUbo = &aStorage.mUbos.back();
     mUboRepository.emplace(semantic::gLightViewProjection, mLightViewProjectionUbo);
+
+    aStorage.mUbos.emplace_back();
+    mShadowCascadeUbo = &aStorage.mUbos.back();
+    mUboRepository.emplace(semantic::gShadowCascade, mShadowCascadeUbo);
 }
 
 

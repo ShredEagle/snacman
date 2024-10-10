@@ -20,7 +20,7 @@
                 "shadows": "on"
             },
             "programfile": "shaders/ForwardPbr.prog",
-            "defines": ["ENVIRONMENT_MAPPING", "SHADOW_MAPPING"]
+            "defines": ["ENVIRONMENT_MAPPING", "SHADOW_MAPPING", "SHADOW_CASCADE"]
         },
         {
             "annotations": {
@@ -41,6 +41,12 @@
                 "pass": "depth_opaque"
             },
             "programfile": "shaders/DepthMapping.prog"
+        },
+        {
+            "annotations": {
+                "pass": "cascaded_depth_opaque"
+            },
+            "programfile": "shaders/CascadedDepthMapping.prog"
         }
     ]
 }

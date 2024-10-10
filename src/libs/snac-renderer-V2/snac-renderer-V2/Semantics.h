@@ -40,6 +40,7 @@ namespace semantic
     BLOCK_SEM(JointMatrices);
     BLOCK_SEM(Lights);
     BLOCK_SEM(LightViewProjection);
+    BLOCK_SEM(ShadowCascade);
 
     #undef BLOCK_SEM
 

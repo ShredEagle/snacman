@@ -18,6 +18,8 @@ namespace ad::renderer {
 // TODO can we use the define system to forward those upper limit to shaders?
 constexpr unsigned int gMaxLights = 16;
 constexpr unsigned int gMaxShadowLights = 4;
+constexpr unsigned int gMaxCascadesPerShadow = 4;
+constexpr unsigned int gMaxShadowMaps = gMaxShadowLights * gMaxCascadesPerShadow;
 
 // TODO there are obvious ways to pack the values much more tightly
 
@@ -134,7 +136,7 @@ struct LightViewProjection
 {
     GLuint mLightViewProjectionCount{0};
     // TODO can we use the define system to forward this upper limit to shaders?
-    alignas(16) math::Matrix<4, 4, GLfloat> mLightViewProjections[gMaxShadowLights];
+    alignas(16) math::Matrix<4, 4, GLfloat> mLightViewProjections[gMaxShadowMaps];
 };
 
 

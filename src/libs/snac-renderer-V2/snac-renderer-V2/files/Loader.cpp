@@ -1357,9 +1357,13 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
         {
             stageEnumerator = GL_VERTEX_SHADER;
         }
-        else if (shaderStage == "fragment")
+        else if(shaderStage == "fragment")
         {
             stageEnumerator = GL_FRAGMENT_SHADER;
+        }
+        else if(shaderStage == "geometry")
+        {
+            stageEnumerator = GL_GEOMETRY_SHADER;
         }
         else
         {

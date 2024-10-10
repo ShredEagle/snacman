@@ -33,7 +33,7 @@ namespace {
                         GL_DEPTH_COMPONENT24,
                         ShadowMapping::gTextureSize.width(),
                         ShadowMapping::gTextureSize.height(),
-                        gMaxShadowLights);
+                        gMaxShadowMaps);
         assert(graphics::isImmutableFormat(aShadowMap));
 
         // Set texture comparison mode, allowing to compare the depth component to a reference value
@@ -181,8 +181,6 @@ void TheGraph::renderFrame(const Scene & aScene,
 
     loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, aCamera);
     loadLightsUbo(*aGraphShared.mUbos.mLightsUbo, aLights_camera);
-    // For lights casting a shadow
-    loadLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo, lightViewProjection);
     
     // Currently, the environment is the only *contextual* provider of a texture repo
     // (The other texture repo is part of the material)
@@ -197,7 +195,7 @@ void TheGraph::renderFrame(const Scene & aScene,
     {
         graphics::ScopedBind boundFbo{mDepthFbo};
         glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
-        passOpaqueDepth(aGraphShared, aPartList, textureRepository, aStorage);
+        passOpaqueDepth(aGraphShared, aPartList, textureRepository, aStorage, DepthMethod::Single);
     }
 
     {

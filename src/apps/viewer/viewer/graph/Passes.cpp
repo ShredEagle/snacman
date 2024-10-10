@@ -17,11 +17,16 @@ namespace ad::renderer {
 void passOpaqueDepth(const GraphShared & aGraphShared,
                      const ViewerPartList & aPartList,
                      const RepositoryTexture & aTextureRepository,
-                     Storage & aStorage)
+                     Storage & aStorage,
+                     DepthMethod aMethod)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_depth", CpuTime, GpuTime);
 
-    auto annotations = selectPass("depth_opaque");
+    auto annotations =
+        aMethod == DepthMethod::Cascaded ?
+            selectPass("cascaded_depth_opaque")
+            : selectPass("depth_opaque");
+    
     // Can be done once even for distinct cameras, if there is no culling
     ViewerPassCache passCache = prepareViewerPass(annotations , aPartList, aStorage);
 
