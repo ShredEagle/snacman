@@ -345,24 +345,26 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
     const math::Vec<3, float> camRight_world = math::Vec<3, float>{1.f, 0.f, 0.f} * cameraToWorld.getLinear();
     const math::Vec<3, float> camUp_world = math::Vec<3, float>{0.f, 1.f, 0.f} * cameraToWorld.getLinear();
 
-    math::Matrix<4, 4, GLfloat> cameraViewProjection = aCamera.assembleViewProjection();
-    auto [cameraNear, cameraFar] = getNearFarPlanes(aCamera);
+    const auto [cameraNear, cameraFar] = getNearFarPlanes(aCamera);
+    // Minimum of negative values will return the value with largest absolute value.
+    float clampedCameraNear = std::min(cameraNear, c.mCsmNearPlaneLimit);
+    // Computation of Z-partitioning ratio
+    const float distanceRatio = std::pow(cameraFar/clampedCameraNear, 1.f/gMaxCascadesPerShadow);
 
     std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> frustaCascade;
     // Warning: #cascade_hardcode_4 we are hardcoding the fact there are exactly 4 cascades here.
     static_assert(gMaxCascadesPerShadow == 4);
     ShadowCascadeBlock shadowCascadeBlock;
 
-    // Decide on the Z-partitioning ratio
-    const float distanceRatio = std::pow(cameraFar/cameraNear, 1.f/gMaxCascadesPerShadow);
-
     // For each cascade, calculate the view-frustum bounds
     // We follow fit-to-cascade, where cascade N-1 far-plane becomes cascade N near-plane.
     // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/cascaded-shadow-maps#fit-to-cascade
     float near = cameraNear; 
+    // Note: we treat the first subfrusta far plane computation separately
+    // (it does not use the actual frusta near, but a clamped near value)
+    float far = clampedCameraNear * distanceRatio;
     for(unsigned int cascadeIdx = 0; cascadeIdx != gMaxCascadesPerShadow; ++cascadeIdx)
     {
-        const float far = near * distanceRatio;
         frustaCascade[cascadeIdx] = aCamera.getParentToCamera() * getProjectionChangeNearFar(aCamera, near, far);
 
         if(aDebugDrawFrusta) 
@@ -370,11 +372,11 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
             debugDrawViewFrustum(
                 frustaCascade[cascadeIdx].inverse(),
                 drawer::gShadow,
-                // TODO Ad 2024/10/03: There seem to be a bug here, the colors appear washed out.
                 hdr::gColorBrewerSet1_linear[cascadeIdx]);
         }
         shadowCascadeBlock.mCascadeFarPlaneDepths_view[cascadeIdx] = far;
         near = far;
+        far = near * distanceRatio;
     }
     // The last far value, which was assigned to near, should match the overall camera far
     assert(near = cameraFar);
@@ -393,7 +395,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
     // Attach a texture as the logical buffer of the FBO
     {
         // TODO: The attachment is permanent, no need to recreate it each time the FBO is bound
-        glFramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *aShadowMap, /*mip map level*/0);
+        gl.FramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *aShadowMap, /*mip map level*/0);
         assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
     }
 

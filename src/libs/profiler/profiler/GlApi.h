@@ -56,6 +56,7 @@ public:
     void DrawElementsInstancedBaseVertex(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex);
     void DrawElementsInstancedBaseVertexBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex, GLuint baseinstance);
     void Enable(GLenum cap);
+    void FramebufferTexture(GLenum target, GLenum attachment, GLuint texture, GLint level);
     void FramebufferTexture3D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
     void FramebufferTextureLayer(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer);
     void MultiDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect, GLsizei drawcount, GLsizei stride);
@@ -149,6 +150,15 @@ inline void GlApi::Enable(GLenum cap)
 {
     // TODO: instrument
     glEnable(cap);
+}
+
+
+inline void GlApi::FramebufferTexture(GLenum target, GLenum attachment, GLuint texture, GLint level)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mFboAttachCount;
+#endif
+    return glFramebufferTexture(target, attachment, texture, level);
 }
 
 
