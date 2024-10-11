@@ -92,5 +92,8 @@ void loadCameraUbo(const graphics::UniformBufferObject & aUbo,
 void loadLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo,
                                 const LightViewProjection & aLightViewProjection);
 
+void updateOffsetInLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo,
+                                          const LightViewProjection & aLightViewProjection);
+
 
 } // namespace ad::renderer

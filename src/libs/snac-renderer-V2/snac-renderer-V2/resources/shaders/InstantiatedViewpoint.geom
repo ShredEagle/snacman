@@ -15,8 +15,10 @@ void main()
 {
     for(uint vertexIdx = 0; vertexIdx !=3; ++vertexIdx)
     {
-        gl_Layer = gl_InvocationID;
-        gl_Position =  lightViewProjections[gl_InvocationID] * vec4(ex_Position_world[vertexIdx], 1.0);
+        // The index of the currently rendered shadow map goes to gl_Layer 
+        // (thus gl_Layer points to the shadow map in the layered target)
+        gl_Layer = gl_InvocationID + int(lightViewProjectionOffset);
+        gl_Position =  lightViewProjections[gl_Layer] * vec4(ex_Position_world[vertexIdx], 1.0);
         EmitVertex();
     }
     EndPrimitive();

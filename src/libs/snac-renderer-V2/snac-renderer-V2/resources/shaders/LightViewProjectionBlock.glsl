@@ -7,6 +7,7 @@
 layout(std140, binding = 5) uniform LightViewProjectionBlock
 {
     uint lightViewProjectionCount;
+    uint lightViewProjectionOffset;
     mat4 lightViewProjections[MAX_SHADOW_MAPS];
 };
 

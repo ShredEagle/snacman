@@ -400,6 +400,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
     // The viewport size is be the same for each shadow map.
     glViewport(0, 0, ShadowMapping::gTextureSize.width(), ShadowMapping::gTextureSize.height());
 
+    // Compute the lights view-projection matrices (times the number of cascades when using CSM)
     for(GLuint directionalIdx = 0;
         directionalIdx != aDirectionalLights.size();
         ++directionalIdx)
@@ -433,9 +434,6 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
             lightViewProjection.mLightViewProjectionCount++;
         }
 
-        loadLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo, lightViewProjection);
-        passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Cascaded);
-
         if(aDebugDrawFrusta && (c.mDebugDrawWhichCascade >= 0)) 
         {
             const std::size_t whichCascade = c.mDebugDrawClippedTriangles; // largest
@@ -443,11 +441,25 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                                  drawer::gLight,
                                  light.mDiffuseColor);
         }
-
-        // loadShadowCascadeUbo()
-        proto::loadSingle(*aGraphShared.mUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
-
     }
+
+    loadLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo, lightViewProjection);
+
+
+    // TODO Ad 2024/10/11: #parameterize_shaders if we were able to select a program with the correct
+    // number of GS invocations (#lights x #cascade) we would only need a single "draw call".
+    for(GLuint directionalIdx = 0;
+        directionalIdx != aDirectionalLights.size();
+        ++directionalIdx)
+    {
+        lightViewProjection.mLightViewProjectionOffset = gMaxCascadesPerShadow * directionalIdx;
+        updateOffsetInLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo,
+                                             lightViewProjection);
+        passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Cascaded);
+    }
+
+    // loadShadowCascadeUbo()
+    proto::loadSingle(*aGraphShared.mUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
 
     return lightViewProjection;
 }

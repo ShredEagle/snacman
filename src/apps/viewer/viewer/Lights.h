@@ -135,6 +135,12 @@ void r(T_visitor & aV, LightsData & aLights)
 struct LightViewProjection
 {
     GLuint mLightViewProjectionCount{0};
+    // Note: this is a workaround for the fact that InstantiatedViewpoint GS hardcodes 4 invocations
+    // (matching the number of cascades for a single light).
+    // This implies that for any light except the 1st, we will need to offset each invocation.
+    // TODO Ad 2024/10/10: #parameterize_shaders Somehow allowing to compile a program with the required number of invocations 
+    // would allow to get rid of this member (and make a single call to draw all lights shadow maps at once)
+    GLuint mLightViewProjectionOffset{0};
     // TODO can we use the define system to forward this upper limit to shaders?
     alignas(16) math::Matrix<4, 4, GLfloat> mLightViewProjections[gMaxShadowMaps];
 };

@@ -110,4 +110,17 @@ void loadLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo, cons
 }
 
 
+void updateOffsetInLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo,
+                                          const LightViewProjection & aLightViewProjection)
+{
+    graphics::ScopedBind bound{aUbo};
+    gl.BufferSubData(
+        aUbo.GLTarget_v,
+        offsetof(LightViewProjection, mLightViewProjectionOffset),
+        sizeof(LightViewProjection::mLightViewProjectionOffset),
+        &aLightViewProjection.mLightViewProjectionOffset
+    );
+}
+
+
 } // namespace ad::renderer
