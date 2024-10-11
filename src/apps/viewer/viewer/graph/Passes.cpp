@@ -47,9 +47,6 @@ void passOpaqueDepth(const GraphShared & aGraphShared,
 
     }
 
-    // Clear must appear after the Framebuffer setup!
-    gl.Clear(GL_DEPTH_BUFFER_BIT);
-
     // Might loop over cameras, or any other variation
     //for(whatever dimension)
     {

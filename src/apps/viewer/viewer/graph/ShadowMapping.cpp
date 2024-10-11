@@ -445,6 +445,8 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
 
     loadLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo, lightViewProjection);
 
+    // Clear must appear after the Framebuffer setup!
+    gl.Clear(GL_DEPTH_BUFFER_BIT);
 
     // TODO Ad 2024/10/11: #parameterize_shaders if we were able to select a program with the correct
     // number of GS invocations (#lights x #cascade) we would only need a single "draw call".
