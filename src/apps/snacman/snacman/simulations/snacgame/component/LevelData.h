@@ -33,7 +33,7 @@ enum class TileType
 
 struct Tile
 {
-    TileType mType;
+    TileType mType = TileType::Void;
     int mAllowedMove = gAllowedMovementNone;
     math::Position<2, float> mPos = math::Position<2, float>::Zero();
 

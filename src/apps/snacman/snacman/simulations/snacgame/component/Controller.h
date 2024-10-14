@@ -18,7 +18,7 @@ struct Controller
 {
     ControllerType mType = ControllerType::Keyboard;
     GameInput mInput;
-    unsigned int mControllerId;
+    unsigned int mControllerId = 0;
 
     void drawUi() const;
 

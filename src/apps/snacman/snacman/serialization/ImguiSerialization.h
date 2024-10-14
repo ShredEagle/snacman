@@ -64,13 +64,13 @@ void debugRender(const char * n, std::vector<T_value>  & a)
     {
         float child_w = ImGui::GetContentRegionAvail().x;
         ImGui::BeginChild("rangechild", ImVec2(std::min(child_w, 100.f), 200.0f));
-        for (int i = 0; i < a.size(); i++ )
+        for (std::size_t i = 0; i < a.size(); i++ )
         {
-             ImGui::Text("%d", i);
+             ImGui::Text("%ld", i);
 
             if (ImGui::IsItemClicked())
             {
-                clickedNode = i;
+                clickedNode = (int)i;
             }
         }
         ImGui::EndChild();
@@ -95,13 +95,13 @@ void debugRender(const char * n, std::array<T_value, V_size>  & a)
     {
         float child_w = ImGui::GetContentRegionAvail().x;
         ImGui::BeginChild("rangechild", ImVec2(std::min(100.f, child_w), 200.0f));
-        for (int i = 0; i < a.size(); i++ )
+        for (std::size_t i = 0; i < a.size(); i++ )
         {
-             ImGui::Text("%d", i);
+             ImGui::Text("%ld", i);
 
             if (ImGui::IsItemClicked())
             {
-                clickedNode = i;
+                clickedNode = (int)i;
             }
         }
         ImGui::EndChild();

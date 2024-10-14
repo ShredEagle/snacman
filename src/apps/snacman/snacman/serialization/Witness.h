@@ -239,13 +239,13 @@ public:
         {
             float child_w = ImGui::GetContentRegionAvail().x;
             ImGui::BeginChild("rangechild", ImVec2(child_w, 200.0f));
-            for (int i = 0; i < aRange->size(); i++)
+            for (std::size_t i = 0; i < aRange->size(); i++)
             {
-                ImGui::Text("%d", i);
+                ImGui::Text("%ld", i);
 
                 if (ImGui::IsItemClicked())
                 {
-                    clickedNode = i;
+                    clickedNode = (int)i;
                 }
             }
             ImGui::EndChild();

@@ -15,7 +15,7 @@ namespace component {
 
 struct VisualModel
 {
-    renderer::Handle<const renderer::Object> mModel;
+    renderer::Handle<const renderer::Object> mModel = nullptr;
     bool mDisableInterpolation = false;
 
     template<class T_witness>

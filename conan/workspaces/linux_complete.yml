@@ -1,9 +1,9 @@
 editables:
-    MarkovJunior.cpp/54207a0487@adnn/develop:
+    MarkovJunior.cpp/d245053a72@adnn/develop:
         path: ../../../MarkovJunior.cpp/conan
     entity/0f3525cba1@adnn/develop:
         path: ../../../entity/conan
-    graphics/6421179122@adnn/develop:
+    graphics/3a7f5997a1@adnn/develop:
         path: ../../../graphics/conan
     handy/15a1bb8eaa@adnn/develop:
         path: ../../../handy/conan

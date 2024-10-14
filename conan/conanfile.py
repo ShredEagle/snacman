@@ -23,10 +23,10 @@ class SnacmanConan(ConanFile):
 
     requires = (
         ("entity/0f3525cba1@adnn/develop"),
-        ("graphics/6421179122@adnn/develop"),
+        ("graphics/3a7f5997a1@adnn/develop"),
         ("handy/15a1bb8eaa@adnn/develop"),
         ("math/d5fa5b3887@adnn/develop"),
-        ("MarkovJunior.cpp/54207a0487@adnn/develop"),
+        ("MarkovJunior.cpp/55a5a1d84d@adnn/develop"),
 
         ("implot/0.16"),  # MIT
         ("imgui/1.89.8"),
@@ -35,7 +35,7 @@ class SnacmanConan(ConanFile):
         # Waiting for my PR on conan-center for assimp to get merged in
         # see: https://github.com/conan-io/conan-center-index/pull/20185
         # I manually exported the recipe and uploaded it.
-        ("assimp/5.3.1@adnn/develop"),
+        ("assimp/5.4.2"),
         ("spdlog/1.13.0"),
         # ("spdlog/1.13.0@#1e0f4eb6338d05e4bd6fcc6bf4734172"),
         ("nlohmann_json/3.11.2"),
