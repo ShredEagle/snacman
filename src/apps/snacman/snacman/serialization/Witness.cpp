@@ -1,3 +1,4 @@
+#define GUARD_SERIAL_IMPORT
 #include "Witness.h"
 
 #include <snacman/simulations/snacgame/GameContext.h>

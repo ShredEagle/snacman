@@ -1,11 +1,9 @@
 #pragma once
 
-#include "snacman/serialization/Witness.h"
+#include <snacman/serialization/Serial.h>
 
 #include <math/Interpolation/ParameterAnimation.h>
 #include <reflexion/NameValuePair.h>
-#include <snac-reflexion/Reflexion.h>
-#include <snac-reflexion/Reflexion_impl.h>
 #include <snac-renderer-V2/Handle.h>
 #include <snac-renderer-V2/Rigging.h>
 #include <snacman/Timing.h>

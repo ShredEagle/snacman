@@ -32,7 +32,7 @@
 #include "SceneGraph.h"
 #include "SimulationControl.h"
 #include "snacman/EntityUtilities.h"
-#include "snacman/serialization/Witness.h"
+#include "snacman/serialization/Serial.h"
 #include "snacman/simulations/snacgame/component/Collision.h"
 #include "snacman/simulations/snacgame/component/Explosion.h"
 #include "snacman/simulations/snacgame/component/MovementScreenSpace.h"

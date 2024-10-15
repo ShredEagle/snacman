@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef GUARD_SERIAL_IMPORT
+Include Serial.h instead of Witness.h;
+#endif
+
 #include "Imgui.h"
 #include "ImguiSerialization.h"
 #include "imguiui/ImguiUi.h"
@@ -434,3 +438,5 @@ WITNESS_FUNC_DECLARATION(json)
 WITNESS_FUNC_DECLARATION(imgui)
 } // namespace serial
 } // namespace ad
+
+#undef GUARD_SERIAL_IMPORT

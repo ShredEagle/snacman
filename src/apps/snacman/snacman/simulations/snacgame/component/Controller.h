@@ -1,9 +1,7 @@
 #pragma once
 
-#include "snacman/serialization/Witness.h"
+#include <snacman/serialization/Serial.h>
 
-#include <snac-reflexion/Reflexion.h>
-#include <snac-reflexion/Reflexion_impl.h>
 #include <reflexion/NameValuePair.h>
 
 #include "../InputCommandConverter.h"
