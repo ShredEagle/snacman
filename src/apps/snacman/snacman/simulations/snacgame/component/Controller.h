@@ -1,5 +1,9 @@
 #pragma once
 
+#include <snacman/serialization/Serial.h>
+
+#include <reflexion/NameValuePair.h>
+
 #include "../InputCommandConverter.h"
 
 #include <snacman/Input.h>
@@ -12,10 +16,20 @@ struct Controller
 {
     ControllerType mType = ControllerType::Keyboard;
     GameInput mInput;
-    unsigned int mControllerId;
+    unsigned int mControllerId = 0;
 
     void drawUi() const;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mType));
+        aWitness.witness(NVP(mInput));
+        aWitness.witness(NVP(mControllerId));
+    }
 };
+
+REFLEXION_REGISTER(Controller)
 
 } // namespace component
 } // namespace snacgame

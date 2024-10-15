@@ -1,5 +1,8 @@
 #pragma once
 
+#include <snacman/serialization/Serial.h>
+#include <reflexion/NameValuePair.h>
+
 #include <snac-renderer-V1/text/Text.h>
 
 #include <math/Color.h>
@@ -16,7 +19,17 @@ struct Text
     std::string mString;
     std::shared_ptr<snac::Font> mFont;
     math::hdr::Rgba_f mColor;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mString));
+        aWitness.witness(NVP(mFont));
+        aWitness.witness(NVP(mColor));
+    }
 };
+
+REFLEXION_REGISTER(Text)
 
 
 } // namespace component

@@ -6,6 +6,8 @@
 #include "snacman/simulations/snacgame/Entities.h"
 #include <snac-renderer-V1/Camera.h>
 
+#include "system/SceneStack.h"
+
 namespace ad {
 namespace snacgame {
 

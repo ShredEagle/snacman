@@ -1,5 +1,8 @@
 #pragma once
 
+#include <snacman/serialization/Serial.h>
+#include <reflexion/NameValuePair.h>
+
 #include <math/Homogeneous.h>
 #include <math/Transformations.h>
 #include <math/Vector.h>
@@ -12,7 +15,15 @@ namespace component {
 struct Collision
 {
     math::Box<float> mHitbox;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mHitbox));
+    }
 };
+
+REFLEXION_REGISTER(Collision)
 
 constexpr const math::Box<float> gPlayerHitbox{{-0.35f, 0.f, -0.35f},
                                                {0.7f, 0.7f, 0.7f}};

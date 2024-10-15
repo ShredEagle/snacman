@@ -2,6 +2,8 @@
 
 #include "Scene.h"
 
+#include "../system/SceneStack.h"
+
 #include <math/Color.h>
 #include <entity/Query.h>
 #include <entity/Wrap.h>

@@ -267,6 +267,14 @@ struct GameInput
     math::Vec<2, float> mLeftDirection = math::Vec<2, float>::Zero();
     // Right joystick and up, down, left, right
     math::Vec<2, float> mRightDirection = math::Vec<2, float>::Zero();
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mCommand));
+        aWitness.witness(NVP(mLeftDirection));
+        aWitness.witness(NVP(mRightDirection));
+    }
 };
 
 struct ControllerCommand

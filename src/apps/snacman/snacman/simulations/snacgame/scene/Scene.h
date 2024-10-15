@@ -1,5 +1,8 @@
 #pragma once
 
+#include <snacman/serialization/Serial.h>
+#include <reflexion/NameValuePair.h>
+
 #include "../OrbitalControlInput.h"
 
 #include "../component/SceneNode.h"
@@ -26,19 +29,43 @@ namespace scene {
 const inline std::string gQuitTransitionName = "quit";
 
 struct MenuSceneInfo
-{};
+{
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+    }
+};
 
 struct JoinGameSceneInfo
 {
     int mTransitionControllerId = -1;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mTransitionControllerId));
+    }
 };
 
 struct GameSceneInfo
-{};
+{
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+    }
+};
 
 struct DisconnectedControllerInfo
 {
     std::vector<int> mDisconnectedControllerId;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mDisconnectedControllerId));
+    }
 };
 
 struct Transition
@@ -51,6 +78,15 @@ struct Transition
     bool operator==(const Transition & aRhs) const
     {
         return mTransitionName == aRhs.mTransitionName;
+    }
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mTransitionName));
+        aWitness.witness(NVP(shouldTeardown));
+        aWitness.witness(NVP(shouldSetup));
+        aWitness.witness(NVP(mSceneInfo));
     }
 };
 

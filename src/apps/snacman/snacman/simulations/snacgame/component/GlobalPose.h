@@ -1,5 +1,8 @@
 #pragma once
 
+#include <snacman/serialization/Serial.h>
+#include <reflexion/NameValuePair.h>
+
 #include <math/Vector.h>
 #include <math/Quaternion.h>
 #include <math/Color.h>
@@ -19,7 +22,20 @@ struct GlobalPose
     math::hdr::Rgba_f mColor; // TODO should not be here
 
     void drawUi() const;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mPosition));
+        aWitness.witness(NVP(mScaling));
+        aWitness.witness(NVP(mInstanceScaling));
+        aWitness.witness(NVP(mOrientation));
+        aWitness.witness(NVP(mColor));
+    }
 };
+
+REFLEXION_REGISTER(GlobalPose)
+
 }
 }
 }

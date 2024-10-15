@@ -209,6 +209,7 @@ void runApplication()
         if constexpr(isDevmode())
         {
             simulation.drawDebugUi(configurableSettings, inhibiter, input, profilerOutput.str());
+
         }
         else
         {

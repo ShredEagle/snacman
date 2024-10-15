@@ -1,5 +1,8 @@
 #pragma once
 
+#include <snacman/serialization/Serial.h>
+#include <reflexion/NameValuePair.h>
+
 #include <math/Angle.h>
 #include <math/Vector.h>
 
@@ -18,8 +21,17 @@ struct PoseScreenSpace
     // (and atm, the transformation in the shader should result in pixel coordinates)
     // Plus for non-origin aligned rotations, it is hard to express the origin in screen unit square...
     //math::AffineMatrix<3, float> mLocalToScreenUnit{math::AffineMatrix<3, float>::Identity}; // screen unit square, from [-1, -1] to [1, 1]
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mPosition_u));
+        aWitness.witness(NVP(mScale));
+        aWitness.witness(NVP(mRotationCCW));
+    }
 };
 
+REFLEXION_REGISTER(PoseScreenSpace)
 
 } // namespace component
 } // namespace cubes

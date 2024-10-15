@@ -20,6 +20,7 @@ set(${TARGET_NAME}_HEADERS
     QueryManipulation.h
     RenderThread.h
     Resources.h
+    SnacArchive.h
     SparseSet.h
     TemporaryRendererHelpers.h # TODO should be removed, this was a hack waiting to host Object instead of Node in VisualModel
     Timing.h
@@ -105,6 +106,13 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/SceneStack.h
 
     detail/Logger.h
+    detail/Common.h
+
+    serialization/Imgui.h
+    serialization/ImguiSerialization.h
+    serialization/Json.h
+    serialization/JsonSerialization.h
+    serialization/Witness.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -163,6 +171,9 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/SceneStack.cpp
 
     detail/Logger.cpp
+
+    serialization/ImguiSerialization.cpp
+    serialization/Witness.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -231,6 +242,7 @@ target_link_libraries(${TARGET_NAME}
         ad::profiler
         ad::snac-renderer-V1 # TODO #RV2 remove
         ad::snac-renderer-V2
+        ad::snac-reflexion
 
         ad::arte
         ad::entity

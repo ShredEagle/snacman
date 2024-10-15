@@ -1,5 +1,8 @@
 #pragma once
 
+#include <snacman/serialization/Serial.h>
+#include <reflexion/NameValuePair.h>
+
 #include "../GameParameters.h"
 #include "snacman/simulations/snacgame/component/PowerUp.h"
 
@@ -55,8 +58,17 @@ struct PlayerHud
     ent::Handle<ent::Entity> mScoreText;
     ent::Handle<ent::Entity> mRoundText;
     ent::Handle<ent::Entity> mPowerupText;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mScoreText));
+        aWitness.witness(NVP(mRoundText));
+        aWitness.witness(NVP(mPowerupText));
+    }
 };
 
+REFLEXION_REGISTER(PlayerHud)
 
 } // namespace component
 } // namespace snacgame

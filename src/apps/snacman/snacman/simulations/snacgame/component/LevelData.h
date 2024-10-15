@@ -1,8 +1,12 @@
 #pragma once
 
+#include <snacman/serialization/Serial.h>
+
+#include <reflexion/NameValuePair.h>
+
 #include "Tags.h"
-#include "snacman/simulations/snacgame/LevelHelper.h"
 #include "../InputConstants.h"
+#include "../LevelHelper.h"
 
 #include <math/Vector.h>
 #include <platform/Filesystem.h>
@@ -27,10 +31,20 @@ enum class TileType
 
 struct Tile
 {
-    TileType mType;
+    TileType mType = TileType::Void;
     int mAllowedMove = gAllowedMovementNone;
     math::Position<2, float> mPos = math::Position<2, float>::Zero();
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mType));
+        aWitness.witness(NVP(mAllowedMove));
+        aWitness.witness(NVP(mPos));
+    }
 };
+
+REFLEXION_REGISTER(Tile)
 
 struct PathfindNode
 {
@@ -41,10 +55,26 @@ struct PathfindNode
     math::Position<2, float> mPos;
     bool mPathable = false;
     bool mOpened = false;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mReducedCost));
+        aWitness.witness(NVP(mCost));
+        aWitness.witness(NVP(mIndex));
+        aWitness.witness(NVP(mPos));
+        aWitness.witness(NVP(mPathable));
+        aWitness.witness(NVP(mOpened));
+    }
 };
+
+REFLEXION_REGISTER(PathfindNode)
 
 struct LevelSetupData
 {
+    LevelSetupData()
+    {}
+
     // Level grid stored as
     // 0 1 2 ... mColCount - 1 (0th row)
     // mColCount mColCount + 1 ... 2 * mColCount - 1 (1th row)
@@ -63,7 +93,17 @@ struct LevelSetupData
     std::vector<math::Size<3, int>> mAvailableSizes;
     int mSeed;
 
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mAssetRoot));
+        aWitness.witness(NVP(mFile));
+        aWitness.witness(NVP(mAvailableSizes));
+        aWitness.witness(NVP(mSeed));
+    }
 };
+
+REFLEXION_REGISTER(LevelSetupData)
 
 struct Level
 {
@@ -73,7 +113,19 @@ struct Level
 
     std::vector<int> mPortalIndex;
     float mCellSize = 1.f;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mSize));
+        aWitness.witness(NVP(mTiles));
+        aWitness.witness(NVP(mNodes));
+        aWitness.witness(NVP(mPortalIndex));
+        aWitness.witness(NVP(mCellSize));
+    }
 };
+
+REFLEXION_REGISTER(Level)
 
 } // namespace component
 } // namespace snacgame

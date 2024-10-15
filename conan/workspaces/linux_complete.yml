@@ -1,14 +1,16 @@
 editables:
-    MarkovJunior.cpp/01458bc65b@adnn/develop:
+    MarkovJunior.cpp/d245053a72@adnn/develop:
         path: ../../../MarkovJunior.cpp/conan
-    entity/8c53fddf55@adnn/develop:
+    entity/0f3525cba1@adnn/develop:
         path: ../../../entity/conan
-    graphics/81280a6e5a@adnn/develop:
+    graphics/3a7f5997a1@adnn/develop:
         path: ../../../graphics/conan
-    handy/5c42e80ebf@adnn/develop:
+    handy/15a1bb8eaa@adnn/develop:
         path: ../../../handy/conan
-    math/06fe2ee25c@adnn/develop:
+    math/d5fa5b3887@adnn/develop:
         path: ../../../math/conan
+    reflexion/57198786a6@adnn/develop:
+        path: ../../../reflexion/conan
     snacman/local:
         path: ../../conan
 layout: linux_layout

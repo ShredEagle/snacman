@@ -1,5 +1,8 @@
 #pragma once
 
+#include <snacman/serialization/Serial.h>
+#include <reflexion/NameValuePair.h>
+
 #include "PowerUp.h"
 
 #include "../GameParameters.h"
@@ -20,6 +23,11 @@ constexpr float gTeleportChangeTargetDelay = 1.f;
 
 struct DogPowerUpInfo
 {
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+    }
 };
 
 struct TeleportPowerUpInfo
@@ -30,18 +38,41 @@ struct TeleportPowerUpInfo
     // and then to wait for the delay
     float mDelayChangeTarget = 0.f;
     ent::Handle<ent::Entity> mTargetArrow;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mCurrentTarget));
+        aWitness.witness(NVP(mDelayChangeTarget));
+        aWitness.witness(NVP(mTargetArrow));
+    }
 };
 
 struct MissilePowerUpInfo
 {
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+    }
 };
 
 struct PlayerPowerUp
 {
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+    }
 };
 
 struct ControllingMissile
 {
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+    }
 };
 
 struct PlayerRoundData
@@ -73,8 +104,27 @@ struct PlayerRoundData
     int mDestinationPortal = -1;
 
     void drawUi() const;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mRoundScore));
+        aWitness.witness(NVP(mInvulFrameCounter));
+        aWitness.witness(NVP(mMoveState));
+        aWitness.witness(NVP(mModel));
+        aWitness.witness(NVP(mCrown));
+        aWitness.witness(NVP(mSlot));
+        aWitness.witness(NVP(mPowerUp));
+        aWitness.witness(NVP(mType));
+        aWitness.witness(NVP(mInfo));
+        aWitness.witness(NVP(mPortalImage));
+        aWitness.witness(NVP(mCurrentPortalPos));
+        aWitness.witness(NVP(mCurrentPortal));
+        aWitness.witness(NVP(mDestinationPortal));
+    }
 };
 
+REFLEXION_REGISTER(PlayerRoundData)
 
 } // namespace component
 } // namespace snacgame

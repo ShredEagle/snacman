@@ -19,6 +19,7 @@
 #include "../component/GlobalPose.h"
 #include "../component/Geometry.h"
 #include "../component/SceneNode.h"
+#include "../system/SceneStack.h"
 #include "../GameContext.h"
 #include "../GameParameters.h"
 #include "../typedef.h"

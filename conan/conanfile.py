@@ -22,18 +22,23 @@ class SnacmanConan(ConanFile):
     }
 
     requires = (
-        ("entity/38ecfecf59@adnn/develop"),
-        ("graphics/a494da01c2@adnn/develop"),
+        ("entity/0f3525cba1@adnn/develop"),
+        ("graphics/3a7f5997a1@adnn/develop"),
         ("handy/15a1bb8eaa@adnn/develop"),
-        ("math/93cb736b19@adnn/develop"),
-        ("MarkovJunior.cpp/c6fb4e32d1@adnn/develop"),
+        ("math/d5fa5b3887@adnn/develop"),
+        ("MarkovJunior.cpp/55a5a1d84d@adnn/develop"),
+
+        ("implot/0.16"),  # MIT
+        ("imgui/1.89.8"),
+
 
         # Waiting for my PR on conan-center for assimp to get merged in
         # see: https://github.com/conan-io/conan-center-index/pull/20185
         # I manually exported the recipe and uploaded it.
-        ("assimp/5.3.1@adnn/develop"),
         ("cli11/2.4.2"),
+        ("assimp/5.4.2"),
         ("spdlog/1.13.0"),
+        # ("spdlog/1.13.0@#1e0f4eb6338d05e4bd6fcc6bf4734172"),
         ("nlohmann_json/3.11.2"),
 
         # Intel Instrumentation and Tracing Technology API
@@ -41,6 +46,7 @@ class SnacmanConan(ConanFile):
 
         # The overrides (who will think about reviewing them?)
         ("zlib/1.3"),
+        ("reflexion/57198786a6@adnn/develop"),
     )
 
     # Note: It seems conventionnal to add CMake build requirement

@@ -1,4 +1,8 @@
 #pragma once
+
+#include <snacman/serialization/Serial.h>
+#include <reflexion/NameValuePair.h>
+
 #include <entity/Entity.h>
 
 namespace ad {
@@ -19,8 +23,19 @@ struct SceneNode
     ent::Handle<ent::Entity> mParent;
     // TODO There should not be a name here directly, but this makes debugging easier
     std::string mName;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mFirstChild));
+        aWitness.witness(NVP(mNextChild));
+        aWitness.witness(NVP(mPrevChild));
+        aWitness.witness(NVP(mParent));
+        aWitness.witness(NVP(mName));
+    }
 };
 
+REFLEXION_REGISTER(SceneNode)
 
 }
 } // namespace snacgame
