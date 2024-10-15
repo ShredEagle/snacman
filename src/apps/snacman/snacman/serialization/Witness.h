@@ -7,7 +7,6 @@
 #include "JsonSerialization.h"
 #include "snac-renderer-V1/text/Text.h"
 #include "snacman/Resources.h"
-#include "snacman/simulations/snacgame/GameContext.h"
 
 #include <imgui.h>
 #include <nlohmann/json.hpp>
@@ -19,6 +18,9 @@
 #include <variant>
 
 namespace ad {
+namespace snacgame {
+struct GameContext;
+}
 namespace serial {
 
 using imguiui::ImguiUi;
@@ -88,7 +90,7 @@ template <std::size_t N>
 struct variant_switch
 {
     template <class T_variant, class T_witness>
-    void operator()(int aIndex,
+    void operator()(std::size_t aIndex,
                     const T_witness & aWitness,
                     T_variant & aVariant) const
     {
@@ -106,7 +108,7 @@ template <>
 struct variant_switch<0>
 {
     template <class T_variant, class T_witness>
-    void operator()(int aIndex,
+    void operator()(std::size_t aIndex,
                     const T_witness & aWitness,
                     T_variant & aVariant) const
     {
@@ -350,24 +352,9 @@ public:
     }
 
     void witness_json(const char * aName,
-                      renderer::Handle<const renderer::Object> * aObject)
-    {
-        json & data = *std::get<json *>(mData);
-        snac::ModelData modelData =
-            mGameContext.mResources.getModelDataFromResource(*aObject);
-        data[aName]["modelPath"] = modelData.mModelPath;
-        data[aName]["effectPath"] = modelData.mEffectPath;
-    }
+                      renderer::Handle<const renderer::Object> * aObject);
 
-    void witness_json(const char * aName, std::shared_ptr<snac::Font> * aObject)
-    {
-        json & data = *std::get<json *>(mData);
-        snac::FontSerialData fontData =
-            mGameContext.mResources.getFontDataFromResource(*aObject);
-        data[aName]["fontPath"] = fontData.mFontPath;
-        data[aName]["pixelHeight"] = fontData.mPixelHeight;
-        data[aName]["effectPath"] = fontData.mEffectPath;
-    }
+    void witness_json(const char * aName, std::shared_ptr<snac::Font> * aObject);
 
     template <JsonExtractable T_value>
     void testify_json(const char * aName, T_value * aValue) const
@@ -430,21 +417,10 @@ public:
     }
 
     void testify_json(const char * aName,
-                      renderer::Handle<const renderer::Object> * aObject) const
-    {
-        json & data = *std::get<json *>(mData);
-        *aObject = mGameContext.mResources.getModel(data[aName]["modelPath"],
-                                                    data[aName]["effectPath"]);
-    }
+                      renderer::Handle<const renderer::Object> * aObject) const;
 
     void testify_json(const char * aName,
-                      std::shared_ptr<snac::Font> * aObject) const
-    {
-        json & data = *std::get<json *>(mData);
-        *aObject = mGameContext.mResources.getFont(data[aName]["fontPath"],
-                                                   data[aName]["pixelHeight"],
-                                                   data[aName]["effectPath"]);
-    }
+                      std::shared_ptr<snac::Font> * aObject) const;
 };
 
 #define WITNESS_FUNC_DECLARATION(name)                                         \

@@ -1,17 +1,59 @@
 #include "Witness.h"
 
-#include <cstdio>
-#include <entity/Entity.h>
-#include <imgui.h>
-#include <nlohmann/json.hpp>
+#include <snacman/simulations/snacgame/GameContext.h>
+
 #include <snac-reflexion/Reflexion.h>
 #include <snac-reflexion/Reflexion_impl.h>
+
+#include <entity/Entity.h>
+
+#include <imgui.h>
+#include <nlohmann/json.hpp>
+
+#include <cstdio>
 #include <string>
 
 namespace ad {
 namespace serial {
 
 using nlohmann::json;
+
+void Witness::witness_json(const char * aName,
+                  renderer::Handle<const renderer::Object> * aObject)
+{
+    json & data = *std::get<json *>(mData);
+    snac::ModelData modelData =
+        mGameContext.mResources.getModelDataFromResource(*aObject);
+    data[aName]["modelPath"] = modelData.mModelPath;
+    data[aName]["effectPath"] = modelData.mEffectPath;
+}
+
+void Witness::witness_json(const char * aName, std::shared_ptr<snac::Font> * aObject)
+{
+    json & data = *std::get<json *>(mData);
+    snac::FontSerialData fontData =
+        mGameContext.mResources.getFontDataFromResource(*aObject);
+    data[aName]["fontPath"] = fontData.mFontPath;
+    data[aName]["pixelHeight"] = fontData.mPixelHeight;
+    data[aName]["effectPath"] = fontData.mEffectPath;
+}
+
+void Witness::testify_json(const char * aName,
+                  renderer::Handle<const renderer::Object> * aObject) const
+{
+    json & data = *std::get<json *>(mData);
+    *aObject = mGameContext.mResources.getModel(data[aName]["modelPath"],
+                                                data[aName]["effectPath"]);
+}
+
+void Witness::testify_json(const char * aName,
+                  std::shared_ptr<snac::Font> * aObject) const
+{
+    json & data = *std::get<json *>(mData);
+    *aObject = mGameContext.mResources.getFont(data[aName]["fontPath"],
+                                               data[aName]["pixelHeight"],
+                                               data[aName]["effectPath"]);
+}
 
 void testify_json(ent::EntityManager & aWorld,
                   const Witness && aData)

@@ -429,7 +429,7 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                                 scene::JoinGameScene::sFromMenuTransition,
                             .mSceneInfo = scene::JoinGameSceneInfo{0}}});
                     handle.get(phase)->add(component::MovementScreenSpace{
-                        math::Radian<float>{0.2}});
+                        math::Radian<float>{0.2f}});
                     handle.get(phase)->add(
                         component::PathToOnGrid{other, {1.1f, 1.2f}, false});
                     handle.get(phase)->add(

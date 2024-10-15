@@ -2,6 +2,9 @@
 
 #include "GameParameters.h"
 
+#include "component/PlayerSlot.h"
+#include "component/PlayerGameData.h"
+
 #include <entity/Entity.h>
 #include <entity/Query.h>
 namespace ad {
