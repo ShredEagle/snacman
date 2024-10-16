@@ -123,7 +123,7 @@ void SecondaryGraph::renderFrame(const Scene & aScene,
         // TODO Ad 2023/11/30: #perf Currently, this forward pass does not leverage the already available opaque depth-buffer
         // We cannot bind our "custom" depth buffer as the default framebuffer depth-buffer, so we will need to study alternatives:
         // render opaque depth to default FB, and blit to a texture for showing, render forward to a render target then blit to default FB, ...
-        passForward(aGraphShared, aPartList, textureRepository, aStorage, mControls, false);
+        passForward(aGraphShared, aPartList, textureRepository, aStorage, mControls, false/*no CSM*/, false /*no envmap*/);
     }
 }
 

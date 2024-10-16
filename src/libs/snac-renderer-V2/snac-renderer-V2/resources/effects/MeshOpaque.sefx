@@ -20,6 +20,15 @@
                 "shadows": "on"
             },
             "programfile": "shaders/ForwardPbr.prog",
+            "defines": ["ENVIRONMENT_MAPPING", "SHADOW_MAPPING"]
+        },
+        {
+            "annotations": {
+                "pass": "forward_pbr",
+                "environment": "on",
+                "csm": "on"
+            },
+            "programfile": "shaders/ForwardPbr.prog",
             "defines": ["ENVIRONMENT_MAPPING", "SHADOW_MAPPING", "SHADOW_CASCADE"]
         },
         {

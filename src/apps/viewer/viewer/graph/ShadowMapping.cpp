@@ -328,33 +328,22 @@ math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GL
 }
 
 
-LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
-                                  const RepositoryTexture & aTextureRepository,
-                                  Storage & aStorage,
-                                  const GraphShared & aGraphShared,
-                                  const ViewerPartList & aPartList,
-                                  math::Box<GLfloat> aSceneAabb,
-                                  const Camera & aCamera,
-                                  Handle<const graphics::Texture> aShadowMap,
-                                  std::span<const DirectionalLight> aDirectionalLights,
-                                  bool aDebugDrawFrusta)
+/// @brief Z-partitioning of the camera frustum
+/// @return An array of view-projection matrices, one per camera-subfrustum.
+std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> zParitionCameraFrustum(const Camera & aCamera,
+                                                                                      ShadowCascadeBlock & aShadowCascadeBlock,
+                                                                                      const ShadowMapping::Controls & c,
+                                                                                      bool aDebugDrawFrusta)
 {
-    const ShadowMapping::Controls & c = aPass.mControls;
-
-    const math::AffineMatrix<4, float> cameraToWorld = aCamera.getParentToCamera().inverse();
-    const math::Vec<3, float> camRight_world = math::Vec<3, float>{1.f, 0.f, 0.f} * cameraToWorld.getLinear();
-    const math::Vec<3, float> camUp_world = math::Vec<3, float>{0.f, 1.f, 0.f} * cameraToWorld.getLinear();
-
     const auto [cameraNear, cameraFar] = getNearFarPlanes(aCamera);
     // Minimum of negative values will return the value with largest absolute value.
-    float clampedCameraNear = std::min(cameraNear, c.mCsmNearPlaneLimit);
+    const float clampedCameraNear = std::min(cameraNear, c.mCsmNearPlaneLimit);
     // Computation of Z-partitioning ratio
     const float distanceRatio = std::pow(cameraFar/clampedCameraNear, 1.f/gMaxCascadesPerShadow);
 
     std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> frustaCascade;
     // Warning: #cascade_hardcode_4 we are hardcoding the fact there are exactly 4 cascades here.
     static_assert(gMaxCascadesPerShadow == 4);
-    ShadowCascadeBlock shadowCascadeBlock;
 
     // For each cascade, calculate the view-frustum bounds
     // We follow fit-to-cascade, where cascade N-1 far-plane becomes cascade N near-plane.
@@ -374,15 +363,54 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                 drawer::gShadow,
                 hdr::gColorBrewerSet1_linear[cascadeIdx]);
         }
-        shadowCascadeBlock.mCascadeFarPlaneDepths_view[cascadeIdx] = far;
+        aShadowCascadeBlock.mCascadeFarPlaneDepths_view[cascadeIdx] = far;
         near = far;
         far = near * distanceRatio;
     }
     // The last far value, which was assigned to near, should match the overall camera far
     assert(near = cameraFar);
 
+    return frustaCascade;
+}
+
+
+LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
+                                  const RepositoryTexture & aTextureRepository,
+                                  Storage & aStorage,
+                                  const GraphShared & aGraphShared,
+                                  const ViewerPartList & aPartList,
+                                  math::Box<GLfloat> aSceneAabb,
+                                  const Camera & aCamera,
+                                  Handle<const graphics::Texture> aShadowMap,
+                                  std::span<const DirectionalLight> aDirectionalLights,
+                                  bool aDebugDrawFrusta /* TODO: can we remove? (absorbed by controls)*/)
+{
+    const ShadowMapping::Controls & c = aPass.mControls;
+    const DepthMethod method = c.mUseCascades ? DepthMethod::Cascaded : DepthMethod::Single;
+
+    // Z-partitioning of the camera frustum (only usefull for CSM)
+    std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> frustaCascade;
+    if (method == DepthMethod::Cascaded)
+    {
+        ShadowCascadeBlock shadowCascadeBlock;
+        frustaCascade = zParitionCameraFrustum(aCamera, shadowCascadeBlock, c, aDebugDrawFrusta);
+
+        shadowCascadeBlock.mDebugTintCascade = c.mTintViewByCascadeIdx;
+        // Note: In production, it is likely that a given camera has constant Z-partitioning, so the shadow cascade UBO
+        // could be loaded once.
+        // Note: this load is usefull for subsequent scene renderings, not to render the shadow map in itself.
+        // It is a bit of a smell to have side effects for subsequent passes "hidden" in this specific function
+        // (it does not fell well-structured).
+        // The goal of the frame graph is to make this kind of data dependency very explicit, such as:
+        // This call produces the ShadowCascadeUbo, which is later consummed by other passes (e.g. forward pass)
+        proto::loadSingle(*aGraphShared.mUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
+    }
+
+    // Will receive the view-projection matrix (ie. form world to light clipping space)
+    // for each light projecting a shadow.
     LightViewProjection lightViewProjection;
 
+    // Enable slope-scale bias
     auto scopePolygonOffset = graphics::scopeFeature(GL_POLYGON_OFFSET_FILL, true);
     glPolygonOffset(c.mSlopeScale, c.mUnitScale);
 
@@ -391,13 +419,6 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
 
     // Will remain the bound FBO while all the shadow maps are rendered
     graphics::ScopedBind boundFbo{aPass.mFbo, graphics::FrameBufferTarget::Draw};
-
-    // Attach a texture as the logical buffer of the FBO
-    {
-        // TODO: The attachment is permanent, no need to recreate it each time the FBO is bound
-        gl.FramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *aShadowMap, /*mip map level*/0);
-        assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-    }
 
     // The viewport size is be the same for each shadow map.
     glViewport(0, 0, ShadowMapping::gTextureSize.width(), ShadowMapping::gTextureSize.height());
@@ -416,57 +437,110 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         // This is a pure orientation: a directional light has no "position", we can set its origin to the other space origin.
         const math::LinearMatrix<3, 3, GLfloat> orientationWorldToLight = alignMinusZ(light.mDirection);
 
-        for(unsigned int cascadeIdx = 0; cascadeIdx != gMaxCascadesPerShadow; ++cascadeIdx)
+        if(method == DepthMethod::Cascaded)
         {
-            math::Matrix<4, 4, float> cascadeViewProjection = computeLightViewProjection(orientationWorldToLight,
-                                                                                         aSceneAabb,
-                                                                                         frustaCascade[cascadeIdx],
-                                                                                         c,
-                                                                                         aDebugDrawFrusta ?
-                                                                                             std::optional<DebugPlaneColors>{{
-                                                                                                .mOutline = hdr::gColorBrewerSet1_linear[cascadeIdx],
-                                                                                                .mSubdiv = light.mDiffuseColor * 0.5f}}
-                                                                                             : std::nullopt
-                                                                                        );
+            for(unsigned int cascadeIdx = 0; cascadeIdx != gMaxCascadesPerShadow; ++cascadeIdx)
+            {
+                math::Matrix<4, 4, float> cascadeViewProjection = computeLightViewProjection(orientationWorldToLight,
+                                                                                            aSceneAabb,
+                                                                                            frustaCascade[cascadeIdx],
+                                                                                            c,
+                                                                                            aDebugDrawFrusta ?
+                                                                                                std::optional<DebugPlaneColors>{{
+                                                                                                    .mOutline = hdr::gColorBrewerSet1_linear[cascadeIdx],
+                                                                                                    .mSubdiv = light.mDiffuseColor * 0.5f}}
+                                                                                                : std::nullopt
+                                                                                            );
+
+                // Add the light view-projection to the collection
+                lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + cascadeIdx] =
+                    math::AffineMatrix<4, GLfloat>{orientationWorldToLight}
+                    * cascadeViewProjection;
+                lightViewProjection.mLightViewProjectionCount++;
+            }
+
+            if(aDebugDrawFrusta && (c.mDebugDrawWhichCascade >= 0)) 
+            {
+                const std::size_t whichCascade = c.mDebugDrawClippedTriangles; // largest
+                debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + c.mDebugDrawWhichCascade].inverse(),
+                                    drawer::gLight,
+                                    light.mDiffuseColor);
+            }
+        }
+        else
+        {
+            math::Matrix<4, 4, float> fullViewProjection = computeLightViewProjection(orientationWorldToLight,
+                                                                                       aSceneAabb,
+                                                                                       aCamera.assembleViewProjection(),
+                                                                                       c,
+                                                                                       aDebugDrawFrusta ?
+                                                                                           std::optional<DebugPlaneColors>{{
+                                                                                               .mOutline = math::hdr::gMagenta<float>,
+                                                                                               .mSubdiv = light.mDiffuseColor * 0.5f}}
+                                                                                           : std::nullopt
+                                                                                       );
 
             // Add the light view-projection to the collection
-            lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + cascadeIdx] =
+            lightViewProjection.mLightViewProjections[directionalIdx] =
                 math::AffineMatrix<4, GLfloat>{orientationWorldToLight}
-                * cascadeViewProjection;
+                * fullViewProjection;
             lightViewProjection.mLightViewProjectionCount++;
-        }
 
-        if(aDebugDrawFrusta && (c.mDebugDrawWhichCascade >= 0)) 
-        {
-            const std::size_t whichCascade = c.mDebugDrawClippedTriangles; // largest
-            debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + c.mDebugDrawWhichCascade].inverse(),
-                                 drawer::gLight,
-                                 light.mDiffuseColor);
+            //
+            // Render shadow map (for single method)
+            //
+
+            // Attach a texture as the logical buffer of the FBO
+            // This is not layered, as we attache a single layer from the shadow-maps array.
+            // (The layer we intend to render to via `passOpaqueDepth()`).
+            {
+                // The attachment is permanent, no need to recreate it each time the FBO is bound
+                gl.FramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *aShadowMap, /*mip map level*/0, directionalIdx);
+                assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+            }
+
+            // TODO Ad 2024/10/11: #parameterize_shaders if we were able to select a program with the correct
+            // number of GS invocations (lights) we would only need a single "draw call".
+            // and it would be more uniform with the CSM version: using the same instanced-GS program,
+            // done once after this for-loop.
+            loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
+                          GpuViewProjectionBlock{orientationWorldToLight, fullViewProjection});
+            passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Single);
         }
     }
 
     loadLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo, lightViewProjection);
 
-    // Clear must appear after the Framebuffer setup!
-    gl.Clear(GL_DEPTH_BUFFER_BIT);
-
-    // TODO Ad 2024/10/11: #parameterize_shaders if we were able to select a program with the correct
-    // number of GS invocations (#lights x #cascade) we would only need a single "draw call".
-    for(GLuint directionalIdx = 0;
-        directionalIdx != aDirectionalLights.size();
-        ++directionalIdx)
+    //
+    // Render shadow maps
+    //
+    if(method == DepthMethod::Cascaded)
     {
-        lightViewProjection.mLightViewProjectionOffset = gMaxCascadesPerShadow * directionalIdx;
-        updateOffsetInLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo,
-                                             lightViewProjection);
-        passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Cascaded);
-    }
+        // Attach a texture as the logical buffer of the FBO
+        // Since the texture is an array, the attachment is layered.
+        {
+            // TODO: The attachment is permanent, no need to recreate it each time the FBO is bound
+            gl.FramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *aShadowMap, /*mip map level*/0);
+            assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+        }
 
-    shadowCascadeBlock.mDebugTintCascade = c.mTintViewByCascadeIdx;
-    // Note: In production, it is likely that a given camera has constant Z-partitioning, so the shadow cascade UBO
-    // could be loaded once.
-    // loadShadowCascadeUbo()
-    proto::loadSingle(*aGraphShared.mUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
+        // TODO Ad 2024/10/11: #parameterize_shaders if we were able to select a program with the correct
+        // number of GS invocations (lights * cascades) we would only need a single "draw call".
+        for(GLuint directionalIdx = 0;
+            directionalIdx != aDirectionalLights.size();
+            ++directionalIdx)
+        {
+            lightViewProjection.mLightViewProjectionOffset = gMaxCascadesPerShadow * directionalIdx;
+            updateOffsetInLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo,
+                                                lightViewProjection);
+            // TODO avoid the instanciated stuff when the cascades are disabled
+            passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Cascaded);
+        }
+    }
+    else
+    {
+        // Done above, directly in the loop where we compute the lights' view-projection.
+    }
 
     return lightViewProjection;
 }

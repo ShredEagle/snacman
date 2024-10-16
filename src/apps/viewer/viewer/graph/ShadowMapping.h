@@ -29,6 +29,9 @@ struct ShadowMapping
         GLfloat mSlopeScale{5.0f};
         GLfloat mUnitScale{5000.f};
 
+        // Toggle cascaded shadow map.
+        bool mUseCascades{true};
+
         // Note: it is not always recommended, because it can change the light frustum size
         // frame to frame, which might degrade light texel grid alignment techniques.
         // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/common-techniques-to-improve-shadow-depth-maps?redirectedfrom=MSDN#calculating-a-tight-projection
@@ -58,6 +61,7 @@ void r(T_visitor & aV, ShadowMapping::Controls & aControls)
 {
     give(aV, aControls.mSlopeScale, "slope scale");
     give(aV, aControls.mUnitScale,  "unit scale");
+    give(aV, aControls.mUseCascades,  "Cascaded Shadow Maps");
     give(aV, aControls.mTightenLightFrustumXYToScene,  "frustum XY to scene");
     give(aV, aControls.mTightenFrustumDepthToClippedScene,  "frustum Z to clipped scene");
     give(aV, aControls.mDebugDrawClippedTriangles,  "debug: Draw clipped triangles");

@@ -64,6 +64,7 @@ void passForward(const GraphShared & aGraphShared,
                  const RepositoryTexture & aTextureRepository,
                  Storage & aStorage,
                  const GraphControls aControls,
+                 bool aCascadedShadowMap,
                  bool aEnvironmentMapping)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "pass_forward", CpuTime, GpuTime);
@@ -76,6 +77,12 @@ void passForward(const GraphShared & aGraphShared,
     {
         annotations.push_back({"environment", "on"});
     }
+
+    if(aCascadedShadowMap)
+    {
+        annotations.push_back({"csm", "on"});
+    }
+
     ViewerPassCache passCache = prepareViewerPass(annotations, aPartList, aStorage);
 
     // Load the data for the part and pass related UBOs (TODO: SSBOs)

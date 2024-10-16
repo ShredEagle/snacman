@@ -33,6 +33,9 @@ void passForward(const GraphShared & aGraphShared,
                  const RepositoryTexture & aTextureRepository,
                  Storage & aStorage,
                  const GraphControls aControls,
+                 // TODO Ad 2024/10/16: #pass_API The multiplication of ad-hoc controls on the passes interface
+                 // seems indicative that the pass abstraction is not well defined.
+                 bool aCascadedShadowMap,
                  bool aEnvironmentMapping);
 
 
