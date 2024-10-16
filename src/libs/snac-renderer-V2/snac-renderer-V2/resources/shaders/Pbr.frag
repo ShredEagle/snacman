@@ -339,6 +339,7 @@ void main()
     vec3 diffuseAccum = vec3(0.);
     vec3 specularAccum = vec3(0.);
 
+vec3 cascadeSelectionDebugColor = vec3(1.); 
 #if defined(SHADOW_CASCADE)
     //
     // Cascade selection
@@ -354,9 +355,10 @@ void main()
     const vec4 availableCascadeIndices = vec4(1, 1, 1, 0);
     uint shadowCascadeIdx = uint(dot(availableCascadeIndices, depthComparison));
 
-    vec3 cascadeSelectionDebugColor = gColorBrewerSet1_linear[shadowCascadeIdx]; 
-#else
-    vec3 cascadeSelectionDebugColor = vec3(1.); 
+    if(debugTintCascade)
+    {
+        cascadeSelectionDebugColor = gColorBrewerSet1_linear[shadowCascadeIdx]; 
+    }
 #endif //SHADOW_CASCADE
 
 

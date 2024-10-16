@@ -42,6 +42,7 @@ struct ShadowMapping
 
         GLfloat mCsmNearPlaneLimit{-1.f};
         int mDebugDrawWhichCascade{0};
+        bool mTintViewByCascadeIdx{false};
     };
 
     Controls mControls;
@@ -59,9 +60,11 @@ void r(T_visitor & aV, ShadowMapping::Controls & aControls)
     give(aV, aControls.mUnitScale,  "unit scale");
     give(aV, aControls.mTightenLightFrustumXYToScene,  "frustum XY to scene");
     give(aV, aControls.mTightenFrustumDepthToClippedScene,  "frustum Z to clipped scene");
-    give(aV, aControls.mDebugDrawClippedTriangles,  "debugdraw clipped triangles");
+    give(aV, aControls.mDebugDrawClippedTriangles,  "debug: Draw clipped triangles");
     give(aV, aControls.mCsmNearPlaneLimit,  "The near plane will be clamped for cascade partitionning");
-    give(aV, Clamped<int>{aControls.mDebugDrawWhichCascade, -1, gMaxCascadesPerShadow - 1},  "debugdraw shadow cascade frustum");
+    give(aV, Clamped<int>{aControls.mDebugDrawWhichCascade, -1, gMaxCascadesPerShadow - 1},
+         "debug: Draw shadow cascade frustum");
+    give(aV, aControls.mTintViewByCascadeIdx,  "debug: Tint rendering by cascade index");
 }
 
 

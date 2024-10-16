@@ -462,6 +462,9 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Cascaded);
     }
 
+    shadowCascadeBlock.mDebugTintCascade = c.mTintViewByCascadeIdx;
+    // Note: In production, it is likely that a given camera has constant Z-partitioning, so the shadow cascade UBO
+    // could be loaded once.
     // loadShadowCascadeUbo()
     proto::loadSingle(*aGraphShared.mUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
 
