@@ -28,6 +28,10 @@ struct ShadowMapping
     /// (CSM will use smaller layers than single).
     void prepareShadowMap();
 
+    /// @brief Ensures the current setup matches the configured controls
+    /// and fix it if necessary
+    void reviewControls();
+
     // Note: #thread-safety this will not be thread safe if controls are presented in imgui on the main thread
     // and values read by a render thread.
     struct Controls
@@ -37,6 +41,9 @@ struct ShadowMapping
 
         // Toggle cascaded shadow map.
         bool mUseCascades{true};
+
+        // Toggle hardware percentage closer filtering
+        bool mUseHardwarePcf{true};
 
         // Note: it is not always recommended, because it can change the light frustum size
         // frame to frame, which might degrade light texel grid alignment techniques.
@@ -60,7 +67,11 @@ struct ShadowMapping
 
     Handle<graphics::Texture> mShadowMap;
     math::Size<2, GLsizei> mMapSize;
+
+    // TODO Ad 2024/10/17: #ui find a better pattern to implement the controllers of values
+    // that toggle an effect only when their value is changed.
     bool mIsSetupForCsm = mControls.mUseCascades;
+    bool mIsSetupForPcf = mControls.mUseHardwarePcf;
 
     // This is not necessarily the size of and individual texture layer, but the budget for a single light:
     // For CSM, this budget should be divided by the number of cascades.
@@ -74,6 +85,7 @@ void r(T_visitor & aV, ShadowMapping::Controls & aControls)
     give(aV, aControls.mSlopeScale, "slope scale");
     give(aV, aControls.mUnitScale,  "unit scale");
     give(aV, aControls.mUseCascades,  "Cascaded Shadow Maps");
+    give(aV, aControls.mUseHardwarePcf,  "Percentage Closer Filtering hw");
     give(aV, aControls.mTightenLightFrustumXYToScene,  "frustum XY to scene");
     give(aV, aControls.mTightenFrustumDepthToClippedScene,  "frustum Z to clipped scene");
     give(aV, aControls.mDebugDrawClippedTriangles,  "debug: Draw clipped triangles");

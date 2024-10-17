@@ -105,8 +105,29 @@ void ShadowMapping::prepareShadowMap()
         setupShadowMap(*this, ShadowMapping::gTexelPerLight, gMaxShadowLights);
     }
     mIsSetupForCsm = mControls.mUseCascades;
+
+    {
+        graphics::ScopedBind boundTexture{*mShadowMap};
+        // GL_LINEAR magnification filter enables hardware PCF
+        glTexParameteri(mShadowMap->mTarget,
+                        GL_TEXTURE_MAG_FILTER, 
+                        (mControls.mUseHardwarePcf ? GL_LINEAR : GL_NEAREST));
+    }
+    mIsSetupForPcf = mControls.mUseHardwarePcf;
 }
 
+
+void ShadowMapping::reviewControls()
+{
+    // Note: This is wastefull, doing the whole preparation (including immage specification)
+    // each time any checked value is changed.
+    // Yet this is not intended to be runtime dynamic settings in production.
+    if(   mIsSetupForCsm != mControls.mUseCascades
+       || mIsSetupForPcf != mControls.mUseHardwarePcf)
+    {
+        prepareShadowMap();
+    }
+}
 
 
 math::Rectangle<GLfloat> getFrustumSideBounds(math::Matrix<4, 4, GLfloat> aFrustumClipToLightSpace)

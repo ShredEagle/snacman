@@ -150,12 +150,9 @@ void TheGraph::renderFrame(const Scene & aScene,
 {
     RepositoryTexture textureRepository;
 
-    // It is a bit weird that the client is inspecting shadow pass to determine when 
-    // shadowmap textures should be reconfigured.
-    if(mShadowPass.mIsSetupForCsm != mShadowPass.mControls.mUseCascades)
-    {
-        mShadowPass.prepareShadowMap();
-    }
+    // For the moment, it is the client responsibility to call that
+    // but it might be better to integrate it behind fillShadowMap()
+    mShadowPass.reviewControls();
 
     // Shadow mapping
     fillShadowMap(
