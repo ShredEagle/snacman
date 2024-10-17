@@ -25,32 +25,15 @@ namespace ad::renderer {
 namespace {
 
 
-    void prepareShadowMap(const graphics::Texture & aShadowMap)
-    {
-        graphics::ScopedBind boundTexture{aShadowMap};
-        gl.TexStorage3D(aShadowMap.mTarget,
-                        1,
-                        GL_DEPTH_COMPONENT24,
-                        ShadowMapping::gTextureSize.width(),
-                        ShadowMapping::gTextureSize.height(),
-                        gMaxShadowMaps);
-        assert(graphics::isImmutableFormat(aShadowMap));
-
-        // Set texture comparison mode, allowing to compare the depth component to a reference value
-        glTexParameteri(aShadowMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-        glTexParameteri(aShadowMap.mTarget, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-
-        glTexParameteri(aShadowMap.mTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(aShadowMap.mTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        glTexParameterfv(aShadowMap.mTarget, 
-                         GL_TEXTURE_BORDER_COLOR,
-                         math::hdr::Rgba_f{1.f, 0.f, 0.f, 0.f}.data());
-    }
-
-
     void setupShowTextureSampler(const graphics::Sampler & aSampler)
     {
         glSamplerParameteri(aSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        // Note: We hardcode that the show sampler will not use mipmapping:
+        // because a *mutable* texture which is not mipmap complete (e.g. depth map)
+        // would not be considered complete if its min filter uses mipmapping.
+        // TODO Ad 2024/10/17: Implement a behaviour tailored to the texture to be shown
+        // instead of hardcoding the lowest common denominator.
+        glSamplerParameteri(aSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glObjectLabel(GL_SAMPLER, aSampler, -1, "show_texture_sampler");
     }
 
@@ -66,12 +49,14 @@ TheGraph::TheGraph(math::Size<2, int> aRenderSize,
                    const Loader & aLoader) :
     mRenderSize{aRenderSize},
     mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")},
-    mShadowMap{makeTexture(aStorage, GL_TEXTURE_2D_ARRAY, "shadow_map")}
+    mShadowPass{
+        .mShadowMap = makeTexture(aStorage, GL_TEXTURE_2D_ARRAY, "shadow_map"),
+    }
 {
     allocateSizeDependentTextures(mRenderSize);
     setupSizeDependentTextures();
 
-    prepareShadowMap(*mShadowMap);
+    mShadowPass.prepareShadowMap();
 
     // Assign permanent texture units to glsl samplers used for the 2D transparency compositing.
     {
@@ -165,8 +150,15 @@ void TheGraph::renderFrame(const Scene & aScene,
 {
     RepositoryTexture textureRepository;
 
+    // It is a bit weird that the client is inspecting shadow pass to determine when 
+    // shadowmap textures should be reconfigured.
+    if(mShadowPass.mIsSetupForCsm != mShadowPass.mControls.mUseCascades)
+    {
+        mShadowPass.prepareShadowMap();
+    }
+
     // Shadow mapping
-    LightViewProjection lightViewProjection = fillShadowMap(
+    fillShadowMap(
         mShadowPass,
         textureRepository,
         aStorage,
@@ -174,7 +166,6 @@ void TheGraph::renderFrame(const Scene & aScene,
         aPartList,
         aScene.mRoot.mAabb,
         aCamera,
-        mShadowMap,
         std::span{aScene.mLights_world.mDirectionalLights.data(), aScene.mLights_world.mDirectionalCount},
         aShowTextures /*debug draw*/ // Semantically incorrect, but we take it to also mean "we are the main view"
     );
@@ -190,7 +181,7 @@ void TheGraph::renderFrame(const Scene & aScene,
         textureRepository = aScene.mEnvironment->mTextureRepository;
     }
 
-    textureRepository[semantic::gShadowMap] = mShadowMap;
+    textureRepository[semantic::gShadowMap] = mShadowPass.mShadowMap;
 
     {
         graphics::ScopedBind boundFbo{mDepthFbo};
@@ -255,7 +246,7 @@ void TheGraph::renderFrame(const Scene & aScene,
         #endif //SHOW_ENV_TEXTURES
 
         #if defined(SHOW_SHADOWMAP)
-        showDepthTexture(*mShadowMap, -1, -10, 1);
+        showDepthTexture(*mShadowPass.mShadowMap, -1, -10, 1);
         #endif //SHOW_SHADOWMAP 
     }
 }

@@ -24,6 +24,12 @@ struct ViewerPartList;
 
 struct ShadowMapping
 {
+    /// @brief Allocate texture and setup their parameters, respecting per-light budget.
+    /// (CSM will use smaller layers than single).
+    void prepareShadowMap();
+
+    // Note: #thread-safety this will not be thread safe if controls are presented in imgui on the main thread
+    // and values read by a render thread.
     struct Controls
     {
         GLfloat mSlopeScale{5.0f};
@@ -52,7 +58,13 @@ struct ShadowMapping
 
     graphics::FrameBuffer mFbo;
 
-    static constexpr math::Size<2, GLsizei> gTextureSize{2048, 2048};
+    Handle<graphics::Texture> mShadowMap;
+    math::Size<2, GLsizei> mMapSize;
+    bool mIsSetupForCsm = mControls.mUseCascades;
+
+    // This is not necessarily the size of and individual texture layer, but the budget for a single light:
+    // For CSM, this budget should be divided by the number of cascades.
+    static constexpr math::Size<2, GLsizei> gTexelPerLight{2048, 2048};
 };
 
 
@@ -66,22 +78,21 @@ void r(T_visitor & aV, ShadowMapping::Controls & aControls)
     give(aV, aControls.mTightenFrustumDepthToClippedScene,  "frustum Z to clipped scene");
     give(aV, aControls.mDebugDrawClippedTriangles,  "debug: Draw clipped triangles");
     give(aV, aControls.mCsmNearPlaneLimit,  "The near plane will be clamped for cascade partitionning");
-    give(aV, Clamped<int>{aControls.mDebugDrawWhichCascade, -1, gMaxCascadesPerShadow - 1},
+    give(aV, Clamped<int>{aControls.mDebugDrawWhichCascade, -1, gCascadesPerShadow - 1},
          "debug: Draw shadow cascade frustum");
     give(aV, aControls.mTintViewByCascadeIdx,  "debug: Tint rendering by cascade index");
 }
 
 
-LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
-                                  const RepositoryTexture & aTextureRepository,
-                                  Storage & aStorage,
-                                  const GraphShared & aGraphShared,
-                                  const ViewerPartList & aPartList,
-                                  math::Box<GLfloat> aSceneAabb,
-                                  const Camera & aCamera,
-                                  Handle<const graphics::Texture> aShadowMap,
-                                  std::span<const DirectionalLight> aDirectionalLights,
-                                  bool aDebugDrawFrusta);
+void fillShadowMap(const ShadowMapping & aPass, 
+                   const RepositoryTexture & aTextureRepository,
+                   Storage & aStorage,
+                   const GraphShared & aGraphShared,
+                   const ViewerPartList & aPartList,
+                   math::Box<GLfloat> aSceneAabb,
+                   const Camera & aCamera,
+                   std::span<const DirectionalLight> aDirectionalLights,
+                   bool aDebugDrawFrusta);
 
 
 } // namespace ad::renderer

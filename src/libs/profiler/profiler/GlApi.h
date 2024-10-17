@@ -61,6 +61,7 @@ public:
     void FramebufferTextureLayer(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer);
     void MultiDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect, GLsizei drawcount, GLsizei stride);
     void PolygonMode(GLenum face, GLenum mode);
+    void TexImage3D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels);
     void TexStorage2D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height);
     void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
     void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
@@ -265,6 +266,23 @@ inline void GlApi::PolygonMode(GLenum face, GLenum mode)
 {
     // TODO instrument
     glPolygonMode(face, mode);
+}
+
+
+inline void GlApi::TexImage3D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels)
+{
+#if defined(SE_INSTRUMENT_GL)
+    // Only gives an approximation at the moment
+    // TODO Ad 2023/10/24: Is it actually how the reserved memory is computed?
+    // Do we need to take into account some further alignment constraints?
+    // How is byte rounding implemeneted?
+    GLuint bitsPerPixel = graphics::getPixelFormatBitSize(internalformat);
+    GLsizei w = width;
+    GLsizei h = height;
+    GLsizei d = depth;
+    v().mTextureMemory.mAllocated += (w * h * d * bitsPerPixel) / 8;
+#endif
+    glTexImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels);
 }
 
 

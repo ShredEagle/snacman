@@ -34,6 +34,81 @@ void debugDrawTriangle(const Triangle & aTri, math::hdr::Rgb_f aColor = math::hd
 }
 
 
+namespace {
+
+    void setupShadowMap(ShadowMapping & aShadowMapping, math::Size<2, GLsizei> aLayerSize, GLsizei aLayers)
+    {
+        const graphics::Texture & shadowMap = *aShadowMapping.mShadowMap;
+
+        graphics::ScopedBind boundTexture{shadowMap};
+
+        // We want to resize when switching between CSM / Single
+        // which is not convenient with immutable storage
+    //#define IMMUTABLE_SHADOWMAP
+    #if defined(IMMUTABLE_SHADOWMAP)
+        gl.TexStorage3D(shadowMap.mTarget,
+                        1,
+                        GL_DEPTH_COMPONENT24,
+                        aLayerSize.width(),
+                        aLayerSize.height(),
+                        aLayers);
+        assert(graphics::isImmutableFormat(shadowMap));
+    #else
+        gl.TexImage3D(shadowMap.mTarget, 
+                    0,
+                    GL_DEPTH_COMPONENT24,
+                    aLayerSize.width(),
+                    aLayerSize.height(),
+                    aLayers,
+                    0,
+                    GL_DEPTH_COMPONENT,
+                    GL_FLOAT,
+                    nullptr);
+    #endif //IMMUTABLE_SHADOWMAP
+
+        aShadowMapping.mMapSize = aLayerSize;
+
+        // Note: we would like to check for texture completeness (in the context of sampling it)
+        // but attaching it to a framebuffer and checking framebuffer completeness does not
+        // help with this scenario (I suppose this approach checks for "write" completeness).
+        //assert(isTextureComplete(shadowMap));
+
+        // Set texture comparison mode, allowing to compare the depth component to a reference value
+        glTexParameteri(shadowMap.mTarget, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+        glTexParameteri(shadowMap.mTarget, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+        glTexParameteri(shadowMap.mTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(shadowMap.mTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glTexParameterfv(shadowMap.mTarget, 
+                        GL_TEXTURE_BORDER_COLOR,
+                        math::hdr::Rgba_f{1.f, 0.f, 0.f, 0.f}.data());
+
+        // We disable mipmap minification filter, otherwise a mutable texture
+        // would not be mipmap complete, and could not be sampled.
+        glTexParameteri(shadowMap.mTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    }
+
+} // unnamed namespace
+
+
+void ShadowMapping::prepareShadowMap()
+{
+    static_assert(gCascadesPerShadow == 4);
+    // To be fair when comparing methods, the non-cascaded variant should use 4 times bigger individual shadow maps.
+    if (mControls.mUseCascades)
+    {
+        setupShadowMap(*this, ShadowMapping::gTexelPerLight / 2, gMaxShadowMaps);
+    }
+    else
+    {
+        setupShadowMap(*this, ShadowMapping::gTexelPerLight, gMaxShadowLights);
+    }
+    mIsSetupForCsm = mControls.mUseCascades;
+}
+
+
+
 math::Rectangle<GLfloat> getFrustumSideBounds(math::Matrix<4, 4, GLfloat> aFrustumClipToLightSpace)
 {
     using math::homogeneous::normalize;
@@ -330,7 +405,7 @@ math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GL
 
 /// @brief Z-partitioning of the camera frustum
 /// @return An array of view-projection matrices, one per camera-subfrustum.
-std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> zParitionCameraFrustum(const Camera & aCamera,
+std::array<math::Matrix<4, 4, GLfloat>, gCascadesPerShadow> zParitionCameraFrustum(const Camera & aCamera,
                                                                                       ShadowCascadeBlock & aShadowCascadeBlock,
                                                                                       const ShadowMapping::Controls & c,
                                                                                       bool aDebugDrawFrusta)
@@ -339,11 +414,11 @@ std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> zParitionCameraFr
     // Minimum of negative values will return the value with largest absolute value.
     const float clampedCameraNear = std::min(cameraNear, c.mCsmNearPlaneLimit);
     // Computation of Z-partitioning ratio
-    const float distanceRatio = std::pow(cameraFar/clampedCameraNear, 1.f/gMaxCascadesPerShadow);
+    const float distanceRatio = std::pow(cameraFar/clampedCameraNear, 1.f/gCascadesPerShadow);
 
-    std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> frustaCascade;
+    std::array<math::Matrix<4, 4, GLfloat>, gCascadesPerShadow> frustaCascade;
     // Warning: #cascade_hardcode_4 we are hardcoding the fact there are exactly 4 cascades here.
-    static_assert(gMaxCascadesPerShadow == 4);
+    static_assert(gCascadesPerShadow == 4);
 
     // For each cascade, calculate the view-frustum bounds
     // We follow fit-to-cascade, where cascade N-1 far-plane becomes cascade N near-plane.
@@ -352,7 +427,7 @@ std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> zParitionCameraFr
     // Note: we treat the first subfrusta far plane computation separately
     // (it does not use the actual frusta near, but a clamped near value)
     float far = clampedCameraNear * distanceRatio;
-    for(unsigned int cascadeIdx = 0; cascadeIdx != gMaxCascadesPerShadow; ++cascadeIdx)
+    for(unsigned int cascadeIdx = 0; cascadeIdx != gCascadesPerShadow; ++cascadeIdx)
     {
         frustaCascade[cascadeIdx] = aCamera.getParentToCamera() * getProjectionChangeNearFar(aCamera, near, far);
 
@@ -374,22 +449,22 @@ std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> zParitionCameraFr
 }
 
 
-LightViewProjection fillShadowMap(const ShadowMapping & aPass, 
-                                  const RepositoryTexture & aTextureRepository,
-                                  Storage & aStorage,
-                                  const GraphShared & aGraphShared,
-                                  const ViewerPartList & aPartList,
-                                  math::Box<GLfloat> aSceneAabb,
-                                  const Camera & aCamera,
-                                  Handle<const graphics::Texture> aShadowMap,
-                                  std::span<const DirectionalLight> aDirectionalLights,
-                                  bool aDebugDrawFrusta /* TODO: can we remove? (absorbed by controls)*/)
+void fillShadowMap(const ShadowMapping & aPass, 
+                   const RepositoryTexture & aTextureRepository,
+                   Storage & aStorage,
+                   const GraphShared & aGraphShared,
+                   const ViewerPartList & aPartList,
+                   math::Box<GLfloat> aSceneAabb,
+                   const Camera & aCamera,
+                   std::span<const DirectionalLight> aDirectionalLights,
+                   bool aDebugDrawFrusta /* TODO: can we remove? (absorbed by controls)*/)
 {
     const ShadowMapping::Controls & c = aPass.mControls;
     const DepthMethod method = c.mUseCascades ? DepthMethod::Cascaded : DepthMethod::Single;
+    Handle<graphics::Texture> shadowMap = aPass.mShadowMap;
 
     // Z-partitioning of the camera frustum (only usefull for CSM)
-    std::array<math::Matrix<4, 4, GLfloat>, gMaxCascadesPerShadow> frustaCascade;
+    std::array<math::Matrix<4, 4, GLfloat>, gCascadesPerShadow> frustaCascade;
     if (method == DepthMethod::Cascaded)
     {
         ShadowCascadeBlock shadowCascadeBlock;
@@ -415,13 +490,13 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
     glPolygonOffset(c.mSlopeScale, c.mUnitScale);
 
     static constexpr GLfloat clearDepth = 1.f;
-    glClearTexImage(*aShadowMap, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &clearDepth);
+    glClearTexImage(*shadowMap, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &clearDepth);
 
     // Will remain the bound FBO while all the shadow maps are rendered
     graphics::ScopedBind boundFbo{aPass.mFbo, graphics::FrameBufferTarget::Draw};
 
     // The viewport size is be the same for each shadow map.
-    glViewport(0, 0, ShadowMapping::gTextureSize.width(), ShadowMapping::gTextureSize.height());
+    glViewport(0, 0, aPass.mMapSize.width(), aPass.mMapSize.height());
 
     // Compute the lights view-projection matrices (times the number of cascades when using CSM)
     for(GLuint directionalIdx = 0;
@@ -439,7 +514,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
 
         if(method == DepthMethod::Cascaded)
         {
-            for(unsigned int cascadeIdx = 0; cascadeIdx != gMaxCascadesPerShadow; ++cascadeIdx)
+            for(unsigned int cascadeIdx = 0; cascadeIdx != gCascadesPerShadow; ++cascadeIdx)
             {
                 math::Matrix<4, 4, float> cascadeViewProjection = computeLightViewProjection(orientationWorldToLight,
                                                                                             aSceneAabb,
@@ -453,7 +528,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
                                                                                             );
 
                 // Add the light view-projection to the collection
-                lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + cascadeIdx] =
+                lightViewProjection.mLightViewProjections[directionalIdx * gCascadesPerShadow + cascadeIdx] =
                     math::AffineMatrix<4, GLfloat>{orientationWorldToLight}
                     * cascadeViewProjection;
                 lightViewProjection.mLightViewProjectionCount++;
@@ -462,7 +537,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
             if(aDebugDrawFrusta && (c.mDebugDrawWhichCascade >= 0)) 
             {
                 const std::size_t whichCascade = c.mDebugDrawClippedTriangles; // largest
-                debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx * gMaxCascadesPerShadow + c.mDebugDrawWhichCascade].inverse(),
+                debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx * gCascadesPerShadow + c.mDebugDrawWhichCascade].inverse(),
                                     drawer::gLight,
                                     light.mDiffuseColor);
             }
@@ -495,7 +570,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
             // (The layer we intend to render to via `passOpaqueDepth()`).
             {
                 // The attachment is permanent, no need to recreate it each time the FBO is bound
-                gl.FramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *aShadowMap, /*mip map level*/0, directionalIdx);
+                gl.FramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *shadowMap, /*mip map level*/0, directionalIdx);
                 assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
             }
 
@@ -520,7 +595,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
         // Since the texture is an array, the attachment is layered.
         {
             // TODO: The attachment is permanent, no need to recreate it each time the FBO is bound
-            gl.FramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *aShadowMap, /*mip map level*/0);
+            gl.FramebufferTexture(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *shadowMap, /*mip map level*/0);
             assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
         }
 
@@ -530,7 +605,7 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
             directionalIdx != aDirectionalLights.size();
             ++directionalIdx)
         {
-            lightViewProjection.mLightViewProjectionOffset = gMaxCascadesPerShadow * directionalIdx;
+            lightViewProjection.mLightViewProjectionOffset = gCascadesPerShadow * directionalIdx;
             updateOffsetInLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo,
                                                 lightViewProjection);
             // TODO avoid the instanciated stuff when the cascades are disabled
@@ -541,8 +616,6 @@ LightViewProjection fillShadowMap(const ShadowMapping & aPass,
     {
         // Done above, directly in the loop where we compute the lights' view-projection.
     }
-
-    return lightViewProjection;
 }
 
 

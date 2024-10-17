@@ -376,7 +376,7 @@ vec3 cascadeSelectionDebugColor = vec3(1.);
         if(directionalIdx < MAX_SHADOWS)
         {
 #if defined(SHADOW_CASCADE)
-    uint shadowMapIdx = MAX_CASCADES_PER_SHADOW * directionalIdx + shadowCascadeIdx;
+    uint shadowMapIdx = CASCADES_PER_SHADOW * directionalIdx + shadowCascadeIdx;
 #else
     uint shadowMapIdx = directionalIdx;
 #endif //SHADOW_CASCADE

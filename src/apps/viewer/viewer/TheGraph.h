@@ -96,7 +96,6 @@ struct TheGraph
 
     // Shadow mapping
     ShadowMapping mShadowPass;
-    Handle<graphics::Texture> mShadowMap;
 
     // Debug texture rendering (this should be encapsulated somewhere else)
     graphics::Sampler mShowTextureSampler;

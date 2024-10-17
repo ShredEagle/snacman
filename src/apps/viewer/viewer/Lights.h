@@ -18,8 +18,8 @@ namespace ad::renderer {
 // TODO can we use the define system to forward those upper limit to shaders?
 constexpr unsigned int gMaxLights = 16;
 constexpr unsigned int gMaxShadowLights = 4;
-constexpr unsigned int gMaxCascadesPerShadow = 4;
-constexpr unsigned int gMaxShadowMaps = gMaxShadowLights * gMaxCascadesPerShadow;
+constexpr unsigned int gCascadesPerShadow = 4;
+constexpr unsigned int gMaxShadowMaps = gMaxShadowLights * gCascadesPerShadow;
 
 // TODO there are obvious ways to pack the values much more tightly
 
