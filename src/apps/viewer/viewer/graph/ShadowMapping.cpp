@@ -130,6 +130,8 @@ void ShadowMapping::reviewControls()
 }
 
 
+/// @brief From a frustum defined by an inverse projection matrix, return the tight rectangle
+/// bounding the X-Y plane of the frustum.
 math::Rectangle<GLfloat> getFrustumSideBounds(math::Matrix<4, 4, GLfloat> aFrustumClipToLightSpace)
 {
     using math::homogeneous::normalize;
@@ -145,30 +147,6 @@ math::Rectangle<GLfloat> getFrustumSideBounds(math::Matrix<4, 4, GLfloat> aFrust
     }
 
     return math::Rectangle<GLfloat>{
-        .mPosition = low,
-        .mDimension = (high - low).as<math::Size>(),
-    };
-}
-
-
-// TODO Ad 2024/08/29: Consolidate with function above
-math::Box<GLfloat> getBoxSideBounds(math::Box<GLfloat> aBox, math::AffineMatrix<4, GLfloat> aBoxToLightSpace)
-{
-    using math::homogeneous::normalize;
-
-    math::Position<3, GLfloat> low = 
-        normalize(math::homogeneous::makePosition(aBox.cornerAt(0)) * aBoxToLightSpace).xyz();
-    math::Position<3, GLfloat> high = low;
-
-    for(std::size_t idx = 1; idx != aBox.gCornerCount; ++idx)
-    {
-        math::Position<3, GLfloat> cornerInLightSpace = 
-            normalize(math::homogeneous::makePosition(aBox.cornerAt(idx)) * aBoxToLightSpace).xyz();
-        low = min(low, cornerInLightSpace);
-        high = max(high, cornerInLightSpace);
-    }
-
-    return math::Box<GLfloat>{
         .mPosition = low,
         .mDimension = (high - low).as<math::Size>(),
     };
@@ -322,16 +300,17 @@ struct DebugPlaneColors
 };
 
 
-/// @brief Compute a tight view projection block, used to render the shadow map of a light
-/// illuminating a scene that is viewed by a camera.
+/// @brief Compute a tight projection matrix, allowing to render a shadow map 
+/// covering the part of a scene that is viewed by a camera.
 /// @param aCameraFrustum The view-projection matrix of the camera, defining its frustum.
-math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GLfloat> aOrientationWorldToLight,
-                                                     math::Box<GLfloat> aSceneAabb,
-                                                     math::Matrix<4, 4, GLfloat> aCameraViewProjection,
-                                                     const ShadowMapping::Controls & c,
-                                                     math::Size<2, GLsizei> aMapSize,
-                                                     std::optional<DebugPlaneColors> aDebugDrawColors // nullopt to disable debug drawing
-                                                     )
+/// @return A projection matrix, to be composed with a world-to-light matrix by the client.
+math::Matrix<4, 4, float> computeLightProjection(math::LinearMatrix<3, 3, GLfloat> aOrientationWorldToLight,
+                                                 math::Box<GLfloat> aSceneAabb,
+                                                 math::Matrix<4, 4, GLfloat> aCameraViewProjection,
+                                                 const ShadowMapping::Controls & c,
+                                                 math::Size<2, GLsizei> aMapSize,
+                                                 std::optional<DebugPlaneColors> aDebugDrawColors // nullopt to disable debug drawing
+                                                 )
 {
     //
     // Handle the orthographic projection.
@@ -347,8 +326,8 @@ math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GL
             viewProjectionInverse * math::AffineMatrix<4, GLfloat>{aOrientationWorldToLight});
 
     // TODO can we replace with the aabb generic transformation?
-    const math::Box<GLfloat> sceneAabb_light =
-        getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{aOrientationWorldToLight});
+    const math::Box<GLfloat> sceneAabb_light = aSceneAabb * aOrientationWorldToLight;
+        //getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{aOrientationWorldToLight});
     const math::Rectangle<GLfloat> sceneAabbSide_light = sceneAabb_light.frontRectangle();
 
     math::Rectangle<GLfloat> effectiveRectangle_light = 
@@ -554,22 +533,22 @@ void fillShadowMap(const ShadowMapping & aPass,
         {
             for(unsigned int cascadeIdx = 0; cascadeIdx != gCascadesPerShadow; ++cascadeIdx)
             {
-                math::Matrix<4, 4, float> cascadeViewProjection = computeLightViewProjection(orientationWorldToLight,
-                                                                                            aSceneAabb,
-                                                                                            frustaCascade[cascadeIdx],
-                                                                                            c,
-                                                                                            aPass.mMapSize,
-                                                                                            aDebugDrawFrusta ?
-                                                                                                std::optional<DebugPlaneColors>{{
-                                                                                                    .mOutline = hdr::gColorBrewerSet1_linear[cascadeIdx],
-                                                                                                    .mSubdiv = light.mDiffuseColor * 0.5f}}
-                                                                                                : std::nullopt
-                                                                                            );
+                math::Matrix<4, 4, float> cascadeProjection = computeLightProjection(orientationWorldToLight,
+                                                                                     aSceneAabb,
+                                                                                     frustaCascade[cascadeIdx],
+                                                                                     c,
+                                                                                     aPass.mMapSize,
+                                                                                     aDebugDrawFrusta ?
+                                                                                         std::optional<DebugPlaneColors>{{
+                                                                                             .mOutline = hdr::gColorBrewerSet1_linear[cascadeIdx],
+                                                                                             .mSubdiv = light.mDiffuseColor * 0.5f}}
+                                                                                         : std::nullopt
+                                                                                     );
 
                 // Add the light view-projection to the collection
                 lightViewProjection.mLightViewProjections[directionalIdx * gCascadesPerShadow + cascadeIdx] =
                     math::AffineMatrix<4, GLfloat>{orientationWorldToLight}
-                    * cascadeViewProjection;
+                    * cascadeProjection;
                 lightViewProjection.mLightViewProjectionCount++;
             }
 
@@ -583,22 +562,22 @@ void fillShadowMap(const ShadowMapping & aPass,
         }
         else
         {
-            math::Matrix<4, 4, float> fullViewProjection = computeLightViewProjection(orientationWorldToLight,
-                                                                                       aSceneAabb,
-                                                                                       aCamera.assembleViewProjection(),
-                                                                                       c,
-                                                                                       aPass.mMapSize,
-                                                                                       aDebugDrawFrusta ?
-                                                                                           std::optional<DebugPlaneColors>{{
-                                                                                               .mOutline = math::hdr::gMagenta<float>,
-                                                                                               .mSubdiv = light.mDiffuseColor * 0.5f}}
-                                                                                           : std::nullopt
-                                                                                       );
+            math::Matrix<4, 4, float> fullProjection = computeLightProjection(orientationWorldToLight,
+                                                                              aSceneAabb,
+                                                                              aCamera.assembleViewProjection(),
+                                                                              c,
+                                                                              aPass.mMapSize,
+                                                                              aDebugDrawFrusta ?
+                                                                                  std::optional<DebugPlaneColors>{{
+                                                                                      .mOutline = math::hdr::gMagenta<float>,
+                                                                                      .mSubdiv = light.mDiffuseColor * 0.5f}}
+                                                                                  : std::nullopt
+                                                                              );
 
             // Add the light view-projection to the collection
             lightViewProjection.mLightViewProjections[directionalIdx] =
                 math::AffineMatrix<4, GLfloat>{orientationWorldToLight}
-                * fullViewProjection;
+                * fullProjection;
             lightViewProjection.mLightViewProjectionCount++;
 
             //
@@ -619,7 +598,7 @@ void fillShadowMap(const ShadowMapping & aPass,
             // and it would be more uniform with the CSM version: using the same instanced-GS program,
             // done once after this for-loop.
             loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
-                          GpuViewProjectionBlock{orientationWorldToLight, fullViewProjection});
+                          GpuViewProjectionBlock{orientationWorldToLight, fullProjection});
             passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Single);
         }
     }
