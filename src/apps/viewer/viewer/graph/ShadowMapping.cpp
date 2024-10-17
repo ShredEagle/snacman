@@ -329,6 +329,7 @@ math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GL
                                                      math::Box<GLfloat> aSceneAabb,
                                                      math::Matrix<4, 4, GLfloat> aCameraViewProjection,
                                                      const ShadowMapping::Controls & c,
+                                                     math::Size<2, GLsizei> aMapSize,
                                                      std::optional<DebugPlaneColors> aDebugDrawColors // nullopt to disable debug drawing
                                                      )
 {
@@ -350,10 +351,26 @@ math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GL
         getBoxSideBounds(aSceneAabb, math::AffineMatrix<4, GLfloat>{aOrientationWorldToLight});
     const math::Rectangle<GLfloat> sceneAabbSide_light = sceneAabb_light.frontRectangle();
 
-    const math::Rectangle<GLfloat> effectiveRectangle_light = 
+    math::Rectangle<GLfloat> effectiveRectangle_light = 
         c.mTightenLightFrustumXYToScene ?
             intersect(cameraFrustumSides_light, sceneAabbSide_light)
             : cameraFrustumSides_light;
+
+
+    if(c.mMoveFrustumTexelIncrement)
+    {
+        // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/common-techniques-to-improve-shadow-depth-maps?redirectedfrom=MSDN#moving-the-light-in-texel-sized-increments
+        // see: https://github.com/walbourn/directx-sdk-samples/blob/a5a073eb857d5af5bb5c35b9340b307a0c9093a6/CascadedShadowMaps11/CascadedShadowsManager.cpp#L932-L954
+        math::Rectangle<GLfloat> & r = effectiveRectangle_light;
+        math::Size<2, GLfloat> worldUnitsPerTexel = 
+            r.dimension().cwDiv(aMapSize.as<math::Size, GLfloat>());
+
+        r.origin() = floor(r.origin().cwDiv(worldUnitsPerTexel.as<math::Position>()));
+        r.origin().cwMulAssign(worldUnitsPerTexel.as<math::Position>());
+
+        r.dimension() = floor(r.dimension().cwDiv(worldUnitsPerTexel));
+        r.dimension().cwMulAssign(worldUnitsPerTexel);
+    }
 
     if(aDebugDrawColors) 
     {
@@ -424,7 +441,7 @@ math::Matrix<4, 4, float> computeLightViewProjection(math::LinearMatrix<3, 3, GL
 }
 
 
-/// @brief Z-partitioning of the camera frustum
+/// @brief Z-partitioning of the camera frustum.
 /// @return An array of view-projection matrices, one per camera-subfrustum.
 std::array<math::Matrix<4, 4, GLfloat>, gCascadesPerShadow> zParitionCameraFrustum(const Camera & aCamera,
                                                                                       ShadowCascadeBlock & aShadowCascadeBlock,
@@ -541,6 +558,7 @@ void fillShadowMap(const ShadowMapping & aPass,
                                                                                             aSceneAabb,
                                                                                             frustaCascade[cascadeIdx],
                                                                                             c,
+                                                                                            aPass.mMapSize,
                                                                                             aDebugDrawFrusta ?
                                                                                                 std::optional<DebugPlaneColors>{{
                                                                                                     .mOutline = hdr::gColorBrewerSet1_linear[cascadeIdx],
@@ -569,6 +587,7 @@ void fillShadowMap(const ShadowMapping & aPass,
                                                                                        aSceneAabb,
                                                                                        aCamera.assembleViewProjection(),
                                                                                        c,
+                                                                                       aPass.mMapSize,
                                                                                        aDebugDrawFrusta ?
                                                                                            std::optional<DebugPlaneColors>{{
                                                                                                .mOutline = math::hdr::gMagenta<float>,
