@@ -85,8 +85,8 @@ namespace {
 
         // We disable mipmap minification filter, otherwise a mutable texture
         // would not be mipmap complete, and could not be sampled.
+        // (will be touched again by the PCF parameter)
         glTexParameteri(shadowMap.mTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
     }
 
 } // unnamed namespace
@@ -108,10 +108,10 @@ void ShadowMapping::prepareShadowMap()
 
     {
         graphics::ScopedBind boundTexture{*mShadowMap};
-        // GL_LINEAR magnification filter enables hardware PCF
-        glTexParameteri(mShadowMap->mTarget,
-                        GL_TEXTURE_MAG_FILTER, 
-                        (mControls.mUseHardwarePcf ? GL_LINEAR : GL_NEAREST));
+        // GL_LINEAR enables hardware PCF
+        const GLenum filter = (mControls.mUseHardwarePcf ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(mShadowMap->mTarget, GL_TEXTURE_MIN_FILTER, filter);
+        glTexParameteri(mShadowMap->mTarget, GL_TEXTURE_MAG_FILTER, filter);
     }
     mIsSetupForPcf = mControls.mUseHardwarePcf;
 }
