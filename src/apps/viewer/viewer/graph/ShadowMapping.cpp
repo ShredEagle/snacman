@@ -198,16 +198,18 @@ math::LinearMatrix<3, 3, GLfloat> alignMinusZ(math::Vec<3, GLfloat> aGazeDirecti
 }
 
 
+/// @brief Clips triangles formed by the `aAabb` against the X and Y planes defined by `aClippingFrustymXYBorders`.
+/// @return The minimum and maximum Z values of clipped triangles.
 /// @param aAabb The axis aligned box to be clipped, in a space where the scene AABB is tight (usually, world-space).
 /// Note: providing it in light space would not be productive, since an AABB in light space is already parallel to the light frustum.
 /// @param aBoxToLight Transformation matrix from the space in which box is defined to light space.
 /// @param aClippingFrustumXYBorders The X and Y borders of the light frustum (sometime called the shadow rectangle),
 /// against which aAabb will be clipped.
-std::pair<GLfloat /*near*/, GLfloat /* far */> tightenNearFar(
+std::pair<GLfloat /*Z-min*/, GLfloat /* Z-max */> tightenNearFar(
     math::Box<GLfloat> aAabb,
     math::LinearMatrix<3, 3, GLfloat> aBoxToLight,
     math::Rectangle<GLfloat> aClippingFrustumXYBorders,
-    bool aDebugDrawClippedTriangles)
+    std::optional<math::hdr::Rgb_f> aDebugDrawClippedTriangleColor) // nullopt to disable debug drawing
 {
     // Indices of corners to tessellate a Box.
     static constexpr std::size_t gTriIdx[] = 
@@ -230,17 +232,17 @@ std::pair<GLfloat /*near*/, GLfloat /* far */> tightenNearFar(
     // The clip interface requires a Box. But since we will not clip against the Z axis border,
     // a depth of zero is okay.
     const math::Box<GLfloat> clippingVolume{
-        .mPosition  = {aClippingFrustumXYBorders.mPosition, 0.f},
+        .mPosition  = {aClippingFrustumXYBorders.mPosition,  0.f},
         .mDimension = {aClippingFrustumXYBorders.mDimension, 0.f},
     };
 
-    GLfloat near{std::numeric_limits<GLfloat>::max()};
-    GLfloat far{std::numeric_limits<GLfloat>::lowest()};
+    GLfloat zMin{std::numeric_limits<GLfloat>::max()};
+    GLfloat zMax{std::numeric_limits<GLfloat>::lowest()};
     std::vector<Triangle> clipped;
-    auto trackNearFar = [&near, &far, &clipped](const Triangle & aClippedTriangle)
+    auto trackNearFar = [&zMin, &zMax, &clipped](const Triangle & aClippedTriangle)
     {
-        near = std::min(near, minForComponent(2, aClippedTriangle));
-        far  = std::max(far, maxForComponent(2, aClippedTriangle));
+        zMin = std::min(zMin, minForComponent(2, aClippedTriangle));
+        zMax  = std::max(zMax, maxForComponent(2, aClippedTriangle));
         clipped.push_back(aClippedTriangle);
     };
 
@@ -273,7 +275,7 @@ std::pair<GLfloat /*near*/, GLfloat /* far */> tightenNearFar(
         }
     }
 
-    return {near, far};
+    return {zMin, zMax};
 }
 
 
@@ -383,38 +385,39 @@ math::Matrix<4, 4, float> computeLightProjection(math::LinearMatrix<3, 3, GLfloa
         drawPlane(orientationLightToWorld, effectiveRectangle_light, Level::debug);
     }
 
-    auto near = sceneAabb_light.zMin();
+    auto far = sceneAabb_light.zMin();
     auto depth = sceneAabb_light.depth();
 
     if(c.mTightenFrustumDepthToClippedScene)
     {
-        // Note: Here, we have to provide the corners of the **world** AABB for the scene,
-        // expressed in light space (transformation from world to light frame currently occurs in the function).
+        // Note: Here, we have to provide the **world** AABB for the scene,
+        // (whose corners will be transformed from world to light frame in the function).
         // Not the **light** AABB for the scene.
         // (The side of the light AABB are already parallel to any other light AABB, including the shadow frustum.)
-        GLfloat far;
-        std::tie(near, far) = tightenNearFar(aSceneAabb, 
+        // Important: The world and light frames are right-handed: zMin is far-plane's position, zMax is near-plane's.
+        GLfloat near;
+        std::tie(far, near) = tightenNearFar(aSceneAabb, 
                                              aOrientationWorldToLight,
                                              effectiveRectangle_light,
                                              c.mDebugDrawClippedTriangles);
-        depth = far - near;
+        depth = near - far;
 
         // TODO turn the inverse condition into simple assertions
-        if(near < sceneAabb_light.zMin() && !math::absoluteTolerance(near, sceneAabb_light.zMin(), 1.E-5f))
+        if(far < sceneAabb_light.zMin() && !math::absoluteTolerance(far, sceneAabb_light.zMin(), 1.E-5f))
         {
-            SELOG(warn)("Whole scene shadow near plane '{}' was tighter than clipped-scene near plane '{}'.", 
+            SELOG(warn)("Whole scene shadow far plane '{}' was tighter than clipped-scene far plane '{}'.", 
                         sceneAabb_light.zMin(),
-                        near);
-        }
-        if(far > sceneAabb_light.zMax() && !math::absoluteTolerance(far, sceneAabb_light.zMax(), 1.E-5f))
-        {
-            SELOG(warn)("Whole scene shadow far  plane '{}' was tighter than clipped-scene far  plane '{}'.", 
-                        sceneAabb_light.zMax(),
                         far);
+        }
+        if(near > sceneAabb_light.zMax() && !math::absoluteTolerance(near, sceneAabb_light.zMax(), 1.E-5f))
+        {
+            SELOG(warn)("Whole scene near far  plane '{}' was tighter than clipped-scene near plane '{}'.", 
+                        sceneAabb_light.zMax(),
+                        near);
         }
     }
 
-    math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, near};
+    math::Position<3, GLfloat> frustumBoxPosition{effectiveRectangle_light.mPosition, far};
     math::Size<3, GLfloat> frustumBoxDimension{effectiveRectangle_light.mDimension, depth};
     return graphics::makeOrthographicProjection({frustumBoxPosition, frustumBoxDimension});
 }
