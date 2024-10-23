@@ -45,6 +45,9 @@ struct ShadowMapping
         // Toggle hardware percentage closer filtering
         bool mUseHardwarePcf{true};
 
+        bool mDebugDrawFrusta{true};
+        bool mDebugDrawShadowPlanes{false};
+
         // Toggle wether we move the light frustum in texel-sized increments
         // to limit shimmering
         // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/common-techniques-to-improve-shadow-depth-maps?redirectedfrom=MSDN#moving-the-light-in-texel-sized-increments
@@ -88,15 +91,18 @@ template <class T_visitor>
 void r(T_visitor & aV, ShadowMapping::Controls & aControls)
 {
     give(aV, aControls.mSlopeScale, "slope scale");
-    give(aV, aControls.mUnitScale,  "unit scale");
-    give(aV, aControls.mUseCascades,  "Cascaded Shadow Maps");
-    give(aV, aControls.mUseHardwarePcf,  "Percentage Closer Filtering hw");
+    give(aV, aControls.mUnitScale, "unit scale");
+    give(aV, aControls.mUseCascades, "Cascaded Shadow Maps");
+    give(aV, aControls.mUseHardwarePcf, "Percentage Closer Filtering hw");
+    give(aV, aControls.mDebugDrawFrusta, "debug: Show camera & light frusta");
+    give(aV, aControls.mDebugDrawShadowPlanes, "debug: Show shadow planes (light frusta X-Y bounds)");
     give(aV, aControls.mMoveFrustumTexelIncrement,  "Move light frustum in texel increments");
     give(aV, aControls.mTightenLightFrustumXYToScene,  "frustum XY to scene");
     give(aV, aControls.mTightenFrustumDepthToClippedScene,  "frustum Z to clipped scene");
     give(aV, aControls.mDebugDrawClippedTriangles,  "debug: Draw clipped triangles");
     give(aV, aControls.mCsmNearPlaneLimit,  "The near plane will be clamped for cascade partitionning");
-    give(aV, Clamped<int>{aControls.mDebugDrawWhichCascade, -1, gCascadesPerShadow - 1},
+    // We allow the cascade index to go 1 above max index, to mean "all cascades"
+    give(aV, Clamped<int>{aControls.mDebugDrawWhichCascade, -1, gCascadesPerShadow/* - 1*/},
          "debug: Draw shadow cascade frustum");
     give(aV, aControls.mTintViewByCascadeIdx,  "debug: Tint rendering by cascade index");
 }
@@ -109,8 +115,7 @@ void fillShadowMap(const ShadowMapping & aPass,
                    const ViewerPartList & aPartList,
                    math::Box<GLfloat> aSceneAabb,
                    const Camera & aCamera,
-                   std::span<const DirectionalLight> aDirectionalLights,
-                   bool aDebugDrawFrusta);
+                   std::span<const DirectionalLight> aDirectionalLights);
 
 
 } // namespace ad::renderer

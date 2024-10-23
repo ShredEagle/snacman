@@ -30,6 +30,8 @@ namespace sdr {
 
 namespace hdr {
 
+    constexpr math::hdr::Rgb_f gCameraFrustumColor = math::hdr::gYellow<float>;
+
     // In sRGB color space
     constexpr std::array<math::hdr::Rgb_f, 9> gColorBrewerSet1_srgb {{
         {0.894f, 0.102f, 0.110f},

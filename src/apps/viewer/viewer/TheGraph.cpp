@@ -163,8 +163,7 @@ void TheGraph::renderFrame(const Scene & aScene,
         aPartList,
         aScene.mRoot.mAabb,
         aCamera,
-        std::span{aScene.mLights_world.mDirectionalLights.data(), aScene.mLights_world.mDirectionalCount},
-        aShowTextures /*debug draw*/ // Semantically incorrect, but we take it to also mean "we are the main view"
+        std::span{aScene.mLights_world.mDirectionalLights.data(), aScene.mLights_world.mDirectionalCount}
     );
 
     loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, aCamera);

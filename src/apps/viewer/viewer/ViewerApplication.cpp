@@ -1,5 +1,6 @@
 #include "ViewerApplication.h"
 
+#include "ColorPalettes.h"
 #include "DebugDrawUtilities.h"
 #include "EnvironmentUtilities.h"
 #include "Json.h"
@@ -527,7 +528,7 @@ void PrimaryView::update(const Timing & aTime)
         });
 
         auto viewProjectionInverse = mCameraSystem.mCamera.assembleViewProjection().inverse();
-        debugDrawViewFrustum(viewProjectionInverse, drawer::gCamera);
+        debugDrawViewFrustum(viewProjectionInverse, drawer::gCamera, hdr::gCameraFrustumColor);
     }
 }
 
