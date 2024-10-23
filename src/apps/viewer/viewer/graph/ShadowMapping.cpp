@@ -235,7 +235,7 @@ std::pair<GLfloat /*near*/, GLfloat /* far */> tightenNearFar(
     };
 
     GLfloat near{std::numeric_limits<GLfloat>::max()};
-    GLfloat far{std::numeric_limits<GLfloat>::min()};
+    GLfloat far{std::numeric_limits<GLfloat>::lowest()};
     std::vector<Triangle> clipped;
     auto trackNearFar = [&near, &far, &clipped](const Triangle & aClippedTriangle)
     {
