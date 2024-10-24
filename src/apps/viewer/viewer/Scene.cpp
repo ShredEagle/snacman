@@ -97,10 +97,10 @@ Scene loadScene(const filesystem::path & aSceneFile,
 }
 
 
-LightsData Scene::getLightsInCamera(const Camera & aCamera,
-                                    bool aTransformDirectionalLights) const
+LightsDataUser Scene::getLightsInCamera(const Camera & aCamera,
+                                        bool aTransformDirectionalLights) const
 {
-    LightsData result{mLights_world};
+    LightsDataUser result{mLights_world};
     const math::AffineMatrix<4, float> & transform = aCamera.getParentToCamera();
     if(aTransformDirectionalLights)
     {

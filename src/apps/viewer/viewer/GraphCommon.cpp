@@ -67,7 +67,8 @@ void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
 }
 
 
-void loadLightsUbo(const graphics::UniformBufferObject & aUbo, const LightsData & aLights)
+void loadLightsUbo(const graphics::UniformBufferObject & aUbo,
+                   const LightsData & aLights)
 {
     proto::loadSingle(aUbo, aLights, graphics::BufferHint::DynamicDraw);
 }

@@ -3,6 +3,8 @@
 
 #include "runtime_reflect/ReflectHelpers.h"
 
+#include <handy/array_utils.h>
+
 #include <math/Color.h>
 #include <math/Vector.h>
 
@@ -35,8 +37,7 @@ struct DirectionalLight
     alignas(16) math::hdr::Rgb<GLfloat> mDiffuseColor = math::hdr::gWhite<GLfloat>;
     alignas(16) math::hdr::Rgb<GLfloat> mSpecularColor = math::hdr::gWhite<GLfloat>;
     // alignment rules for std140 UB are defined by core glspec 7.6.2.2
-    // In Lights.glsl, the colors are defined ad vec4 (4 floats), so the alignment of the next member is 16 (4 * 4).
-    alignas(16) Index mShadowMapIndex = gNoEntryIndex;
+    // In Lights.glsl, the colors are defined as vec4 (4 floats), so the alignment of the next member is 16 (4 * 4).
 };
 
 
@@ -90,7 +91,8 @@ void r(T_visitor & aV, PointLight & aLight)
 }
 
 
-struct LightsData
+/// @brief Data that is user controlled, and part of the LightsBlock UBO
+struct LightsDataUser
 {
     // see: https://registry.khronos.org/OpenGL/specs/gl/glspec45.core.pdf#page=159
     // "If the member is a scalar consuming N basic machine units, the base alignment is N.""
@@ -118,13 +120,85 @@ struct LightsData
 };
 
 
+/// @brief SOA extension to LightsData, that is used for internal bookeeping (not user facing)
+/// and part of the Lights UBO.
+///
+/// It maintains an array with an entry for each light, providing the base index of the shadow map
+/// for associated light (this base should be offset by the cascade index for CSM).
+struct LightsDataInternal
+{
+    // TODO Ad 2024/10/24: Use a compact approach instead of wasting 75% of this array in padding.
+    // For an array of scalars, base alignment of the array, as well as array stride (i.e. individual members alignment) 
+    // are set to the base alignment of the scalar (here GLuint -> 4) rounded up to base alignment of a vec4 (16).
+    // Resulting alignment and stride is thus 16.
+    // see: std140 storage layout, GL core spec 4.6, p146, item 4.
+    struct alignas(16) IndexPadded
+    {
+        /*implicit*/ IndexPadded(Index aIdx) :
+            mIndex{aIdx}
+        {}
+
+        /*implicit*/ operator Index & ()
+        { return mIndex; }
+
+        /*implicit*/ operator Index () const
+        { return mIndex; }
+
+        Index mIndex;
+    };
+
+    alignas(16) std::array<IndexPadded, gMaxLights> mDirectionalLightShadowMapIndices =
+        make_filled_array<IndexPadded, gMaxLights>(IndexPadded{gNoEntryIndex});
+};
+
+
+/// @brief Concatenate all structures to be pushed as LightsBlock UBO.
+struct LightsData : public LightsDataUser, LightsDataInternal
+{};
+
+
+/// @brief Extra control for the users, **not** part of the UBO.
+struct ProjectShadowToggle
+{
+    /*implicit*/ operator bool() const
+    { return mIsProjectingShadow; }
+
+    bool mIsProjectingShadow{false};
+};
+
+
 template <class T_visitor>
-void r(T_visitor & aV, LightsData & aLights)
+void r(T_visitor & aV, ProjectShadowToggle & aToggle)
+{
+    give(aV, aToggle.mIsProjectingShadow, "project shadow");
+}
+
+
+/// @brief UI only struct, not to be loaded in UBO.
+struct LightsDataToggleShadow
+{
+    std::array<ProjectShadowToggle, gMaxLights> mDirectionalLightProjectShadow;
+};
+
+
+/// @brief Concatenate all structures that are user facing.
+struct LightsDataUi : public LightsDataUser, LightsDataToggleShadow
+{
+    std::span<ProjectShadowToggle> spanDirectionalLightProjectShadow()
+    { return std::span{mDirectionalLightProjectShadow.data(), mDirectionalCount}; }
+};
+
+
+template <class T_visitor>
+void r(T_visitor & aV, LightsDataUi & aLights)
 {
     give(aV, aLights.mAmbientColor, "ambient color");
 
     give(aV, Clamped<GLuint>{aLights.mDirectionalCount, 0, gMaxLights}, "directional count");
-    give(aV, aLights.spanDirectionalLights(), "directional lights");
+    give(aV,
+         std::make_tuple(aLights.spanDirectionalLights(), 
+                         aLights.spanDirectionalLightProjectShadow()),
+         "directional lights");
 
     give(aV, Clamped<GLuint>{aLights.mPointCount, 0, gMaxLights}, "point count");
     give(aV, aLights.spanPointLights(), "point lights");

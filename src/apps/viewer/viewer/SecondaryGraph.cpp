@@ -87,7 +87,7 @@ void SecondaryGraph::setupSizeDependentTextures()
 void SecondaryGraph::renderFrame(const Scene & aScene, 
                                  const ViewerPartList & aPartList,
                                  const Camera & aCamera,
-                                 const LightsData & aLights_camera,
+                                 const LightsDataUser & aLights_camera,
                                  const GraphShared & aGraphShared,
                                  Storage & aStorage,
                                  bool aShowTextures,
@@ -95,7 +95,7 @@ void SecondaryGraph::renderFrame(const Scene & aScene,
 {
     // Load the data that is per graph (actually, more per-view) in UBOs
     loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, aCamera);
-    loadLightsUbo(*aGraphShared.mUbos.mLightsUbo, aLights_camera);
+    loadLightsUbo(*aGraphShared.mUbos.mLightsUbo, {aLights_camera, LightsDataInternal{}});
 
     RepositoryTexture textureRepository;
 

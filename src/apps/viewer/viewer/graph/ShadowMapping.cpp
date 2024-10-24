@@ -1,5 +1,3 @@
-#include "ShadowMapping.h"
-
 #include "Passes.h"
 #include "ShadowCascadeBlock.h"
 
@@ -471,14 +469,14 @@ std::array<math::Matrix<4, 4, GLfloat>, gCascadesPerShadow> zParitionCameraFrust
 }
 
 
-void fillShadowMap(const ShadowMapping & aPass, 
-                   const RepositoryTexture & aTextureRepository,
-                   Storage & aStorage,
-                   const GraphShared & aGraphShared,
-                   const ViewerPartList & aPartList,
-                   math::Box<GLfloat> aSceneAabb,
-                   const Camera & aCamera,
-                   std::span<const DirectionalLight> aDirectionalLights)
+LightsDataInternal fillShadowMap(const ShadowMapping & aPass, 
+                                 const RepositoryTexture & aTextureRepository,
+                                 Storage & aStorage,
+                                 const GraphShared & aGraphShared,
+                                 const ViewerPartList & aPartList,
+                                 math::Box<GLfloat> aSceneAabb_world,
+                                 const Camera & aCamera,
+                                 const LightsDataUi & aLights)
 {
     const ShadowMapping::Controls & c = aPass.mControls;
     const DepthMethod method = c.mUseCascades ? DepthMethod::Cascaded : DepthMethod::Single;
@@ -519,94 +517,110 @@ void fillShadowMap(const ShadowMapping & aPass,
     // The viewport size is be the same for each shadow map.
     glViewport(0, 0, aPass.mMapSize.width(), aPass.mMapSize.height());
 
+    std::span<const DirectionalLight> aDirectionalLights = aLights.spanDirectionalLights();
+    LightsDataInternal result;
+    // Keep the count of lights projecting a shadow
+    GLuint shadowLightIdx = 0;
+    const GLuint cascadesPerLight = (method == DepthMethod::Cascaded ? gCascadesPerShadow : 1);
+
     // Compute the lights view-projection matrices (times the number of cascades when using CSM)
     for(GLuint directionalIdx = 0;
         directionalIdx != aDirectionalLights.size();
         ++directionalIdx)
     {
-        // TODO this should disappear when we have a better approach to defining which lights can cast shadow.
-        // Atm, we hardcode that each directional light cast a shadow, thus allowing to index shadow with directionalIdx
-        assert(directionalIdx < gMaxShadowLights);
-
-        const DirectionalLight light = aDirectionalLights[directionalIdx];
-
-        // This is a pure orientation: a directional light has no "position", we can set its origin to the other space origin.
-        const math::LinearMatrix<3, 3, GLfloat> orientationWorldToLight = alignMinusZ(light.mDirection);
-
-        if(method == DepthMethod::Cascaded)
+        if (const bool isProjectingShadow = aLights.mDirectionalLightProjectShadow[directionalIdx])
         {
-            for(unsigned int cascadeIdx = 0; cascadeIdx != gCascadesPerShadow; ++cascadeIdx)
+            assert(shadowLightIdx < gMaxShadowLights);
+            // To avoid the multiplication in the fragment shader, we direclty store the base cascade index for current light
+            result.mDirectionalLightShadowMapIndices[directionalIdx] = shadowLightIdx * cascadesPerLight;
+
+            const DirectionalLight light = aDirectionalLights[directionalIdx];
+
+            // This is a pure orientation: a directional light has no "position", we can set its origin to the other space origin.
+            const math::LinearMatrix<3, 3, GLfloat> orientationWorldToLight = alignMinusZ(light.mDirection);
+
+            if(method == DepthMethod::Cascaded)
             {
-                math::Matrix<4, 4, float> cascadeProjection = computeLightProjection(orientationWorldToLight,
-                                                                                     aSceneAabb,
-                                                                                     frustaCascade[cascadeIdx],
-                                                                                     c,
-                                                                                     aPass.mMapSize,
-                                                                                     {
-                                                                                         .mViewFrustrum = hdr::gColorBrewerSet1_linear[cascadeIdx],
-                                                                                         .mLight = light.mDiffuseColor * 0.5f
-                                                                                     });
+                for(unsigned int cascadeIdx = 0; cascadeIdx != gCascadesPerShadow; ++cascadeIdx)
+                {
+                    math::Matrix<4, 4, float> cascadeProjection = computeLightProjection(orientationWorldToLight,
+                                                                                         aSceneAabb_world,
+                                                                                         frustaCascade[cascadeIdx],
+                                                                                         c,
+                                                                                         aPass.mMapSize,
+                                                                                         {
+                                                                                             .mViewFrustrum = hdr::gColorBrewerSet1_linear[cascadeIdx],
+                                                                                             .mLight = light.mDiffuseColor * 0.5f
+                                                                                         });
+
+                    // Add the light view-projection to the collection
+                    lightViewProjection.mLightViewProjections[shadowLightIdx * gCascadesPerShadow + cascadeIdx] =
+                        math::AffineMatrix<4, GLfloat>{orientationWorldToLight}
+                        * cascadeProjection;
+                    lightViewProjection.mLightViewProjectionCount++;
+
+                    // At the moment, draw all if the requested idx above max.
+                    if(c.mDebugDrawWhichCascade == cascadeIdx || c.mDebugDrawWhichCascade >= (int)gCascadesPerShadow) 
+                    {
+                        debugDrawViewFrustum(lightViewProjection.mLightViewProjections[shadowLightIdx * gCascadesPerShadow + cascadeIdx].inverse(),
+                                            drawer::gLight,
+                                            light.mDiffuseColor);
+                    }
+                }
+
+            }
+            else
+            {
+                math::Matrix<4, 4, float> fullProjection = computeLightProjection(orientationWorldToLight,
+                                                                                  aSceneAabb_world,
+                                                                                  aCamera.assembleViewProjection(),
+                                                                                  c,
+                                                                                  aPass.mMapSize,
+                                                                                  {
+                                                                                          .mViewFrustrum = hdr::gCameraFrustumColor,
+                                                                                          .mLight = light.mDiffuseColor * 0.5f
+                                                                                  });
 
                 // Add the light view-projection to the collection
-                lightViewProjection.mLightViewProjections[directionalIdx * gCascadesPerShadow + cascadeIdx] =
+                lightViewProjection.mLightViewProjections[shadowLightIdx] =
                     math::AffineMatrix<4, GLfloat>{orientationWorldToLight}
-                    * cascadeProjection;
+                    * fullProjection;
                 lightViewProjection.mLightViewProjectionCount++;
 
-                // At the moment, draw all if the requested idx above max.
-                if(c.mDebugDrawWhichCascade == cascadeIdx || c.mDebugDrawWhichCascade >= (int)gCascadesPerShadow) 
+                if(c.mDebugDrawWhichCascade >= 0) 
                 {
-                    debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx * gCascadesPerShadow + cascadeIdx].inverse(),
-                                         drawer::gLight,
-                                         light.mDiffuseColor);
+                    debugDrawViewFrustum(lightViewProjection.mLightViewProjections[shadowLightIdx].inverse(),
+                                        drawer::gLight,
+                                        light.mDiffuseColor);
                 }
+                //
+                // Render shadow map (for single method)
+                //
+
+                // Attach a texture as the logical buffer of the FBO
+                // This is not layered, as we attach a single layer from the shadow-maps array.
+                // (The layer we intend to render to via `passOpaqueDepth()`).
+                {
+                    // The attachment is permanent, no need to recreate it each time the FBO is bound
+                    gl.FramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *shadowMap, /*mip map level*/0, shadowLightIdx);
+                    assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+                }
+
+                // TODO Ad 2024/10/11: #parameterize_shaders if we were able to select a program with the correct
+                // number of GS invocations (lights) we would only need a single "draw call".
+                // and it would be more uniform with the CSM version: using the same instanced-GS program,
+                // done once after this for-loop.
+                loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
+                            GpuViewProjectionBlock{orientationWorldToLight, fullProjection});
+                passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Single);
             }
 
+            ++shadowLightIdx;
         }
         else
         {
-            math::Matrix<4, 4, float> fullProjection = computeLightProjection(orientationWorldToLight,
-                                                                              aSceneAabb,
-                                                                              aCamera.assembleViewProjection(),
-                                                                              c,
-                                                                              aPass.mMapSize,
-                                                                              {
-                                                                                    .mViewFrustrum = hdr::gCameraFrustumColor,
-                                                                                    .mLight = light.mDiffuseColor * 0.5f
-                                                                              });
-
-            // Add the light view-projection to the collection
-            lightViewProjection.mLightViewProjections[directionalIdx] =
-                math::AffineMatrix<4, GLfloat>{orientationWorldToLight}
-                * fullProjection;
-            lightViewProjection.mLightViewProjectionCount++;
-
-            if(c.mDebugDrawWhichCascade >= 0) 
-            {
-                debugDrawViewFrustum(lightViewProjection.mLightViewProjections[directionalIdx].inverse(),
-                                    drawer::gLight,
-                                    light.mDiffuseColor);
-            }
-            //
-            // Render shadow map (for single method)
-            //
-
-            // Attach a texture as the logical buffer of the FBO
-            // This is not layered, as we attache a single layer from the shadow-maps array.
-            // (The layer we intend to render to via `passOpaqueDepth()`).
-            {
-                // The attachment is permanent, no need to recreate it each time the FBO is bound
-                gl.FramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *shadowMap, /*mip map level*/0, directionalIdx);
-                assert(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-            }
-
-            // TODO Ad 2024/10/11: #parameterize_shaders if we were able to select a program with the correct
-            // number of GS invocations (lights) we would only need a single "draw call".
-            // and it would be more uniform with the CSM version: using the same instanced-GS program,
-            // done once after this for-loop.
-            loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
-                          GpuViewProjectionBlock{orientationWorldToLight, fullProjection});
-            passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Single);
+            // Actually the value is already written by initialization.
+            result.mDirectionalLightShadowMapIndices[directionalIdx] = gNoEntryIndex;
         }
     }
 
@@ -642,6 +656,8 @@ void fillShadowMap(const ShadowMapping & aPass,
     {
         // Done above, directly in the loop where we compute the lights' view-projection.
     }
+
+    return result;
 }
 
 

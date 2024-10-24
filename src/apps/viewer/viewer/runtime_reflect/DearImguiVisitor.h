@@ -4,6 +4,8 @@
 
 #include <imgui.h>
 
+#include <tuple>
+
 
 namespace ad {
 
@@ -32,6 +34,47 @@ void give(DearImguiVisitor & aV, const std::span<T, Extent> & aSpan, const char 
         // We have to push an explicit ID on the stack, to distinguish below widgets.
         ImGui::PushID(label.c_str());
         r(aV, aSpan[idx]);
+        ImGui::PopID();
+    }
+    ImGui::Unindent();
+}
+
+// Note: To get each element of the tuple, we need compile-time indices
+// so a runtime loop cannot work.
+// We rely on an index sequence to get the parameter pack VN_indices.
+template <class... VT, std::size_t Extent, std::size_t... VN_indices>
+void interleaveSpans(DearImguiVisitor & aV,
+                     const std::tuple<std::span<VT, Extent>...> & aSpans,
+                     std::size_t aElementIdx,
+                     std::index_sequence<VN_indices...>)
+{
+    // Fold expression, to invoke r for each value of the VN_indices pack
+    (r(aV, std::get<VN_indices>(aSpans)[aElementIdx]), ...);
+}
+
+
+/// @brief Handles struct-of-arrays by interleaving elements of all spans.
+/// @param aSpans is a tuple of N spans, which must all have the same length.
+template <class... VT, std::size_t Extent>
+void give(DearImguiVisitor & aV,
+          const std::tuple<std::span<VT, Extent>...> & aSpans,
+          const char * aName)
+{
+    ImGui::Indent();
+    const std::size_t elementCount = std::get<0>(aSpans).size();
+    for(std::size_t idx = 0; idx != elementCount; ++idx)
+    {
+        std::string label = aName + (" #" + std::to_string(idx));
+        ImGui::SeparatorText(label.c_str());
+        // We have to push an explicit ID on the stack, to distinguish below widgets.
+        ImGui::PushID(label.c_str());
+
+        interleaveSpans(
+            aV,
+            aSpans,
+            idx,
+            std::index_sequence_for<VT...>{});
+
         ImGui::PopID();
     }
     ImGui::Unindent();

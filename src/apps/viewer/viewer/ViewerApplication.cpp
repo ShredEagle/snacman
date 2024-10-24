@@ -499,7 +499,7 @@ void handleAnimations(Node & aNode,
 }
 
 
-void showPointLights(const LightsData & aLights)
+void showPointLights(const LightsDataUser & aLights)
 {
     for(const auto & pointLight : aLights.spanPointLights())
     {

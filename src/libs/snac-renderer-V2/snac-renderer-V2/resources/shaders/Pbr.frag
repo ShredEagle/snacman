@@ -342,7 +342,7 @@ void main()
 vec3 cascadeSelectionDebugColor = vec3(1.); 
 #if defined(SHADOW_CASCADE)
     //
-    // Cascade selection
+    // Cascade selection (independant of the light)
     //
 
     // Interval-based, 
@@ -372,13 +372,14 @@ vec3 cascadeSelectionDebugColor = vec3(1.);
 
 #if defined(SHADOW_MAPPING)
         // TODO handle providing the shadow map texture index with the light
-        //if(projectShadow(directional.shadowMapIndex))
-        if(directionalIdx < MAX_SHADOWS)
+        uint shadowMapBaseIdx = ub_DirectionalLightShadowMapIndices[directionalIdx];
+        if(shadowMapBaseIdx != INVALID_INDEX)
         {
 #if defined(SHADOW_CASCADE)
-    uint shadowMapIdx = CASCADES_PER_SHADOW * directionalIdx + shadowCascadeIdx;
+            // CASCADES_PER_SHADOW multiplication is already done in shadowMapBaseIdx
+            uint shadowMapIdx = shadowMapBaseIdx + shadowCascadeIdx;
 #else
-    uint shadowMapIdx = directionalIdx;
+            uint shadowMapIdx = shadowMapBaseIdx;
 #endif //SHADOW_CASCADE
             //const float bias = 0.002;
             const float bias = 0.;

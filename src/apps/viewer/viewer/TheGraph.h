@@ -22,7 +22,7 @@ namespace ad::renderer {
 
 class Camera;
 struct Environment;
-struct LightsData;
+struct LightsDataUser;
 struct Loader;
 struct Scene;
 struct Storage;
@@ -50,7 +50,7 @@ struct TheGraph
     void renderFrame(const Scene & aScene,
                      const ViewerPartList & aPartList,
                      const Camera & aCamera,
-                     const LightsData & aLights_camera,
+                     const LightsDataUser & aLights_camera,
                      const GraphShared & aGraphShared,
                      Storage & aStorage,
                      bool aShowTextures,

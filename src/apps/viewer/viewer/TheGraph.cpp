@@ -142,7 +142,7 @@ void TheGraph::setupSizeDependentTextures()
 void TheGraph::renderFrame(const Scene & aScene, 
                            const ViewerPartList & aPartList,
                            const Camera & aCamera,
-                           const LightsData & aLights_camera,
+                           const LightsDataUser & aLights_camera,
                            const GraphShared & aGraphShared,
                            Storage & aStorage,
                            bool aShowTextures,
@@ -155,7 +155,7 @@ void TheGraph::renderFrame(const Scene & aScene,
     mShadowPass.reviewControls();
 
     // Shadow mapping
-    fillShadowMap(
+    LightsDataInternal lightsInternal = fillShadowMap(
         mShadowPass,
         textureRepository,
         aStorage,
@@ -163,11 +163,10 @@ void TheGraph::renderFrame(const Scene & aScene,
         aPartList,
         aScene.mRoot.mAabb,
         aCamera,
-        std::span{aScene.mLights_world.mDirectionalLights.data(), aScene.mLights_world.mDirectionalCount}
-    );
+        aScene.mLights_world);
 
     loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, aCamera);
-    loadLightsUbo(*aGraphShared.mUbos.mLightsUbo, aLights_camera);
+    loadLightsUbo(*aGraphShared.mUbos.mLightsUbo, {aLights_camera, lightsInternal});
     
     // Currently, the environment is the only *contextual* provider of a texture repo
     // (The other texture repo is part of the material)

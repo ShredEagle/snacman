@@ -7,4 +7,6 @@
 #define CASCADES_PER_SHADOW 4
 #define MAX_SHADOW_MAPS (MAX_SHADOWS * CASCADES_PER_SHADOW)
 
+#define INVALID_INDEX uint(-1)
+
 #endif

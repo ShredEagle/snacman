@@ -9,7 +9,7 @@
 namespace ad::renderer {
 
 
-struct LightsData;
+struct LightsDataUi;
 struct Scene;
 
 
@@ -47,7 +47,7 @@ private:
     Node * presentNodeTree(Node & aNode, unsigned int aIndex, const Timing & aTime);
     void presentObject(const Object & aObject, Instance & aInstance, const Timing & aTime);
     void presentEffect(Handle<const Effect> aEffect);
-    void presentLights(LightsData & aLightsData);
+    void presentLights(LightsDataUi & aLightsData);
     void presentShaders(const IntrospectProgram & aIntrospectProgram);
     void presentAnimations(Handle<AnimatedRig> mAnimatedRig, Instance & aInstance, const Timing & aTime);
     static void presentJointTree(const NodeTree<Rig::Pose> & aTree,

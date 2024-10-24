@@ -82,8 +82,8 @@ struct Scene
 
     ViewerPartList populatePartList() const;
 
-    LightsData getLightsInCamera(const Camera & aCamera,
-                                 bool aTransformDirectionalLights) const;
+    LightsDataUser getLightsInCamera(const Camera & aCamera,
+                                     bool aTransformDirectionalLights) const;
 
     Node mRoot{
         .mInstance = {
@@ -92,32 +92,41 @@ struct Scene
     }; 
 
     
-    LightsData mLights_world{
-        .mDirectionalCount = 1,
-        .mPointCount = 0,
-        .mAmbientColor = math::hdr::gWhite<GLfloat> / 12.f,
-        .mDirectionalLights = {
-            DirectionalLight{
-                .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.f, -0.2f, -1.f}},
-                .mDiffuseColor = math::hdr::gWhite<GLfloat>,
-                .mSpecularColor = math::hdr::gWhite<GLfloat> / 2.f,
-            },
-            DirectionalLight{
-                .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.77f, -0.4f, -0.5f}},
-                .mDiffuseColor = math::hdr::Rgb_f{1.f, 0.45f, 0.f},
-                .mSpecularColor = math::hdr::Rgb_f{1.f, 0.45f, 0.f},
-            },
-        },
-        .mPointLights = {
-            PointLight{
-                .mPosition = {2.f, 0.f, 0.f},
-                .mRadius = {
-                    .mMin = 1.f,
-                    .mMax = 10.f,
+    LightsDataUi mLights_world{
+        LightsDataUser{
+            .mDirectionalCount = 1,
+            .mPointCount = 0,
+            .mAmbientColor = math::hdr::gWhite<GLfloat> / 12.f,
+            .mDirectionalLights = {
+                DirectionalLight{
+                    .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.f, -0.2f, -1.f}},
+                    .mDiffuseColor = math::hdr::gWhite<GLfloat>,
+                    .mSpecularColor = math::hdr::gWhite<GLfloat> / 2.f,
                 },
-                .mDiffuseColor = math::hdr::gGreen<GLfloat>,
+                DirectionalLight{
+                    .mDirection = math::UnitVec<3, GLfloat>{math::Vec<3, GLfloat>{0.77f, -0.4f, -0.5f}},
+                    .mDiffuseColor = math::hdr::Rgb_f{1.f, 0.45f, 0.f},
+                    .mSpecularColor = math::hdr::Rgb_f{1.f, 0.45f, 0.f},
+                },
+            },
+            .mPointLights = {
+                PointLight{
+                    .mPosition = {2.f, 0.f, 0.f},
+                    .mRadius = {
+                        .mMin = 1.f,
+                        .mMax = 10.f,
+                    },
+                    .mDiffuseColor = math::hdr::gGreen<GLfloat>,
+                },
             },
         },
+        LightsDataToggleShadow{
+            .mDirectionalLightProjectShadow = []{
+                auto result = make_filled_array<ProjectShadowToggle, gMaxLights>(ProjectShadowToggle{});
+                result[0] = result[1] = ProjectShadowToggle{.mIsProjectingShadow = true};
+                return result;
+            }()
+        }
     };
 
     std::optional<Environment> mEnvironment;
