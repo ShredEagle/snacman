@@ -2,6 +2,8 @@
 
 #include "TheGraph.h"
 
+#include "runtime_reflect/DearImguiVisitor.h"
+
 #include <imguiui/ImguiUi.h>
 #include <imguiui/Widgets.h>
 #include <imguiui/Widgets-impl.h>
@@ -18,15 +20,19 @@ void GraphGui::present(TheGraph & aGraph)
 
         imguiui::addCombo("Forward pass",
             aGraph.mControls.mForwardPassKey,
-            TheGraph::Controls::gForwardKeys.begin(),
-            TheGraph::Controls::gForwardKeys.end(),
+            GraphControls::gForwardKeys.begin(),
+            GraphControls::gForwardKeys.end(),
             [](auto aKeyIt){return *aKeyIt;});
 
         imguiui::addCombo("Forward polygon mode",
             aGraph.mControls.mForwardPolygonMode,
-            TheGraph::Controls::gPolygonModes.begin(),
-            TheGraph::Controls::gPolygonModes.end(),
+            GraphControls::gPolygonModes.begin(),
+            GraphControls::gPolygonModes.end(),
             [](auto aModeIt){return graphics::to_string(*aModeIt);});
+
+        ImGui::SeparatorText("Shadow mapping");
+        DearImguiVisitor v;
+        r(v, aGraph.mShadowPass.mControls);
 
         ImGui::End();
     }

@@ -111,15 +111,15 @@ namespace cube {
     inline std::array<math::Position<3, float>, 8> getBoxVertices(math::Box<float> aBox)
     {
         return {
-            aBox.bottomLeftBack(),
-            aBox.bottomLeftFront(),
-            aBox.topLeftBack(),
-            aBox.topLeftFront(),
+            aBox.leftBottomZMin(),
+            aBox.leftBottomZMax(),
+            aBox.leftTopZMin(),
+            aBox.leftTopZMax(),
 
-            aBox.bottomRightBack(),
-            aBox.bottomRightFront(),
-            aBox.topRightBack(),
-            aBox.topRightFront(),
+            aBox.rightBottomZMin(),
+            aBox.rightBottomZMax(),
+            aBox.rightTopZMin(),
+            aBox.rightTopZMax(),
         };
     }
 

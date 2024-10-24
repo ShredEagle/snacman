@@ -270,7 +270,10 @@ int runApplication(int argc, char * argv[])
         // TODO Ad 2023/08/22: With this structure, it is showing the profile from previous frame
         // would be better to show current frame 
         // (but this implies to end the profiler frame earlier, thus not profiling ImGui UI)
-        showGui(imguiUi, application, profilerOut.str(), timing);
+        {
+            graphics::ScopedBind boundDefaultFb{graphics::FrameBuffer::Default()};
+            showGui(imguiUi, application, profilerOut.str(), timing);
+        }
 
         glfwApp.swapBuffers();
 

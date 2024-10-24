@@ -17,6 +17,11 @@
 namespace ad::renderer {
 
 
+math::Box<GLfloat> getAabbInParent(const Node & aNode)
+{
+    return aNode.mAabb * static_cast<math::AffineMatrix<4, float>>(aNode.mInstance.mPose);
+}
+
 
 Scene loadScene(const filesystem::path & aSceneFile,
                 const GenericStream & aStream,
@@ -32,7 +37,7 @@ Scene loadScene(const filesystem::path & aSceneFile,
 
     for (const auto & entry : description.at("entries"))
     {
-        std::vector<std::string> defines = entry["features"].get<std::vector<std::string>>();
+        std::vector<std::string> defines = entry.value<std::vector<std::string>>("features", {});
         filesystem::path modelFile = entry.at("model");
 
         Node model;
@@ -75,10 +80,6 @@ Scene loadScene(const filesystem::path & aSceneFile,
                 eulerAngles.yaw()   = eulerJson.value("yaw",   eulerAngles.yaw());
             }
             pose.mOrientation = math::toQuaternion(eulerAngles);
-
-            poserAabb *= math::trans3d::scaleUniform(pose.mUniformScale)
-                        * pose.mOrientation.toRotationMatrix() 
-                        * math::trans3d::translate(pose.mPosition);
         }
 
         Node modelPoser{
@@ -96,10 +97,10 @@ Scene loadScene(const filesystem::path & aSceneFile,
 }
 
 
-LightsData Scene::getLightsInCamera(const Camera & aCamera,
-                                    bool aTransformDirectionalLights) const
+LightsDataUser Scene::getLightsInCamera(const Camera & aCamera,
+                                        bool aTransformDirectionalLights) const
 {
-    LightsData result{mLights_world};
+    LightsDataUser result{mLights_world};
     const math::AffineMatrix<4, float> & transform = aCamera.getParentToCamera();
     if(aTransformDirectionalLights)
     {

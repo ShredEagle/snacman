@@ -42,6 +42,16 @@
 #include "system/SystemOrbitalCamera.h"
 #include "typedef.h"
 
+#include <snacman/DevmodeControl.h>
+#include <snacman/LoopSettings.h>
+#include <snacman/Profiling.h>
+#include <snacman/Profiling_V2.h>
+#include <snacman/QueryManipulation.h>
+#include <snacman/RenderThread.h>
+#include <snacman/TemporaryRendererHelpers.h>
+
+#include <utilities/ImguiUtilities.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -56,14 +66,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <snacman/DevmodeControl.h>
-#include <snacman/ImguiUtilities.h>
-#include <snacman/LoopSettings.h>
-#include <snacman/Profiling.h>
-#include <snacman/Profiling_V2.h>
-#include <snacman/QueryManipulation.h>
-#include <snacman/RenderThread.h>
-#include <snacman/TemporaryRendererHelpers.h>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -252,12 +254,15 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
         }
         if (mImguiDisplays.mShowLogLevel)
         {
-            snac::imguiLogLevelSelection(&mImguiDisplays.mShowLogLevel);
+            ImGui::Begin("Logging", &mImguiDisplays.mShowLogLevel);
+            utilities::imguiLogLevelSelection();
+            ImGui::End();
         }
         if (mImguiDisplays.mShowDebugDrawers)
         {
-            snac::imguiDebugDrawerLevelSection(
-                &mImguiDisplays.mShowDebugDrawers);
+            ImGui::Begin("Debug drawing", &mImguiDisplays.mShowDebugDrawers);
+            utilities::imguiDebugDrawerLevelSection();
+            ImGui::End();
         }
         if (mImguiDisplays.mShowMappings)
         {

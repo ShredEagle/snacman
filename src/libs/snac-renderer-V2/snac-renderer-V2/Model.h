@@ -369,6 +369,18 @@ struct Storage
 };
 
 
+inline Handle<graphics::Texture> makeTexture(Storage & aStorage, GLenum aTarget, const char * aDebugName)
+{
+    graphics::Texture & added = aStorage.mTextures.emplace_back(aTarget);
+
+    graphics::ScopedBind dummyBindToCreate{added};
+    // Doesn not work before the object is actually created.
+    glObjectLabel(GL_TEXTURE, added, -1, aDebugName);
+
+    return &added;
+}
+
+
 // TODO change the first argument to an handle if materials are on day stored in an array of Storage.
 inline const Name & getName(const Material & aMaterial, const Storage & aStorage)
 {

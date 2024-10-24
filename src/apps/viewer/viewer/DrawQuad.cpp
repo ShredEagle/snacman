@@ -44,31 +44,44 @@ namespace {
         in vec2 ex_Uv;
 
         layout(binding=0) uniform sampler2D u_Texture2D;
-        layout(binding=1) uniform samplerCube u_TextureCubemap;
+        layout(binding=1) uniform sampler2DArray u_Texture2DArray;
+        layout(binding=2) uniform samplerCube u_TextureCubemap;
 
         uniform int u_SourceChannel;
 
         uniform unsigned int u_Linearization;
         uniform float u_NearDistance;
         uniform float u_FarDistance;
-        uniform bool u_IsCubemap;
+        uniform unsigned int u_Sampler;
 
         out vec4 out_Color;
 
         void main()
         {
             vec4 sampled;
-            if(u_IsCubemap)
+            switch(u_Sampler)
             {
-                // Using Z = +1 will index into the cubemap X_POSITIVE face
-                // (since (u, v) is in [0, 1]^2)
-                // TODO allow to select other cubemap faces.
-                sampled = textureLod(u_TextureCubemap, vec3(ex_Uv * 2 - 1, 1.), 1); // TODO control lod with uniform
+                case 0:
+                {
+                    sampled = texture(u_Texture2D, ex_Uv);
+                    break;
+                }
+                case 1:
+                {
+                    // TODO allow to select the array index
+                    sampled = texture(u_Texture2DArray, vec3(ex_Uv, 0.));
+                    break;
+                }
+                case 2: 
+                {
+                    // Using Z = +1 will index into the cubemap X_POSITIVE face
+                    // (since (u, v) is in [0, 1]^2)
+                    // TODO allow to select other cubemap faces.
+                    sampled = textureLod(u_TextureCubemap, vec3(ex_Uv * 2 - 1, 1.), 1); // TODO control lod with uniform
+                    break;
+                }
             }
-            else
-            {
-                sampled = texture(u_Texture2D, ex_Uv);
-            }
+
             vec4 color = sampled;
             if(u_SourceChannel >= 0)
             {
@@ -141,9 +154,15 @@ void drawQuad(DrawQuadParameters aParameters)
     glProgramUniform1ui(program, glGetUniformLocation(program, "u_Linearization"), aParameters.mOperation);
     glProgramUniform1f( program, glGetUniformLocation(program, "u_NearDistance"),  aParameters.mNearDistance);
     glProgramUniform1f( program, glGetUniformLocation(program, "u_FarDistance"),   aParameters.mFarDistance);
-    glProgramUniform1i( program, glGetUniformLocation(program, "u_IsCubemap"),     aParameters.mIsCubemap);
+    glProgramUniform1ui(program, glGetUniformLocation(program, "u_Sampler"),       aParameters.mSampler);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    // Reset default program, to avoid potential issues when calling glClear() with warnings such as:
+    // > "The current GL state uses a sampler (0) that has depth comparisons enabled, with a texture object (shadow_map) with a depth format,"
+    // > " by a shader that samples it with a non-shadow sampler. Using this state to sample would result in undefined behavior"
+    // Yes, glClear() should not validate anything related to the active program, but who am I to judge the driver.
+    glUseProgram(0);
 }
 
 

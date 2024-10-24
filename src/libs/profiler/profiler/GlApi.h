@@ -33,6 +33,7 @@ public:
 
         unsigned int mBufferBindCount{0};
         unsigned int mDrawCount{0};
+        unsigned int mFboAttachCount{0};
         Memory mBufferMemory;
         Memory mTextureMemory;
     };
@@ -41,6 +42,10 @@ public:
     void BufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
     void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
     void Clear(GLbitfield mask);
+    void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data);
+    void CompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
+    void CompressedTexImage3D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
+    void CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
     void Disable(GLenum cap);
     void DrawArrays(GLenum mode, GLint first, GLsizei count);
     void DrawArraysInstanced(GLenum mode, GLint first, GLsizei count, GLsizei instancecount);
@@ -51,15 +56,15 @@ public:
     void DrawElementsInstancedBaseVertex(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex);
     void DrawElementsInstancedBaseVertexBaseInstance(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex, GLuint baseinstance);
     void Enable(GLenum cap);
+    void FramebufferTexture(GLenum target, GLenum attachment, GLuint texture, GLint level);
+    void FramebufferTexture3D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
+    void FramebufferTextureLayer(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer);
     void MultiDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect, GLsizei drawcount, GLsizei stride);
     void PolygonMode(GLenum face, GLenum mode);
+    void TexImage3D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels);
     void TexStorage2D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height);
     void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
     void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
-    void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data);
-    void CompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
-    void CompressedTexImage3D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
-    void CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
 
 
     // Note: Give access to the Metrics even if the instrumentation is not macro enabled
@@ -148,6 +153,34 @@ inline void GlApi::Enable(GLenum cap)
     glEnable(cap);
 }
 
+
+inline void GlApi::FramebufferTexture(GLenum target, GLenum attachment, GLuint texture, GLint level)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mFboAttachCount;
+#endif
+    return glFramebufferTexture(target, attachment, texture, level);
+}
+
+
+inline void GlApi::FramebufferTexture3D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mFboAttachCount;
+#endif
+    return glFramebufferTexture3D(target, attachment, textarget, texture, level, zoffset);
+}
+
+
+inline void GlApi::FramebufferTextureLayer(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mFboAttachCount;
+#endif
+    return glFramebufferTextureLayer(target, attachment, texture, level, layer);
+}
+
+
 inline void GlApi::DrawArrays(GLenum mode, GLint first, GLsizei count)
 {
 #if defined(SE_INSTRUMENT_GL)
@@ -233,6 +266,23 @@ inline void GlApi::PolygonMode(GLenum face, GLenum mode)
 {
     // TODO instrument
     glPolygonMode(face, mode);
+}
+
+
+inline void GlApi::TexImage3D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels)
+{
+#if defined(SE_INSTRUMENT_GL)
+    // Only gives an approximation at the moment
+    // TODO Ad 2023/10/24: Is it actually how the reserved memory is computed?
+    // Do we need to take into account some further alignment constraints?
+    // How is byte rounding implemeneted?
+    GLuint bitsPerPixel = graphics::getPixelFormatBitSize(internalformat);
+    GLsizei w = width;
+    GLsizei h = height;
+    GLsizei d = depth;
+    v().mTextureMemory.mAllocated += (w * h * d * bitsPerPixel) / 8;
+#endif
+    glTexImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels);
 }
 
 
