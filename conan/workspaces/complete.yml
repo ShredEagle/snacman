@@ -1,5 +1,5 @@
 editables:
-    entity/0f3525cba1@adnn/develop
+    entity/0f3525cba1@adnn/develop:
         path: ../../../entity/conan
     graphics/bce2183238@adnn/develop:
         path: ../../../graphics/conan
