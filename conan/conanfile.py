@@ -25,12 +25,11 @@ class SnacmanConan(ConanFile):
         ("entity/0f3525cba1@adnn/develop"),
         ("graphics/3a7f5997a1@adnn/develop"),
         ("handy/15a1bb8eaa@adnn/develop"),
-        ("math/d5fa5b3887@adnn/develop"),
+        ("math/90bd61eae3@adnn/develop"),
         ("MarkovJunior.cpp/55a5a1d84d@adnn/develop"),
 
         ("implot/0.16"),  # MIT
         ("imgui/1.89.8"),
-
 
         # Waiting for my PR on conan-center for assimp to get merged in
         # see: https://github.com/conan-io/conan-center-index/pull/20185

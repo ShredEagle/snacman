@@ -29,8 +29,8 @@ inline void debugDrawViewFrustum(const math::Matrix<4, 4, float> & aViewProjecti
         for(std::size_t idx = 0; idx != 4; ++idx)
         {
             DBGDRAW_INFO(aDrawer).addLine(
-                math::homogeneous::normalize(corners_worldSpace[idx + aStartIdx]).xyz(),
-                math::homogeneous::normalize(corners_worldSpace[(idx + 1) % 4 + aStartIdx]).xyz(),
+                math::homogeneous::homogenize(corners_worldSpace[idx + aStartIdx]).xyz(),
+                math::homogeneous::homogenize(corners_worldSpace[(idx + 1) % 4 + aStartIdx]).xyz(),
                 aColor);
         }
     };
@@ -43,8 +43,8 @@ inline void debugDrawViewFrustum(const math::Matrix<4, 4, float> & aViewProjecti
     for(std::size_t idx = 0; idx != 4; ++idx)
     {
         DBGDRAW_INFO(aDrawer).addLine(
-            math::homogeneous::normalize(corners_worldSpace[idx]).xyz(),
-            math::homogeneous::normalize(corners_worldSpace[(idx + 4)]).xyz(),
+            math::homogeneous::homogenize(corners_worldSpace[idx]).xyz(),
+            math::homogeneous::homogenize(corners_worldSpace[(idx + 4)]).xyz(),
             aColor);
     }
 }

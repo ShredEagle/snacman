@@ -132,14 +132,14 @@ void ShadowMapping::reviewControls()
 /// bounding the X-Y plane of the frustum.
 math::Rectangle<GLfloat> getFrustumSideBounds(math::Matrix<4, 4, GLfloat> aFrustumClipToLightSpace)
 {
-    using math::homogeneous::normalize;
+    using math::homogeneous::homogenize;
 
-    math::Position<2, GLfloat> low = normalize(gNdcUnitCorners[0] * aFrustumClipToLightSpace).xy();
+    math::Position<2, GLfloat> low = homogenize(gNdcUnitCorners[0] * aFrustumClipToLightSpace).xy();
     math::Position<2, GLfloat> high = low;
 
     for(std::size_t idx = 1; idx != gNdcUnitCorners.size(); ++idx)
     {
-        math::Position<2, GLfloat> cornerInLightSpace = normalize(gNdcUnitCorners[idx] * aFrustumClipToLightSpace).xy();
+        math::Position<2, GLfloat> cornerInLightSpace = homogenize(gNdcUnitCorners[idx] * aFrustumClipToLightSpace).xy();
         low = min(low, cornerInLightSpace);
         high = max(high, cornerInLightSpace);
     }
