@@ -12,8 +12,8 @@ namespace ad::renderer {
 
 
 struct Environment;
+struct GraphShared;
 struct Loader;
-struct TheGraph;
 struct Storage;
 
 
@@ -23,7 +23,7 @@ struct Storage;
 
 /// @brief Dump the environment as the 6 faces of a cubemap, as a single image strip.
 void dumpEnvironmentCubemap(const Environment & aEnvironment, 
-                            const TheGraph & aGraph,
+                            const GraphShared & aGraphShared,
                             Storage & aStorage,
                             std::filesystem::path aOutputStrip);
 
@@ -33,7 +33,7 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
 /// corresponding to the sampled principal incoming direction.
 /// (principal incoming direction might just be view reflection, or a skew of it.)
 Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvironment,
-                                                       const TheGraph & aGraph,
+                                                       const GraphShared & aGraphShared,
                                                        Storage & aStorage,
                                                        GLsizei aOutputSideLength);
 
@@ -43,7 +43,7 @@ Handle<graphics::Texture> filterEnvironmentMapSpecular(const Environment & aEnvi
 /// @return An environment map (cubemap) representing the irradiance 
 /// arriving at the sampled normal.
 Handle<graphics::Texture> filterEnvironmentMapDiffuse(const Environment & aEnvironment,
-                                                      const TheGraph & aGraph,
+                                                      const GraphShared & aGraphShared,
                                                       Storage & aStorage,
                                                       GLsizei aOutputSideLength);
 

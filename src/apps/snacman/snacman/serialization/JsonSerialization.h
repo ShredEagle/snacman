@@ -18,7 +18,7 @@ struct adl_serializer<std::chrono::time_point<Clock, Duration>>
 
     static void from_json(const json & aJson, std::chrono::time_point<Clock, Duration> & aTimePoint)
     {
-        const Duration since_epoch(static_cast<Duration::rep>(aJson["since_epoch"]));
+        const Duration since_epoch(static_cast<typename Duration::rep>(aJson["since_epoch"]));
         aTimePoint = std::chrono::time_point<Clock, Duration>(since_epoch);
     }
 };

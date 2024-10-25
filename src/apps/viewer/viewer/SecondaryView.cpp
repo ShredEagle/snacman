@@ -25,7 +25,7 @@ SecondaryView::SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInt
             math::Degree<float>{0.f}
         }},
     mRenderSize{mAppInterface->getFramebufferSize()},
-    mGraph{mRenderSize, aStorage, aLoader},
+    mGraph{mRenderSize, aLoader},
     mFramebufferSizeListener{mAppInterface->listenFramebufferResize(
         std::bind(&SecondaryView::resize, this, std::placeholders::_1))}
 {
@@ -35,7 +35,7 @@ SecondaryView::SecondaryView(std::shared_ptr<graphics::AppInterface> aGlfwAppInt
         .mAspectRatio = math::getRatio<float>(mRenderSize.as<math::Size, float>()),
         .mViewHeight = 2,
         .mNearZ = 0,
-        .mFarZ = -100,
+        .mFarZ = -200,
     });
 
     // Attach the render buffers to FBO
@@ -89,16 +89,23 @@ void SecondaryView::update(const Timing & aTime)
 }
 
 
-void SecondaryView::render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage)
+void SecondaryView::render(const Scene & aScene,
+                           const ViewerPartList & aPartList,
+                           bool aLightsInCameraSpace,
+                           const GraphShared & aGraphShared,
+                           Storage & aStorage)
 {
     PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "SecondaryView::render()", CpuTime, GpuTime, BufferMemoryWritten);
 
-    graphics::ScopedBind boundFbo{mDrawFramebuffer, graphics::FrameBufferTarget::Draw};
+    // To remove
+    //graphics::ScopedBind boundFbo{mDrawFramebuffer, graphics::FrameBufferTarget::Draw};
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     mGraph.renderFrame(aScene,
+                       aPartList,
                        mCameraSystem.mCamera,
                        aScene.getLightsInCamera(mCameraSystem.mCamera, !aLightsInCameraSpace),
+                       aGraphShared,
                        aStorage,
                        false,
                        mDrawFramebuffer);

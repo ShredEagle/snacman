@@ -1,5 +1,7 @@
 #include "ViewerApplication.h"
 
+#include "ColorPalettes.h"
+#include "DebugDrawUtilities.h"
 #include "EnvironmentUtilities.h"
 #include "Json.h"
 #include "Logging.h"
@@ -21,6 +23,7 @@
 
 #include <snac-renderer-V2/Cube.h>
 #include <snac-renderer-V2/Profiling.h>
+#include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/Semantics.h>
 #include <snac-renderer-V2/debug/DebugDrawing.h>
 
@@ -232,6 +235,61 @@ namespace {
     }
 
 
+    // Note: I would have liked to merge it with "populatePartList"
+    // but it might be called from several "views" in a single frame, thus duplicating the debug draws...
+    void debugDrawAabb(const Node & aNode,
+                       const Pose & aParentAbsolutePose,
+                       const Node * aHighlightedNode)
+    {
+        using ::ad::snac::DebugDrawer;
+
+        const Instance & instance = aNode.mInstance;
+        const Pose & localPose = instance.mPose;
+        Pose absolutePose = aParentAbsolutePose.transform(localPose);
+
+        // All AABB are expressed in the **local** space (and thus, aligned on the axis of local space).
+
+        // For the highlighted Node, we raise the drawing level
+        // This way, it is possible to filter and see only the highlighted node AABB.
+        DebugDrawer::Level nodeLevel = 
+            aHighlightedNode == &aNode ? DebugDrawer::Level::info : DebugDrawer::Level::debug;
+
+        DBGDRAW(drawer::gScene, nodeLevel).addBox(
+            // TODO Ad 2024/08/24: #pose This should become a simple assignment when Pose is consolidated
+            snac::DebugDrawer::Entry{
+                .mPosition = absolutePose.mPosition.as<math::Position>(),
+                .mScaling = math::Size<3, float>{
+                    absolutePose.mUniformScale,
+                    absolutePose.mUniformScale,
+                    absolutePose.mUniformScale},
+                .mOrientation = absolutePose.mOrientation,
+                .mColor = math::hdr::gBlue<float>,
+            },
+            aNode.mAabb);
+
+        if(const Object * object = aNode.mInstance.mObject;
+           object != nullptr)
+        {
+            DBGDRAW_TRACE(drawer::gScene).addBox(
+                // TODO Ad 2024/08/24: #pose This should become a simple assignment when Pose is consolidated
+                snac::DebugDrawer::Entry{
+                    .mPosition = absolutePose.mPosition.as<math::Position>(),
+                    .mScaling = math::Size<3, float>{
+                        absolutePose.mUniformScale,
+                        absolutePose.mUniformScale,
+                        absolutePose.mUniformScale},
+                    .mOrientation = absolutePose.mOrientation,
+                },
+                object->mAabb);
+        }
+
+        for(const auto & child : aNode.mChildren)
+        {
+            debugDrawAabb(child, absolutePose, aHighlightedNode);
+        }
+    }
+
+
 } // unnamed namespace
 
 
@@ -271,17 +329,14 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage},
     // Track the size of the default framebuffer, which will be the destination of mGraph::render().
     mDebugRenderer{mStorage, mLoader},
+    mGraphShared{mLoader, mStorage},
     mPrimaryView{mGlfwAppInterface, aImguiUi, mLoader, mStorage},
     mSecondaryView{mSecondViewAppInterface, aSecondViewImguiUi, mStorage, mLoader}
 {
-    // TODO #graph This aspect is very problematic: the instance stream should be unique, as its buffers are deeply associated to models
-    // on load. This means all "graphs" should use the same at the moment.
-    mSecondaryView.mGraph.mInstanceStream = mPrimaryView.mGraph.mInstanceStream;
-
     if(aSceneFile.extension() == ".sew")
     {
         // TODO Ad 2024/08/02: #graph sort out this instance stream stuff
-        mScene = loadScene(aSceneFile, mPrimaryView.mGraph.mInstanceStream, mLoader, mStorage);
+        mScene = loadScene(aSceneFile, mGraphShared.mInstanceStream, mLoader, mStorage);
     }
     else
     {
@@ -343,13 +398,13 @@ void ViewerApplication::setEnvironmentCubemap(std::filesystem::path aEnvironment
     // That approach is smelly: we use the Environment to compute a value we then assign to the Environment
     mScene.mEnvironment->mTextureRepository[semantic::gFilteredRadianceEnvironmentTexture] =
         // TODO Ad 2024/08/02: #graph get rid of the graph parameter in the filtering functions
-        filterEnvironmentMapSpecular(*mScene.mEnvironment, mPrimaryView.mGraph, mStorage, gFilteredRadianceSide);
+        filterEnvironmentMapSpecular(*mScene.mEnvironment, mGraphShared, mStorage, gFilteredRadianceSide);
 
     mScene.mEnvironment->mTextureRepository[semantic::gIntegratedEnvironmentBrdf] =
         integrateEnvironmentBrdf(mStorage, gIntegratedBrdfSide, mLoader);
 
     mScene.mEnvironment->mTextureRepository[semantic::gFilteredIrradianceEnvironmentTexture] =
-        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mPrimaryView.mGraph, mStorage, gFilteredIrradianceSide);
+        filterEnvironmentMapDiffuse(*mScene.mEnvironment, mGraphShared, mStorage, gFilteredIrradianceSide);
 }
 
 
@@ -444,7 +499,7 @@ void handleAnimations(Node & aNode,
 }
 
 
-void showPointLights(const LightsData & aLights)
+void showPointLights(const LightsDataUser & aLights)
 {
     for(const auto & pointLight : aLights.spanPointLights())
     {
@@ -456,56 +511,6 @@ void showPointLights(const LightsData & aLights)
             math::Box<float>{-gLightCubeSize.as<math::Position>() / 2.f, gLightCubeSize});
     }
 }
-
-
-namespace {
-
-
-    // TODO Ad 2024/08/08: This should be moved to a more general library
-    /// @brief Debug-draw the view frustum of a camera, provided the inverse of its view-projection matrix.
-    void debugDrawCameraFrustum(const math::Matrix<4, 4, float> & aViewProjectionInverse)
-    {
-        std::array<math::Position<4, float>, 8> ndcCorners{{
-            {-1.f, -1.f, -1.f, 1.f}, // Near bottom left
-            { 1.f, -1.f, -1.f, 1.f}, // Near bottom right
-            { 1.f,  1.f, -1.f, 1.f}, // Near top right
-            {-1.f,  1.f, -1.f, 1.f}, // Near top left
-            {-1.f, -1.f,  1.f, 1.f}, // Far bottom left
-            { 1.f, -1.f,  1.f, 1.f}, // Far bottom right
-            { 1.f,  1.f,  1.f, 1.f}, // Far top right
-            {-1.f,  1.f,  1.f, 1.f}, // Far top left
-        }};
-
-        // Transform corners from NDC to world
-        for(std::size_t idx = 0; idx != ndcCorners.size(); ++idx)
-        {
-            ndcCorners[idx] *= aViewProjectionInverse;
-        }
-
-        auto drawFace = [&ndcCorners](const std::size_t aStartIdx)
-        {
-            for(std::size_t idx = 0; idx != 4; ++idx)
-            {
-                DBGDRAW_INFO(drawer::gCamera).addLine(
-                    math::homogeneous::normalize(ndcCorners[idx + aStartIdx]).xyz(),
-                    math::homogeneous::normalize(ndcCorners[(idx + 1) % 4 + aStartIdx]).xyz());
-            }
-        };
-
-        // Near plane
-        drawFace(0);
-        // Far plane
-        drawFace(4);
-        // Sides
-        for(std::size_t idx = 0; idx != 4; ++idx)
-        {
-            DBGDRAW_INFO(drawer::gCamera).addLine(math::homogeneous::normalize(ndcCorners[idx]).xyz(),
-                                                math::homogeneous::normalize(ndcCorners[(idx + 4)]).xyz());
-        }
-    }
-
-
-} // unnamed namespace
 
 
 void PrimaryView::update(const Timing & aTime)
@@ -523,7 +528,7 @@ void PrimaryView::update(const Timing & aTime)
         });
 
         auto viewProjectionInverse = mCameraSystem.mCamera.assembleViewProjection().inverse();
-        debugDrawCameraFrustum(viewProjectionInverse);
+        debugDrawViewFrustum(viewProjectionInverse, drawer::gCamera, hdr::gCameraFrustumColor);
     }
 }
 
@@ -546,6 +551,8 @@ void ViewerApplication::update(const Timing & aTime)
 
     mPrimaryView.update(aTime);
     mSecondaryView.update(aTime);
+
+    debugDrawAabb(mScene.mRoot, Pose{}, mSceneGui.getHighlighted());
 }
 
 
@@ -591,7 +598,7 @@ void ViewerApplication::drawMainUi(const renderer::Timing & aTime)
             assert(mScene.mEnvironment);
             dumpEnvironmentCubemap(
                 *mScene.mEnvironment,
-                mPrimaryView.mGraph,
+                mGraphShared,
                 mStorage,
                 mScene.mEnvironment->mMapFile.parent_path() /
                     "split-" += mScene.mEnvironment->mMapFile.filename());
@@ -646,6 +653,8 @@ void ViewerApplication::drawMainUi(const renderer::Timing & aTime)
             mSecondViewAppInterface->hideWindow();
         }
     }
+
+    mDebugAndLogGui.present();
 }
 
 
@@ -655,13 +664,19 @@ void ViewerApplication::drawSecondaryUi()
 }
 
 
-void PrimaryView::render(const Scene & aScene, bool aLightsInCameraSpace, Storage & aStorage)
+void PrimaryView::render(const Scene & aScene,
+                         const ViewerPartList & aPartList,
+                         bool aLightsInCameraSpace,
+                         const GraphShared & aGraphShared,
+                         Storage & aStorage)
 {
     mGraph.renderFrame(aScene,
+                       aPartList,
                        mCameraSystem.mCamera,
                        aScene.getLightsInCamera(mCameraSystem.mCamera, !aLightsInCameraSpace),
+                       aGraphShared,
                        aStorage,
-                       false,
+                       true,
                        graphics::FrameBuffer::Default());
 }
 
@@ -672,24 +687,67 @@ void ViewerApplication::render()
     nvtx3::mark("ViewerApplication::render()");
     NVTX3_FUNC_RANGE();
 
-    snac::DebugDrawer::DrawList drawList = snac::DebugDrawer::EndFrame();
+    // 
+    // Prepare what is intended to be shared by all the graphs
+    //
 
-    mPrimaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
+    // TODO: How to handle material/program selection while generating the part list,
+    // if the camera (or pass itself?) might override the materials?
+    // Partial answer: the program selection is done later in preparePass (does not address camera overrides though)
+    ViewerPartList partList = mScene.populatePartList();
+
+    // Use the same indirect buffer for all drawings
+    // Its content will be rewritten by distinct passes though
+    // With the current approach, this binding could be done only once at construction,
+    // unless several "Graph" instances use distinct indirect buffers
+    graphics::bind(mGraphShared.mIndirectBuffer, graphics::BufferType::DrawIndirect);
+    {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "load_frame_UBOs", CpuTime, GpuTime, BufferMemoryWritten);
+        loadFrameUbo(*mGraphShared.mUbos.mFrameUbo);
+        // Load model transforms
+        // Note: the model matrix transforms to world space, so it is independant of viewpoint.
+        // (the pass indexes the transform for the objects it actually draws, so culling could still be implemented on top).
+        proto::load(*mGraphShared.mUbos.mModelTransformUbo,
+                    std::span{partList.mInstanceTransforms},
+                    graphics::BufferHint::DynamicDraw);
+
+        proto::load(*mGraphShared.mUbos.mJointMatrixPaletteUbo, std::span{partList.mRiggingPalettes}, graphics::BufferHint::StreamDraw);
+    }
+
+    //
+    // Render the views (via their graph)
+    //
+    mPrimaryView.render(mScene, partList, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mGraphShared, mStorage);
+
+    // Not sure if we want to also include the secondary view render in the debugdrawer frame.
+    // Since at the moment of writing it calls the same code, we do not include it, to avoid duplicated debug drawing.
+    snac::DebugDrawer::DrawList drawList = snac::DebugDrawer::EndFrame();
 
     if(mSecondViewAppInterface->isWindowOnDisplay())
     {
-        mSecondaryView.render(mScene, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mStorage);
+        mSecondaryView.render(mScene, partList, mSceneGui.getOptions().mAreDirectionalLightsCameraSpace, mGraphShared, mStorage);
     }
 
-    renderDebugDrawlist(
-        drawList,
-        // Fullscreen viewport
-        math::Rectangle<int>::AtOrigin(mGlfwAppInterface->getFramebufferSize()),
-        // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
-        // It is needed for the viewing block, so we hope it is left at the camera position
-        mPrimaryView.mGraph.mUbos.mUboRepository);
-
+    // TODO Ad 2024/08/23: This manual management of each window should be generalized behind a notion of "sink"
+    // so we can separately control which channel/level goes to each sink (instead of completely toggling on/off)
+    if(mDebugAndLogGui.mRenderToMainView)
     {
+        // We reset the camera to the main view, this is a smell
+        loadCameraUbo(*mGraphShared.mUbos.mViewingUbo, mPrimaryView.mCameraSystem.mCamera);
+        graphics::ScopedBind boundFbo{graphics::FrameBuffer::Default()};
+        renderDebugDrawlist(
+            drawList,
+            // Fullscreen viewport
+            math::Rectangle<int>::AtOrigin(mGlfwAppInterface->getFramebufferSize()),
+            // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
+            mGraphShared.mUbos.mUboRepository);
+    }
+
+    if(mSecondViewAppInterface->isWindowOnDisplay()
+        && mDebugAndLogGui.mRenderToSecondaryView)
+    {
+        // We reset the camera to the secondary view
+        loadCameraUbo(*mGraphShared.mUbos.mViewingUbo, mSecondaryView.mCameraSystem.mCamera);
         graphics::ScopedBind boundFbo{mSecondaryView.mDrawFramebuffer};
         renderDebugDrawlist(
             drawList,
@@ -697,7 +755,7 @@ void ViewerApplication::render()
             math::Rectangle<int>::AtOrigin(mSecondaryView.mRenderSize),
             // TODO Ad 2024/08/02: #graph This need to access the ubo repo in the graph is another design smell
             // It is needed for the viewing block, so we hope it is left at the camera position
-            mSecondaryView.mGraph.mUbos.mUboRepository);
+            mGraphShared.mUbos.mUboRepository);
     }
 }
 

@@ -1,5 +1,7 @@
 #version 430
 
+#include "ColorPalettes.glsl"
+#include "Constants.glsl"
 #include "Gamma.glsl"
 #include "HelpersIbl.glsl"
 #include "HelpersPbr.glsl"
@@ -26,13 +28,23 @@ uniform sampler2DArray u_NormalTexture;
 uniform sampler2DArray u_MetallicRoughnessAoTexture;
 #endif
 
+#ifdef SHADOW_MAPPING
+
+#if defined(SHADOW_CASCADE)
+#include "ShadowCascadeBlock.glsl"
+#endif //SHADOW_CASCADE
+
+uniform sampler2DArrayShadow u_ShadowMap;
+in vec3[MAX_SHADOW_MAPS] ex_Position_lightTex;
+
+#endif //SHADOW_MAPPING
+
 #if defined(ENVIRONMENT_MAPPING)
 uniform samplerCube u_EnvironmentTexture;
 uniform samplerCube u_FilteredRadianceEnvironmentTexture;
 uniform samplerCube u_FilteredIrradianceEnvironmentTexture;
 uniform sampler2D u_IntegratedEnvironmentBrdf;
-
-#endif
+#endif //ENVIRONMENT_MAPPING
 
 out vec4 out_Color;
 
@@ -51,6 +63,19 @@ struct PbrMaterial
     vec3 f90;
     float alpha;
 };
+
+
+#if defined(SHADOW_MAPPING)
+
+//float getShadowAttenuation(vec4 fragPosition_lightClip, uint shadowMapIdx, float bias)
+float getShadowAttenuation(vec3 fragPosition_lightTex, uint shadowMapIdx, float bias)
+{
+    return texture(u_ShadowMap, 
+                   vec4(fragPosition_lightTex.xy, // uv
+                        shadowMapIdx, // array layer
+                        fragPosition_lightTex.z - bias /* reference value */));
+}
+#endif //SHADOW_MAPPING
 
 
 LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
@@ -155,6 +180,7 @@ void main()
 
 // Defines for BC5 Red-Green texture compression, which only store 2 channels
 // The third component has to be reconstructed.
+#if defined(TEXTURED)
 #define BC5_RGTC;
 #if defined(BC5_RGTC)
     // Fetch from Red-Green channels, and remap from [0, 1]^2 to [-1, 1]^2.
@@ -172,6 +198,9 @@ void main()
                 vec3(ex_Uv[material.normalUvChannel], material.normalTextureIndex)).xyz
         * 2 - vec3(1);
 #endif // BC5_RGTC
+#else // not textured
+    vec3 normal_tbn = vec3(0, 0, 1);
+#endif // TEXURED
 
     // MikkT see: http://www.mikktspace.com/
 
@@ -224,9 +253,13 @@ void main()
     //
 
     // Extract PBR parameters
+#if defined(TEXTURED)
     vec3 mrao = 
         texture(u_MetallicRoughnessAoTexture, 
                 vec3(ex_Uv[material.mraoUvChannel], material.mraoTextureIndex)).xyz;
+#else // not textured
+    vec3 mrao = vec3(0, 0.2, 0);
+#endif // TEXTURED
 
 #define PBR_CHANNELS_GLTF
 
@@ -306,11 +339,54 @@ void main()
     vec3 diffuseAccum = vec3(0.);
     vec3 specularAccum = vec3(0.);
 
+vec3 cascadeSelectionDebugColor = vec3(1.); 
+#if defined(SHADOW_CASCADE)
+    //
+    // Cascade selection (independant of the light)
+    //
+
+    // Interval-based, 
+    // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/cascaded-shadow-maps#interval-based-cascade-selection
+    vec4 fragmentDepth_view = vec4(ex_Position_cam.z);
+    // A vector with 1 where the pixel depth exceeds the cascade far plane
+    // Note: we could probably do away with vec3 here
+    // #cascade_hardcode_4
+    vec4 depthComparison = vec4(lessThan(fragmentDepth_view, cascadeFarPlaneDepths_view));
+    const vec4 availableCascadeIndices = vec4(1, 1, 1, 0);
+    uint shadowCascadeIdx = uint(dot(availableCascadeIndices, depthComparison));
+
+    if(debugTintCascade)
+    {
+        cascadeSelectionDebugColor = gColorBrewerSet1_linear[shadowCascadeIdx]; 
+    }
+#endif //SHADOW_CASCADE
+
+
     // Directional lights
     for(uint directionalIdx = 0; directionalIdx != ub_DirectionalCount.x; ++directionalIdx)
     {
         DirectionalLight directional = ub_DirectionalLights[directionalIdx];
         vec3 lightDir_cam = -directional.direction.xyz;
+    
+        float shadowAttenuation = 1.0;
+
+#if defined(SHADOW_MAPPING)
+        // TODO handle providing the shadow map texture index with the light
+        uint shadowMapBaseIdx = ub_DirectionalLightShadowMapIndices[directionalIdx];
+        if(shadowMapBaseIdx != INVALID_INDEX)
+        {
+#if defined(SHADOW_CASCADE)
+            // CASCADES_PER_SHADOW multiplication is already done in shadowMapBaseIdx
+            uint shadowMapIdx = shadowMapBaseIdx + shadowCascadeIdx;
+#else
+            uint shadowMapIdx = shadowMapBaseIdx;
+#endif //SHADOW_CASCADE
+            //const float bias = 0.002;
+            const float bias = 0.;
+            shadowAttenuation = 
+                getShadowAttenuation(ex_Position_lightTex[shadowMapIdx], shadowMapIdx, bias);
+        }
+#endif // SHADOW_MAPPING
 
 #if defined(MATERIAL_BLEND_PARAMETERS)
         // evaluate the model only once, with interpolated material parameters
@@ -332,8 +408,8 @@ void main()
         lighting.specular += mix(lightingDielec.specular, lightingMetal.specular, metallic);
 #endif
 
-        diffuseAccum += lighting.diffuse;
-        specularAccum += lighting.specular;
+        diffuseAccum += lighting.diffuse * shadowAttenuation;
+        specularAccum += lighting.specular * shadowAttenuation;
     }
 
     // Point lights
@@ -342,7 +418,7 @@ void main()
         PointLight point = ub_PointLights[pointIdx];
 
         // see rtr 4th p110 (5.10)
-        vec3 lightRay_cam = point.position.xyz - ex_Position_cam;
+        vec3 lightRay_cam = point.position.xyz - ex_Position_cam.xyz;
         float radius = sqrt(dot(lightRay_cam, lightRay_cam));
         vec3 lightDir_cam = lightRay_cam / radius;
 
@@ -463,5 +539,6 @@ void main()
 #endif // ENVIRONMENT_MAPPING_MIRROR
 #endif // ENVIRONMENT_MAPPING
 
-    out_Color = correctGamma(vec4(fragmentColor, albedo.a * material.diffuseColor.a));
+    out_Color = correctGamma(vec4(fragmentColor * cascadeSelectionDebugColor,
+                                  albedo.a * material.diffuseColor.a));
 }
