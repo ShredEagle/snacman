@@ -528,7 +528,7 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
         directionalIdx != aDirectionalLights.size();
         ++directionalIdx)
     {
-        if (const bool isProjectingShadow = aLights.mDirectionalLightProjectShadow[directionalIdx])
+        if (aLights.mDirectionalLightProjectShadow[directionalIdx])
         {
             assert(shadowLightIdx < gMaxShadowLights);
             // To avoid the multiplication in the fragment shader, we direclty store the base cascade index for current light
@@ -560,7 +560,7 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
                     lightViewProjection.mLightViewProjectionCount++;
 
                     // At the moment, draw all if the requested idx above max.
-                    if(c.mDebugDrawWhichCascade == cascadeIdx || c.mDebugDrawWhichCascade >= (int)gCascadesPerShadow) 
+                    if(c.mDebugDrawWhichCascade == (int)cascadeIdx || c.mDebugDrawWhichCascade >= (int)gCascadesPerShadow) 
                     {
                         debugDrawViewFrustum(lightViewProjection.mLightViewProjections[shadowLightIdx * gCascadesPerShadow + cascadeIdx].inverse(),
                                             drawer::gLight,
