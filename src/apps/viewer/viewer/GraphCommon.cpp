@@ -5,7 +5,7 @@
 
 #include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/Model.h>
-#include <snac-renderer-v2/Profiling.h>
+#include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/Semantics.h>
 // TODO Ad 2023/10/18: Should get rid of this repeated implementation
 #include <snac-renderer-V2/RendererReimplement.h>
