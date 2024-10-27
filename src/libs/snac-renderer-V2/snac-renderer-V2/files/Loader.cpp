@@ -1345,12 +1345,12 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
         GLenum stageEnumerator;
         if(shaderStage == "defines")
         {
+            // Load the defines found at the .prog level
             // Special case, not a shader stage
             for (std::string macro : shaderFile)
             {
                 aDefines_temp.push_back(std::move(macro));
             }
-            SELOG(warn)("'{}' program has 'defines', which are not recommended with V2.", aProgFile.string());
             continue;
         }
         else if(shaderStage == "vertex")
