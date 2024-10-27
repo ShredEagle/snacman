@@ -146,7 +146,7 @@ void main(void)
         ub_Light.color * max(0.f, dot(normal_c, light_c))
         * material.diffuseFactor.xyz;
     vec3 specular = 
-        ub_Light.color * pow(max(0.f, dot(normal_c, h_c)), material.specularExponent)
+        ub_Light.color * pow(max(0.f, dot(normal_c, h_c)), max(0.01, material.specularExponent))
         * material.specularFactor.xyz;
 
 #ifdef SHADOW

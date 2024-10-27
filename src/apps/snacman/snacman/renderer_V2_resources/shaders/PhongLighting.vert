@@ -24,7 +24,9 @@ in vec2 ve_Uv;
 layout(std140, binding = 0) uniform ViewProjectionBlock
 {
     mat4 u_WorldToCamera;
+    mat4 u_CameraToWorld;
     mat4 u_Projection;
+    mat4 u_ViewingProjection;
 };
 
 #ifdef SHADOW
