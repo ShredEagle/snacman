@@ -4,6 +4,7 @@
 #include "Json.h"
 #include "Logging.h"
 #include "PassViewer.h"
+#include "math/Homogeneous.h"
 
 
 #include <handy/vector_utils.h>
@@ -487,8 +488,8 @@ namespace {
             for(std::size_t idx = 0; idx != 4; ++idx)
             {
                 DBGDRAW_INFO(drawer::gCamera).addLine(
-                    math::homogeneous::normalize(ndcCorners[idx + aStartIdx]).xyz(),
-                    math::homogeneous::normalize(ndcCorners[(idx + 1) % 4 + aStartIdx]).xyz());
+                    math::homogeneous::homogenize(ndcCorners[idx + aStartIdx]).xyz(),
+                    math::homogeneous::homogenize(ndcCorners[(idx + 1) % 4 + aStartIdx]).xyz());
             }
         };
 
@@ -499,8 +500,8 @@ namespace {
         // Sides
         for(std::size_t idx = 0; idx != 4; ++idx)
         {
-            DBGDRAW_INFO(drawer::gCamera).addLine(math::homogeneous::normalize(ndcCorners[idx]).xyz(),
-                                                math::homogeneous::normalize(ndcCorners[(idx + 4)]).xyz());
+            DBGDRAW_INFO(drawer::gCamera).addLine(math::homogeneous::homogenize(ndcCorners[idx]).xyz(),
+                                                math::homogeneous::homogenize(ndcCorners[(idx + 4)]).xyz());
         }
     }
 
