@@ -174,7 +174,7 @@ void witness_imgui(ent::Handle<ent::Entity> & aHandle, Witness && aData)
         witness_json(aHandle, Witness::make(&jsonSerial, aData.mGameContext));
         blueprint = jsonSerial.dump(2);
         showBlueprint = true;
-        lineCount = std::count(blueprint.begin(), blueprint.end(), '\n');
+        lineCount = (int)std::count(blueprint.begin(), blueprint.end(), '\n');
     }
     if (showBlueprint)
     {
