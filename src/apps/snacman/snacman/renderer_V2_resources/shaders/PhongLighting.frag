@@ -140,13 +140,14 @@ void main(void)
     //
     // Phong illumination
     //
+
     vec3 ambient = 
         ub_AmbientColor * material.ambientFactor.xyz;
     vec3 diffuse =
         ub_Light.color * max(0.f, dot(normal_c, light_c))
         * material.diffuseFactor.xyz;
     vec3 specular = 
-        ub_Light.color * pow(max(0.f, dot(normal_c, h_c)), material.specularExponent)
+        ub_Light.color * pow(max(0.f, dot(normal_c, h_c)), max(material.specularExponent, 0.1))
         * material.specularFactor.xyz;
 
 #ifdef SHADOW

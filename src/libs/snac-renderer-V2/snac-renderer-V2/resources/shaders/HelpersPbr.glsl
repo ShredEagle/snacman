@@ -6,13 +6,13 @@
 
 const vec3 gF0_dielec = vec3(0.04);
 
-vec3 schlickFresnelReflectance(float aNormalDotLight_plus, vec3 F0, vec3 F90 = vec3(1., 1., 1.))
+vec3 schlickFresnelReflectance(float aNormalDotLight_plus, vec3 F0, vec3 F90)
 {
     return F0 + (F90 - F0) * pow(1 - aNormalDotLight_plus, 5);
 }
 
 
-vec3 schlickFresnelReflectance(vec3 aNormal, vec3 aLightDir, vec3 F0, vec3 F90 = vec3(1., 1., 1.))
+vec3 schlickFresnelReflectance(vec3 aNormal, vec3 aLightDir, vec3 F0, vec3 F90)
 {
     return schlickFresnelReflectance(dotPlus(aNormal, aLightDir), F0, F90);
 }

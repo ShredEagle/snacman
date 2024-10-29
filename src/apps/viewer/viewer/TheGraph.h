@@ -142,8 +142,8 @@ struct TheGraph
     graphics::Texture mTransparencyRevealage{GL_TEXTURE_2D};
     graphics::FrameBuffer mTransparencyFbo;
     QuadDrawer mTransparencyResolver;
-    static const GLint gAccumTextureUnit{0};
-    static const GLint gRevealageTextureUnit{1};
+    inline static const GLint gAccumTextureUnit{0};
+    inline static const GLint gRevealageTextureUnit{1};
 
     // Skybox rendering
     Skybox mSkybox;

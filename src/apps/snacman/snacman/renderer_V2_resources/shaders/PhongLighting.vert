@@ -23,8 +23,10 @@ in vec2 ve_Uv;
 // index to both uniform blocks if we do not set it explicitly.
 layout(std140, binding = 0) uniform ViewProjectionBlock
 {
-    mat4 u_WorldToCamera;
-    mat4 u_Projection;
+    mat4 worldToCamera;
+    mat4 cameraToWorld;
+    mat4 projection;
+    mat4 viewingProjection;
 };
 
 #ifdef SHADOW
@@ -56,10 +58,10 @@ void main(void)
 #endif
     ;
 
-    // TODO maybe u_WorldToCamera and in_LocalToWorld should be pre-multiplied in client code?
-    mat4 localToCamera = u_WorldToCamera * localToWorld;
+    // TODO maybe worldToCamera and in_LocalToWorld should be pre-multiplied in client code?
+    mat4 localToCamera = worldToCamera * localToWorld;
     vec4 position_c = localToCamera * vec4(ve_Position_l, 1.f);
-    gl_Position = u_Projection * position_c;
+    gl_Position = projection * position_c;
     ex_Position_c = vec3(position_c);
     ex_Normal_c = mat3(localToCamera) * ve_Normal_l;
     // Tangents are transformed by the normal localToCamera matrix (unlike normals)
