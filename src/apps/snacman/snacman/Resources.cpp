@@ -2,6 +2,7 @@
 
 #include "RenderThread.h"                  // for RenderThread
 #include "simulations/snacgame/Renderer.h" // for Renderer
+#include "snacman/serialization/Witness.h"
 
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
@@ -69,6 +70,15 @@ std::shared_ptr<Font> Resources::getFont(filesystem::path aFont,
         font, FontSerialData{aFont, aPixelHeight, aEffect});
     return font;
 }
+ent::Handle<ent::Entity>
+Resources::getBlueprint(const filesystem::path & aBpFile,
+                        ent::EntityManager & aWorld,
+                        snacgame::GameContext & aGameContext)
+{
+    ent::Handle<ent::Entity> handle =
+        mBlueprints.load(aBpFile, mFinder, aWorld, aGameContext);
+    return handle;
+}
 
 std::shared_ptr<Effect> Resources::getShaderEffect(filesystem::path aEffect)
 {
@@ -109,18 +119,19 @@ Resources::ModelLoader(filesystem::path aModel,
 using json = nlohmann::json;
 
 // TODO(franz): Reimplement after serialization
-//
-// ent::Handle<ent::Entity> Resources::BpLoader(filesystem::path aBpFile,
-//                                              ent::EntityManager & aWorld,
-//                                              Resources & aResources)
-// {
-//     std::ifstream bpStream(aBpFile);
-//     const json data = json::parse(bpStream);
-//     ent::Handle<ent::Entity> bp =
-//         aWorld.addBlueprint(data["name"].get<std::string>().c_str());
-//     from_json(bp, data);
-//     return bp;
-// }
+
+ent::Handle<ent::Entity>
+Resources::BpLoader(const filesystem::path & aBpFile,
+                    ent::EntityManager & aWorld,
+                    snacgame::GameContext & aGameContext)
+{
+    std::ifstream bpStream(aBpFile);
+    json data = json::parse(bpStream);
+    ent::Handle<ent::Entity> bp =
+        aWorld.addBlueprint(data["name"].get<std::string>().c_str());
+    serial::testify_json(bp, serial::Witness::make_const(&data["data"], aGameContext));
+    return bp;
+}
 
 void Resources::recompilePrograms()
 {

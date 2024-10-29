@@ -140,6 +140,7 @@ void main(void)
     //
     // Phong illumination
     //
+
     vec3 ambient = 
         ub_AmbientColor * material.ambientFactor.xyz;
     vec3 diffuse =

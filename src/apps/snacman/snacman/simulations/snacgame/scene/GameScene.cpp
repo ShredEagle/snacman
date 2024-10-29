@@ -35,7 +35,6 @@
 #include "../component/Text.h"
 #include "../component/VisualModel.h"
 #include "../Entities.h"
-#include "../EntityWrap.h"
 #include "../GameContext.h"
 #include "../GameParameters.h"
 #include "../InputCommandConverter.h"
@@ -85,6 +84,7 @@ GameScene::GameScene(GameContext & aGameContext,
                      ent::Wrap<component::MappingContext> & aContext) :
     Scene(gGameSceneName, aGameContext, aContext),
     mLevelData{mGameContext.mWorld,
+        "level data",
                component::LevelSetupData(
                    mGameContext.mResources.find(gMarkovRoot).value(),
                    "snaclvl4.xml",
@@ -150,7 +150,7 @@ GameScene::GameScene(GameContext & aGameContext,
     }
 
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
-    renderer::Orbital & camOrbital = snac::getComponent<snacgame::OrbitalControlInput>(camera).mOrbital;
+    renderer::Orbital & camOrbital = snac::getComponent<system::OrbitalCamera>(camera).mControl.mOrbital;
     camOrbital.mSpherical.polar() = gInitialCameraSpherical.polar();
     camOrbital.mSpherical.radius() = gInitialCameraSpherical.radius();
 

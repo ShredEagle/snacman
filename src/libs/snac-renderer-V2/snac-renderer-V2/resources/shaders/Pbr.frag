@@ -466,7 +466,7 @@ vec3 cascadeSelectionDebugColor = vec3(1.);
     vec3 mirror = texture(u_EnvironmentTexture, worldToCubemap(reflected_world)).rgb;
     // Note: since light direction is the reflection of view around shadingNormal
     // view / light dir can be used interchangeably to compute the Fresnel term.
-    fragmentColor += schlickFresnelReflectance(shadingNormal_cam, view_cam, pbrMaterial.f0)
+    fragmentColor += schlickFresnelReflectance(shadingNormal_cam, view_cam, pbrMaterial.f0, vec3(1., 1., 1.))
                      * mirror;
 #else
     float alphaSquared = pow(max(0.00001, pbrMaterial.alpha), 2);

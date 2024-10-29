@@ -577,7 +577,7 @@ makeText(GameContext & aContext,
          const math::Position<2, float> & aPosition_unitscreen,
          const math::Size<2, float> & aScale)
 {
-    auto handle = aContext.mWorld.addEntity();
+    auto handle = aContext.mWorld.addEntity(aString.c_str());
 
     handle.get(aPhase)
         ->add(component::Text{
@@ -606,7 +606,7 @@ void swapPlayerPosition(Phase & aPhase, EntHandle aPlayer, EntHandle aOther)
 
 EntHandle createStageDecor(GameContext & aContext)
 {
-    EntHandle result = aContext.mWorld.addEntity();
+    EntHandle result = aContext.mWorld.addEntity("decor");
     {
         Phase createStage;
         Entity stageEntity = *result.get(createStage);

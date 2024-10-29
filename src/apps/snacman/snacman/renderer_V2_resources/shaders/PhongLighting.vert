@@ -58,7 +58,7 @@ void main(void)
 #endif
     ;
 
-    // TODO maybe u_WorldToCamera and in_LocalToWorld should be pre-multiplied in client code?
+    // TODO maybe worldToCamera and in_LocalToWorld should be pre-multiplied in client code?
     mat4 localToCamera = u_WorldToCamera * localToWorld;
     vec4 position_c = localToCamera * vec4(ve_Position_l, 1.f);
     gl_Position = u_Projection * position_c;

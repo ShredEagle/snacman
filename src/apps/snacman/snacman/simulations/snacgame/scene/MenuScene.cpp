@@ -1,12 +1,9 @@
 #include "MenuScene.h"
 
+#include "snacman/serialization/Witness.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/simulations/snacgame/system/MenuManager.h"
-
-#include "../Entities.h"
-#include "../GameParameters.h"
-#include "../InputCommandConverter.h"
-#include "../OrbitalControlInput.h"
+#include "snacman/simulations/snacgame/system/SystemOrbitalCamera.h"
 
 #include "../component/Context.h"
 #include "../component/Controller.h"
@@ -20,6 +17,10 @@
 #include "../component/SceneNode.h"
 #include "../component/Tags.h"
 #include "../component/Text.h"
+#include "../Entities.h"
+#include "../GameParameters.h"
+#include "../InputCommandConverter.h"
+#include "../OrbitalControlInput.h"
 #include "../scene/DataScene.h"
 #include "../scene/GameScene.h"
 #include "../scene/JoinGameScene.h"
@@ -48,37 +49,21 @@ MenuScene::MenuScene(GameContext & aGameContext,
 {
     auto font = mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf");
 
-    ent::Phase init;
-    auto startHandle = createMenuItem(
-        mGameContext, init, "Start", font,
-        math::Position<2, float>{-0.55f, 0.0f},
-        {
-            {gGoDown, "Quit"},
-        },
-        Transition{.mTransitionName = JoinGameScene::sFromMenuTransition}, true,
-        {1.5f, 1.5f});
-    auto quitHandle =
-        createMenuItem(mGameContext, init, "Quit", font,
-                       math::Position<2, float>{-0.55f, -0.3f},
-                       {
-                           {gGoUp, "Start"},
-                       },
-                       Transition{.mTransitionName = gQuitTransitionName},
-                       false, {1.5f, 1.5f});
+    serial::EntityLedger menuLedger = serial::loadLedgerFromJson(
+        "scenes/menu_scene.json", mGameContext.mWorld, mGameContext);
 
-    mOwnedEntities.push_back(startHandle);
-    mOwnedEntities.push_back(quitHandle);
+    //TODO(franz): this should change on ledger are a bit more integrated
+    mOwnedEntities = menuLedger.mEntities;
+
+    ent::Phase init;
     mSystems.get(init)
         ->add(system::SceneGraphResolver{mGameContext, mGameContext.mSceneRoot})
         .add(system::MenuManager{mGameContext})
         .add(system::InputProcessor{mGameContext, mMappingContext});
 
-    ent::Handle<ent::Entity> background = createStageDecor(mGameContext);
-    mOwnedEntities.push_back(background);
-    insertEntityInScene(background, mGameContext.mSceneRoot);
-
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
-    OrbitalControlInput & orbitalControl = snac::getComponent<OrbitalControlInput>(camera);
+    OrbitalControlInput & orbitalControl =
+        snac::getComponent<system::OrbitalCamera>(camera).mControl;
     orbitalControl.mOrbital.mSpherical = gInitialCameraSpherical;
 }
 
@@ -93,7 +78,6 @@ void MenuScene::onExit(Transition aTransition)
         handle.get(destroy)->erase();
     }
 
-    mOwnedEntities.clear();
     mSystems.get(destroy)->erase();
     mSystems = mGameContext.mWorld.addEntity();
 }
@@ -113,7 +97,7 @@ void MenuScene::update(const snac::Time & aTime, RawInput & aInput)
     bool quit = accumulatedCommand & gQuitCommand;
 
     if (menuItem.mTransition.mTransitionName
-             == JoinGameScene::sFromMenuTransition)
+        == JoinGameScene::sFromMenuTransition)
     {
         for (auto command : controllerCommands)
         {

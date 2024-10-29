@@ -1,6 +1,5 @@
 #pragma once
 
-#include "EntityWrap.h"
 #include "GameContext.h"
 #include "Renderer_V2.h"
 #include "ImguiSceneEditor.h"
@@ -116,13 +115,14 @@ private:
     GameContext mGameContext;
     
     // TODO use the ent::Wrap
+ 
     ent::Wrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
-    EntityWrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
+    ent::Wrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
 
-    EntityWrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
-    EntityWrap<ent::Query<component::Text, component::GlobalPose>> mQueryTextWorld;
-    EntityWrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
-    EntityWrap<ent::Query<component::PlayerHud>> mQueryHuds;
+    ent::Wrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
+    ent::Wrap<ent::Query<component::Text, component::GlobalPose>> mQueryTextWorld;
+    ent::Wrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
+    ent::Wrap<ent::Query<component::PlayerHud>> mQueryHuds;
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;

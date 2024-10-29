@@ -18,7 +18,7 @@ Scene::Scene(std::string aName,
              ent::Wrap<component::MappingContext> & aContext) :
     mName{aName},
     mGameContext{aGameContext},
-    mSystems{mGameContext.mWorld.addEntity()},
+    mSystems{mGameContext.mWorld.addEntity(aName.c_str())},
     mMappingContext{aContext},
     mCameraQuery{aGameContext.mWorld}
 {}

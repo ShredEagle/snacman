@@ -1,12 +1,13 @@
 #include "entity/Entity.h"
 #include "entity/Wrap.h"
 #include "snacman/EntityUtilities.h"
-#include "../system/SceneStack.h"
-#include "snacman/simulations/snacgame/SceneGraph.h"
 #include "snacman/simulations/snacgame/component/Context.h"
 #include "snacman/simulations/snacgame/Entities.h"
 #include "snacman/simulations/snacgame/GameContext.h"
 #include "snacman/simulations/snacgame/scene/Scene.h"
+#include "snacman/simulations/snacgame/SceneGraph.h"
+
+#include "../system/SceneStack.h"
 
 namespace ad {
 namespace snacgame {
@@ -16,8 +17,11 @@ class StageDecorScene : public Scene
 public:
     StageDecorScene(GameContext & aGameContext,
                     ent::Wrap<component::MappingContext> & aContext) :
-        Scene("decor", aGameContext, aContext),
-        mStageDecor{createStageDecor(aGameContext)}
+        Scene("decor scene", aGameContext, aContext),
+        mStageDecor{aGameContext.mWorld.createFromBlueprint(
+            aGameContext.mResources.getBlueprint(
+                "blueprints/decor.json", mGameContext.mWorld, mGameContext),
+            "decor")}
     {
         insertEntityInScene(mStageDecor, mGameContext.mSceneRoot);
     }
@@ -39,9 +43,7 @@ public:
         }
     }
 
-    void update(const snac::Time & aTime, RawInput & aInput) override
-    {
-    }
+    void update(const snac::Time & aTime, RawInput & aInput) override {}
 
     static constexpr char sQuitTransition[] = "Quit";
 

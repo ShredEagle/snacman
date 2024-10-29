@@ -20,8 +20,6 @@ struct RawInput;
 namespace snacgame {
 
 struct GameContext;
-template <class T_wrapped>
-struct EntityWrap;
 
 namespace component {
 struct MappingContext;

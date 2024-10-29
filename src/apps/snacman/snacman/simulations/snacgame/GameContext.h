@@ -33,7 +33,6 @@ namespace component {
 struct LevelSetupData;
 } // namespace component
 
-
 struct GameContext
 {
     GameContext(snac::Resources aResources, snac::RenderThread<Renderer_t> & aRenderThread);

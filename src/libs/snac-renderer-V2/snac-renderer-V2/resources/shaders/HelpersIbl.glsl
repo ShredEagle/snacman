@@ -211,7 +211,7 @@ vec3 specularIBL(vec3 aSpecularColor, float aAlphaSquared, vec3 N, vec3 V, sampl
             vec3 sampleColor = textureLod(aEnvMap, vec3(L.xy, -L.z), lod).rgb;
 
             float G = G2_GGX(NoL, NoV, aAlphaSquared);
-            vec3 F = schlickFresnelReflectance(VoH, aSpecularColor);
+            vec3 F = schlickFresnelReflectance(VoH, aSpecularColor, vec3(1., 1., 1.));
             // Incident light = sampleColor * NoL
             // Microfacet specular = D*G*F / (4*NoL*NoV)
             // pdf = D * NoH / (4 * VoH)
@@ -381,7 +381,7 @@ vec3 prefilterEnvMapDiffuse_LambertianFresnel(vec3 N, vec3 F0, samplerCube aEnvM
             vec3 sampled = textureLod(aEnvMap, sampleDir, 0).rgb;
 #endif
 
-            vec3 F = schlickFresnelReflectance(nDotL, gF0_dielec);
+            vec3 F = schlickFresnelReflectance(nDotL, gF0_dielec, vec3(1., 1., 1.));
             prefilteredColor += max(vec3(0.), (1 - F)) * sampled;
         }
     }

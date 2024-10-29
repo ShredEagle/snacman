@@ -6,6 +6,7 @@
 #include "Json.h"
 #include "Logging.h"
 #include "PassViewer.h"
+#include "math/Homogeneous.h"
 
 
 #include <handy/vector_utils.h>

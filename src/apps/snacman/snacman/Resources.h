@@ -1,5 +1,6 @@
 #pragma once
 
+#include "entity/EntityManager.h"
 #include "simulations/snacgame/Renderer.h"  // for Renderer
 
 // TODO might become useless once Resources itselfs become the Load<> implementer
@@ -20,6 +21,9 @@
 
 namespace ad {
 
+namespace snacgame {
+struct GameContext;
+}
 
 namespace snac {
 
@@ -74,7 +78,7 @@ public:
                                   filesystem::path aEffect = "effects/Text.sefx");
     FontSerialData getFontDataFromResource(std::shared_ptr<Font> & aResource)
     { return mFontDataFromResource.at(aResource); }
-    ent::Handle<ent::Entity> getBlueprint(filesystem::path aBpFile);
+    ent::Handle<ent::Entity> getBlueprint(const filesystem::path & aBpFile, ent::EntityManager & aWorld, snacgame::GameContext & GameContext);
 
     /// \warning At the moment: intended to be called only from the thread where OpenGL context is active.
     // TODO Ad 2024/03/28: #RV2 #decommissionRV1 Finish porting to V2 resources (not even sure we need a this anymore)
@@ -114,9 +118,9 @@ private:
     std::unordered_map<snacgame::Renderer_t::Handle_t<const renderer::Object>, ModelData> mModelDataFromResource;
 
     static ent::Handle<ent::Entity> BpLoader(
-        filesystem::path aBpFile, 
+        const filesystem::path & aBpFile, 
         ent::EntityManager & aWorld,
-        Resources & aResources);
+        snacgame::GameContext & aGameContext);
     
     // There is a smelly circular dependency in this design:
     // Resources knows the RenderThread to request OpenGL related resource loading
@@ -131,7 +135,7 @@ private:
     resource::ResourceManager<std::shared_ptr<Font>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;
     resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;
     resource::ResourceManager<snacgame::Renderer_t::Handle_t<const renderer::Object>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
-    resource::ResourceManager<ent::HandleKey<ent::Entity>,   resource::ResourceFinder, &Resources::ModelLoader> mBlueprints;
+    resource::ResourceManager<ent::Handle<ent::Entity>,   resource::ResourceFinder, &Resources::BpLoader> mBlueprints;
 };
 
 

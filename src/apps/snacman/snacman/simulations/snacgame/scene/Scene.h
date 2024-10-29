@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/system/SystemOrbitalCamera.h"
 #include <snacman/serialization/Serial.h>
 #include <reflexion/NameValuePair.h>
 
@@ -145,7 +146,7 @@ protected:
     ent::Handle<ent::Entity> mSystems;
     std::vector<ent::Handle<ent::Entity>> mOwnedEntities;
     ent::Wrap<component::MappingContext> & mMappingContext;
-    ent::Query<OrbitalControlInput> mCameraQuery;
+    ent::Query<system::OrbitalCamera> mCameraQuery;
 };
 
 } // namespace scene

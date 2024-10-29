@@ -26,7 +26,6 @@ set(${TARGET_NAME}_HEADERS
 
     simulations/sandbox/ModelLoader.h
 
-    simulations/snacgame/EntityWrap.h
     simulations/snacgame/Entities.h
     simulations/snacgame/GameContext.h
     simulations/snacgame/GameParameters.h
@@ -106,6 +105,7 @@ set(${TARGET_NAME}_HEADERS
 
     detail/Logger.h
     detail/Common.h
+    detail/imgui_stdlib.h
 
     serialization/Imgui.h
     serialization/ImguiSerialization.h
@@ -170,6 +170,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/SceneStack.cpp
 
     detail/Logger.cpp
+    detail/imgui_stdlib.cpp
 
     serialization/ImguiSerialization.cpp
     serialization/Witness.cpp
