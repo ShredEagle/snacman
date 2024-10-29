@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../EntityWrap.h"
+#include "entity/Wrap.h"
 #include "../GraphicState.h"
 #include "../OrbitalControlInput.h"
 
@@ -42,11 +42,11 @@ public:
                 math::Radian<float> aVerticalFov,
                 int aWindowHeight_screen);
 
-    renderer::Camera getCamera() const;
+    renderer::Camera getCamera();
+    OrbitalControlInput mControl;
 
 private:
-    EntityWrap<renderer::Camera> mCamera;
-    EntityWrap<OrbitalControlInput> mControl;
+    renderer::Camera mCamera;
 };
 
 } // namespace system

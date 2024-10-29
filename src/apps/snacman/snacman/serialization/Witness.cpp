@@ -1,17 +1,17 @@
+#include "snacman/Logging.h"
+#include <fstream>
+#include <sstream>
 #define GUARD_SERIAL_IMPORT
 #include "Witness.h"
 
-#include <snacman/simulations/snacgame/GameContext.h>
-
-#include <snac-reflexion/Reflexion.h>
-#include <snac-reflexion/Reflexion_impl.h>
-
+#include <cstdio>
 #include <entity/Entity.h>
-
 #include <imgui.h>
 #include <nlohmann/json.hpp>
-
-#include <cstdio>
+#include <snac-reflexion/Reflexion.h>
+#include <snac-reflexion/Reflexion_impl.h>
+#include <snacman/simulations/snacgame/GameContext.h>
+#include <snacman/detail/imgui_stdlib.h>
 #include <string>
 
 namespace ad {
@@ -20,7 +20,7 @@ namespace serial {
 using nlohmann::json;
 
 void Witness::witness_json(const char * aName,
-                  renderer::Handle<const renderer::Object> * aObject)
+                           renderer::Handle<const renderer::Object> * aObject)
 {
     json & data = *std::get<json *>(mData);
     snac::ModelData modelData =
@@ -29,7 +29,8 @@ void Witness::witness_json(const char * aName,
     data[aName]["effectPath"] = modelData.mEffectPath;
 }
 
-void Witness::witness_json(const char * aName, std::shared_ptr<snac::Font> * aObject)
+void Witness::witness_json(const char * aName,
+                           std::shared_ptr<snac::Font> * aObject)
 {
     json & data = *std::get<json *>(mData);
     snac::FontSerialData fontData =
@@ -39,8 +40,9 @@ void Witness::witness_json(const char * aName, std::shared_ptr<snac::Font> * aOb
     data[aName]["effectPath"] = fontData.mEffectPath;
 }
 
-void Witness::testify_json(const char * aName,
-                  renderer::Handle<const renderer::Object> * aObject) const
+void Witness::testify_json(
+    const char * aName,
+    renderer::Handle<const renderer::Object> * aObject) const
 {
     json & data = *std::get<json *>(mData);
     *aObject = mGameContext.mResources.getModel(data[aName]["modelPath"],
@@ -48,7 +50,7 @@ void Witness::testify_json(const char * aName,
 }
 
 void Witness::testify_json(const char * aName,
-                  std::shared_ptr<snac::Font> * aObject) const
+                           std::shared_ptr<snac::Font> * aObject) const
 {
     json & data = *std::get<json *>(mData);
     *aObject = mGameContext.mResources.getFont(data[aName]["fontPath"],
@@ -56,17 +58,19 @@ void Witness::testify_json(const char * aName,
                                                data[aName]["effectPath"]);
 }
 
-void testify_json(ent::EntityManager & aWorld,
-                  const Witness && aData)
+std::vector<ent::Handle<ent::Entity>> testify_json(ent::EntityManager & aWorld, const Witness && aData)
 {
     std::unordered_map<std::string, ent::Handle<ent::Entity>> nameHandleMap;
     json * data = std::get<json *>(aData.mData);
+    std::vector<ent::Handle<ent::Entity>> resultEntities(data->size());
+    ad::ent::EntityManager & world = aData.mGameContext.mWorld;
 
+    int dataIndex = 0;
     for (auto & [name, ent] : data->items())
     {
         ent::Handle<ent::Entity> handle = aWorld.addEntity(name.c_str());
         testify_json(handle, Witness::make_const(&ent, aData.mGameContext));
-        nameHandleMap.insert_or_assign(name, handle);
+        resultEntities.at(dataIndex++) = (handle);
     }
 
     for (auto & pair : reflexion::handleRequestsInstance())
@@ -74,16 +78,24 @@ void testify_json(ent::EntityManager & aWorld,
         auto [handle, nameRequested] = pair;
         // TODO(franz): maybe add the invalid handle to the nameHandleMap with a
         // special name
-        if (nameHandleMap.contains(nameRequested))
+        ent::Handle<ent::Entity> requestedHandle = world.handleFromName(nameRequested);
+        if (handle->isValid())
         {
-            *handle = nameHandleMap.at(nameRequested);
+            *handle = requestedHandle;
         }
+#ifndef NDEBUG
+        else
+        {
+            SELOG(error)("Requested Handle {} does not exists.", nameRequested);
+        }
+#endif
     }
     reflexion::handleRequestsInstance().clear();
+
+    return resultEntities;
 }
 
-void testify_json(ent::Handle<ent::Entity> & aHandle,
-                  const Witness && aData)
+void testify_json(ent::Handle<ent::Entity> & aHandle, const Witness && aData)
 {
     json * data = std::get<json *>(aData.mData);
     json & components = (*data)["components"];
@@ -102,8 +114,7 @@ void testify_json(ent::Handle<ent::Entity> & aHandle,
     }
 }
 
-void witness_json(ent::Handle<ent::Entity> & aHandle,
-                  Witness && aData)
+void witness_json(ent::Handle<ent::Entity> & aHandle, Witness && aData)
 {
     json * data = std::get<json *>(aData.mData);
     json & componentObject = (*data)["components"];
@@ -121,8 +132,7 @@ void witness_json(ent::Handle<ent::Entity> & aHandle,
     }
 }
 
-void witness_json(ent::EntityManager & aWorld,
-                  Witness && aData)
+void witness_json(ent::EntityManager & aWorld, Witness && aData)
 {
     std::unordered_map<ent::Handle<ent::Entity>, std::string> handleNameMap;
     json * data = std::get<json *>(aData.mData);
@@ -134,32 +144,92 @@ void witness_json(ent::EntityManager & aWorld,
         });
 }
 
-void witness_imgui(ent::Handle<ent::Entity> & aHandle,
-                   Witness && aData)
+void witness_imgui(ent::Handle<ent::Entity> & aHandle, Witness && aData)
 {
+    bool canBeJsonified = true;
     for (std::type_index type : aHandle.getTypeSet())
     {
-        const char * name = reflexion::typedProcessorStore().at(type)->name();
-        if (ImGui::TreeNode(name))
+        if (reflexion::typedProcessorStore().contains(type))
         {
-            reflexion::typedProcessorStore().at(type)->serializeComponent(
-                Witness::make(aData.mData, aData.mGameContext), aHandle);
-            ImGui::TreePop();
+            const char * name = reflexion::typedProcessorStore().at(type)->name();
+            if (ImGui::TreeNode(name))
+            {
+                    reflexion::typedProcessorStore().at(type)->serializeComponent(
+                        Witness::make(aData.mData, aData.mGameContext), aHandle);
+                ImGui::TreePop();
+            }
         }
+        else
+        {
+            canBeJsonified = false;
+            ImGui::Text("Can't show this component");
+        }
+    }
+    static std::string blueprint;
+    static bool showBlueprint;
+    static int lineCount = 0;
+    if (canBeJsonified && ImGui::Button("Get blueprint"))
+    {
+        json jsonSerial;
+        witness_json(aHandle, Witness::make(&jsonSerial, aData.mGameContext));
+        blueprint = jsonSerial.dump(2);
+        showBlueprint = true;
+        lineCount = std::count(blueprint.begin(), blueprint.end(), '\n');
+    }
+    if (showBlueprint)
+    {
+        ImGui::InputTextMultiline("blueprint data", &blueprint, ImVec2(0, ImGui::GetTextLineHeight() * (float)(lineCount + 2)));
     }
 }
 
-void witness_imgui(ent::EntityManager & aWorld,
-                   Witness && aData)
+void witness_imgui(ent::EntityManager & aWorld, Witness && aData)
 {
     aWorld.forEachHandle(
         [&aData](ent::Handle<ent::Entity> aHandle, const char * aName) {
             if (ImGui::TreeNode(aName))
             {
-                witness_imgui(aHandle, Witness::make(aData.mData, aData.mGameContext));
+                witness_imgui(aHandle,
+                              Witness::make(aData.mData, aData.mGameContext));
                 ImGui::TreePop();
             }
         });
+}
+
+void Witness::witness_imgui(const char * aName,
+                           renderer::Handle<const renderer::Object> * aObject)
+{
+    snac::ModelData modelData =
+        mGameContext.mResources.getModelDataFromResource(*aObject);
+    ImGui::Text("model path: %s", modelData.mModelPath.c_str());
+    ImGui::Text("effect path: %s", modelData.mEffectPath.c_str());
+}
+
+void Witness::witness_imgui(const char * aName,
+                           std::shared_ptr<snac::Font> * aObject)
+{
+    snac::FontSerialData fontData =
+        mGameContext.mResources.getFontDataFromResource(*aObject);
+    ImGui::Text("path: %s", fontData.mFontPath.c_str());
+    ImGui::Text("pixel height: %d", fontData.mPixelHeight);
+    ImGui::Text("effect path: %s", fontData.mEffectPath.c_str());
+}
+
+EntityLedger loadLedgerFromJson(const filesystem::path & aJsonPath,
+                          ent::EntityManager & aWorld,
+                          snacgame::GameContext & aContext)
+{
+    filesystem::path realJsonPath = *(aContext.mResources.find(aJsonPath));
+    std::ifstream sourceStream(realJsonPath);
+    json sourceJson = json::parse(sourceStream);
+    std::vector<ent::Handle<ent::Entity>> entities =
+        testify_json(aWorld, Witness::make_const(&sourceJson, aContext));
+    EntityLedger resultLedger{
+        .mSourcePath = aJsonPath,
+        .mEntities = std::move(entities),
+        .mJson = sourceJson,
+        .mWorld = aWorld,
+    };
+    return resultLedger;
 }
 
 } // namespace serial

@@ -14,8 +14,8 @@ namespace snacgame {
 GameContext::GameContext(snac::Resources aResources, snac::RenderThread<Renderer_t> & aRenderThread) :
     mResources{std::move(aResources)},
     mRenderThread{aRenderThread},
-    mSceneStack{mWorld},
-    mSceneRoot{mWorld.addEntity()},
+    mSceneStack{mWorld, "scene stack"},
+    mSceneRoot{mWorld.addEntity("SceneRoot")},
     mSlotManager(this)
 {
     ent::Phase addSceneNodeToSceneRoot;

@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef GUARD_SERIAL_IMPORT
-Include Serial.h instead of Witness.h;
+//Include Serial.h instead of Witness.h;
 #endif
 
 #include "Imgui.h"
@@ -131,6 +131,16 @@ struct variant_switch<0>
 };
 } // namespace
 
+/// \brief Contains information about a json file and the entities created
+/// by that json file
+struct EntityLedger
+{
+    filesystem::path mSourcePath;
+    std::vector<ent::Handle<ent::Entity>> mEntities;
+    json mJson;
+    ent::EntityManager & mWorld;
+};
+
 /// \brief Wrapper class for serialization data porcelain
 /// based around a variant that is made of all available data porcelain type
 class Witness
@@ -251,7 +261,7 @@ public:
 
                 if (ImGui::IsItemClicked())
                 {
-                    clickedNode = (int)i;
+                    clickedNode = (int) i;
                 }
             }
             ImGui::EndChild();
@@ -267,6 +277,21 @@ public:
             clickedNode = 0;
         }
     }
+
+    template <ImguiWitnessable... T_value_types,
+              template <class...>
+              class T_variant>
+        requires(is_variant_v<T_variant<T_value_types...>>)
+    void witness_imgui(const char * aName,
+                      T_variant<T_value_types...> * aVariant)
+    {
+        std::visit(
+            [&](auto && value) {
+                value.describeTo(*this);
+            },
+            *aVariant);
+    }
+
 
     template <ImguiWitnessable T_value>
     void witness_imgui(const char * aName, T_value * aValue)
@@ -295,6 +320,12 @@ public:
             ImGui::TreePop();
         }
     }
+
+    void witness_imgui(const char * aName,
+                      renderer::Handle<const renderer::Object> * aObject);
+
+    void witness_imgui(const char * aName,
+                      std::shared_ptr<snac::Font> * aObject);
 
     template <JsonSerializable T_value>
     void witness_json(const char * aName, T_value * aValue)
@@ -358,7 +389,8 @@ public:
     void witness_json(const char * aName,
                       renderer::Handle<const renderer::Object> * aObject);
 
-    void witness_json(const char * aName, std::shared_ptr<snac::Font> * aObject);
+    void witness_json(const char * aName,
+                      std::shared_ptr<snac::Font> * aObject);
 
     template <JsonExtractable T_value>
     void testify_json(const char * aName, T_value * aValue) const
@@ -428,14 +460,19 @@ public:
 };
 
 #define WITNESS_FUNC_DECLARATION(name)                                         \
-    void testify_##name(ent::EntityManager & aWorld, const Witness && aData);  \
+    std::vector<ent::Handle<ent::Entity>> testify_##name(ent::EntityManager & aWorld, const Witness && aData);  \
     void testify_##name(ent::Handle<ent::Entity> & aHandle,                    \
                         const Witness && aData);                               \
-    void witness_##name(ent::EntityManager & aWorld, Witness && aData);        \
-    void witness_##name(ent::Handle<ent::Entity> & aHandle, Witness && aData);
+    void witness_##name(                      \
+        ent::EntityManager & aWorld, Witness && aData);                        \
+    void witness_##name(                      \
+        ent::Handle<ent::Entity> & aHandle, Witness && aData);
 
 WITNESS_FUNC_DECLARATION(json)
 WITNESS_FUNC_DECLARATION(imgui)
+EntityLedger loadLedgerFromJson(const filesystem::path & aJsonPath,
+                          ent::EntityManager & aWorld,
+                          snacgame::GameContext & aContext);
 } // namespace serial
 } // namespace ad
 

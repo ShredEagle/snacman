@@ -55,7 +55,7 @@ JoinGameScene::JoinGameScene(GameContext & aGameContext,
     insertEntityInScene(mJoinGameRoot, mGameContext.mSceneRoot);
 
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
-    renderer::Orbital & camOrbital = snac::getComponent<snacgame::OrbitalControlInput>(camera).mOrbital;
+    renderer::Orbital & camOrbital = snac::getComponent<system::OrbitalCamera>(camera).mControl.mOrbital;
     camOrbital.mSpherical.polar() = math::Turn<float>{0.22f};
     camOrbital.mSpherical.radius() = 15.f;
 }
