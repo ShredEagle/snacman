@@ -1,5 +1,4 @@
 {
-    "defines": ["TEXTURES", "NAIVE_TEXTURES"],
     "vertex": "PhongLighting.vert",
     "fragment": "PhongLighting.frag"
 }

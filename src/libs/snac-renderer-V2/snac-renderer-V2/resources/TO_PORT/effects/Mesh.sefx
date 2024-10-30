@@ -4,19 +4,20 @@
             "annotations": {
                 "pass": "forward"
             },
-            "programfile": "shaders/PhongLightingVertexColorRiggingTextures.prog"
+            "programfile": "shaders/PhongLighting.prog"
         },
         {
             "annotations": {
                 "pass": "forward_shadow"
             },
-            "programfile": "shaders/PhongLightingVertexColorShadowRiggingTextures.prog"
+            "defines": ["SHADOW"],
+            "programfile": "shaders/PhongLighting.prog"
         },
         {
             "annotations": {
                 "pass": "depth"
             },
-            "programfile": "shaders/DepthMapRigging.prog",
+            "programfile": "shaders/DepthMap.prog",
             "name": "shadow_mapping"
         }
     ]

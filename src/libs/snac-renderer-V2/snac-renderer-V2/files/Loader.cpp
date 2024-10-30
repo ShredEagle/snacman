@@ -1043,6 +1043,25 @@ std::pair<Node, Node> loadTriangleAndCube(Storage & aStorage,
 }
 
 
+// Note: path is copied as it will be mutated
+ModelWithFeatures getModelAndFeatures(std::filesystem::path aJsonFile)
+{
+    assert(aJsonFile.extension() == ".sel");
+
+    Json content = Json::parse(std::ifstream{aJsonFile});
+    std::vector<std::string> defines = content.value<std::vector<std::string>>("features", {});
+
+    // Important: the .sel file only contains features, not the path to the binary .seum file
+    // (as was initially intended). It is mechanically derived by looking for the .seum in same directory.
+    // This way, this method oes not need a "finder" mechanism to compute the .seum path,
+    // making it usable in more contexts.
+    return {
+        .mModel = std::move(aJsonFile.replace_extension(".seum")),
+        .mFeatures = std::move(defines),
+    };
+}
+
+
 // TODO should not take a default effect, but have a way to get the actual effect to use 
 // (maybe directly from the binary file)
 std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBinaryFile,

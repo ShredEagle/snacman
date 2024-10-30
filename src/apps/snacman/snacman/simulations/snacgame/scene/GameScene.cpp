@@ -39,6 +39,7 @@
 #include "../GameParameters.h"
 #include "../InputCommandConverter.h"
 #include "../InputConstants.h"
+#include "../ModelInfos.h"
 #include "../scene/Scene.h"
 #include "../SceneGraph.h"
 #include "../system/AdvanceAnimations.h"
@@ -98,33 +99,31 @@ GameScene::GameScene(GameContext & aGameContext,
     mPathfinders{mGameContext.mWorld}
 {
     // Preload models to avoid loading time when they first appear in the game
-    mGameContext.mResources.getModel("models/collar/collar.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/teleport/teleport.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/missile/missile.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/boom/boom.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/portal/portal.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/dog/dog.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/missile/area.gltf",
-                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/collar/collar.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/teleport/teleport.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/missile/missile.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/boom/boom.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/portal/portal.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/dog/dog.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/missile/area.sel",
+                                     gMeshGenericEffect);
     mGameContext.mResources.getModel(
-        "models/square_biscuit/square_biscuit.gltf",
-        "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/burger/burger.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/portal/portal.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/billpad/billpad.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/donut/donut.gltf",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/arrow/arrow.gltf",
-                                     "effects/MeshTextures.sefx");
+        "models/square_biscuit/square_biscuit.sel",
+        gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/burger/burger.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/billpad/billpad.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel(gDonutModel,
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/arrow/arrow.sel",
+                                     gMeshGenericEffect);
     {
         Phase init;
         mSystems.get(init)

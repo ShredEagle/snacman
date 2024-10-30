@@ -458,9 +458,14 @@ renderer::Handle<const renderer::Object> Renderer_V2::loadModel(filesystem::path
                                                                 filesystem::path aEffect, 
                                                                 Resources_t & aResources)
 {
-    if(auto loadResult = loadBinary(aModel, 
+    // If the provided path is a ".sel" file, read the features
+    auto model = (aModel.extension() == ".sel") ?
+        renderer::getModelAndFeatures(aModel) :
+        renderer::ModelWithFeatures{.mModel = aModel};
+
+    if(auto loadResult = loadBinary(model.mModel, 
                                     mRendererToKeep.mStorage,
-                                    aResources.loadEffect(aEffect, mRendererToKeep.mStorage),
+                                    aResources.loadEffect(aEffect, mRendererToKeep.mStorage, model.mFeatures),
                                     mRendererToKeep.mRenderGraph.mInstanceStream);
         std::holds_alternative<renderer::Node>(loadResult))
     {
@@ -478,6 +483,7 @@ renderer::Handle<const renderer::Object> Renderer_V2::loadModel(filesystem::path
     }
     else
     {
+        // Atempt to reprocess (gltf to seum) if the error code indicates outdated version
         auto errorCode = std::get<renderer::SeumErrorCode>(loadResult);
         if(auto basePath = filesystem::path{aModel}.replace_extension(".gltf");
            errorCode == renderer::SeumErrorCode::OutdatedVersion && is_regular_file(basePath))

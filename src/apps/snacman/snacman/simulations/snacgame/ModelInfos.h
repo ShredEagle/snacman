@@ -7,6 +7,12 @@
 namespace ad {
 namespace snacgame {
 
+
+constexpr const char * gDonutModel = "models/donut/donut.sel";
+
+constexpr const char * gMeshGenericEffect = "effects/Mesh.sefx";
+
+
 struct PowerUpBaseInfo
 {
     const char * mPath = "";
@@ -44,17 +50,17 @@ constexpr std::array<ModelInfo,
                      static_cast<unsigned int>(component::PowerUpType::_End)>
     gLevelPowerupInfoByType{
         ModelInfo{
-            .mPath = "models/collar/collar.gltf",
-            .mProgPath = "effects/MeshTextures.sefx",
+            .mPath = "models/collar/collar.sel",
+            .mProgPath = gMeshGenericEffect,
             .mScaling = 0.2f,
         },
         ModelInfo{
-            .mPath = "models/teleport/teleport.gltf",
-            .mProgPath = "effects/MeshTextures.sefx",
+            .mPath = "models/teleport/teleport.sel",
+            .mProgPath = gMeshGenericEffect,
             .mScaling = 0.3f,
         },
-        ModelInfo{.mPath = "models/missile/missile.gltf",
-                        .mProgPath = "effects/MeshTextures.sefx",
+        ModelInfo{.mPath = "models/missile/missile.sel",
+                        .mProgPath = gMeshGenericEffect,
                         .mScaling = 0.3f,
                         }};
 
@@ -62,20 +68,20 @@ constexpr std::array<ModelInfo,
                      static_cast<unsigned int>(component::PowerUpType::_End)>
     gPlayerPowerupInfoByType{
         ModelInfo{
-            .mPath = "models/dog/dog.gltf",
-            .mProgPath = "effects/MeshTextures.sefx",
+            .mPath = "models/dog/dog.sel",
+            .mProgPath = gMeshGenericEffect,
             .mOrientation =
                 math::Quaternion<float>{0.f, 0.707f, 0.f, 0.707f},
             .mScaling = 0.03f,
             .mPosOffset = {0.f, -1.f, 0.f},
         },
         ModelInfo{
-            .mPath = "models/teleport/teleport.gltf",
-            .mProgPath = "effects/MeshTextures.sefx",
+            .mPath = "models/teleport/teleport.sel",
+            .mProgPath = gMeshGenericEffect,
             .mScaling = 0.3f,
         },
-        ModelInfo{.mPath = "models/missile/missile.gltf",
-                        .mProgPath = "effects/MeshTextures.sefx",
+        ModelInfo{.mPath = "models/missile/missile.sel",
+                        .mProgPath = gMeshGenericEffect,
                         .mOrientation = gBaseMissileOrientation,
                         .mInstanceScale = {0.3f, 0.3f, 0.3f},
                         .mScaling = 1.f}};
@@ -85,26 +91,26 @@ constexpr std::array<ModelInfo,
           4>
       gSlotNumbers{
           ModelInfo{
-              .mPath = "models/numbers/one.gltf",
-              .mProgPath = "effects/MeshTextures.sefx",
+              .mPath = "models/numbers/one.sel",
+              .mProgPath = "effects/Mesh.sefx",
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },
           ModelInfo{
-              .mPath = "models/numbers/two.gltf",
-              .mProgPath = "effects/MeshTextures.sefx",
+              .mPath = "models/numbers/two.sel",
+              .mProgPath = "effects/Mesh.sefx",
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },
           ModelInfo{
-              .mPath = "models/numbers/three.gltf",
-              .mProgPath = "effects/MeshTextures.sefx",
+              .mPath = "models/numbers/three.sel",
+              .mProgPath = "effects/Mesh.sefx",
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },
           ModelInfo{
-              .mPath = "models/numbers/four.gltf",
-              .mProgPath = "effects/MeshTextures.sefx",
+              .mPath = "models/numbers/four.sel",
+              .mProgPath = "effects/Mesh.sefx",
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },

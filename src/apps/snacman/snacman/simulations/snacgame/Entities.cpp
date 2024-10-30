@@ -106,8 +106,8 @@ void createLevelElement(Phase & aPhase,
 {
     Entity path = *aHandle.get(aPhase);
     addMeshGeoNode(
-        aContext, path, "models/square_biscuit/square_biscuit.gltf",
-        "effects/MeshTextures.sefx",
+        aContext, path, "models/square_biscuit/square_biscuit.sel",
+        gMeshGenericEffect,
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
          gLevelHeight},
         0.45f, lLevelElementScaling,
@@ -146,8 +146,8 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
 {
     auto handle = aContext.mWorld.addEntity();
     Entity pill = *handle.get(aPhase);
-    addMeshGeoNode(aContext, pill, "models/burger/burger.gltf",
-                   "effects/MeshTextures.sefx",
+    addMeshGeoNode(aContext, pill, "models/burger/burger.sel",
+                   gMeshGenericEffect,
                    {static_cast<float>(aGridPos.x()),
                     static_cast<float>(aGridPos.y()), gPillHeight},
                    0.16f, {1.f, 1.f, 1.f},
@@ -257,8 +257,8 @@ void addPortalInfo(GameContext & aContext,
         Phase portalModelPhase;
         Entity modelEnt = *model.get(portalModelPhase);
         addMeshGeoNode(
-            aContext, modelEnt, "models/portal/portal.gltf",
-            "effects/MeshTextures.sefx",
+            aContext, modelEnt, "models/portal/portal.sel",
+            gMeshGenericEffect,
             {aGeo.mPosition.x() + aDirection.x() * 1.3f, aGeo.mPosition.y(),
              0.f},
             0.2f, {1.f, 1.f, 1.f},
@@ -367,8 +367,8 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
         {
             ent::Entity billpad = *billpadHandle.get(createScore);
             addMeshGeoNode(
-                aContext, billpad, "models/billpad/billpad.gltf",
-                "effects/MeshTextures.sefx", {0.f, 0.f, -0.30f}, 8.f,
+                aContext, billpad, "models/billpad/billpad.sel",
+                gMeshGenericEffect, {0.f, 0.f, -0.30f}, 8.f,
                 {1.f, 1.f, 1.f},
                 Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                        math::Turn<float>{0.25f}}
@@ -414,8 +414,8 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
         Entity model = *playerModelHandle.get(createModel);
 
         auto modelData = addMeshGeoNode(
-            aContext, model, "models/donut/donut.gltf",
-            "effects/MeshRiggingTextures.sefx",
+            aContext, model, gDonutModel,
+            gMeshGenericEffect,
             Pos3::Zero(), 1.f,
             gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation,
             gSlotColors.at(slot.mSlotIndex));
@@ -442,8 +442,8 @@ ent::Handle<ent::Entity> createCrown(GameContext & aContext)
     Entity crown = *crownHandle.get(createCrown);
 
     addMeshGeoNode(
-        aContext, crown, "models/crown/crown.gltf",
-        "effects/MeshTextures.sefx", gBaseCrownPosition, 1.f,
+        aContext, crown, "models/crown/crown.sel",
+        gMeshGenericEffect, gBaseCrownPosition, 1.f,
         gBaseCrownInstanceScaling, gBaseCrownOrientation);
     crownHandle.get(createCrown)->add(component::Crown{});
 
@@ -611,8 +611,8 @@ EntHandle createStageDecor(GameContext & aContext)
         Phase createStage;
         Entity stageEntity = *result.get(createStage);
 
-        addMeshGeoNode(aContext, stageEntity, "models/stage/stage.gltf",
-                       "effects/MeshTextures.sefx", {0.f, 0.f, -0.4f}, 1.0f,
+        addMeshGeoNode(aContext, stageEntity, "models/stage/stage.sel",
+                       gMeshGenericEffect, {0.f, 0.f, -0.4f}, 1.0f,
                        {1.1f, 1.1f, 1.f},
                        Quat_f{math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
                               math::Turn<float>{0.25f}}
@@ -629,8 +629,8 @@ EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
         Phase createTargetArrow;
         Entity targetArrow = *result.get(createTargetArrow);
 
-        addMeshGeoNode(aContext, targetArrow, "models/arrow/arrow.gltf",
-                       "effects/MeshTextures.sefx", {0.f, 0.f, 2.f}, 0.4f,
+        addMeshGeoNode(aContext, targetArrow, "models/arrow/arrow.sel",
+                       gMeshGenericEffect, {0.f, 0.f, 2.f}, 0.4f,
                        {1.f, 1.f, 1.f},
                        Quat_f{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                               math::Turn<float>{0.25f}},
@@ -654,8 +654,8 @@ EntHandle createExplosion(GameContext & aContext,
     {
         Phase createExplosion;
         Entity explosionEnt = *explosion.get(createExplosion);
-        addMeshGeoNode(aContext, explosionEnt, "models/boom/boom.gltf",
-                       "effects/MeshTextures.sefx", aPos, 0.1f);
+        addMeshGeoNode(aContext, explosionEnt, "models/boom/boom.sel",
+                       gMeshGenericEffect, aPos, 0.1f);
         explosionEnt
             .add(component::Explosion{
                 .mStartTime = aTime.mTimepoint,
@@ -681,10 +681,10 @@ EntHandle createPortalImage(GameContext & aContext,
         Entity portal = *newPortalImage.get(addPortalImage);
         Vec2 relativePos =
             aPortal.mMirrorSpawnPosition.xy() - aPlayerData.mCurrentPortalPos;
-        addMeshGeoNode(aContext, portal, "models/donut/donut.gltf",
+        addMeshGeoNode(aContext, portal, gDonutModel,
                        // Again, this is working by accident... Reusing the effect used on first load
                        // (which is correct, unless this one)
-                       "effects/MeshTextures.sefx",
+                       gMeshGenericEffect,
                        {relativePos.x(), relativePos.y(), 0.f},
                        modelGeo.mScaling, modelGeo.mInstanceScaling,
                        modelGeo.mOrientation, modelGeo.mColor);

@@ -77,7 +77,7 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 gLevelPowerupInfoByType.at(static_cast<unsigned int>(newType));
             // TODO: (franz) put the program in the powerup info
             aVisualModel.mModel = mGameContext->mResources.getModel(
-                info.mPath, "effects/MeshTextures.sefx");
+                info.mPath, gMeshGenericEffect);
             aPowerUp.mType = newType;
             aGeo.mInstanceScaling = info.mInstanceScale;
             aGeo.mOrientation = gLevelBasePowerupQuat * info.mOrientation;
@@ -413,8 +413,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                     // TODO: (franz) put in Entities.cpp the creation of the
                     // area
                     addMeshGeoNode(
-                        *mGameContext, ringEnt, "models/missile/area.gltf",
-                        "effects/MeshTextures.sefx", {0.f, 0.f, 0.f}, 3.f,
+                        *mGameContext, ringEnt, "models/missile/area.sel",
+                        gMeshGenericEffect, {0.f, 0.f, 0.f}, 3.f,
                         {1.f, 1.f, 1.f},
                         Quat_f{UnitVec3{Vec3{1.f, 0.f, 0.f}}, Turn_f{0.25f}},
                         gSlotColors.at(playerSlot.mSlotIndex));
