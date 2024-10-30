@@ -35,6 +35,8 @@
 #include <snacman/Resources.h>
 #include <snacman/TemporaryRendererHelpers.h>
 
+#include <utilities/Time.h>
+
 #include <file-processor/Processor.h>
 
 #include <cassert>
@@ -443,11 +445,12 @@ Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
                          resource::ResourceFinder & aResourcesFinder,
                          arte::FontFace aDebugFontFace) :
     mAppInterface{aAppInterface},
+    mLoader{.mFinder = aResourcesFinder},
     // TODO Ad 2024/04/17: #decomissionRV1 #resources This temporary Loader "just to get it to work" is smelly
     // but we need to address the resource management design issue to know what to do instead...
     // (This is a hack to port snacgame to DebugRenderer V2.)
     // Hopefully it gets replaced by a more sane approach to resource management after V1 is entirely decomissionned.
-    mRendererToKeep{renderer::Loader{.mFinder = aResourcesFinder}}
+    mRendererToKeep{mLoader}
 {}
 
 
@@ -619,6 +622,21 @@ void Renderer_V2::render(const GraphicState_t & aState)
     {
         TIME_RECURRING_GL("Draw_debug", renderer::DrawCalls);
         mRendererToKeep.mRenderGraph.renderDebugFrame(aState.mDebugDrawList, mRendererToKeep.mStorage);
+    }
+}
+
+
+void Renderer_V2::recompileEffectsV2()
+{
+    LapTimer timer;
+    if(renderer::recompileEffects(mLoader, mRendererToKeep.mStorage))
+    {
+        SELOG(info)("Successfully recompiled effect, took {:.3f}s.",
+                    asFractionalSeconds(timer.mark()));
+    }
+    else
+    {
+        SELOG(error)("Could not recompile all effects.");
     }
 }
 

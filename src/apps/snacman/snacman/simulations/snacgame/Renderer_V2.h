@@ -263,6 +263,8 @@ public:
     void resetRepositories()
     { mRendererToDecomission.resetRepositories(); }
 
+    void recompileEffectsV2();
+
 private:
     template <class T_range>
     void renderText(const T_range & aTexts, snac::ProgramSetup & aProgramSetup);
@@ -270,6 +272,9 @@ private:
     Control mControl;
     graphics::AppInterface & mAppInterface;
     snac::Renderer mRendererToDecomission; // TODO #RV2 Remove this data member
+    // TODO #resource_redesign
+    // This is saved as a member because the loader is needed to recompile effects
+    renderer::Loader mLoader;
     Impl_V2 mRendererToKeep;
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;
