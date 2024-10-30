@@ -1,0 +1,7 @@
+{
+    "techniques": [
+        {
+            "programfile": "shaders/Text.prog"
+        }
+    ]
+}
