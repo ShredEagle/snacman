@@ -47,6 +47,7 @@ InputProcessor::mapControllersInput(RawInput & aInput, const char * aBoundMode, 
         }
         case ControllerType::Dummy:
         default:
+            connected = true;
             break;
         }
 

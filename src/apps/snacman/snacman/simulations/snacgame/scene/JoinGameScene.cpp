@@ -39,7 +39,7 @@ JoinGameScene::JoinGameScene(GameContext & aGameContext,
                              ent::Wrap<component::MappingContext> & aMappingContext) :
     Scene(gJoinGameSceneName, aGameContext, aMappingContext),
     mSlots{aGameContext.mWorld},
-    mJoinGameRoot{mGameContext.mWorld.addEntity()}
+    mJoinGameRoot{mGameContext.mWorld.addEntity("join game root")}
 {
     Phase init;
     mSystems.get(init)
@@ -53,6 +53,15 @@ JoinGameScene::JoinGameScene(GameContext & aGameContext,
     }
 
     insertEntityInScene(mJoinGameRoot, mGameContext.mSceneRoot);
+
+    mGameContext.mResources.getModel("models/numbers/one.seum",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/numbers/two.seum",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/numbers/three.seum",
+                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel("models/numbers/four.seum",
+                                     "effects/MeshTextures.sefx");
 
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
     renderer::Orbital & camOrbital = snac::getComponent<system::OrbitalCamera>(camera).mControl.mOrbital;

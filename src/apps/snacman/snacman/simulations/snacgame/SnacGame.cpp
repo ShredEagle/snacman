@@ -37,6 +37,7 @@
 #include "snacman/simulations/snacgame/component/Collision.h"
 #include "snacman/simulations/snacgame/component/Explosion.h"
 #include "snacman/simulations/snacgame/component/MovementScreenSpace.h"
+#include "snacman/simulations/snacgame/component/PlayerJoinData.h"
 #include "snacman/simulations/snacgame/component/PowerUp.h"
 #include "snacman/simulations/snacgame/scene/JoinGameScene.h"
 #include "system/SceneStack.h"
@@ -173,6 +174,16 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
                 mGameContext.mWorld};
             static ent::Query<component::Controller> controllerQuery{
                 mGameContext.mWorld};
+            if (ImGui::Button("add player"))
+            {
+                EntHandle slotHandle = addPlayer(mGameContext, (int)playerSlotQuery.countMatches() + 3);
+                const component::PlayerSlot & slot =
+                    slotHandle.get()->get<component::PlayerSlot>();
+                EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, (int)slot.mSlotIndex);
+                insertEntityInScene(joinGamePlayer, mGameContext.mWorld.handleFromName("join game root"));
+                Phase joinPlayer;
+                slotHandle.get(joinPlayer)->add(component::PlayerJoinData{.mJoinPlayerModel = joinGamePlayer});
+            }
             playerSlotQuery.each([&](EntHandle aPlayer,
                                      const component::PlayerSlot &
                                          aPlayerSlot) {

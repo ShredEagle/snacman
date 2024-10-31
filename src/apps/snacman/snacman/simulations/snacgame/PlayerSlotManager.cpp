@@ -4,6 +4,7 @@
 #include "component/PlayerSlot.h"
 #include "Entities.h"
 #include "GameContext.h"
+#include "snacman/Input.h"
 #include "snacman/simulations/snacgame/component/Controller.h"
 #include "typedef.h"
 
@@ -16,6 +17,24 @@ constexpr int gNoSlotAvailable = -1;
 PlayerSlotManager::PlayerSlotManager(GameContext * aContext) :
     mPlayerSlots{aContext->mWorld}
 {}
+
+ControllerType getControllerType(unsigned int aControllerId)
+{
+    if (aControllerId == gKeyboardControllerIndex)
+    {
+        return ControllerType::Keyboard;
+    }
+#ifdef SNACMAN_DEVMODE
+    else if (aControllerId > 3)
+    {
+        return ControllerType::Dummy;
+    }
+#endif
+    else
+    {
+        return ControllerType::Gamepad;
+    }
+}
 
 bool PlayerSlotManager::addPlayer(GameContext & aContext,
                                   EntHandle aPlayer,
@@ -34,9 +53,7 @@ bool PlayerSlotManager::addPlayer(GameContext & aContext,
                 .add(component::PlayerSlot{.mSlotIndex =
                                                (unsigned int) slotIndex})
                 .add(component::Controller{
-                    .mType = aControllerIndex == gKeyboardControllerIndex
-                                 ? ControllerType::Keyboard
-                                 : ControllerType::Gamepad,
+                    .mType = getControllerType(aControllerIndex),
                     .mControllerId = aControllerIndex})
                 .add(component::Unspawned{})
                 .add(component::PlayerGameData{});
