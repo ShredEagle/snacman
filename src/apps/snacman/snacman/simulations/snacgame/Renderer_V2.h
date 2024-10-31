@@ -62,17 +62,16 @@ struct SnacGraph
     ///
     /// An entity is not matching the notion of GL instance (since an entity maps to an Object, wich might contains several Parts).
     /// So this cannot be made available as instance attributes, but should probably be accessed via buffer-backed blocks.
-    struct alignas(16) EntityData
+    struct alignas(16) EntityData_glsl
     {
         // Note: 16-aligned, because it is intended to be stored as an array in a buffer object
         // and then the elements are accessed via a std140 uniform block 
 
         math::AffineMatrix<4, GLfloat> mModelTransform;
         math::hdr::Rgba_f mColorFactor;
-        GLuint mMatrixPaletteOffset; // offset to the first joint of this instance in the buffer of joints.
     };
     
-    static_assert(sizeof(EntityData) % 16 == 0, 
+    static_assert(sizeof(EntityData_glsl) % 16 == 0, 
         "Size a multiple of 16 so successive loads work as expected.");
 
     struct alignas(16) LightingData
@@ -89,6 +88,7 @@ struct SnacGraph
     {
         GLuint mEntityIdx;
         GLuint mMaterialParametersIdx; 
+        GLuint mMatrixPaletteOffset = (GLuint)-1;
     };
 
     /// @brief The list of parts to be rendered. This might be valid for several passes (intra, or inter frame)
@@ -144,6 +144,17 @@ struct SnacGraph
                         .mClientDataFormat{
                             .mDimension = 1,
                             .mOffset = offsetof(InstanceData, mMaterialParametersIdx),
+                            .mComponentType = GL_UNSIGNED_INT,
+                        },
+                    }
+                },
+                {
+                    semantic::gMatrixPaletteOffset,
+                    renderer::AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 1,
+                            .mOffset = offsetof(InstanceData, mMatrixPaletteOffset),
                             .mComponentType = GL_UNSIGNED_INT,
                         },
                     }

@@ -9,9 +9,10 @@
 namespace ad::renderer {
 
 
-/// @brief A list of parts to be drawn, each associated to a Material.
+/// @brief A list of all instanciated parts to be drawn, each associated to a Material.
+/// SoA whose major dimension is the cartesian product of renderer::Object's instances, times the number of parts in each Object.
 /// It is intended to be reused accross distinct passes inside a frame (or even accross frames for static parts).
-/// @note It is intended to be derived by applications if they have any more specific needs (e.g. ViewerPartList)
+/// @note It should be derived by applications if they have any more specific needs (e.g. ViewerPartList)
 struct PartList
 {
     static constexpr GLsizei gInvalidIdx = std::numeric_limits<GLsizei>::max();
@@ -56,6 +57,9 @@ struct DrawElementsIndirectCommand
 
 
 /// @brief Store state and parameters required to issue a GL draw call.
+/// Those are the elements that have to be provided as parameters to the drawcall 
+/// (cannot be fetched from buffer).
+/// i.e. each instance of DrawCall leads to a distinct glMultiDraw*() call.
 struct DrawCall
 {
     GLenum mPrimitiveMode = 0;

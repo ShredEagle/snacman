@@ -41,7 +41,7 @@ out flat vec4 ex_ColorFactor;
 out flat uint ex_MaterialIdx;
 
 #ifdef TEXTURES
-out vec2[4] ex_Uvs; // Lay the ground-work for up to 4 UV channels (only 1 UV vertex attribute atm)
+out vec2[4] ex_Uv; // Lay the ground-work for up to 4 UV channels (only 1 UV vertex attribute atm)
 #endif
 
 #ifdef SHADOW
@@ -70,7 +70,7 @@ void main(void)
 
     ex_ColorFactor  = entity.colorFactor /* TODO multiply by vertex color, when enabled */;
 #ifdef TEXTURES
-    ex_Uvs[0] = ve_Uv;
+    ex_Uv[0] = ve_Uv;
 #endif
     ex_MaterialIdx = in_MaterialIdx;
 

@@ -28,7 +28,6 @@ struct ViewerPartList : public PartList
 /// @brief Entry to populate the instance buffer (attribute divisor == 1).
 /// Each instance (mapping to a `Part` in client data model) has a pose and a material.
 // TODO Ad 2024/03/20: Why does it duplicate Loader.h InstanceData? (modulo the alias types)
-// TODO move into the viewer
 struct ViewerDrawInstance
 {
     GLsizei mInstanceTransformIdx; // index in the instance UBO
@@ -45,6 +44,7 @@ struct ViewerPassCache : public PassCache
 /// @brief From a PartList, generates the PassCache for a given pass.
 /// @param aPass Pass name.
 /// @param aPartList The PartList that should be rendered.
+/// @param aStorage cannot be const, because new VAOs might be cached into it.
 ViewerPassCache prepareViewerPass(AnnotationsSelector aAnnotations,
                                   const ViewerPartList & aPartList,
                                   Storage & aStorage);

@@ -205,18 +205,41 @@ void SnacGraph::drawInstancedDirect(const renderer::Object & aObject,
 };
 
 
+/// @brief SoA on the number of entities, comprising the EntitiesData to be uploaded as uniform buffer
+/// and data to be provded as instance attribute.
+struct EntitiesRecord
+{
+    void append(SnacGraph::EntityData_glsl aEntityData, GLuint aMatrixPaletteOffset)
+    {
+        mEntitiesBlock.push_back(std::move(aEntityData));
+        mMatrixPaletteOffsets.push_back(aMatrixPaletteOffset);
+    }
+
+    std::size_t size() const
+    {
+        assert (mEntitiesBlock.size() == mMatrixPaletteOffsets.size());
+        return mEntitiesBlock.size();
+    }
+
+    // To be uploaded as UBO
+    std::vector<SnacGraph::EntityData_glsl> mEntitiesBlock;
+    // To populate instance attributes
+    std::vector<GLuint> mMatrixPaletteOffsets; // offset to the first joint of this instance in the buffer of joints.
+};
+
+
 void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Storage & aStorage)
 {
     using renderer::gl;
 
     // This maps each renderer::Object to the array of its entity data.
     // This is sorting each game entity by "visual model" (== renderer::Object), 
-    // associating each model to all the entities using it (represented by the EntityData required for rendering).
-    // TODO Ad 2024/04/04: #perf #dod There might be a way to store all EntityData contiguously directly,
+    // associating each model to all the entities using it (represented by the EntityData_glsl required for rendering).
+    // TODO Ad 2024/04/04: #perf #dod There might be a way to store all EntityData_glsl contiguously directly,
     // making it easier to load them into a GL buffer at once. But we might loose spatial coherency when accessing this buffer
-    // from shaders (since the EntityData might not be sorted by Object anymore.)
+    // from shaders (since the EntityData_glsl might not be sorted by Object anymore.)
     std::map<renderer::Handle<const renderer::Object>,
-             std::vector<SnacGraph::EntityData>> sortedModels;
+             EntitiesRecord> sortedModels;
 
     // TODO Ad 2024/04/04: #culling This will not be true anymore when we do no necessarilly render the whole graphic state.
     const std::size_t totalEntities = aState.mEntities.size();
@@ -225,7 +248,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
     // Populate sortedModels and the global matrix palette
     //
     auto sortModelEntry = BEGIN_RECURRING_GL("Sort_meshes_and_animate");
-    // The "ideal" semantic for the paletter buffer is a local,
+    // The "ideal" semantic for the paletted buffer is a local,
     // but we do not want to reallocate dynamic data each frame. So clear between runs.
     mRiggingPalettesBuffer.clear();
     for (const visu_V2::Entity & entity : aState.mEntities)
@@ -255,12 +278,12 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
             }
         }
 
-        sortedModels[object].push_back(
-            SnacGraph::EntityData{
+        sortedModels[object].append(
+            SnacGraph::EntityData_glsl{
                 .mModelTransform = poseTransformMatrix(entity.mInstanceScaling, entity.mInstance.mPose),
                 .mColorFactor = entity.mColor,
-                .mMatrixPaletteOffset = matrixPaletteOffset,
-            });
+            },
+            matrixPaletteOffset);
     }
 
     //
@@ -288,7 +311,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
         // Orphan the buffer, and set it to the current size 
         //(TODO: might be good to keep a separate counter to never shrink it)
         gl.BufferData(GL_UNIFORM_BUFFER,
-                      sizeof(SnacGraph::EntityData) * totalEntities,
+                      sizeof(SnacGraph::EntityData_glsl) * totalEntities,
                       nullptr,
                       GL_STREAM_DRAW);
 
@@ -300,12 +323,12 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
         {
             // This implementation relies on multiple loads, 
             // maybe it is a good candidate for buffer mapping? (glMapBufferRange())
-            GLsizeiptr size = entities.size() * sizeof(SnacGraph::EntityData);
+            GLsizeiptr size = entities.size() * sizeof(SnacGraph::EntityData_glsl);
             gl.BufferSubData(
                 GL_UNIFORM_BUFFER,
                 entityDataOffset,
                 size,
-                entities.data());
+                entities.mEntitiesBlock.data());
 
             entityDataOffset += size;
 
@@ -315,13 +338,14 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
             // (the data for all instances of a given part is contiguous).
             for(const renderer::Part & part : object->mParts)
             {
-                for(GLuint entityGlobalIdx = entityIdxOffset;
-                    entityGlobalIdx != entityIdxOffset + entities.size();
-                    ++entityGlobalIdx)
+                for(GLuint entityLocalIdx = 0;
+                    entityLocalIdx != entities.size();
+                    ++entityLocalIdx)
                 {
                     mInstanceBuffer.push_back(SnacGraph::InstanceData{
-                        .mEntityIdx = entityGlobalIdx,
+                        .mEntityIdx = entityLocalIdx + entityIdxOffset,
                         .mMaterialParametersIdx = (GLuint)part.mMaterial.mMaterialParametersIdx,
+                        .mMatrixPaletteOffset = entities.mMatrixPaletteOffsets[entityLocalIdx],
                     });
 
                     // In the partlist, keep track of which part correspond to which entry
@@ -337,8 +361,8 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
 
     // Load the instance buffer, at once.
     renderer::proto::load(*getBufferView(mInstanceStream, semantic::gEntityIdx).mGLBuffer,
-                            std::span{mInstanceBuffer},          
-                            graphics::BufferHint::StreamDraw);
+                          std::span{mInstanceBuffer},          
+                          graphics::BufferHint::StreamDraw);
 
     //
     // Load lighting UBO

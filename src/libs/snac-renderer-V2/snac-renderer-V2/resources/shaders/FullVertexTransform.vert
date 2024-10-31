@@ -9,10 +9,43 @@ in vec3 ve_Bitangent_local;
 in vec4 ve_Color;
 in vec2 ve_Uv;
 
+#if defined(ENTITIES)
+in uint in_EntityIdx;
+#else
 in uint in_ModelTransformIdx;
+#endif //ENTITIES
 in uint in_MaterialIdx;
 
 #include "ViewProjectionBlock.glsl"
+
+#if defined(ENTITIES)
+
+struct EntityData
+{
+    mat4 localToWorld;
+    // Will be required if we were to support non-uniform scaling.
+    //layout(location=10) in mat4 in_LocalToWorldInverseTranspose;
+    vec4 colorFactor;
+
+    // Note: There is an alternative regarding MatrixPaletteOffset,
+    // which could be either an instance (vertex) attribute,
+    //   * The current appraoch
+    // or an EntityData member.
+    //   * Having it as a data member even if RIGGING is not defined is a drawback of the second appraoch.
+};
+
+// TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
+layout(std140, binding = 1) uniform EntitiesBlock
+{
+    EntityData ub_Entities[MAX_ENTITIES];
+};
+
+mat4 getModelTransform()
+{
+    return ub_Entities[in_EntityIdx].localToWorld;
+}
+
+#else
 
 // TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
 layout(std140, binding = 1) uniform LocalToWorldBlock
@@ -20,6 +53,12 @@ layout(std140, binding = 1) uniform LocalToWorldBlock
     mat4 modelTransforms[512];
 };
 
+mat4 getModelTransform()
+{
+    return modelTransforms[in_ModelTransformIdx];
+}
+
+#endif //ENTITIES
 
 #ifdef SHADOW_MAPPING
 
@@ -39,6 +78,7 @@ out vec3 ex_Bitangent_cam;
 #endif //TRANSFORM_TO_WORLD
 
 out vec4 ex_Color;
+out flat vec4 ex_ColorFactor;
 out vec2[4] ex_Uv; // simulates 4 UV channels, not implemented atm
 out flat uint ex_MaterialIdx;
 
@@ -51,7 +91,7 @@ out flat uint ex_MaterialIdx;
 void main(void)
 {
     mat4 localToWorld = 
-        modelTransforms[in_ModelTransformIdx]
+        getModelTransform()
 #ifdef RIGGING
         * assembleSkinningMatrix()
 #endif
@@ -77,6 +117,7 @@ void main(void)
 #endif //TRANSORM_TO_WORLD
 
     ex_Color = ve_Color;
+    ex_ColorFactor = vec4(1);
     ex_Uv[0] = ve_Uv; // only 1 uv channel input at the moment
     ex_MaterialIdx = in_MaterialIdx;
 

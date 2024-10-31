@@ -219,7 +219,6 @@ file(GENERATE
      # TODO: should we remove the snacman local V2_resources folder?
      #       for the moment we cannot, we have dedicated custom shaders for snacman (not the base renderer versions)
      CONTENT "{\"prefixes\": [\"${RENDERER_SOURCE_DIR}/resources/\",
-                              \"${RENDERER_SOURCE_DIR}/resources/TO_PORT\",
                               \"${RENDERER_SOURCE_DIR}/resources/TEXT_V1\",
                               \"${REPO_FOLDER}/../snac-assets/\"]}")
 
