@@ -1,5 +1,0 @@
-{
-    "defines": ["ENTITIES", "RIGGING"],
-    "vertex": "SimplePositionTransform.vert",
-    "fragment": "Depth.frag"
-}
