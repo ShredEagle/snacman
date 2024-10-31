@@ -76,6 +76,8 @@ struct FontData
                                                  math::sdr::Rgba aColor,
                                                  math::AffineMatrix<4, float> aStringLocalToWorld) const;
 
+    math::Vec<2, float> computeTextSize(const std::string & aString) const;
+
     arte::FontFace mFontFace;
     GlyphMap mGlyphMap;
     // After the glyphmap, which will be written by the atlas initializer

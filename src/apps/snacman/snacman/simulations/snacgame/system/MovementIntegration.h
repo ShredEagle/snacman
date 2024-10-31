@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/component/Physics.h"
 #include <entity/Query.h>
 
 namespace ad {
@@ -21,6 +22,7 @@ public:
     void update(float aDelta);
 
 private:
+    ent::Query<component::Gravity, component::Speed, component::Geometry> mGravityObject;
     ent::Query<component::Geometry, component::Speed> mMovables;
     ent::Query<component::MovementScreenSpace, component::PoseScreenSpace>
         mScreenMovables;

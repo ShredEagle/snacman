@@ -85,25 +85,25 @@ constexpr std::array<ModelInfo,
           4>
       gSlotNumbers{
           ModelInfo{
-              .mPath = "models/numbers/one.gltf",
+              .mPath = "models/numbers/one.seum",
               .mProgPath = "effects/MeshTextures.sefx",
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },
           ModelInfo{
-              .mPath = "models/numbers/two.gltf",
+              .mPath = "models/numbers/two.seum",
               .mProgPath = "effects/MeshTextures.sefx",
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },
           ModelInfo{
-              .mPath = "models/numbers/three.gltf",
+              .mPath = "models/numbers/three.seum",
               .mProgPath = "effects/MeshTextures.sefx",
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },
           ModelInfo{
-              .mPath = "models/numbers/four.gltf",
+              .mPath = "models/numbers/four.seum",
               .mProgPath = "effects/MeshTextures.sefx",
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,

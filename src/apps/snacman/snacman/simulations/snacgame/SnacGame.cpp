@@ -93,7 +93,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mAppInterface{&aAppInterface},
     mGameContext(
         snac::Resources{std::move(aResourceFinder), aFreetype, aRenderThread},
-        aRenderThread),
+        aRenderThread, aAppInterface),
     mMappingContext{mGameContext.mWorld, "mapping context", mGameContext.mResources},
     mSystemOrbitalCamera{mGameContext.mWorld, "orbital camera", mGameContext.mWorld,
                          math::getRatio<float>(mAppInterface->getWindowSize())},

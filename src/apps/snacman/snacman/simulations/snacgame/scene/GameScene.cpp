@@ -4,12 +4,16 @@
 
 #include "GameScene.h"
 
+#include "math/Color.h"
+#include "snac-renderer-V1/text/Text.h"
 #include "snacman/EntityUtilities.h"
 #include "snacman/simulations/snacgame/scene/DataScene.h"
 #include "snacman/simulations/snacgame/scene/DisconnectedControllerScene.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "snacman/simulations/snacgame/scene/PauseScene.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
+#include "snacman/Timing.h"
+#include "snacman/simulations/snacgame/system/SpawningPhaseSystem.h"
 
 #include "../component/AllowedMovement.h"
 #include "../component/Collision.h"
@@ -83,18 +87,19 @@ const char * const gMarkovRoot{"markov/"};
 GameScene::GameScene(GameContext & aGameContext,
                      ent::Wrap<component::MappingContext> & aContext) :
     Scene(gGameSceneName, aGameContext, aContext),
-    mLevelData{mGameContext.mWorld,
-        "level data",
+    mLevelData{mGameContext.mWorld, "level data",
                component::LevelSetupData(
                    mGameContext.mResources.find(gMarkovRoot).value(),
                    "snaclvl4.xml",
                    {Size3_i{19, 19, 1}},
                    123123)},
+    mSceneData{mGameContext.mWorld, "game scene data"},
     mTiles{mGameContext.mWorld},
     mRoundTransients{mGameContext.mWorld},
     mSlots{mGameContext.mWorld},
     mHuds{mGameContext.mWorld},
     mPlayers{mGameContext.mWorld},
+    mFallingPlayers{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
     // Preload models to avoid loading time when they first appear in the game
@@ -146,16 +151,19 @@ GameScene::GameScene(GameContext & aGameContext,
             .add(system::PortalManagement{mGameContext})
             .add(system::PowerUpUsage{mGameContext})
             .add(system::Pathfinding{mGameContext})
-            .add(system::Debug_BoundingBoxes{mGameContext});
+            .add(system::Debug_BoundingBoxes{mGameContext})
+            .add(system::SpawningPhase{mGameContext});
     }
 
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
-    renderer::Orbital & camOrbital = snac::getComponent<system::OrbitalCamera>(camera).mControl.mOrbital;
+    renderer::Orbital & camOrbital =
+        snac::getComponent<system::OrbitalCamera>(camera).mControl.mOrbital;
     camOrbital.mSpherical.polar() = gInitialCameraSpherical.polar();
     camOrbital.mSpherical.radius() = gInitialCameraSpherical.radius();
 
-    mSlots.each([this](EntHandle aHandle, const component::PlayerSlot &)
-                { addBillpadHud(mGameContext, aHandle); });
+    mSlots.each([this](EntHandle aHandle, const component::PlayerSlot &) {
+        addBillpadHud(mGameContext, aHandle);
+    });
 }
 
 void GameScene::onEnter(Transition aTransition)
@@ -179,12 +187,14 @@ void GameScene::onExit(Transition aTransition)
     {
         Phase destroyPlayer;
         mSlots.each(
-            [&destroyPlayer](EntHandle aHandle, const component::PlayerSlot &)
-            { eraseEntityRecursive(aHandle, destroyPlayer); });
+            [&destroyPlayer](EntHandle aHandle, const component::PlayerSlot &) {
+                eraseEntityRecursive(aHandle, destroyPlayer);
+            });
         // Delete hud
         mHuds.each(
-            [&destroyPlayer](EntHandle aHandle, const component::PlayerHud &)
-            { eraseEntityRecursive(aHandle, destroyPlayer); });
+            [&destroyPlayer](EntHandle aHandle, const component::PlayerHud &) {
+                eraseEntityRecursive(aHandle, destroyPlayer);
+            });
     }
     {
         Phase destroyEnvironment;
@@ -197,10 +207,55 @@ void GameScene::onExit(Transition aTransition)
     {
         // TODO: (franz) remove this at some point
         Phase debugDestroy;
-        mPathfinders.each(
-            [&debugDestroy](EntHandle aHandle, const component::PathToOnGrid &)
-            { aHandle.get(debugDestroy)->erase(); });
+        mPathfinders.each([&debugDestroy](EntHandle aHandle,
+                                          const component::PathToOnGrid &) {
+            aHandle.get(debugDestroy)->erase();
+        });
     }
+}
+
+EntHandle GameScene::createSpawningPhaseText(const std::string & aText, const snac::Time & aTime)
+{
+    Phase phase;
+    int textSize = snac::gDefaultPixelHeight * 3;
+    std::shared_ptr<snac::Font> boigaFont =
+        mGameContext.mResources.getFont("fonts/fill_boiga.ttf", textSize);
+
+    math::Vec<2, float> size =
+        boigaFont->mFontData.computeTextSize(aText);
+    const math::Size<2, int> & windowSize =
+        mGameContext.mAppInterface.getFramebufferSize();
+
+    math::hdr::Rgba_f color = {1.f, 1.f, 1.f, 1.f};
+    math::Position<2, float> position = {0.f - (size.x() / (float)windowSize.width()),
+                             0.f - (size.y() / (float)windowSize.height())};
+    EntHandle textHandle = makeText(mGameContext, phase, aText, boigaFont,
+                            color,
+                            position);
+
+     auto parameterAnimation = math::ParameterAnimation<
+            float,
+            math::AnimationResult::FullRange,
+            math::None, math::ease::MassSpringDamper
+        >
+        (
+            math::ease::MassSpringDamper<float>(
+                0.2f,
+                1.f,
+                1.4f,
+                8.0f
+            ),
+            1.f,
+            0.3f
+        );
+
+    textHandle.get(phase)->add(component::TextZoom{
+                aTime.mTimepoint,
+                parameterAnimation
+            });
+
+    return textHandle;
+
 }
 
 void GameScene::update(const snac::Time & aTime, RawInput & aInput)
@@ -256,23 +311,98 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         return;
     }
 
-    // This should be divided in four phases right now
-    // The cleanup phase
-
     if (mLevel.isValid()
         && mSystems.get(update)->get<system::RoundMonitor>().isRoundOver())
+    {
+        mSceneData->mPhase = GamePhase::VictorySequence;
+    }
+
+    switch (mSceneData->mPhase)
+    {
+    case GamePhase::SpawningSequence:
+    {
+        if (!mLevel.isValid())
+        {
+            mLevel =
+                mSystems.get()->get<system::LevelManager>().createLevel(
+                    *mLevelData);
+            insertEntityInScene(mLevel, mGameContext.mSceneRoot);
+            mSystems.get()
+                ->get<system::PlayerSpawner>()
+                .spawnPlayersBeforeRound(mLevel);
+        }
+
+        // Move tiles into place
+        // Make player fall
+        std::array<EntHandle, 4> playersToStop;
+        std::size_t playerSize = 0;
+        // HACK(franz): just testing stuff
+        mFallingPlayers.each([&playerSize, &playersToStop](
+                          EntHandle aHandle, component::Geometry & aGeometry,
+                          const component::Gravity & aGravity) {
+            if (aGeometry.mPosition.z() <= aGravity.mFloorHeight)
+            {
+                playersToStop.at(playerSize++) = aHandle;
+                aGeometry.mPosition.z() = aGravity.mFloorHeight;
+            }
+        });
+
+        {
+            Phase removeSpeed;
+            for (int i = 0; i < playerSize; i++)
+            {
+                playersToStop.at(i)
+                    .get(removeSpeed)
+                    ->remove<component::Speed>();
+            }
+        }
+
+        snac::Clock::duration elapsed =
+            snac::Clock::now() - mSceneData->mStartOfScene;
+
+        if (elapsed > snac::ms{1000} && !mReadyGoText.isValid())
+        {
+            mReadyGoText = createSpawningPhaseText("Ready?", aTime);
+        }
+
+        // if (mReadyGoText.isValid())
+        // {
+        //     math::Vec<2, float> size =
+        //         boigaFont->mFontData.computeTextSize("Ready?");
+        //     const math::Size<2, int> & windowSize =
+        //         mGameContext.mAppInterface.getFramebufferSize();
+        //     math::hdr::Rgba_f color = {1.f, 1.f, 1.f, 1.f};
+        //     math::Position<2, float> position = {0.f - (size.x() / (float)windowSize.width()),
+        //                              0.f - (size.y() / (float)windowSize.height())};
+        // }
+
+        mSystems.get(update)->get<system::MovementIntegration>().update(
+            (float) aTime.mDeltaSeconds);
+        mSystems.get(update)->get<system::SceneGraphResolver>().update();
+        mSystems.get(update)->get<system::SpawningPhase>().update(aTime);
+
+        if (mPlayers.countMatches() == 0)
+        {
+            Phase goToPlaying;
+            mSceneData->mPhase = GamePhase::Playing;
+            mReadyGoText.get(goToPlaying)->erase();
+        }
+        break;
+    }
+    case GamePhase::VictorySequence:
     {
         component::LevelSetupData & data = *mLevelData;
         data.mSeed += 1;
 
         mSystems.get(update)->get<system::RoundMonitor>().updateRoundScore();
 
-        //Transfer controller to slot before deleting player models
+        // Transfer controller to slot before deleting player models
         {
             Phase transferController;
-            mSlots.each([&](EntHandle aSlotHandle, component::PlayerSlot & aSlot)
-            {
-                component::Controller & controller = snac::getComponent<component::Controller>(aSlot.mPlayer);
+            mSlots.each([&](EntHandle aSlotHandle,
+                            component::PlayerSlot & aSlot) {
+                component::Controller & controller =
+                    snac::getComponent<component::Controller>(aSlot.mPlayer);
                 aSlotHandle.get(transferController)->add(controller);
             });
         }
@@ -282,55 +412,59 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
             // This removes everything from the level players models included
             eraseEntityRecursive(mLevel, cleanup);
         }
+        mSceneData->mPhase = GamePhase::SpawningSequence;
+        break;
     }
-
-    if (!mLevel.isValid())
+    case GamePhase::Playing:
     {
-        const component::LevelSetupData & data = *mLevelData;
-        mLevel =
-            mSystems.get(update)->get<system::LevelManager>().createLevel(data);
-        insertEntityInScene(mLevel, mGameContext.mSceneRoot);
+        // This should be divided in four phases right now
+        // The cleanup phase
+
+        // The creation of the level
+        // Spawning the players
+        //  if there is an unspawned player and is there room in the map
+        //  spawn the player
+        //  else
+        //  put the player in a queue for the next round
+        //  Add all spawned player to the scene graph
+        // The game phase
+        auto level = snac::getComponent<component::Level>(mLevel);
+
+        // TODO: (franz) maybe at some point it would be better to
+        // spawn player between rounds
+        // This however needs to be thought through (like if someone starts
+        // a game alone, should we spawn someone during the round in that case)
+        mSystems.get(update)
+            ->get<system::PlayerSpawner>()
+            .spawnPlayersDuringRound(mLevel);
+
+        mSystems.get(update)->get<system::PlayerInvulFrame>().update(
+            (float) aTime.mDeltaSeconds);
+        mSystems.get(update)->get<system::AllowMovement>().update(level);
+        mSystems.get(update)->get<system::ConsolidateGridMovement>().update(
+            (float) aTime.mDeltaSeconds);
+        mSystems.get(update)->get<system::IntegratePlayerMovement>().update(
+            (float) aTime.mDeltaSeconds);
+        mSystems.get(update)->get<system::MovementIntegration>().update(
+            (float) aTime.mDeltaSeconds);
+        mSystems.get(update)->get<system::AnimationManager>().update();
+        mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
+        mSystems.get(update)->get<system::Pathfinding>().update(level);
+        mSystems.get(update)->get<system::PortalManagement>().preGraphUpdate();
+        mSystems.get(update)->get<system::Explosion>().update(aTime);
+
+        mSystems.get(update)->get<system::SceneGraphResolver>().update();
+
+        mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate(
+            level);
+        mSystems.get(update)->get<system::PowerUpUsage>().update(aTime, mLevel);
+        mSystems.get(update)->get<system::EatPill>().update();
+
+        mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
+
+        break;
     }
-
-    auto level = snac::getComponent<component::Level>(mLevel);
-
-    // TODO: (franz) maybe at some point it would be better to
-    // spawn player between rounds
-    // This however needs to be thought through (like if someone starts
-    // a game alone, should we spawn someone during the round in that case)
-    mSystems.get(update)->get<system::PlayerSpawner>().spawnPlayers(mLevel);
-    // The creation of the level
-    // Spawning the players
-    //  if there is an unspawned player and is there room in the map
-    //  spawn the player
-    //  else
-    //  put the player in a queue for the next round
-    //  Add all spawned player to the scene graph
-    // The game phase
-
-    mSystems.get(update)->get<system::PlayerInvulFrame>().update(
-        (float) aTime.mDeltaSeconds);
-    mSystems.get(update)->get<system::AllowMovement>().update(level);
-    mSystems.get(update)->get<system::ConsolidateGridMovement>().update(
-        (float) aTime.mDeltaSeconds);
-    mSystems.get(update)->get<system::IntegratePlayerMovement>().update(
-        (float) aTime.mDeltaSeconds);
-    mSystems.get(update)->get<system::MovementIntegration>().update(
-        (float) aTime.mDeltaSeconds);
-    mSystems.get(update)->get<system::AnimationManager>().update();
-    mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
-    mSystems.get(update)->get<system::Pathfinding>().update(level);
-    mSystems.get(update)->get<system::PortalManagement>().preGraphUpdate();
-    mSystems.get(update)->get<system::Explosion>().update(aTime);
-
-    mSystems.get(update)->get<system::SceneGraphResolver>().update();
-
-    mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate(
-        level);
-    mSystems.get(update)->get<system::PowerUpUsage>().update(aTime, mLevel);
-    mSystems.get(update)->get<system::EatPill>().update();
-
-    mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
+    }
 }
 
 } // namespace scene

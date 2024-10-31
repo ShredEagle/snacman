@@ -49,10 +49,10 @@ namespace {
 
         uniform int u_SourceChannel;
 
-        uniform unsigned int u_Linearization;
+        uniform uint u_Linearization;
         uniform float u_NearDistance;
         uniform float u_FarDistance;
-        uniform unsigned int u_Sampler;
+        uniform uint u_Sampler;
 
         out vec4 out_Color;
 

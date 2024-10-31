@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Scene.h"
+#include "snacman/Timing.h"
+#include "snacman/simulations/snacgame/component/Geometry.h"
+#include "snacman/simulations/snacgame/component/Speed.h"
 
 #include <snac-renderer-V1/Camera.h>
 
@@ -31,9 +34,23 @@ struct PathToOnGrid;
 struct LevelTile;
 struct RoundTransient;
 struct LevelSetupData;
+struct Gravity;
 } // namespace component
 
 namespace scene {
+
+enum class GamePhase
+{
+    SpawningSequence,
+    Playing,
+    VictorySequence,
+};
+
+struct GameSceneData
+{
+    GamePhase mPhase = GamePhase::SpawningSequence;
+    snac::Clock::time_point mStartOfScene = snac::Clock::now(); 
+};
 
 class GameScene : public Scene
 {
@@ -48,18 +65,24 @@ public:
     void onExit(Transition aTransition) override;
 
     ent::Wrap<component::LevelSetupData> mLevelData;
+    ent::Wrap<GameSceneData> mSceneData;
 
     static constexpr char sFromPauseTransition[] = "GameFromPauseTransition";
     static constexpr char sToPauseTransition[] = "Pause";
     static constexpr char sToDisconnectedControllerTransition[] = "DisconnectedController";
 private:
+
+    ent::Handle<ent::Entity> createSpawningPhaseText(const std::string & aText, const snac::Time & aTime);
+
     ent::Query<component::LevelTile> mTiles;
     ent::Query<component::RoundTransient> mRoundTransients;
     ent::Query<component::PlayerSlot> mSlots;
     ent::Query<component::PlayerHud> mHuds;
-    ent::Query<component::PlayerRoundData, component::Controller> mPlayers;
+    ent::Query<component::Geometry, component::PlayerRoundData, component::Controller> mPlayers;
+    ent::Query<component::Gravity, component::Geometry> mFallingPlayers;
     ent::Query<component::PathToOnGrid> mPathfinders;
     ent::Handle<ent::Entity> mLevel;
+    ent::Handle<ent::Entity> mReadyGoText;
 };
 
 } // namespace scene
