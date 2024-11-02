@@ -121,7 +121,7 @@ struct LightsDataUser
 };
 
 
-/// @brief SOA extension to LightsData, that is used for internal bookeeping (not user facing)
+/// @brief SOA extension to LightsData_glsl, that is used for internal bookeeping (not user facing)
 /// and part of the Lights UBO.
 ///
 /// It maintains an array with an entry for each light, providing the base index of the shadow map
@@ -154,7 +154,7 @@ struct LightsDataInternal
 
 
 /// @brief Concatenate all structures to be pushed as LightsBlock UBO.
-struct LightsData : public LightsDataUser, LightsDataInternal
+struct LightsData_glsl : public LightsDataUser, LightsDataInternal
 {};
 
 

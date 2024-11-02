@@ -19,7 +19,9 @@ in flat uint ex_MaterialIdx;
 
 #ifdef TEXTURED
 uniform sampler2DArray u_DiffuseTexture;
+#if !defined(NAIVE_TEXTURES)
 uniform sampler2DArray u_NormalTexture;
+#endif //NAIVE_TEXTURES
 #endif
 
 out vec4 out_Color;
@@ -49,7 +51,7 @@ void main()
     //
     // Normal mapping
     //
-#ifdef TEXTURED
+#if defined(TEXTURED) && !defined(NAIVE_TEXTURES)
     // Fetch from normal map, and remap fro [0, 1]^3 to [-1, 1]^3.
     vec3 normal_tbn = 
         texture(u_NormalTexture, 
@@ -57,7 +59,7 @@ void main()
         * 2 - vec3(1);
 #else
     vec3 normal_tbn = vec3(0, 0, 1);
-#endif
+#endif // TEXTURED && !NAIVE_TEXTURES
 
     // MikkT see: http://www.mikktspace.com/
 

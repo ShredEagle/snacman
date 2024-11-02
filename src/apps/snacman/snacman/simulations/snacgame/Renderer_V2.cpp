@@ -20,7 +20,6 @@
 // TODO #RV2 Remove V1 includes
 #include <snac-renderer-V1/text/Text.h>
 #include <snac-renderer-V1/Instances.h>
-#include <snac-renderer-V1/Semantic.h>
 #include <snac-renderer-V1/Render.h>
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/ResourceLoad.h>
@@ -28,6 +27,9 @@
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/SetupDrawing.h>
+#include <snac-renderer-V2/Semantics.h>
+
+#include "../../../../viewer/viewer/Lights.h"
 
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
@@ -360,7 +362,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
     }
 
     // Load the instance buffer, at once.
-    renderer::proto::load(*getBufferView(mInstanceStream, semantic::gEntityIdx).mGLBuffer,
+    renderer::proto::load(*getBufferView(mInstanceStream, renderer::semantic::gEntityIdx).mGLBuffer,
                           std::span{mInstanceBuffer},          
                           graphics::BufferHint::StreamDraw);
 
@@ -380,19 +382,28 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
     math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.4f, 0.4f, 0.4f};
 
     {
-        SnacGraph::LightingData lightingData{
-            .mAmbientColor = ambientColor,
-            .mLightPosition_c = lightPosition_cam,
-            .mLightColor = lightColor,
+        renderer::LightsData_glsl lightsData{
+            renderer::LightsDataUser{
+                .mPointCount = 1,
+                .mAmbientColor = ambientColor,
+                .mPointLights{{
+                    renderer::PointLight{
+                        .mPosition = lightPosition_cam,
+                        .mRadius = {50.f, 500.f},
+                        .mDiffuseColor = lightColor,
+                        .mSpecularColor = lightColor,
+                    },
+                }}
+            },
         };
 
         graphics::ScopedBind boundLightingUbo{mGraphUbos.mLightingUbo};
         // Orphan the buffer, and set it to the current size 
         //(TODO: might be good to keep a separate counter to never shrink it)
         gl.BufferData(GL_UNIFORM_BUFFER,
-                        sizeof(SnacGraph::LightingData),
-                        &lightingData,
-                        GL_STREAM_DRAW);
+                      sizeof(renderer::LightsData_glsl),
+                      &lightsData,
+                      GL_STREAM_DRAW);
     }
 
     //

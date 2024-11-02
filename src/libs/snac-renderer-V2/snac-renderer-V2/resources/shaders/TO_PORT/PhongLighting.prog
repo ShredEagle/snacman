@@ -1,5 +1,5 @@
 {
     "defines": ["ENTITIES"],
     "vertex": "../FullVertexTransform.vert",
-    "fragment": "../PhongLighting.frag"
+    "fragment": "../BlinnPhongLighting.frag"
 }

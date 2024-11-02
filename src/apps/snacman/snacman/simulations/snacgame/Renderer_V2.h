@@ -14,6 +14,7 @@
 #include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Pass.h>
+#include <snac-renderer-V2/Semantics.h>
 #include <snac-renderer-V2/VertexStreamUtilities.h>
 #include <snac-renderer-V2/debug/DebugRenderer.h>
 #include <snac-renderer-V2/files/Loader.h>
@@ -35,26 +36,6 @@ namespace snac {
 namespace snacgame {
 
 
-namespace semantic {
-    #define SEM(s) const renderer::Semantic g ## s{#s}
-    #define BLOCK_SEM(s) const renderer::BlockSemantic g ## s{#s}
-
-    SEM(LocalToWorld);
-    SEM(Albedo);
-    SEM(EntityIdx);
-    SEM(MaterialIdx);
-    SEM(MatrixPaletteOffset);
-
-    BLOCK_SEM(ViewProjection);
-    BLOCK_SEM(Materials);
-    BLOCK_SEM(JointMatrices);
-    BLOCK_SEM(Entities);
-    BLOCK_SEM(Lighting);
-
-    #undef SEMANTIC
-} // namespace semantic
-
-
 // The Render Graph for snacman
 struct SnacGraph
 {
@@ -73,13 +54,6 @@ struct SnacGraph
     
     static_assert(sizeof(EntityData_glsl) % 16 == 0, 
         "Size a multiple of 16 so successive loads work as expected.");
-
-    struct alignas(16) LightingData
-    {
-        alignas(16) math::hdr::Rgb<GLfloat> mAmbientColor;
-        alignas(16) math::Position<3, GLfloat> mLightPosition_c;
-        alignas(16) math::hdr::Rgb<GLfloat> mLightColor;
-    };
 
     /// @brief The data to populate the GL instance attribute buffer, for instanced rendering.
     ///
@@ -127,7 +101,7 @@ struct SnacGraph
             .mVertexBufferViews = { vboView, },
             .mSemanticToAttribute{
                 {
-                    semantic::gEntityIdx,
+                    renderer::semantic::gEntityIdx,
                     renderer::AttributeAccessor{
                         .mBufferViewIndex = 0, // view is added above
                         .mClientDataFormat{
@@ -138,7 +112,7 @@ struct SnacGraph
                     }
                 },
                 {
-                    semantic::gMaterialIdx,
+                    renderer::semantic::gMaterialIdx,
                     renderer::AttributeAccessor{
                         .mBufferViewIndex = 0, // view is added above
                         .mClientDataFormat{
@@ -149,7 +123,7 @@ struct SnacGraph
                     }
                 },
                 {
-                    semantic::gMatrixPaletteOffset,
+                    renderer::semantic::gMatrixPaletteOffset,
                     renderer::AttributeAccessor{
                         .mBufferViewIndex = 0, // view is added above
                         .mClientDataFormat{
@@ -194,10 +168,10 @@ struct SnacGraph
         graphics::UniformBufferObject mViewingProjectionUbo;
 
         renderer::RepositoryUbo mUboRepository{
-            {semantic::gJointMatrices, &mJointMatricesUbo},
-            {semantic::gEntities, &mEntitiesUbo},
-            {semantic::gLighting, &mLightingUbo},
-            {semantic::gViewProjection, &mViewingProjectionUbo},
+            {renderer::semantic::gJointMatrices, &mJointMatricesUbo},
+            {renderer::semantic::gEntities, &mEntitiesUbo},
+            {renderer::semantic::gLights, &mLightingUbo},
+            {renderer::semantic::gViewProjection, &mViewingProjectionUbo},
         };
     } mGraphUbos;
 
