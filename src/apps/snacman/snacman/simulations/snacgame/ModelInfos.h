@@ -10,7 +10,7 @@ namespace snacgame {
 
 constexpr const char * gDonutModel = "models/donut/donut.sel";
 
-constexpr const char * gMeshGenericEffect = "effects/Mesh.sefx";
+constexpr const char * gMeshGenericEffect = "effects/MeshOpaque.sefx";
 
 
 struct PowerUpBaseInfo
@@ -92,25 +92,25 @@ constexpr std::array<ModelInfo,
       gSlotNumbers{
           ModelInfo{
               .mPath = "models/numbers/one.sel",
-              .mProgPath = "effects/Mesh.sefx",
+              .mProgPath = gMeshGenericEffect,
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },
           ModelInfo{
               .mPath = "models/numbers/two.sel",
-              .mProgPath = "effects/Mesh.sefx",
+              .mProgPath = gMeshGenericEffect,
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },
           ModelInfo{
               .mPath = "models/numbers/three.sel",
-              .mProgPath = "effects/Mesh.sefx",
+              .mProgPath = gMeshGenericEffect,
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },
           ModelInfo{
               .mPath = "models/numbers/four.sel",
-              .mProgPath = "effects/Mesh.sefx",
+              .mProgPath = gMeshGenericEffect,
               .mScaling = gNumbersBaseScale,
               .mPosOffset = gNumbersPosOffset,
           },

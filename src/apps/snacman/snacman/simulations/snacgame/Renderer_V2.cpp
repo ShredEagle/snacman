@@ -70,7 +70,10 @@ renderer::PassCache SnacGraph::preparePass(renderer::StringKey aPass,
 {
     TIME_RECURRING_GL("prepare_pass");
 
-    auto annotations = renderer::selectPass(aPass);
+    std::vector<renderer::Technique::Annotation> annotations{
+        {"pass", aPass},
+        {"entities", "on"},
+    };
     renderer::DrawEntryHelper helper;
     std::vector<renderer::PartDrawEntry> entries = 
         helper.generateDrawEntries(annotations, aPartList, aStorage);

@@ -9,6 +9,14 @@
         },
         {
             "annotations": {
+                "pass": "forward",
+                "entities": "on"
+            },
+            "defines": ["ENTITIES"],
+            "programfile": "shaders/ForwardBlinnPhongLighting.prog"
+        },
+        {
+            "annotations": {
                 "pass": "forward_pbr"
             },
             "programfile": "shaders/ForwardPbr.prog"
