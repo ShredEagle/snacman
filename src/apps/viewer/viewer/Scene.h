@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Lights.h"
-
 #include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/Lights.h>
 #include <snac-renderer-V2/Semantics.h>
 
 

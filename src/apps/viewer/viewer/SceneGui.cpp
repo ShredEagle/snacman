@@ -3,7 +3,7 @@
 
 #include "Scene.h"
 
-#include "runtime_reflect/DearImguiVisitor.h"
+#include <snac-renderer-V2/runtime_reflect/DearImguiVisitor.h>
 
 #include <imgui.h>
 

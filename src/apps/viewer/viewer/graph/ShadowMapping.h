@@ -3,11 +3,10 @@
 
 #include "Clipping.h"
 
-#include "../Lights.h"
-
 #include <renderer/FrameBuffer.h>
 
 #include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/Lights.h>
 
 
 namespace ad::renderer {

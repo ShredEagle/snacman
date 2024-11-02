@@ -24,12 +24,11 @@
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/ResourceLoad.h>
 
+#include <snac-renderer-V2/Lights.h>
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/SetupDrawing.h>
 #include <snac-renderer-V2/Semantics.h>
-
-#include "../../../../viewer/viewer/Lights.h"
 
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
