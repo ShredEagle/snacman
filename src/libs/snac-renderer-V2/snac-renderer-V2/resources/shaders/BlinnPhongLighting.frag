@@ -14,6 +14,12 @@ in vec3 ex_Bitangent_cam;
 in vec4 ex_Color;
 #endif
 
+#if defined(ENTITIES)
+in flat uint ex_EntityIdx; // Note: cannot be part of the include, which might be used in FS.
+#define ENTITY_IDX_ATTRIBUTE ex_EntityIdx
+#include "Entities.glsl"
+#endif //ENTITIES
+
 in vec2[4] ex_Uv;
 in flat uint ex_MaterialIdx;
 
@@ -36,6 +42,10 @@ void main()
 #else
     vec4 albedo = vec4(1., 1., 1., 1.);
 #endif
+
+#if defined(ENTITIES)
+    albedo = albedo * getEntity().colorFactor;
+#endif //ENTITIES
 
 #ifdef TEXTURED
     albedo = albedo * texture(u_DiffuseTexture, vec3(ex_Uv[material.diffuseUvChannel], material.diffuseTextureIndex));
