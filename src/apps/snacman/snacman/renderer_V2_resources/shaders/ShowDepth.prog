@@ -1,4 +1,0 @@
-{
-    "vertex": "Forward.vert",
-    "fragment": "DepthTexturing.frag"
-}

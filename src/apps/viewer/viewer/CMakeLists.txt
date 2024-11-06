@@ -15,7 +15,6 @@ set(${TARGET_NAME}_HEADERS
     GraphCommon.h
     GraphGui.h
     Json.h
-    Lights.h
     Logging.h
     PassViewer.h
     SecondaryGraph.h
@@ -29,9 +28,6 @@ set(${TARGET_NAME}_HEADERS
     graph/Passes.h
     graph/ShadowCascadeBlock.h
     graph/ShadowMapping.h
-
-    runtime_reflect/DearImguiVisitor.h
-    runtime_reflect/ReflectHelpers.h
 )
 
 set(${TARGET_NAME}_SOURCES

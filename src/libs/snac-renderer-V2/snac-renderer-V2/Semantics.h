@@ -25,6 +25,7 @@ namespace semantic
     SEM(FilteredRadianceEnvironmentTexture);
     SEM(IntegratedEnvironmentBrdf);
     SEM(FilteredIrradianceEnvironmentTexture);
+    SEM(EntityIdx);
     const Semantic gModelTransformIdx{"ModelTransformIdx"};
     const Semantic gMaterialIdx{"MaterialIdx"};
     SEM(MatrixPaletteOffset);
@@ -33,14 +34,15 @@ namespace semantic
 
     #define BLOCK_SEM(s) const BlockSemantic g ## s{#s}
 
+    BLOCK_SEM(Entities);
     const BlockSemantic gFrame{"Frame"};
-    BLOCK_SEM(ViewProjection);
-    const BlockSemantic gMaterials{"Materials"};
-    const BlockSemantic gLocalToWorld{"LocalToWorld"};
     BLOCK_SEM(JointMatrices);
     BLOCK_SEM(Lights);
     BLOCK_SEM(LightViewProjection);
+    const BlockSemantic gLocalToWorld{"LocalToWorld"};
+    const BlockSemantic gMaterials{"Materials"};
     BLOCK_SEM(ShadowCascade);
+    BLOCK_SEM(ViewProjection);
 
     #undef BLOCK_SEM
 

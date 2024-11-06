@@ -1,10 +1,10 @@
 #include "GraphCommon.h"
 
 #include "PassViewer.h"
-#include "Lights.h"
 
 #include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/Lights.h>
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/Semantics.h>
 // TODO Ad 2023/10/18: Should get rid of this repeated implementation
@@ -68,7 +68,7 @@ void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
 
 
 void loadLightsUbo(const graphics::UniformBufferObject & aUbo,
-                   const LightsData & aLights)
+                   const LightsData_glsl & aLights)
 {
     proto::loadSingle(aUbo, aLights, graphics::BufferHint::DynamicDraw);
 }

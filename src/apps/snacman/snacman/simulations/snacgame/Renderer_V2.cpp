@@ -20,20 +20,23 @@
 // TODO #RV2 Remove V1 includes
 #include <snac-renderer-V1/text/Text.h>
 #include <snac-renderer-V1/Instances.h>
-#include <snac-renderer-V1/Semantic.h>
 #include <snac-renderer-V1/Render.h>
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/ResourceLoad.h>
 
+#include <snac-renderer-V2/Lights.h>
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/SetupDrawing.h>
+#include <snac-renderer-V2/Semantics.h>
 
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
 #include <snacman/ProfilingGPU.h>
 #include <snacman/Resources.h>
 #include <snacman/TemporaryRendererHelpers.h>
+
+#include <utilities/Time.h>
 
 #include <file-processor/Processor.h>
 
@@ -67,7 +70,10 @@ renderer::PassCache SnacGraph::preparePass(renderer::StringKey aPass,
 {
     TIME_RECURRING_GL("prepare_pass");
 
-    auto annotations = renderer::selectPass(aPass);
+    std::vector<renderer::Technique::Annotation> annotations{
+        {"pass", aPass},
+        {"entities", "on"},
+    };
     renderer::DrawEntryHelper helper;
     std::vector<renderer::PartDrawEntry> entries = 
         helper.generateDrawEntries(annotations, aPartList, aStorage);
@@ -203,18 +209,41 @@ void SnacGraph::drawInstancedDirect(const renderer::Object & aObject,
 };
 
 
+/// @brief SoA on the number of entities, comprising the EntitiesData to be uploaded as uniform buffer
+/// and data to be provded as instance attribute.
+struct EntitiesRecord
+{
+    void append(SnacGraph::EntityData_glsl aEntityData, GLuint aMatrixPaletteOffset)
+    {
+        mEntitiesBlock.push_back(std::move(aEntityData));
+        mMatrixPaletteOffsets.push_back(aMatrixPaletteOffset);
+    }
+
+    std::size_t size() const
+    {
+        assert (mEntitiesBlock.size() == mMatrixPaletteOffsets.size());
+        return mEntitiesBlock.size();
+    }
+
+    // To be uploaded as UBO
+    std::vector<SnacGraph::EntityData_glsl> mEntitiesBlock;
+    // To populate instance attributes
+    std::vector<GLuint> mMatrixPaletteOffsets; // offset to the first joint of this instance in the buffer of joints.
+};
+
+
 void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Storage & aStorage)
 {
     using renderer::gl;
 
     // This maps each renderer::Object to the array of its entity data.
     // This is sorting each game entity by "visual model" (== renderer::Object), 
-    // associating each model to all the entities using it (represented by the EntityData required for rendering).
-    // TODO Ad 2024/04/04: #perf #dod There might be a way to store all EntityData contiguously directly,
+    // associating each model to all the entities using it (represented by the EntityData_glsl required for rendering).
+    // TODO Ad 2024/04/04: #perf #dod There might be a way to store all EntityData_glsl contiguously directly,
     // making it easier to load them into a GL buffer at once. But we might loose spatial coherency when accessing this buffer
-    // from shaders (since the EntityData might not be sorted by Object anymore.)
+    // from shaders (since the EntityData_glsl might not be sorted by Object anymore.)
     std::map<renderer::Handle<const renderer::Object>,
-             std::vector<SnacGraph::EntityData>> sortedModels;
+             EntitiesRecord> sortedModels;
 
     // TODO Ad 2024/04/04: #culling This will not be true anymore when we do no necessarilly render the whole graphic state.
     const std::size_t totalEntities = aState.mEntities.size();
@@ -223,7 +252,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
     // Populate sortedModels and the global matrix palette
     //
     auto sortModelEntry = BEGIN_RECURRING_GL("Sort_meshes_and_animate");
-    // The "ideal" semantic for the paletter buffer is a local,
+    // The "ideal" semantic for the paletted buffer is a local,
     // but we do not want to reallocate dynamic data each frame. So clear between runs.
     mRiggingPalettesBuffer.clear();
     for (const visu_V2::Entity & entity : aState.mEntities)
@@ -253,12 +282,12 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
             }
         }
 
-        sortedModels[object].push_back(
-            SnacGraph::EntityData{
+        sortedModels[object].append(
+            SnacGraph::EntityData_glsl{
                 .mModelTransform = poseTransformMatrix(entity.mInstanceScaling, entity.mInstance.mPose),
                 .mColorFactor = entity.mColor,
-                .mMatrixPaletteOffset = matrixPaletteOffset,
-            });
+            },
+            matrixPaletteOffset);
     }
 
     //
@@ -286,7 +315,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
         // Orphan the buffer, and set it to the current size 
         //(TODO: might be good to keep a separate counter to never shrink it)
         gl.BufferData(GL_UNIFORM_BUFFER,
-                      sizeof(SnacGraph::EntityData) * totalEntities,
+                      sizeof(SnacGraph::EntityData_glsl) * totalEntities,
                       nullptr,
                       GL_STREAM_DRAW);
 
@@ -298,12 +327,12 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
         {
             // This implementation relies on multiple loads, 
             // maybe it is a good candidate for buffer mapping? (glMapBufferRange())
-            GLsizeiptr size = entities.size() * sizeof(SnacGraph::EntityData);
+            GLsizeiptr size = entities.size() * sizeof(SnacGraph::EntityData_glsl);
             gl.BufferSubData(
                 GL_UNIFORM_BUFFER,
                 entityDataOffset,
                 size,
-                entities.data());
+                entities.mEntitiesBlock.data());
 
             entityDataOffset += size;
 
@@ -313,13 +342,14 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
             // (the data for all instances of a given part is contiguous).
             for(const renderer::Part & part : object->mParts)
             {
-                for(GLuint entityGlobalIdx = entityIdxOffset;
-                    entityGlobalIdx != entityIdxOffset + entities.size();
-                    ++entityGlobalIdx)
+                for(GLuint entityLocalIdx = 0;
+                    entityLocalIdx != entities.size();
+                    ++entityLocalIdx)
                 {
                     mInstanceBuffer.push_back(SnacGraph::InstanceData{
-                        .mEntityIdx = entityGlobalIdx,
+                        .mEntityIdx = entityLocalIdx + entityIdxOffset,
                         .mMaterialParametersIdx = (GLuint)part.mMaterial.mMaterialParametersIdx,
+                        .mMatrixPaletteOffset = entities.mMatrixPaletteOffsets[entityLocalIdx],
                     });
 
                     // In the partlist, keep track of which part correspond to which entry
@@ -334,9 +364,9 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
     }
 
     // Load the instance buffer, at once.
-    renderer::proto::load(*getBufferView(mInstanceStream, semantic::gEntityIdx).mGLBuffer,
-                            std::span{mInstanceBuffer},          
-                            graphics::BufferHint::StreamDraw);
+    renderer::proto::load(*getBufferView(mInstanceStream, renderer::semantic::gEntityIdx).mGLBuffer,
+                          std::span{mInstanceBuffer},          
+                          graphics::BufferHint::StreamDraw);
 
     //
     // Load lighting UBO
@@ -354,19 +384,28 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
     math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.4f, 0.4f, 0.4f};
 
     {
-        SnacGraph::LightingData lightingData{
-            .mAmbientColor = ambientColor,
-            .mLightPosition_c = lightPosition_cam,
-            .mLightColor = lightColor,
+        renderer::LightsData_glsl lightsData{
+            renderer::LightsDataUser{
+                .mPointCount = 1,
+                .mAmbientColor = ambientColor,
+                .mPointLights{{
+                    renderer::PointLight{
+                        .mPosition = lightPosition_cam,
+                        .mRadius = {50.f, 500.f},
+                        .mDiffuseColor = lightColor,
+                        .mSpecularColor = lightColor,
+                    },
+                }}
+            },
         };
 
         graphics::ScopedBind boundLightingUbo{mGraphUbos.mLightingUbo};
         // Orphan the buffer, and set it to the current size 
         //(TODO: might be good to keep a separate counter to never shrink it)
         gl.BufferData(GL_UNIFORM_BUFFER,
-                        sizeof(SnacGraph::LightingData),
-                        &lightingData,
-                        GL_STREAM_DRAW);
+                      sizeof(renderer::LightsData_glsl),
+                      &lightsData,
+                      GL_STREAM_DRAW);
     }
 
     //
@@ -443,11 +482,12 @@ Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
                          resource::ResourceFinder & aResourcesFinder,
                          arte::FontFace aDebugFontFace) :
     mAppInterface{aAppInterface},
+    mLoader{.mFinder = aResourcesFinder},
     // TODO Ad 2024/04/17: #decomissionRV1 #resources This temporary Loader "just to get it to work" is smelly
     // but we need to address the resource management design issue to know what to do instead...
     // (This is a hack to port snacgame to DebugRenderer V2.)
     // Hopefully it gets replaced by a more sane approach to resource management after V1 is entirely decomissionned.
-    mRendererToKeep{renderer::Loader{.mFinder = aResourcesFinder}}
+    mRendererToKeep{mLoader}
 {}
 
 
@@ -455,9 +495,14 @@ renderer::Handle<const renderer::Object> Renderer_V2::loadModel(filesystem::path
                                                                 filesystem::path aEffect, 
                                                                 Resources_t & aResources)
 {
-    if(auto loadResult = loadBinary(aModel, 
+    // If the provided path is a ".sel" file, read the features
+    auto model = (aModel.extension() == ".sel") ?
+        renderer::getModelAndFeatures(aModel) :
+        renderer::ModelWithFeatures{.mModel = aModel};
+
+    if(auto loadResult = loadBinary(model.mModel, 
                                     mRendererToKeep.mStorage,
-                                    aResources.loadEffect(aEffect, mRendererToKeep.mStorage),
+                                    aResources.loadEffect(aEffect, mRendererToKeep.mStorage, model.mFeatures),
                                     mRendererToKeep.mRenderGraph.mInstanceStream);
         std::holds_alternative<renderer::Node>(loadResult))
     {
@@ -475,6 +520,7 @@ renderer::Handle<const renderer::Object> Renderer_V2::loadModel(filesystem::path
     }
     else
     {
+        // Atempt to reprocess (gltf to seum) if the error code indicates outdated version
         auto errorCode = std::get<renderer::SeumErrorCode>(loadResult);
         if(auto basePath = filesystem::path{aModel}.replace_extension(".gltf");
            errorCode == renderer::SeumErrorCode::OutdatedVersion && is_regular_file(basePath))
@@ -619,6 +665,21 @@ void Renderer_V2::render(const GraphicState_t & aState)
     {
         TIME_RECURRING_GL("Draw_debug", renderer::DrawCalls);
         mRendererToKeep.mRenderGraph.renderDebugFrame(aState.mDebugDrawList, mRendererToKeep.mStorage);
+    }
+}
+
+
+void Renderer_V2::recompileEffectsV2()
+{
+    LapTimer timer;
+    if(renderer::recompileEffects(mLoader, mRendererToKeep.mStorage))
+    {
+        SELOG(info)("Successfully recompiled effect, took {:.3f}s.",
+                    asFractionalSeconds(timer.mark()));
+    }
+    else
+    {
+        SELOG(error)("Could not recompile all effects.");
     }
 }
 

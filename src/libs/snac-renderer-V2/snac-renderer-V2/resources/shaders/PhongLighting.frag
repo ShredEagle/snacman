@@ -11,7 +11,10 @@ in vec3 ex_Normal_cam;
 in vec4 ex_Color;
 #endif
 
+#ifdef TEXTURED
 in vec2[4] ex_Uv;
+#endif // TEXTURED
+
 in flat uint ex_MaterialIdx;
 
 #ifdef TEXTURED
@@ -34,7 +37,7 @@ void main()
 
 #ifdef TEXTURED
     albedo = albedo * texture(u_DiffuseTexture, vec3(ex_Uv[material.diffuseUvChannel], material.diffuseTextureIndex));
-#endif
+#endif // TEXTURED
 
     // Implement "cut-out" transparency: everything below 50% opacity is discarded (i.e. no depth write).
     if(albedo.a < 0.5)

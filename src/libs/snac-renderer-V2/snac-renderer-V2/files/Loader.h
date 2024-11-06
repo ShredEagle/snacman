@@ -36,6 +36,17 @@ enum class SeumErrorCode
 graphics::Texture loadDds(std::filesystem::path aDds);
 
 
+struct ModelWithFeatures
+{
+    std::filesystem::path mModel;
+    std::vector<std::string> mFeatures;
+};
+
+
+/// @brief Extract the binary model path and the list of features from a JSon .sel file.
+ModelWithFeatures getModelAndFeatures(std::filesystem::path aJsonFile);
+
+
 std::variant<Node, SeumErrorCode> loadBinary(const std::filesystem::path & aBinaryFile,
                                              Storage & aStorage,
                                              Effect * aPartsEffect,

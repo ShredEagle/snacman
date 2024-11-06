@@ -1,5 +1,0 @@
-{
-    "defines": ["SHADOW", "RIGGING"],
-    "vertex": "PhongLighting.vert",
-    "fragment": "PhongLighting.frag"
-}

@@ -256,7 +256,9 @@ public:
              {
                 try
                 {
+                    // TODO #RV2 Remove this recompilation currently only using for text still using V1.
                     recompilePrograms(aResources);
+                    aRenderer.recompileEffectsV2();
                     // Required because the actual interface of the shader might have changed
                     // (either explicitly by code, or implicitly because optimizer discarded some attributes/uniforms)
                     aRenderer.resetRepositories();

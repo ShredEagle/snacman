@@ -14,6 +14,7 @@
 #include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Pass.h>
+#include <snac-renderer-V2/Semantics.h>
 #include <snac-renderer-V2/VertexStreamUtilities.h>
 #include <snac-renderer-V2/debug/DebugRenderer.h>
 #include <snac-renderer-V2/files/Loader.h>
@@ -35,26 +36,6 @@ namespace snac {
 namespace snacgame {
 
 
-namespace semantic {
-    #define SEM(s) const renderer::Semantic g ## s{#s}
-    #define BLOCK_SEM(s) const renderer::BlockSemantic g ## s{#s}
-
-    SEM(LocalToWorld);
-    SEM(Albedo);
-    SEM(EntityIdx);
-    SEM(MaterialIdx);
-    SEM(MatrixPaletteOffset);
-
-    BLOCK_SEM(ViewProjection);
-    BLOCK_SEM(Materials);
-    BLOCK_SEM(JointMatrices);
-    BLOCK_SEM(Entities);
-    BLOCK_SEM(Lighting);
-
-    #undef SEMANTIC
-} // namespace semantic
-
-
 // The Render Graph for snacman
 struct SnacGraph
 {
@@ -62,25 +43,17 @@ struct SnacGraph
     ///
     /// An entity is not matching the notion of GL instance (since an entity maps to an Object, wich might contains several Parts).
     /// So this cannot be made available as instance attributes, but should probably be accessed via buffer-backed blocks.
-    struct alignas(16) EntityData
+    struct alignas(16) EntityData_glsl
     {
         // Note: 16-aligned, because it is intended to be stored as an array in a buffer object
         // and then the elements are accessed via a std140 uniform block 
 
         math::AffineMatrix<4, GLfloat> mModelTransform;
         math::hdr::Rgba_f mColorFactor;
-        GLuint mMatrixPaletteOffset; // offset to the first joint of this instance in the buffer of joints.
     };
     
-    static_assert(sizeof(EntityData) % 16 == 0, 
+    static_assert(sizeof(EntityData_glsl) % 16 == 0, 
         "Size a multiple of 16 so successive loads work as expected.");
-
-    struct alignas(16) LightingData
-    {
-        alignas(16) math::hdr::Rgb<GLfloat> mAmbientColor;
-        alignas(16) math::Position<3, GLfloat> mLightPosition_c;
-        alignas(16) math::hdr::Rgb<GLfloat> mLightColor;
-    };
 
     /// @brief The data to populate the GL instance attribute buffer, for instanced rendering.
     ///
@@ -89,6 +62,7 @@ struct SnacGraph
     {
         GLuint mEntityIdx;
         GLuint mMaterialParametersIdx; 
+        GLuint mMatrixPaletteOffset = (GLuint)-1;
     };
 
     /// @brief The list of parts to be rendered. This might be valid for several passes (intra, or inter frame)
@@ -127,7 +101,7 @@ struct SnacGraph
             .mVertexBufferViews = { vboView, },
             .mSemanticToAttribute{
                 {
-                    semantic::gEntityIdx,
+                    renderer::semantic::gEntityIdx,
                     renderer::AttributeAccessor{
                         .mBufferViewIndex = 0, // view is added above
                         .mClientDataFormat{
@@ -138,12 +112,23 @@ struct SnacGraph
                     }
                 },
                 {
-                    semantic::gMaterialIdx,
+                    renderer::semantic::gMaterialIdx,
                     renderer::AttributeAccessor{
                         .mBufferViewIndex = 0, // view is added above
                         .mClientDataFormat{
                             .mDimension = 1,
                             .mOffset = offsetof(InstanceData, mMaterialParametersIdx),
+                            .mComponentType = GL_UNSIGNED_INT,
+                        },
+                    }
+                },
+                {
+                    renderer::semantic::gMatrixPaletteOffset,
+                    renderer::AttributeAccessor{
+                        .mBufferViewIndex = 0, // view is added above
+                        .mClientDataFormat{
+                            .mDimension = 1,
+                            .mOffset = offsetof(InstanceData, mMatrixPaletteOffset),
                             .mComponentType = GL_UNSIGNED_INT,
                         },
                     }
@@ -183,10 +168,10 @@ struct SnacGraph
         graphics::UniformBufferObject mViewingProjectionUbo;
 
         renderer::RepositoryUbo mUboRepository{
-            {semantic::gJointMatrices, &mJointMatricesUbo},
-            {semantic::gEntities, &mEntitiesUbo},
-            {semantic::gLighting, &mLightingUbo},
-            {semantic::gViewProjection, &mViewingProjectionUbo},
+            {renderer::semantic::gJointMatrices, &mJointMatricesUbo},
+            {renderer::semantic::gEntities, &mEntitiesUbo},
+            {renderer::semantic::gLights, &mLightingUbo},
+            {renderer::semantic::gViewProjection, &mViewingProjectionUbo},
         };
     } mGraphUbos;
 
@@ -263,6 +248,8 @@ public:
     void resetRepositories()
     { mRendererToDecomission.resetRepositories(); }
 
+    void recompileEffectsV2();
+
 private:
     template <class T_range>
     void renderText(const T_range & aTexts, snac::ProgramSetup & aProgramSetup);
@@ -270,6 +257,9 @@ private:
     Control mControl;
     graphics::AppInterface & mAppInterface;
     snac::Renderer mRendererToDecomission; // TODO #RV2 Remove this data member
+    // TODO #resource_redesign
+    // This is saved as a member because the loader is needed to recompile effects
+    renderer::Loader mLoader;
     Impl_V2 mRendererToKeep;
     snac::TextRenderer mTextRenderer;
     snac::GlyphInstanceStream mDynamicStrings;

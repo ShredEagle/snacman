@@ -11,7 +11,7 @@ namespace ad::renderer {
 
 class Camera;
 struct GpuViewProjectionBlock;
-struct LightsData;
+struct LightsData_glsl;
 struct LightViewProjection;
 struct Storage;
 struct ViewerPassCache;
@@ -74,7 +74,7 @@ struct GraphShared
 void loadFrameUbo(const graphics::UniformBufferObject & aUbo);
 
 
-void loadLightsUbo(const graphics::UniformBufferObject & aUbo, const LightsData & aLights);
+void loadLightsUbo(const graphics::UniformBufferObject & aUbo, const LightsData_glsl & aLights);
 
 
 // TODO Ad 2024/10/03: Not sure it needs to be part of the API

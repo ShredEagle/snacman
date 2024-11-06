@@ -1,7 +1,7 @@
 #include "JoinGameScene.h"
 
+#include "../ModelInfos.h"
 #include "../typedef.h"
-
 #include "../GameContext.h"
 
 #include "../component/PlayerSlot.h"
@@ -54,14 +54,14 @@ JoinGameScene::JoinGameScene(GameContext & aGameContext,
 
     insertEntityInScene(mJoinGameRoot, mGameContext.mSceneRoot);
 
-    mGameContext.mResources.getModel("models/numbers/one.seum",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/numbers/two.seum",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/numbers/three.seum",
-                                     "effects/MeshTextures.sefx");
-    mGameContext.mResources.getModel("models/numbers/four.seum",
-                                     "effects/MeshTextures.sefx");
+    mGameContext.mResources.getModel(gSlotNumbers[0].mPath,
+                                     gSlotNumbers[0].mProgPath);
+    mGameContext.mResources.getModel(gSlotNumbers[1].mPath,
+                                     gSlotNumbers[1].mProgPath);
+    mGameContext.mResources.getModel(gSlotNumbers[2].mPath,
+                                     gSlotNumbers[2].mProgPath);
+    mGameContext.mResources.getModel(gSlotNumbers[3].mPath,
+                                     gSlotNumbers[3].mProgPath);
 
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
     renderer::Orbital & camOrbital = snac::getComponent<system::OrbitalCamera>(camera).mControl.mOrbital;

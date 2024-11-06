@@ -2,7 +2,7 @@
 
 #include "TheGraph.h"
 
-#include "runtime_reflect/DearImguiVisitor.h"
+#include <snac-renderer-V2/runtime_reflect/DearImguiVisitor.h>
 
 #include <imguiui/ImguiUi.h>
 #include <imguiui/Widgets.h>

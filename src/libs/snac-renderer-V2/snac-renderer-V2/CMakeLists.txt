@@ -8,6 +8,7 @@ set(${TARGET_NAME}_HEADERS
     Handle.h
     IntrospectProgram.h
     Json.h
+    Lights.h
     Logging.h
     Logging-channels.h
     Logging-init.h
@@ -30,6 +31,9 @@ set(${TARGET_NAME}_HEADERS
     files/Flags.h
     files/Loader.h
     files/Versioning.h
+
+    runtime_reflect/DearImguiVisitor.h
+    runtime_reflect/ReflectHelpers.h
 )
 
 set(${TARGET_NAME}_SOURCES

@@ -6,6 +6,7 @@
 #include "../component/PlayerGameData.h"
 #include "../component/PlayerSlot.h"
 
+#include "../ModelInfos.h" // For models variables
 #include "../typedef.h"
 #include "../GameContext.h"
 
@@ -53,8 +54,8 @@ void PlayerInvulFrame::update(float aDelta)
             {
                 model.add(component::VisualModel{
                     .mModel = mGameContext->mResources.getModel(
-                        "models/donut/donut.gltf",
-                        "effects/MeshTextures.sefx")});
+                        gDonutModel,
+                        gMeshGenericEffect)});
             }
             if (static_cast<int>(aRoundData.mInvulFrameCounter * 10.f) % 4 == 2
                 && model.has<component::VisualModel>())
