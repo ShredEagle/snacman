@@ -15,9 +15,12 @@
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/Semantics.h>
-#include <snac-renderer-V2/VertexStreamUtilities.h>
+
 #include <snac-renderer-V2/debug/DebugRenderer.h>
+
 #include <snac-renderer-V2/files/Loader.h>
+
+#include <snac-renderer-V2/utilities/VertexStreamUtilities.h>
 
 #include <filesystem>
 #include <memory>

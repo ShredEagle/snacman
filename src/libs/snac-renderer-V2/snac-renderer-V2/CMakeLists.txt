@@ -21,7 +21,6 @@ set(${TARGET_NAME}_HEADERS
     Rigging.h
     Semantics.h
     SetupDrawing.h
-    VertexStreamUtilities.h
 
     debug/DebugDrawing.h
     debug/DebugRenderer.h
@@ -34,6 +33,11 @@ set(${TARGET_NAME}_HEADERS
 
     runtime_reflect/DearImguiVisitor.h
     runtime_reflect/ReflectHelpers.h
+
+    utilities/ColorPalettes.h
+    utilities/DebugDrawUtilities.h
+    utilities/FrustumUtilities.h
+    utilities/VertexStreamUtilities.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -45,13 +49,14 @@ set(${TARGET_NAME}_SOURCES
     Pass.cpp
     Rigging.cpp
     SetupDrawing.cpp
-    VertexStreamUtilities.cpp
 
     debug/DebugDrawing.cpp
     debug/DebugRenderer.cpp
 
     files/Dds.cpp
     files/Loader.cpp
+
+    utilities/VertexStreamUtilities.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

@@ -3,14 +3,15 @@
 #include "Passes.h"
 #include "ShadowCascadeBlock.h"
 
-#include "../ColorPalettes.h"
-#include "../DebugDrawUtilities.h"
 #include "../Logging.h"
 
 #include <profiler/GlApi.h>
 
 #include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/RendererReimplement.h>
+
+#include <snac-renderer-V2/utilities/ColorPalettes.h>
+#include <snac-renderer-V2/utilities/DebugDrawUtilities.h>
 
 
 namespace ad::renderer {
@@ -613,7 +614,7 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
                 // and it would be more uniform with the CSM version: using the same instanced-GS program,
                 // done once after this for-loop.
                 loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
-                            GpuViewProjectionBlock{orientationWorldToLight, fullProjection});
+                              GpuViewProjectionBlock{orientationWorldToLight, fullProjection});
                 passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Single);
             }
 

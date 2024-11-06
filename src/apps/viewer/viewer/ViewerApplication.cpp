@@ -1,7 +1,5 @@
 #include "ViewerApplication.h"
 
-#include "ColorPalettes.h"
-#include "DebugDrawUtilities.h"
 #include "EnvironmentUtilities.h"
 #include "Json.h"
 #include "Logging.h"
@@ -26,7 +24,11 @@
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/Semantics.h>
+
 #include <snac-renderer-V2/debug/DebugDrawing.h>
+
+#include <snac-renderer-V2/utilities/ColorPalettes.h>
+#include <snac-renderer-V2/utilities/DebugDrawUtilities.h>
 
 #include <utilities/Time.h>
 

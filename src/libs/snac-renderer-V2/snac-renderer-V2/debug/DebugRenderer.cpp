@@ -5,7 +5,7 @@
 #include "../RendererReimplement.h"
 #include "../Semantics.h"
 #include "../SetupDrawing.h"
-#include "../VertexStreamUtilities.h"
+#include "../utilities/VertexStreamUtilities.h"
 
 #include "../files/Loader.h"
 
