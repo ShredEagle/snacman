@@ -9,6 +9,19 @@
 namespace ad::renderer {
 
 
+inline void debugDrawTriangle(const Triangle & aTri, math::hdr::Rgb_f aColor = math::hdr::gGreen<GLfloat>)
+{
+    DBGDRAW_INFO(drawer::gShadow).addLine(
+        aTri[0].xyz(), aTri[1].xyz(),
+        aColor);
+    DBGDRAW_INFO(drawer::gShadow).addLine(
+        aTri[0].xyz(), aTri[2].xyz(),
+        aColor);
+    DBGDRAW_INFO(drawer::gShadow).addLine(
+        aTri[1].xyz(), aTri[2].xyz(),
+        aColor);
+}
+
 
 // TODO Ad 2024/08/08: This should be moved to a more general library
 /// @brief Debug-draw the view frustum of a camera, provided the inverse of its view-projection matrix.

@@ -1,12 +1,11 @@
+#include "ShadowMapping.h"
+
 #include "Passes.h"
 #include "ShadowCascadeBlock.h"
 
 #include "../ColorPalettes.h"
 #include "../DebugDrawUtilities.h"
 #include "../Logging.h"
-// This is almost circular, but we need a lot of stuff, such as passes and HardcodedUbos
-// This should vanish when we end-up with a cleaner design of the Graph / Passes abstractions.
-#include "../TheGraph.h"
 
 #include <profiler/GlApi.h>
 
@@ -15,21 +14,6 @@
 
 
 namespace ad::renderer {
-
-
-
-void debugDrawTriangle(const Triangle & aTri, math::hdr::Rgb_f aColor = math::hdr::gGreen<GLfloat>)
-{
-    DBGDRAW_INFO(drawer::gShadow).addLine(
-        aTri[0].xyz(), aTri[1].xyz(),
-        aColor);
-    DBGDRAW_INFO(drawer::gShadow).addLine(
-        aTri[0].xyz(), aTri[2].xyz(),
-        aColor);
-    DBGDRAW_INFO(drawer::gShadow).addLine(
-        aTri[1].xyz(), aTri[2].xyz(),
-        aColor);
-}
 
 
 namespace {
@@ -295,11 +279,15 @@ math::Matrix<4, 4, float> getProjectionChangeNearFar(const Camera & aCamera, flo
 }
 
 
-struct DebugColors
-{
-    math::hdr::Rgb_f mViewFrustrum;
-    math::hdr::Rgb_f mLight;
-};
+namespace {
+
+    struct DebugColors
+    {
+        math::hdr::Rgb_f mViewFrustrum;
+        math::hdr::Rgb_f mLight;
+    };
+
+} // unnamed namespace
 
 
 /// @brief Compute a tight projection matrix, allowing to render a shadow map 
@@ -469,6 +457,20 @@ std::array<math::Matrix<4, 4, GLfloat>, gCascadesPerShadow> zParitionCameraFrust
 }
 
 
+// TODO Ad 2024/11/06: #pass_API There is an inherent tension here, where the generic meets the specialized:
+// * Generic: 
+//   * the overall process to determine the shadow frustum and to make a pass on them
+//   * the need to fill buffers with some data that makes the shadow maps usable by later passes
+// * Specialized (to the actual application / graph):
+//   * how the concrete depth pass is implemented (the type of glsl instance data, the type of partlist)
+//   * what kind of GL buffer / where to get the buffer object to fill with shadow mapping data
+//     -> Might be addressed via return value instead, but that has an impact on stack usage and potentially on data-transfer time distribution
+// I do not want to implement everything via heavy templating (though that would ensure static polymorphism).
+// From the above analysis, either we couple the implementation to the application (which seems narrow sighted)
+// or we rely on a run-time dynamic behaviour. Some pieces are already in place (TextureRepo, UniformRepo),
+// do we want to somehow use polymorphism too?
+// An alternative would be to redesign this logic as utilities, called by each specialized application
+// between its calls to the specialized passes (but it transfers the tension down to the passes implementations)
 LightsDataInternal fillShadowMap(const ShadowMapping & aPass, 
                                  const RepositoryTexture & aTextureRepository,
                                  Storage & aStorage,
