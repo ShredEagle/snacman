@@ -1,6 +1,9 @@
 #pragma once
 
 
+#include <renderer/Texture.h>
+#include <renderer/ScopeGuards.h>
+
 #include <profiler/GlApi.h>
 
 #include <span>

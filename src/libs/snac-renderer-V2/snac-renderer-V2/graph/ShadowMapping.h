@@ -2,6 +2,7 @@
 
 
 #include "Clipping.h"
+#include "DepthMethod.h"
 
 #include <renderer/FrameBuffer.h>
 
@@ -17,6 +18,7 @@ class Camera;
 struct GraphShared;
 struct TheGraph;
 struct ViewerPartList;
+
 
 // TODO Ad 2024/08/23: Turn that into a proper Pass abstraction
 // but this abstraction has to be designed first.
@@ -107,6 +109,14 @@ void r(T_visitor & aV, ShadowMapping::Controls & aControls)
 }
 
 
+struct ShadowMapUbos
+{
+    graphics::UniformBufferObject * mViewingUbo;
+    graphics::UniformBufferObject * mLightViewProjectionUbo;
+    graphics::UniformBufferObject * mShadowCascadeUbo;
+};
+
+
 /// @brief Prepare all buffers and textures (shadow maps) required for shadow mapping.
 /// @param aPartList All the potential shadow casters.
 /// @param aSceneAabb_world The bounding box of the whole scene, in world coordinates.
@@ -117,13 +127,11 @@ void r(T_visitor & aV, ShadowMapping::Controls & aControls)
 /// This function is loading the shadow cascade and light-view-projections UBOs, render the shadow map textures,
 /// and return part of the LightsData UBO to be loaded by the caller.
 LightsDataInternal fillShadowMap(const ShadowMapping & aPass, 
-                                 const RepositoryTexture & aTextureRepository,
-                                 Storage & aStorage,
-                                 const GraphShared & aGraphShared,
-                                 const ViewerPartList & aPartList,
                                  math::Box<GLfloat> aSceneAabb_world,
                                  const Camera & aCamera,
-                                 const LightsDataUi & aLights);
+                                 const LightsDataUi & aLights,
+                                 ShadowMapUbos aUbos,
+                                 std::function<void(DepthMethod)> aOpaquePass);
 
 
 } // namespace ad::renderer

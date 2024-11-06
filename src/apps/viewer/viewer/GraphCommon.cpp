@@ -7,10 +7,11 @@
 #include <snac-renderer-V2/Lights.h>
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/Semantics.h>
-// TODO Ad 2023/10/18: Should get rid of this repeated implementation
-#include <snac-renderer-V2/RendererReimplement.h>
 
 #include <snac-renderer-V2/files/Loader.h>
+
+// TODO Ad 2023/10/18: Should get rid of this repeated implementation
+#include <snac-renderer-V2/RendererReimplement.h>
 
 
 namespace ad::renderer {
@@ -58,22 +59,6 @@ GraphShared::GraphShared(Loader & aLoader, Storage & aStorage) :
 {}
 
 
-void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
-{
-    GLfloat time =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 1000.f;
-    proto::loadSingle(aUbo, time, graphics::BufferHint::DynamicDraw);
-}
-
-
-void loadLightsUbo(const graphics::UniformBufferObject & aUbo,
-                   const LightsData_glsl & aLights)
-{
-    proto::loadSingle(aUbo, aLights, graphics::BufferHint::DynamicDraw);
-}
-
-
 // TODO Ad 2023/09/26: Could be splitted between the part list load (which should be valid accross passes)
 // and the pass cache load (which might only be valid for a single pass)
 void loadDrawBuffers(const GraphShared & aGraphShared, const ViewerPassCache & aPassCache)
@@ -90,37 +75,6 @@ void loadDrawBuffers(const GraphShared & aGraphShared, const ViewerPassCache & a
     proto::load(aGraphShared.mIndirectBuffer,
                 std::span{aPassCache.mDrawCommands},
                 graphics::BufferHint::DynamicDraw);
-}
-
-
-void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const GpuViewProjectionBlock & aViewProjection)
-{
-    proto::loadSingle(aUbo, aViewProjection, graphics::BufferHint::DynamicDraw);
-}
-
-
-void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aCamera)
-{
-    loadCameraUbo(aUbo, GpuViewProjectionBlock{aCamera});
-}
-
-
-void loadLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo, const LightViewProjection & aLightViewProjection)
-{
-    proto::loadSingle(aUbo, aLightViewProjection, graphics::BufferHint::DynamicDraw);
-}
-
-
-void updateOffsetInLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo,
-                                          const LightViewProjection & aLightViewProjection)
-{
-    graphics::ScopedBind bound{aUbo};
-    gl.BufferSubData(
-        aUbo.GLTarget_v,
-        offsetof(LightViewProjection, mLightViewProjectionOffset),
-        sizeof(LightViewProjection::mLightViewProjectionOffset),
-        &aLightViewProjection.mLightViewProjectionOffset
-    );
 }
 
 

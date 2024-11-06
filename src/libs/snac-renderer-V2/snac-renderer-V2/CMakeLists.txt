@@ -31,12 +31,18 @@ set(${TARGET_NAME}_HEADERS
     files/Loader.h
     files/Versioning.h
 
+    graph/Clipping.h
+    graph/DepthMethod.h
+    graph/ShadowCascadeBlock.h
+    graph/ShadowMapping.h
+
     runtime_reflect/DearImguiVisitor.h
     runtime_reflect/ReflectHelpers.h
 
     utilities/ColorPalettes.h
     utilities/DebugDrawUtilities.h
     utilities/FrustumUtilities.h
+    utilities/LoadUbos.h
     utilities/VertexStreamUtilities.h
 )
 
@@ -56,6 +62,9 @@ set(${TARGET_NAME}_SOURCES
     files/Dds.cpp
     files/Loader.cpp
 
+    graph/ShadowMapping.cpp
+
+    utilities/LoadUbos.cpp
     utilities/VertexStreamUtilities.cpp
 )
 

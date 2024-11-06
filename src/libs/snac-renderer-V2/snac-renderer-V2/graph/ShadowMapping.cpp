@@ -1,17 +1,16 @@
 #include "ShadowMapping.h"
 
-#include "Passes.h"
 #include "ShadowCascadeBlock.h"
-
-#include "../Logging.h"
 
 #include <profiler/GlApi.h>
 
+#include <snac-renderer-V2/Logging.h>
 #include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/RendererReimplement.h>
 
 #include <snac-renderer-V2/utilities/ColorPalettes.h>
 #include <snac-renderer-V2/utilities/DebugDrawUtilities.h>
+#include <snac-renderer-V2/utilities/LoadUbos.h>
 
 
 namespace ad::renderer {
@@ -473,13 +472,11 @@ std::array<math::Matrix<4, 4, GLfloat>, gCascadesPerShadow> zParitionCameraFrust
 // An alternative would be to redesign this logic as utilities, called by each specialized application
 // between its calls to the specialized passes (but it transfers the tension down to the passes implementations)
 LightsDataInternal fillShadowMap(const ShadowMapping & aPass, 
-                                 const RepositoryTexture & aTextureRepository,
-                                 Storage & aStorage,
-                                 const GraphShared & aGraphShared,
-                                 const ViewerPartList & aPartList,
                                  math::Box<GLfloat> aSceneAabb_world,
                                  const Camera & aCamera,
-                                 const LightsDataUi & aLights)
+                                 const LightsDataUi & aLights,
+                                 ShadowMapUbos aUbos,
+                                 std::function<void(DepthMethod)> aOpaquePass)
 {
     const ShadowMapping::Controls & c = aPass.mControls;
     const DepthMethod method = c.mUseCascades ? DepthMethod::Cascaded : DepthMethod::Single;
@@ -500,7 +497,7 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
         // (it does not fell well-structured).
         // The goal of the frame graph is to make this kind of data dependency very explicit, such as:
         // This call produces the ShadowCascadeUbo, which is later consummed by other passes (e.g. forward pass)
-        proto::loadSingle(*aGraphShared.mUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
+        proto::loadSingle(*aUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
     }
 
     // Will receive the view-projection matrix (ie. form world to light clipping space)
@@ -613,9 +610,9 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
                 // number of GS invocations (lights) we would only need a single "draw call".
                 // and it would be more uniform with the CSM version: using the same instanced-GS program,
                 // done once after this for-loop.
-                loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
+                loadCameraUbo(*aUbos.mViewingUbo, 
                               GpuViewProjectionBlock{orientationWorldToLight, fullProjection});
-                passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Single);
+                aOpaquePass(DepthMethod::Single);
             }
 
             ++shadowLightIdx;
@@ -627,7 +624,7 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
         }
     }
 
-    loadLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo, lightViewProjection);
+    loadLightViewProjectionUbo(*aUbos.mLightViewProjectionUbo, lightViewProjection);
 
     //
     // Render shadow maps
@@ -649,10 +646,9 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
             ++directionalIdx)
         {
             lightViewProjection.mLightViewProjectionOffset = gCascadesPerShadow * directionalIdx;
-            updateOffsetInLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo,
+            updateOffsetInLightViewProjectionUbo(*aUbos.mLightViewProjectionUbo,
                                                 lightViewProjection);
-            // TODO avoid the instanciated stuff when the cascades are disabled
-            passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Cascaded);
+            aOpaquePass(DepthMethod::Cascaded);
         }
     }
     else

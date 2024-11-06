@@ -3,8 +3,6 @@
 #include "DrawQuad.h"
 #include "GraphCommon.h"
 
-#include "graph/ShadowMapping.h"
-
 #include <graphics/ApplicationGlfw.h>
 
 #include <renderer/FrameBuffer.h>
@@ -15,6 +13,8 @@
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Repositories.h>
 #include <snac-renderer-V2/debug/DebugRenderer.h>
+#include <snac-renderer-V2/graph/ShadowMapping.h>
+
 
 
 namespace ad::renderer {

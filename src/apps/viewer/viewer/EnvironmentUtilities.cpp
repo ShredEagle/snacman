@@ -22,6 +22,8 @@
 
 #include <snac-renderer-V2/files/Loader.h>
 
+#include <snac-renderer-V2/utilities/LoadUbos.h>
+
 
 namespace ad::renderer {
 
@@ -334,7 +336,7 @@ Handle<graphics::Texture> integrateEnvironmentBrdf(Storage & aStorage,
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    IntrospectProgram program = aLoader.loadProgram("shaders/IntegrateEnvironmentBrdf.prog");
+    IntrospectProgram program = aLoader.loadProgram("programs/IntegrateEnvironmentBrdf.prog");
     graphics::ScopedBind boundProgram(program);
 
     // Draw the fullscreen quad (which will invoke the FS for each ouptut pixel of the viewport)
@@ -404,7 +406,7 @@ graphics::Texture highLightSamples(const Environment & aEnvironment,
     const GLuint imageUnit = 1;
     glBindImageTexture(imageUnit, output, 0, GL_FALSE, 0, GL_WRITE_ONLY, imageFormat);
 
-    IntrospectProgram program = aLoader.loadProgram("shaders/HighlightSamples.prog");
+    IntrospectProgram program = aLoader.loadProgram("programs/HighlightSamples.prog");
     graphics::ScopedBind boundProgram(program);
 
     graphics::setUniform(program, "u_SurfaceNormal", aSurfaceNormal);

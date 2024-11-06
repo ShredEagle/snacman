@@ -16,6 +16,8 @@
 
 #include <snac-renderer-V2/files/Loader.h>
 
+#include <snac-renderer-V2/utilities/LoadUbos.h>
+
 #include <renderer/Uniforms.h>
 
 

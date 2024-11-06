@@ -4,6 +4,7 @@
 #include "../GraphCommon.h"
 
 #include <snac-renderer-V2/Repositories.h>
+#include <snac-renderer-V2/graph/DepthMethod.h>
 
 
 namespace ad::renderer {
@@ -13,12 +14,6 @@ struct Environment;
 struct Storage;
 struct ViewerPartList;
 
-
-enum class DepthMethod
-{
-    Single,
-    Cascaded,
-};
 
 // Note: Storage cannot be const, as it might be modified to insert missing VAOs, etc
 void passOpaqueDepth(const GraphShared & aGraphShared,

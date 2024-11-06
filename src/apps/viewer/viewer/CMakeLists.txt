@@ -21,10 +21,7 @@ set(${TARGET_NAME}_HEADERS
     TheGraph.h
     ViewerApplication.h
 
-    graph/Clipping.h
     graph/Passes.h
-    graph/ShadowCascadeBlock.h
-    graph/ShadowMapping.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -46,7 +43,6 @@ set(${TARGET_NAME}_SOURCES
     ViewerApplication.cpp
 
     graph/Passes.cpp
-    graph/ShadowMapping.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

@@ -16,6 +16,8 @@
 
 #include <snac-renderer-V2/files/Loader.h>
 
+#include <snac-renderer-V2/utilities/LoadUbos.h>
+
 #include <renderer/Uniforms.h>
 
 
@@ -48,7 +50,7 @@ TheGraph::TheGraph(math::Size<2, int> aRenderSize,
                    Storage & aStorage,
                    const Loader & aLoader) :
     mRenderSize{aRenderSize},
-    mTransparencyResolver{aLoader.loadShader("shaders/TransparencyResolve.frag")},
+    mTransparencyResolver{aLoader.loadShader("programs/shaders/TransparencyResolve.frag")},
     mShadowPass{
         .mShadowMap = makeTexture(aStorage, GL_TEXTURE_2D_ARRAY, "shadow_map"),
     }
@@ -157,13 +159,18 @@ void TheGraph::renderFrame(const Scene & aScene,
     // Shadow mapping
     LightsDataInternal lightsInternal = fillShadowMap(
         mShadowPass,
-        textureRepository,
-        aStorage,
-        aGraphShared,
-        aPartList,
         aScene.mRoot.mAabb,
         aCamera,
-        aScene.mLights_world);
+        aScene.mLights_world,
+        ShadowMapUbos{
+            .mViewingUbo = aGraphShared.mUbos.mViewingUbo,
+            .mLightViewProjectionUbo = aGraphShared.mUbos.mLightViewProjectionUbo,
+            .mShadowCascadeUbo = aGraphShared.mUbos.mShadowCascadeUbo,
+        },
+        [&aGraphShared, &aPartList, &textureRepository, &aStorage](DepthMethod aMethod)
+        {
+            passOpaqueDepth(aGraphShared, aPartList, textureRepository, aStorage, aMethod);
+        });
 
     loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, aCamera);
     loadLightsUbo(*aGraphShared.mUbos.mLightsUbo, {aLights_camera, lightsInternal});

@@ -29,6 +29,7 @@
 
 #include <snac-renderer-V2/utilities/ColorPalettes.h>
 #include <snac-renderer-V2/utilities/DebugDrawUtilities.h>
+#include <snac-renderer-V2/utilities/LoadUbos.h>
 
 #include <utilities/Time.h>
 
