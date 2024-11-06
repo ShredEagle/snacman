@@ -207,8 +207,8 @@ public:
                 }
                 else
                 {
-                    static_assert(
-                        false, "Default witness template should not be called");
+                    //static_assert(
+                    //    false, "Default witness template should not be called");
                 }
             },
             mData);
@@ -229,8 +229,9 @@ public:
                 }
                 else
                 {
-                    static_assert(
-                        false, "Default witness template should not be called");
+                    //static_assert(
+                    //    !std::is_same_v<T_value, T_value>, /*always false, but politely using template parameter*/
+                    //    "Default witness template should not be called");
                 }
             },
             mData);

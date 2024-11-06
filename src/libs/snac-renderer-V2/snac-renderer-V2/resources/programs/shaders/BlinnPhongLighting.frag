@@ -48,7 +48,11 @@ void main()
 #endif //ENTITIES
 
 #ifdef TEXTURED
-    albedo = albedo * texture(u_DiffuseTexture, vec3(ex_Uv[material.diffuseUvChannel], material.diffuseTextureIndex));
+    // TODO Remove this test when models are fixed (no parts without textures)
+    if(material.diffuseUvChannel != uint(-1))
+    {
+        albedo = albedo * texture(u_DiffuseTexture, vec3(ex_Uv[material.diffuseUvChannel], material.diffuseTextureIndex));
+    }
 #endif
 
     // Implement "cut-out" transparency: everything below 50% opacity is discarded (i.e. no depth write).
