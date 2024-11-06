@@ -1,4 +1,0 @@
-{
-    "vertex": "FullVertexTransform.vert",
-    "fragment": "Depth.frag"
-}

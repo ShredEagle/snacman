@@ -1,0 +1,5 @@
+{
+    "defines": ["MODEL_MATRIX"],
+    "vertex": "shaders/SimplePositionTransform.vert",
+    "fragment": "shaders/Solid.frag"
+}

@@ -4,7 +4,7 @@
             "annotations": {
                 "pass": "transparent"
             },
-            "programfile": "shaders/ForwardPhongLighting_transparent.prog"
+            "programfile": "programs/ForwardPhongLighting_transparent.prog"
         }
     ]
 }

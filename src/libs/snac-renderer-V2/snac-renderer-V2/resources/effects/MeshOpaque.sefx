@@ -5,7 +5,7 @@
                 "pass": "forward",
                 "environment": "on"
             },
-            "programfile": "shaders/ForwardBlinnPhongLighting.prog"
+            "programfile": "programs/ForwardBlinnPhongLighting.prog"
         },
         {
             "annotations": {
@@ -13,13 +13,13 @@
                 "entities": "on"
             },
             "defines": ["ENTITIES"],
-            "programfile": "shaders/ForwardBlinnPhongLighting.prog"
+            "programfile": "programs/ForwardBlinnPhongLighting.prog"
         },
         {
             "annotations": {
                 "pass": "forward_pbr"
             },
-            "programfile": "shaders/ForwardPbr.prog"
+            "programfile": "programs/ForwardPbr.prog"
         },
         {
             "annotations": {
@@ -27,7 +27,7 @@
                 "environment": "on",
                 "shadows": "on"
             },
-            "programfile": "shaders/ForwardPbr.prog",
+            "programfile": "programs/ForwardPbr.prog",
             "defines": ["ENVIRONMENT_MAPPING", "SHADOW_MAPPING"]
         },
         {
@@ -36,7 +36,7 @@
                 "environment": "on",
                 "csm": "on"
             },
-            "programfile": "shaders/ForwardPbr.prog",
+            "programfile": "programs/ForwardPbr.prog",
             "defines": ["ENVIRONMENT_MAPPING", "SHADOW_MAPPING", "SHADOW_CASCADE"]
         },
         {
@@ -44,26 +44,26 @@
                 "pass": "forward_phong",
                 "environment": "on"
             },
-            "programfile": "shaders/ForwardPhongLighting.prog"
+            "programfile": "programs/ForwardPhongLighting.prog"
         },
         {
             "annotations": {
                 "pass": "forward_debug",
                 "environment": "on"
             },
-            "programfile": "shaders/ForwardDebug.prog"
+            "programfile": "programs/ForwardDebug.prog"
         },
         {
             "annotations": {
                 "pass": "depth_opaque"
             },
-            "programfile": "shaders/DepthMapping.prog"
+            "programfile": "programs/DepthMapping.prog"
         },
         {
             "annotations": {
                 "pass": "cascaded_depth_opaque"
             },
-            "programfile": "shaders/CascadedDepthMapping.prog"
+            "programfile": "programs/CascadedDepthMapping.prog"
         }
     ]
 }

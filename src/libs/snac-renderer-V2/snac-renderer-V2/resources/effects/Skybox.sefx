@@ -5,28 +5,28 @@
                 "pass": "forward",
                 "environment_texture": "cubemap"
             },
-            "programfile": "shaders/Skybox.prog"
+            "programfile": "programs/Skybox.prog"
         },
         {
             "annotations": {
                 "pass": "forward",
                 "environment_texture": "equirectangular"
             },
-            "programfile": "shaders/Skybox.prog",
+            "programfile": "programs/Skybox.prog",
             "defines": "EQUIRECTANGULAR"
         },
         {
             "annotations": {
                 "pass": "prefilter_specular_radiance"
             },
-            "programfile": "shaders/PrefilterCubemap.prog",
+            "programfile": "programs/PrefilterCubemap.prog",
             "defines": "SPECULAR_RADIANCE"
         },
         {
             "annotations": {
                 "pass": "prefilter_diffuse_irradiance"
             },
-            "programfile": "shaders/PrefilterCubemap.prog",
+            "programfile": "programs/PrefilterCubemap.prog",
             "defines": "DIFFUSE_IRRADIANCE"
         }
     ]
