@@ -369,29 +369,22 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
                           graphics::BufferHint::StreamDraw);
 
     //
-    // Load lighting UBO
+    // Load lights and shadow maps
     //
-    static const math::AffineMatrix<4, GLfloat> worldToLight = 
-        math::trans3d::rotateX(math::Degree<float>{60.f})
-        * math::trans3d::translate<GLfloat>({0.f, 2.5f, -16.f});
-
-    math::Position<3, GLfloat> lightPosition_cam = 
-        (math::homogeneous::makePosition(math::Position<3, GLfloat>::Zero()) // light position in light space is the origin
-        * worldToLight.inverse()
-        * aState.mCamera.getParentToCamera()).xyz();
-
+    math::UnitVec<3, GLfloat> lightDirection_cam{
+        math::Vec<3, GLfloat>{0.f, 0.f, -1.f} * math::trans3d::rotateX(-math::Degree<float>{60.f}) // light direction world
+        * aState.mCamera.getParentToCamera().getLinear()};
     math::hdr::Rgb_f lightColor = to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.4f, 0.4f, 0.4f};
 
     {
         renderer::LightsData_glsl lightsData{
             renderer::LightsDataUser{
-                .mPointCount = 1,
+                .mDirectionalCount = 1,
                 .mAmbientColor = ambientColor,
-                .mPointLights{{
-                    renderer::PointLight{
-                        .mPosition = lightPosition_cam,
-                        .mRadius = {50.f, 500.f},
+                .mDirectionalLights{{
+                    renderer::DirectionalLight{
+                        .mDirection = lightDirection_cam,
                         .mDiffuseColor = lightColor,
                         .mSpecularColor = lightColor,
                     },
