@@ -218,7 +218,7 @@ public:
 
     void addText(Text aText);
 
-    void addLine(const LineVertex & aP1, const LineVertex & aP2);
+    void addLine(LineVertex aP1, LineVertex aP2);
 
     void addLine(math::Position<3, float> aP1, math::Position<3, float> aP2,
                  math::hdr::Rgba_f aColor = math::hdr::gMagenta<float>)

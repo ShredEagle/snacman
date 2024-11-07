@@ -17,6 +17,15 @@
         },
         {
             "annotations": {
+                "pass": "forward",
+                "entities": "on",
+                "shadows": "on"
+            },
+            "defines": ["ENTITIES", "SHADOW_MAPPING"],
+            "programfile": "programs/ForwardBlinnPhongLighting.prog"
+        },
+        {
+            "annotations": {
                 "pass": "forward_pbr"
             },
             "programfile": "programs/ForwardPbr.prog"
@@ -57,6 +66,14 @@
             "annotations": {
                 "pass": "depth_opaque"
             },
+            "programfile": "programs/DepthMapping.prog"
+        },
+        {
+            "annotations": {
+                "pass": "depth_opaque",
+                "entities": "on"
+            },
+            "defines": ["ENTITIES"],
             "programfile": "programs/DepthMapping.prog"
         },
         {

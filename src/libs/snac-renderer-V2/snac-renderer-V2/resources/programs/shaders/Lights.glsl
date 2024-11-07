@@ -44,6 +44,13 @@ struct LightContributions
 };
 
 
+void scale(inout LightContributions aLightContribution, float aFactor)
+{
+    aLightContribution.diffuse  = aLightContribution.diffuse  * aFactor;
+    aLightContribution.specular = aLightContribution.specular * aFactor;
+}
+
+
 LightContributions applyLight(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
                               LightColors aColors, float aSpecularExponent)
 {

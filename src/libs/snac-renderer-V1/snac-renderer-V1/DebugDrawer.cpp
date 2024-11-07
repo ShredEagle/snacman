@@ -132,7 +132,7 @@ void DebugDrawer::addText(Text aText)
 }
 
 
-void DebugDrawer::addLine(const LineVertex & aP1, const LineVertex & aP2)
+void DebugDrawer::addLine(LineVertex aP1, LineVertex aP2)
 {
     commands().mLineVertices.push_back(std::move(aP1));
     commands().mLineVertices.push_back(std::move(aP2));

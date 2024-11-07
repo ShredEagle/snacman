@@ -25,6 +25,8 @@ struct ViewerPartList;
 
 struct ShadowMapping
 {
+    ShadowMapping(renderer::Storage & aStorage);
+
     /// @brief Allocate texture and setup their parameters, respecting per-light budget.
     /// (CSM will use smaller layers than single).
     void prepareShadowMap();
@@ -68,6 +70,16 @@ struct ShadowMapping
         GLfloat mCsmNearPlaneLimit{-1.f};
         int mDebugDrawWhichCascade{0};
         bool mTintViewByCascadeIdx{false};
+
+        void turnOffDebugDrawing()
+        {
+            mDebugDrawFrusta
+            = mDebugDrawShadowPlanes
+            = mDebugDrawClippedTriangles
+            = false;
+
+            mDebugDrawWhichCascade = -1;
+        }
     };
 
     Controls mControls;

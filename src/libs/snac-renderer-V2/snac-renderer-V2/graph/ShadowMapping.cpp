@@ -74,6 +74,15 @@ namespace {
 } // unnamed namespace
 
 
+ShadowMapping::ShadowMapping(renderer::Storage & aStorage) :
+    mShadowMap{
+        makeTexture(aStorage, GL_TEXTURE_2D_ARRAY, "shadow_map")
+    }
+{
+    prepareShadowMap();
+}
+
+
 void ShadowMapping::prepareShadowMap()
 {
     static_assert(gCascadesPerShadow == 4);

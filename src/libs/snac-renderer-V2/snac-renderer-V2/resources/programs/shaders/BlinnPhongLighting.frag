@@ -30,6 +30,16 @@ uniform sampler2DArray u_NormalTexture;
 #endif //NAIVE_TEXTURES
 #endif
 
+#ifdef SHADOW_MAPPING
+
+#if defined(SHADOW_CASCADE)
+#include "ShadowCascadeBlock.glsl"
+#endif //SHADOW_CASCADE
+
+#include "Shadow.glsl"
+
+#endif //SHADOW_MAPPING
+
 out vec4 out_Color;
 
 void main()
@@ -137,6 +147,26 @@ void main()
         LightContributions lighting = 
             applyLight(view_cam, lightDir_cam, shadingNormal_cam,
                        directional.colors, material.specularExponent);
+
+#if defined(SHADOW_MAPPING)
+        // Scale the light contribution by the shadow attenuation factor
+        // TODO handle providing the shadow map texture index with the light
+        uint shadowMapBaseIdx = ub_DirectionalLightShadowMapIndices[directionalIdx];
+        if(shadowMapBaseIdx != INVALID_INDEX)
+        {
+#if defined(SHADOW_CASCADE)
+            // CASCADES_PER_SHADOW multiplication is already done in shadowMapBaseIdx
+            uint shadowMapIdx = shadowMapBaseIdx + shadowCascadeIdx;
+#else // SHADOW_CASCADE
+            uint shadowMapIdx = shadowMapBaseIdx;
+#endif //SHADOW_CASCADE
+            const float bias = 0.; // we rely on slope-scale bias, see glPolygonOffset
+            float shadowAttenuation = 
+                getShadowAttenuation(ex_Position_lightTex[shadowMapIdx], shadowMapIdx, bias);
+            scale(lighting, shadowAttenuation);
+        }
+#endif // SHADOW_MAPPING
+
         diffuseAccum += lighting.diffuse;
         specularAccum += lighting.specular;
     }

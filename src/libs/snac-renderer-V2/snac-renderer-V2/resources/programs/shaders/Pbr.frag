@@ -34,9 +34,7 @@ uniform sampler2DArray u_MetallicRoughnessAoTexture;
 #include "ShadowCascadeBlock.glsl"
 #endif //SHADOW_CASCADE
 
-uniform sampler2DArrayShadow u_ShadowMap;
-in vec3[MAX_SHADOW_MAPS] ex_Position_lightTex;
-
+#include "Shadow.glsl"
 #endif //SHADOW_MAPPING
 
 #if defined(ENVIRONMENT_MAPPING)
@@ -63,19 +61,6 @@ struct PbrMaterial
     vec3 f90;
     float alpha;
 };
-
-
-#if defined(SHADOW_MAPPING)
-
-//float getShadowAttenuation(vec4 fragPosition_lightClip, uint shadowMapIdx, float bias)
-float getShadowAttenuation(vec3 fragPosition_lightTex, uint shadowMapIdx, float bias)
-{
-    return texture(u_ShadowMap, 
-                   vec4(fragPosition_lightTex.xy, // uv
-                        shadowMapIdx, // array layer
-                        fragPosition_lightTex.z - bias /* reference value */));
-}
-#endif //SHADOW_MAPPING
 
 
 LightContributions applyLight_pbr(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,

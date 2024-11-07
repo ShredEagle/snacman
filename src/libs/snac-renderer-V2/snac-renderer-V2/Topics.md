@@ -5,3 +5,5 @@
 * thread-safety
 * resource_redesign: I am not satisified with the current design involved with resources loading / management
 * RV2: Renderer V2
+* renderer_API: The client API of the render engine. Initially mainly implemented as a graphic state
+  with a flat-list of objects to draw, and other important entities (cameras, lights).

@@ -15,6 +15,7 @@
 #include <profiler/GlApi.h>
 
 #include <renderer/BufferLoad.h>
+#include <renderer/FrameBuffer.h>
 #include <renderer/Uniforms.h>
 
 // TODO #RV2 Remove V1 includes
@@ -29,6 +30,8 @@
 #include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/SetupDrawing.h>
 #include <snac-renderer-V2/Semantics.h>
+
+#include <snac-renderer-V2/utilities/LoadUbos.h>
 
 #include <snacman/Logging.h>
 #include <snacman/Profiling.h>
@@ -64,19 +67,15 @@ namespace {
 } // unnamed namespace
 
 
-renderer::PassCache SnacGraph::preparePass(renderer::StringKey aPass, 
+renderer::PassCache SnacGraph::preparePass(std::vector<renderer::Technique::Annotation> aAnnotations,
                                            const PartList & aPartList,
                                            renderer::Storage & aStorage)
 {
     TIME_RECURRING_GL("prepare_pass");
 
-    std::vector<renderer::Technique::Annotation> annotations{
-        {"pass", aPass},
-        {"entities", "on"},
-    };
     renderer::DrawEntryHelper helper;
     std::vector<renderer::PartDrawEntry> entries = 
-        helper.generateDrawEntries(annotations, aPartList, aStorage);
+        helper.generateDrawEntries(aAnnotations, aPartList, aStorage);
 
     //
     // Sort the entries
@@ -232,9 +231,52 @@ struct EntitiesRecord
 };
 
 
-void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Storage & aStorage)
+void SnacGraph::passDepth(SnacGraph::PartList aPartList,
+                          renderer::RepositoryTexture aTextureRepository,
+                          renderer::Storage & aStorage)
+{
+    renderer::PassCache passCache = 
+        SnacGraph::preparePass(
+            {
+                {"pass", "depth_opaque"},
+                {"entities", "on"},
+            },
+            aPartList,
+            aStorage);
+
+    // Load the draw indirect buffer with command generated in preparePass()
+    renderer::proto::load(mIndirectBuffer,
+                          std::span{passCache.mDrawCommands},
+                          graphics::BufferHint::StreamDraw);
+
+    {
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
+    }
+
+    DISABLE_PROFILING_GL;
+    renderer::draw(passCache,
+                   mGraphUbos.mUboRepository,
+                   aTextureRepository);
+    ENABLE_PROFILING_GL;
+}
+
+
+void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
+                            renderer::Storage & aStorage,
+                            math::Size<2, int> aFramebufferSize)
 {
     using renderer::gl;
+
+    // Could be done only once for the program duration, as long as only one buffer is ever used here.
+    // TODO Ad 2024/04/09: #staticentities We might actually want several, for example one that is constant
+    // between frames and contain the draw commands for static geometry.
+    gl.BindBuffer(GL_DRAW_INDIRECT_BUFFER, mIndirectBuffer);
+        
+    // TODO can we host as data member ? It is mostly permanent, used for the shadow map, but the texture change on depth method change...
+    renderer::RepositoryTexture textureRepository;
 
     // This maps each renderer::Object to the array of its entity data.
     // This is sorting each game entity by "visual model" (== renderer::Object), 
@@ -371,14 +413,67 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
     //
     // Load lights and shadow maps
     //
+    math::UnitVec<3, GLfloat> lightDirection_world{
+        math::Vec<3, GLfloat>{0.f, 0.f, -1.f} 
+        * math::trans3d::rotateX(-math::Degree<float>{60.f})
+    };
     math::UnitVec<3, GLfloat> lightDirection_cam{
-        math::Vec<3, GLfloat>{0.f, 0.f, -1.f} * math::trans3d::rotateX(-math::Degree<float>{60.f}) // light direction world
+        lightDirection_world
         * aState.mCamera.getParentToCamera().getLinear()};
     math::hdr::Rgb_f lightColor = to_hdr<float>(math::sdr::gWhite) * 0.8f;
     math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.4f, 0.4f, 0.4f};
 
+    // Shadow mapping
+    
+    // TODO Ad 2024/11/07: #renderer_API For the moment, the graphics state does not contain
+    // any bounding box info. We pay for it here  (bounds would allow to limit the shadow projections depth)
+    // and it might become problematic if we want to implement spatial sorting optimizations.
+
+    // Use an "infinite" scene bounding box atm
+    math::Box<GLfloat> oversizeBox{
+        .mPosition = math::Position<3, GLfloat>{-1000.f, -1000.f, -1000.f},
+        .mDimension = math::Size<3, GLfloat>{2000.f, 2000.f, 2000.f}
+    };
+
+    renderer::LightsDataUi lightsDataUi_world{
+        renderer::LightsDataUser{
+            .mDirectionalCount = 1,
+            .mAmbientColor = ambientColor,
+            .mDirectionalLights{{
+                renderer::DirectionalLight{
+                    .mDirection = lightDirection_world,
+                    .mDiffuseColor = lightColor,
+                    .mSpecularColor = lightColor,
+                },
+            }}
+        },
+    };
+    lightsDataUi_world.mDirectionalLightProjectShadow[0].mIsProjectingShadow = true;
+
+    // For the moment, it is the client responsibility to call that
+    // but it might be better to integrate it behind fillShadowMap()
+    mShadowMapping.reviewControls();
+
+    renderer::LightsDataInternal lightsInternal = fillShadowMap(
+        mShadowMapping,
+        oversizeBox, 
+        aState.mCamera,
+        lightsDataUi_world,
+        renderer::ShadowMapUbos{
+            .mViewingUbo = &mGraphUbos.mViewingProjectionUbo,
+            .mLightViewProjectionUbo = &mGraphUbos.mLightViewProjectionUbo,
+            .mShadowCascadeUbo = &mGraphUbos.mShadowCascadeUbo,
+        },
+        [this, &partList, &textureRepository, &aStorage](renderer::DepthMethod aMethod)
+        {
+            passDepth(partList, textureRepository, aStorage);
+        });
+
+    textureRepository[renderer::semantic::gShadowMap] = mShadowMapping.mShadowMap;
+
+    // Load lights UBO, with lights in camera space
     {
-        renderer::LightsData_glsl lightsData{
+        renderer::LightsDataUser lightsData_cam{
             renderer::LightsDataUser{
                 .mDirectionalCount = 1,
                 .mAmbientColor = ambientColor,
@@ -392,25 +487,25 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
             },
         };
 
-        graphics::ScopedBind boundLightingUbo{mGraphUbos.mLightingUbo};
-        // Orphan the buffer, and set it to the current size 
-        //(TODO: might be good to keep a separate counter to never shrink it)
-        gl.BufferData(GL_UNIFORM_BUFFER,
-                      sizeof(renderer::LightsData_glsl),
-                      &lightsData,
-                      GL_STREAM_DRAW);
+        renderer::loadLightsUbo(mGraphUbos.mLightsUbo, {lightsData_cam, lightsInternal});
     }
 
+    // Load the viewing projection data
+    renderer::loadCameraUbo(
+        mGraphUbos.mViewingProjectionUbo,
+        renderer::GpuViewProjectionBlock{aState.mCamera});
+    
     //
-    // Drawing
-    // 
-    static const renderer::StringKey pass = "forward";
+    // Main frame rendering
+    //
+    static const renderer::StringKey gForwardPass = "forward";
 
     TIME_RECURRING_GL("Draw_meshes", renderer::DrawCalls);
 
-    // TODO: set the framebuffer / render target
-
-    // TODO: clear
+    // Setup framebuffer and its viewport
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, graphics::FrameBuffer::Default());
+    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glViewport(0, 0, aFramebufferSize.width(), aFramebufferSize.height());
 
     // Set the pipeline state
     // TODO to be handled by Render Graph passes
@@ -432,33 +527,32 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState, renderer::Stor
             drawInstancedDirect(*object,
                                 baseInstance,
                                 (GLsizei)entities.size(),
-                                pass,
+                                gForwardPass,
                                 aStorage);
         }
     }
     else
     {
         // Multi-draw indirect
-
-        // Could be done only once for the program duration, as long as only one buffer is ever used here.
-        // TODO Ad 2024/04/09: #staticentities We might actually want several, for example one that is constant
-        // between frames and contain the draw commands for static geometry.
-        gl.BindBuffer(GL_DRAW_INDIRECT_BUFFER, mIndirectBuffer);
-        
         renderer::PassCache passCache = 
-            SnacGraph::preparePass(pass, partList, aStorage);
+            SnacGraph::preparePass(
+                {
+                    {"pass", gForwardPass},
+                    {"entities", "on"},
+                    {"shadows", "on"},
+                },
+                partList,
+                aStorage);
 
         // Load the draw indirect buffer with command generated in preparePass()
         renderer::proto::load(mIndirectBuffer,
-                            std::span{passCache.mDrawCommands},
-                            graphics::BufferHint::StreamDraw);
-
-        static const renderer::RepositoryTexture gDummyTextureRepository;
+                              std::span{passCache.mDrawCommands},
+                              graphics::BufferHint::StreamDraw);
 
         DISABLE_PROFILING_GL;
         renderer::draw(passCache,
                        mGraphUbos.mUboRepository,
-                       gDummyTextureRepository);
+                       textureRepository);
         ENABLE_PROFILING_GL;
     }
 }
@@ -589,6 +683,9 @@ void Renderer_V2::renderText(const T_range & aTexts, snac::ProgramSetup & aProgr
         // TODO should be consolidated, a single call for all string of the same
         // font.
         mDynamicStrings.respecifyData(std::span{textBufferData});
+
+        glEnable(GL_BLEND);
+
         auto drawStringEntry = BEGIN_RECURRING_GL("Draw string");
         mTextRenderer.render(mDynamicStrings, *text.mFont, mRendererToDecomission, aProgramSetup);
         END_RECURRING_GL(drawStringEntry);
@@ -601,19 +698,12 @@ void Renderer_V2::render(const GraphicState_t & aState)
 
     TIME_RECURRING_GL("Render", renderer::GpuPrimitiveGen, renderer::DrawCalls);
 
-    // TODO move that up into the specialized classes
-    // Load the viewing projection data
-    renderer::proto::loadSingle(
-        mRendererToKeep.mRenderGraph.mGraphUbos.mViewingProjectionUbo,
-        renderer::GpuViewProjectionBlock{aState.mCamera},
-        graphics::BufferHint::StreamDraw);
+    const math::Size<2, int> framebufferSize = mAppInterface.getFramebufferSize();
 
     if (mControl.mRenderModels)
     {
-        mRendererToKeep.mRenderGraph.renderFrame(aState, mRendererToKeep.mStorage);
+        mRendererToKeep.mRenderGraph.renderFrame(aState, mRendererToKeep.mStorage, framebufferSize);
     }
-
-    const math::Size<2, int> framebufferSize = mAppInterface.getFramebufferSize();
 
     //
     // Text

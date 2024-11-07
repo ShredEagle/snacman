@@ -1,5 +1,7 @@
 #include "DebugDrawing.h"
 
+#include <snac-renderer-V2/debug/DebugDrawing.h>
+
 #include <mutex> // for once_flag
 
 
@@ -25,6 +27,7 @@ namespace {
 void initializeDebugDrawers()
 {
     std::call_once(debugDrawersInitializationOnce, &initializeDebugDrawers_impl);
+    renderer::initializeDebugDrawers();
 }
 
 

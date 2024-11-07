@@ -51,14 +51,10 @@ TheGraph::TheGraph(math::Size<2, int> aRenderSize,
                    const Loader & aLoader) :
     mRenderSize{aRenderSize},
     mTransparencyResolver{aLoader.loadShader("programs/shaders/TransparencyResolve.frag")},
-    mShadowPass{
-        .mShadowMap = makeTexture(aStorage, GL_TEXTURE_2D_ARRAY, "shadow_map"),
-    }
+    mShadowPass{aStorage}
 {
     allocateSizeDependentTextures(mRenderSize);
     setupSizeDependentTextures();
-
-    mShadowPass.prepareShadowMap();
 
     // Assign permanent texture units to glsl samplers used for the 2D transparency compositing.
     {
