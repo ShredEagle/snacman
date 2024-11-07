@@ -329,17 +329,7 @@ vec3 cascadeSelectionDebugColor = vec3(1.);
     //
     // Cascade selection (independant of the light)
     //
-
-    // Interval-based, 
-    // see: https://learn.microsoft.com/en-us/windows/win32/dxtecharts/cascaded-shadow-maps#interval-based-cascade-selection
-    vec4 fragmentDepth_view = vec4(ex_Position_cam.z);
-    // A vector with 1 where the pixel depth exceeds the cascade far plane
-    // Note: we could probably do away with vec3 here
-    // #cascade_hardcode_4
-    vec4 depthComparison = vec4(lessThan(fragmentDepth_view, cascadeFarPlaneDepths_view));
-    const vec4 availableCascadeIndices = vec4(1, 1, 1, 0);
-    uint shadowCascadeIdx = uint(dot(availableCascadeIndices, depthComparison));
-
+    uint shadowCascadeIdx = selectShadowCascade_IntervalBased(ex_Position_cam);
     if(debugTintCascade)
     {
         cascadeSelectionDebugColor = gColorBrewerSet1_linear[shadowCascadeIdx]; 
@@ -353,26 +343,6 @@ vec3 cascadeSelectionDebugColor = vec3(1.);
         DirectionalLight directional = ub_DirectionalLights[directionalIdx];
         vec3 lightDir_cam = -directional.direction.xyz;
     
-        float shadowAttenuation = 1.0;
-
-#if defined(SHADOW_MAPPING)
-        // TODO handle providing the shadow map texture index with the light
-        uint shadowMapBaseIdx = ub_DirectionalLightShadowMapIndices[directionalIdx];
-        if(shadowMapBaseIdx != INVALID_INDEX)
-        {
-#if defined(SHADOW_CASCADE)
-            // CASCADES_PER_SHADOW multiplication is already done in shadowMapBaseIdx
-            uint shadowMapIdx = shadowMapBaseIdx + shadowCascadeIdx;
-#else
-            uint shadowMapIdx = shadowMapBaseIdx;
-#endif //SHADOW_CASCADE
-            //const float bias = 0.002;
-            const float bias = 0.;
-            shadowAttenuation = 
-                getShadowAttenuation(ex_Position_lightTex[shadowMapIdx], shadowMapIdx, bias);
-        }
-#endif // SHADOW_MAPPING
-
 #if defined(MATERIAL_BLEND_PARAMETERS)
         // evaluate the model only once, with interpolated material parameters
         LightContributions lighting =
@@ -393,8 +363,18 @@ vec3 cascadeSelectionDebugColor = vec3(1.);
         lighting.specular += mix(lightingDielec.specular, lightingMetal.specular, metallic);
 #endif
 
-        diffuseAccum += lighting.diffuse * shadowAttenuation;
-        specularAccum += lighting.specular * shadowAttenuation;
+#if defined(SHADOW_MAPPING)
+        applyShadowToLighting(
+            lighting,
+            directionalIdx
+#if defined(SHADOW_CASCADE)
+            , shadowCascadeIdx
+#endif //SHADOW_CASCADE
+        );
+#endif // SHADOW_MAPPING
+
+        diffuseAccum += lighting.diffuse;
+        specularAccum += lighting.specular;
     }
 
     // Point lights

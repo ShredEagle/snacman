@@ -138,6 +138,18 @@ void main()
     vec3 diffuseAccum = vec3(0.);
     vec3 specularAccum = vec3(0.);
 
+//vec3 cascadeSelectionDebugColor = vec3(1.); 
+#if defined(SHADOW_CASCADE)
+    //
+    // Cascade selection (independant of the light)
+    //
+    uint shadowCascadeIdx = selectShadowCascade_IntervalBased(ex_Position_cam);
+    //if(debugTintCascade)
+    //{
+    //    cascadeSelectionDebugColor = gColorBrewerSet1_linear[shadowCascadeIdx]; 
+    //}
+#endif //SHADOW_CASCADE
+
     // Directional lights
     for(uint directionalIdx = 0; directionalIdx != ub_DirectionalCount.x; ++directionalIdx)
     {
@@ -149,22 +161,13 @@ void main()
                        directional.colors, material.specularExponent);
 
 #if defined(SHADOW_MAPPING)
-        // Scale the light contribution by the shadow attenuation factor
-        // TODO handle providing the shadow map texture index with the light
-        uint shadowMapBaseIdx = ub_DirectionalLightShadowMapIndices[directionalIdx];
-        if(shadowMapBaseIdx != INVALID_INDEX)
-        {
+        applyShadowToLighting(
+            lighting,
+            directionalIdx
 #if defined(SHADOW_CASCADE)
-            // CASCADES_PER_SHADOW multiplication is already done in shadowMapBaseIdx
-            uint shadowMapIdx = shadowMapBaseIdx + shadowCascadeIdx;
-#else // SHADOW_CASCADE
-            uint shadowMapIdx = shadowMapBaseIdx;
+            , shadowCascadeIdx
 #endif //SHADOW_CASCADE
-            const float bias = 0.; // we rely on slope-scale bias, see glPolygonOffset
-            float shadowAttenuation = 
-                getShadowAttenuation(ex_Position_lightTex[shadowMapIdx], shadowMapIdx, bias);
-            scale(lighting, shadowAttenuation);
-        }
+        );
 #endif // SHADOW_MAPPING
 
         diffuseAccum += lighting.diffuse;

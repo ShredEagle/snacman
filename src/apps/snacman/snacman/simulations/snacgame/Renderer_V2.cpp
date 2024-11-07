@@ -233,12 +233,16 @@ struct EntitiesRecord
 
 void SnacGraph::passDepth(SnacGraph::PartList aPartList,
                           renderer::RepositoryTexture aTextureRepository,
-                          renderer::Storage & aStorage)
+                          renderer::Storage & aStorage,
+                          renderer::DepthMethod aDepthMethod)
 {
     renderer::PassCache passCache = 
         SnacGraph::preparePass(
             {
-                {"pass", "depth_opaque"},
+                {"pass", (aDepthMethod == renderer::DepthMethod::Cascaded ?  
+                          "cascaded_depth_opaque"
+                          : "depth_opaque")
+                },
                 {"entities", "on"},
             },
             aPartList,
@@ -466,7 +470,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
         },
         [this, &partList, &textureRepository, &aStorage](renderer::DepthMethod aMethod)
         {
-            passDepth(partList, textureRepository, aStorage);
+            passDepth(partList, textureRepository, aStorage, aMethod);
         });
 
     textureRepository[renderer::semantic::gShadowMap] = mShadowMapping.mShadowMap;
@@ -539,7 +543,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
                 {
                     {"pass", gForwardPass},
                     {"entities", "on"},
-                    {"shadows", "on"},
+                    {(mShadowMapping.mControls.mUseCascades ? "csm" : "shadows"), "on"},
                 },
                 partList,
                 aStorage);

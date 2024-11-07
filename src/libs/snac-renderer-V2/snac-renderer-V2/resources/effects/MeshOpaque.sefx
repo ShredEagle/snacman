@@ -26,6 +26,15 @@
         },
         {
             "annotations": {
+                "pass": "forward",
+                "entities": "on",
+                "csm": "on"
+            },
+            "defines": ["ENTITIES", "SHADOW_MAPPING", "SHADOW_CASCADE"],
+            "programfile": "programs/ForwardBlinnPhongLighting.prog"
+        },
+        {
+            "annotations": {
                 "pass": "forward_pbr"
             },
             "programfile": "programs/ForwardPbr.prog"
@@ -80,6 +89,14 @@
             "annotations": {
                 "pass": "cascaded_depth_opaque"
             },
+            "programfile": "programs/CascadedDepthMapping.prog"
+        },
+        {
+            "annotations": {
+                "pass": "cascaded_depth_opaque",
+                "entities": "on"
+            },
+            "defines": ["ENTITIES"],
             "programfile": "programs/CascadedDepthMapping.prog"
         }
     ]

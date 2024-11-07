@@ -160,7 +160,8 @@ struct SnacGraph
 
     void passDepth(SnacGraph::PartList aPartList,
                    renderer::RepositoryTexture aTextureRepository,
-                   renderer::Storage & aStorage);
+                   renderer::Storage & aStorage,
+                   renderer::DepthMethod aDepthMethod);
 
     static constexpr bool gMultiIndirectDraw = true;
 
@@ -212,9 +213,11 @@ struct Impl_V2
             .mDebugRenderer = renderer::DebugRenderer{mStorage, aLoader},
         }
     {
-        mRenderGraph.mShadowMapping.mControls.mUseCascades = false;
-        mRenderGraph.mShadowMapping.mControls.mSlopeScale = 4.f;
-        mRenderGraph.mShadowMapping.mControls.mUnitScale = 200.f;
+        // TODO use cascades
+        mRenderGraph.mShadowMapping.mControls.mUseCascades = true;
+        mRenderGraph.mShadowMapping.mControls.mCsmNearPlaneLimit = -5.f;
+        mRenderGraph.mShadowMapping.mControls.mSlopeScale = 3.f;
+        mRenderGraph.mShadowMapping.mControls.mUnitScale = 100.f;
         // Because at the moment we can only debug draw from main (game) thread
         mRenderGraph.mShadowMapping.mControls.turnOffDebugDrawing();
     }

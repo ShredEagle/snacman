@@ -1,3 +1,7 @@
+#if !defined(LIGHTS_GLSL_INCLUDE_GUARD)
+#define LIGHTS_GLSL_INCLUDE_GUARD
+
+
 #include "Constants.glsl"
 
 struct LightColors
@@ -90,3 +94,5 @@ float attenuatePoint(PointLight aLight, float aRadius)
             2);
 }
 
+
+#endif //LIGHTS_GLSL_INCLUDE_GUARD
