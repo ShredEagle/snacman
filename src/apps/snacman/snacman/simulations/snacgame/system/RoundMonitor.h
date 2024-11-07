@@ -20,7 +20,7 @@ public:
     RoundMonitor(GameContext & aGameContext);
 
     bool isRoundOver();
-    void updateRoundScore();
+    char updateRoundScore();
 private:
     GameContext * mGameContext;
     ent::Query<component::PlayerRoundData> mPlayers;

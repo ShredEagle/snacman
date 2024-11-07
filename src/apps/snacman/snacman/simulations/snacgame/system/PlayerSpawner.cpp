@@ -118,37 +118,6 @@ void PlayerSpawner::spawnPlayersDuringRound(EntHandle aLevel)
             snac::removeComponent<component::Controller>(spawnHandle);
         }
     }
-
-    //TODO(franz): remove from playerSpawner 
-    std::vector<std::pair<EntHandle, component::PlayerRoundData *>> leaders;
-    int leaderScore = 1;
-    mPlayers.each(
-        [&leaders, &leaderScore](EntHandle aHandle,
-                                 component::PlayerRoundData & aRoundData) {
-            component::PlayerGameData & gameData =
-                snac::getComponent<component::PlayerGameData>(aRoundData.mSlot);
-            if (!aRoundData.mCrown.isValid())
-            {
-                if (gameData.mRoundsWon > leaderScore)
-                {
-                    leaders.clear();
-                    leaders.push_back({aHandle, &aRoundData});
-                    leaderScore = gameData.mRoundsWon;
-                }
-                else if (gameData.mRoundsWon == leaderScore)
-                {
-                    leaders.push_back({aHandle, &aRoundData});
-                }
-            }
-        });
-
-    for (auto & [leaderEnt, leaderData] : leaders)
-    {
-        EntHandle crown = createCrown(*mGameContext);
-        leaderData->mCrown = crown;
-        insertEntityInScene(crown, leaderEnt);
-        updateGlobalPosition(snac::getComponent<component::SceneNode>(crown));
-    }
 }
 
 } // namespace system

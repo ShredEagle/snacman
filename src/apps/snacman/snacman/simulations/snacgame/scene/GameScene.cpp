@@ -11,9 +11,10 @@
 #include "snacman/simulations/snacgame/scene/DisconnectedControllerScene.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "snacman/simulations/snacgame/scene/PauseScene.h"
+#include "snacman/simulations/snacgame/system/FallingPlayers.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/Timing.h"
-#include "snacman/simulations/snacgame/system/SpawningPhaseSystem.h"
+#include "snacman/simulations/snacgame/system/TextZoom.h"
 
 #include "../component/AllowedMovement.h"
 #include "../component/Collision.h"
@@ -82,7 +83,8 @@ namespace ad {
 namespace snacgame {
 namespace scene {
 
-const char * const gMarkovRoot{"markov/"};
+constexpr const char * gMarkovRoot = {"markov/"};
+constexpr int gTextSize = snac::gDefaultPixelHeight * 3;
 
 GameScene::GameScene(GameContext & aGameContext,
                      ent::Wrap<component::MappingContext> & aContext) :
@@ -99,10 +101,11 @@ GameScene::GameScene(GameContext & aGameContext,
     mSlots{mGameContext.mWorld},
     mHuds{mGameContext.mWorld},
     mPlayers{mGameContext.mWorld},
-    mFallingPlayers{mGameContext.mWorld},
     mPathfinders{mGameContext.mWorld}
 {
+    TIME_SINGLE(Main, "Constructor game scene");
     // Preload models to avoid loading time when they first appear in the game
+    mGameContext.mResources.getFont("fonts/fill_boiga.ttf", gTextSize);
     mGameContext.mResources.getModel("models/collar/collar.gltf",
                                      "effects/MeshTextures.sefx");
     mGameContext.mResources.getModel("models/teleport/teleport.gltf",
@@ -152,7 +155,8 @@ GameScene::GameScene(GameContext & aGameContext,
             .add(system::PowerUpUsage{mGameContext})
             .add(system::Pathfinding{mGameContext})
             .add(system::Debug_BoundingBoxes{mGameContext})
-            .add(system::SpawningPhase{mGameContext});
+            .add(system::FallingPlayersSystem{mGameContext})
+            .add(system::TextZoomSystem{mGameContext});
     }
 
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
@@ -212,64 +216,95 @@ void GameScene::onExit(Transition aTransition)
             aHandle.get(debugDestroy)->erase();
         });
     }
+    {
+        Phase destroyText;
+        if (mReadyText.isValid())
+        {
+            mReadyText.get(destroyText)->erase();
+        }
+        if (mGoText.isValid())
+        {
+            mGoText.get(destroyText)->erase();
+        }
+        if (mVictoryText.isValid())
+        {
+            mVictoryText.get(destroyText)->erase();
+        }
+    }
 }
 
-EntHandle GameScene::createSpawningPhaseText(const std::string & aText, const snac::Time & aTime)
+math::hdr::Rgba_f getColorMixFromBitMask(char playerBitMask)
+{
+    std::array<math::hdr::Rgba_f, 4> resultColorList;
+    char resultColorCount = 0;
+
+    // Extract position from bitmask and fill the list
+    // with the corresponding slot colors
+    while(playerBitMask)
+    {
+        char position = 0;
+        char tempMask = playerBitMask;
+        while((tempMask & 1) == 0 && tempMask > 0)
+        {
+            position++;
+            tempMask = tempMask >> (char)1;
+        }
+
+        playerBitMask ^= (char)1 << position;
+        resultColorList.at(resultColorCount++) = gSlotColors.at(position);
+    }
+
+    // Average those colors and return
+    math::hdr::Rgba_f resultColor = math::hdr::gBlack<float>;
+    for (int i = 0; i < resultColorCount; i++)
+    {
+        resultColor += resultColorList.at(i) / (float)resultColorCount;
+    }
+    return resultColor;
+}
+
+char GameScene::findWinner()
+{
+    ent::Phase findWinner;
+    char leaderBitMask = mSystems.get(findWinner)->get<system::RoundMonitor>().updateRoundScore();
+    return leaderBitMask;
+}
+
+EntHandle GameScene::createSpawningPhaseText(const std::string & aText,
+                                             const math::hdr::Rgba_f & aColor,
+                                             const snac::Time & aTime)
 {
     Phase phase;
-    int textSize = snac::gDefaultPixelHeight * 3;
     std::shared_ptr<snac::Font> boigaFont =
-        mGameContext.mResources.getFont("fonts/fill_boiga.ttf", textSize);
+        mGameContext.mResources.getFont("fonts/fill_boiga.ttf", gTextSize);
 
-    math::Vec<2, float> size =
-        boigaFont->mFontData.computeTextSize(aText);
-    const math::Size<2, int> & windowSize =
-        mGameContext.mAppInterface.getFramebufferSize();
+    math::Position<2, float> position = {0.f, 0.f};
+    EntHandle textHandle =
+        makeText(mGameContext, phase, aText, boigaFont, aColor, position);
 
-    math::hdr::Rgba_f color = {1.f, 1.f, 1.f, 1.f};
-    math::Position<2, float> position = {0.f - (size.x() / (float)windowSize.width()),
-                             0.f - (size.y() / (float)windowSize.height())};
-    EntHandle textHandle = makeText(mGameContext, phase, aText, boigaFont,
-                            color,
-                            position);
+    auto parameterAnimation =
+        math::ParameterAnimation<float, math::AnimationResult::FullRange,
+                                 math::None, math::ease::MassSpringDamper>(
+            math::ease::MassSpringDamper<float>(0.09f, 10.f, 0.97f, 10.0f), 1.f,
+            1.f);
 
-     auto parameterAnimation = math::ParameterAnimation<
-            float,
-            math::AnimationResult::FullRange,
-            math::None, math::ease::MassSpringDamper
-        >
-        (
-            math::ease::MassSpringDamper<float>(
-                0.2f,
-                1.f,
-                1.4f,
-                8.0f
-            ),
-            1.f,
-            0.3f
-        );
-
-    textHandle.get(phase)->add(component::TextZoom{
-                aTime.mTimepoint,
-                parameterAnimation
-            });
+    textHandle.get(phase)->add(
+        component::TextZoom{snac::Clock::now(), parameterAnimation});
 
     return textHandle;
-
 }
 
 void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
 
-    Phase update;
-
     bool quit = false;
 
     std::vector<ControllerCommand> controllers =
         mSystems.get()->get<system::InputProcessor>().mapControllersInput(
             aInput, "player", "unbound");
-    std::vector<int> disconnectedControllerList;
+    std::array<int, 4> disconnectedControllerList;
+    int disconnectedCount = 0;
 
     for (auto controller : controllers)
     {
@@ -279,7 +314,8 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 
             if (!controller.mConnected)
             {
-                disconnectedControllerList.push_back(controller.mId);
+                disconnectedControllerList.at(disconnectedCount++) =
+                    controller.mId;
             }
         }
         else
@@ -292,6 +328,11 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         }
     }
 
+    if (mSceneData->mPhase == GamePhase::NullPhase)
+    {
+        mSceneData->changePhase(GamePhase::SpawningSequence, aTime);
+    }
+
     if (quit)
     {
         mGameContext.mSceneStack->pushScene(
@@ -300,7 +341,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         return;
     }
 
-    if (disconnectedControllerList.size())
+    if (disconnectedCount > 0)
     {
         mGameContext.mSceneStack->pushScene(
             std::make_shared<DisconnectedControllerScene>(mGameContext,
@@ -312,155 +353,191 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
     }
 
     if (mLevel.isValid()
-        && mSystems.get(update)->get<system::RoundMonitor>().isRoundOver())
+        && mSystems.get()->get<system::RoundMonitor>().isRoundOver()
+        && mSceneData->mPhase != GamePhase::VictorySequence)
     {
-        mSceneData->mPhase = GamePhase::VictorySequence;
+        mSceneData->changePhase(GamePhase::VictorySequence, aTime);
     }
+
+    // This is probably useful for everyone
+    snac::Clock::duration elapsed =
+        aTime.mTimepoint - mSceneData->mStartOfPhase;
 
     switch (mSceneData->mPhase)
     {
+    case GamePhase::NullPhase:
+        assert(false && "NullPhase should not happen");
+        break;
     case GamePhase::SpawningSequence:
     {
+        // Creating level from markov data
         if (!mLevel.isValid())
         {
-            mLevel =
-                mSystems.get()->get<system::LevelManager>().createLevel(
-                    *mLevelData);
+            mLevel = mSystems.get()->get<system::LevelManager>().createLevel(
+                *mLevelData);
             insertEntityInScene(mLevel, mGameContext.mSceneRoot);
             mSystems.get()
                 ->get<system::PlayerSpawner>()
                 .spawnPlayersBeforeRound(mLevel);
-        }
+            std::array<std::pair<EntHandle, component::PlayerRoundData *>, 4> leaders;
+            int leaderCount = 0;
+            int leaderScore = 0;
+            mPlayers.each(
+                [&leaders, &leaderCount, &leaderScore](EntHandle aHandle,
+                                         component::PlayerRoundData & aRoundData, const component::Controller & aController) {
+                    component::PlayerGameData & gameData =
+                        snac::getComponent<component::PlayerGameData>(aRoundData.mSlot);
+                    if (!aRoundData.mCrown.isValid())
+                    {
+                        if (gameData.mRoundsWon > leaderScore)
+                        {
+                            leaderCount = 0;
+                            leaders.at(leaderCount++) = {aHandle, &aRoundData};
+                            leaderScore = gameData.mRoundsWon;
+                        }
+                        else if (gameData.mRoundsWon == leaderScore)
+                        {
+                            leaders.at(leaderCount++) = {aHandle, &aRoundData};
+                        }
+                    }
+                });
 
-        // Move tiles into place
-        // Make player fall
-        std::array<EntHandle, 4> playersToStop;
-        std::size_t playerSize = 0;
-        // HACK(franz): just testing stuff
-        mFallingPlayers.each([&playerSize, &playersToStop](
-                          EntHandle aHandle, component::Geometry & aGeometry,
-                          const component::Gravity & aGravity) {
-            if (aGeometry.mPosition.z() <= aGravity.mFloorHeight)
+            for (int i = 0; i < leaderCount; i++)
             {
-                playersToStop.at(playerSize++) = aHandle;
-                aGeometry.mPosition.z() = aGravity.mFloorHeight;
+                auto & [leaderEnt, leaderData] = leaders.at(i);
+                EntHandle crown = createCrown(mGameContext);
+                leaderData->mCrown = crown;
+                insertEntityInScene(crown, leaderEnt);
+                system::updateGlobalPosition(snac::getComponent<component::SceneNode>(crown));
             }
-        });
-
+        }
+        if (elapsed > snac::ms{1000} && !mReadyText.isValid()
+            && !mGoText.isValid())
         {
-            Phase removeSpeed;
-            for (int i = 0; i < playerSize; i++)
+            mReadyText = createSpawningPhaseText("Ready?",
+                                                 math::hdr::gWhite<float>, aTime);
+        }
+
+        if (mReadyText.isValid())
+        {
+            auto zoomComp = snac::getComponent<component::TextZoom>(mReadyText);
+            auto zoomAnim = zoomComp.mParameter;
+            float duration = (float) snac::asSeconds(snac::Clock::now()
+                                                     - zoomComp.mStartTime);
+            if (zoomAnim.isCompleted(duration))
             {
-                playersToStop.at(i)
-                    .get(removeSpeed)
-                    ->remove<component::Speed>();
+                Phase destroy;
+                mReadyText.get(destroy)->erase();
+                mGoText = createSpawningPhaseText("Go!", math::hdr::gWhite<float>, aTime);
             }
         }
 
-        snac::Clock::duration elapsed =
-            snac::Clock::now() - mSceneData->mStartOfScene;
-
-        if (elapsed > snac::ms{1000} && !mReadyGoText.isValid())
+        if (mGoText.isValid())
         {
-            mReadyGoText = createSpawningPhaseText("Ready?", aTime);
+            auto zoomComp = snac::getComponent<component::TextZoom>(mGoText);
+            auto zoomAnim = zoomComp.mParameter;
+            float duration = (float) snac::asSeconds(snac::Clock::now()
+                                                     - zoomComp.mStartTime);
+            if (zoomAnim.isCompleted(duration))
+            {
+                Phase destroy;
+                mGoText.get(destroy)->erase();
+                mSceneData->changePhase(GamePhase::Playing, aTime);
+                break;
+            }
         }
 
-        // if (mReadyGoText.isValid())
-        // {
-        //     math::Vec<2, float> size =
-        //         boigaFont->mFontData.computeTextSize("Ready?");
-        //     const math::Size<2, int> & windowSize =
-        //         mGameContext.mAppInterface.getFramebufferSize();
-        //     math::hdr::Rgba_f color = {1.f, 1.f, 1.f, 1.f};
-        //     math::Position<2, float> position = {0.f - (size.x() / (float)windowSize.width()),
-        //                              0.f - (size.y() / (float)windowSize.height())};
-        // }
-
-        mSystems.get(update)->get<system::MovementIntegration>().update(
+        mSystems.get()->get<system::MovementIntegration>().update(
             (float) aTime.mDeltaSeconds);
-        mSystems.get(update)->get<system::SceneGraphResolver>().update();
-        mSystems.get(update)->get<system::SpawningPhase>().update(aTime);
-
-        if (mPlayers.countMatches() == 0)
-        {
-            Phase goToPlaying;
-            mSceneData->mPhase = GamePhase::Playing;
-            mReadyGoText.get(goToPlaying)->erase();
-        }
+        mSystems.get()->get<system::SceneGraphResolver>().update();
+        mSystems.get()->get<system::FallingPlayersSystem>().update();
+        mSystems.get()->get<system::TextZoomSystem>().update(aTime);
         break;
     }
     case GamePhase::VictorySequence:
     {
-        component::LevelSetupData & data = *mLevelData;
-        data.mSeed += 1;
-
-        mSystems.get(update)->get<system::RoundMonitor>().updateRoundScore();
-
-        // Transfer controller to slot before deleting player models
+        if (elapsed
+            < snac::ms{3000} / mGameContext.mSimulationControl.mSpeedRatio)
         {
-            Phase transferController;
-            mSlots.each([&](EntHandle aSlotHandle,
-                            component::PlayerSlot & aSlot) {
-                component::Controller & controller =
-                    snac::getComponent<component::Controller>(aSlot.mPlayer);
-                aSlotHandle.get(transferController)->add(controller);
-            });
+            mGameContext.mSimulationControl.mSpeedRatio = 5;
+            if (!mVictoryText.isValid())
+            {
+                char leaderBitMask = findWinner();
+                auto color = getColorMixFromBitMask(leaderBitMask);
+                mVictoryText = createSpawningPhaseText("Victory!", color, aTime);
+            }
+            auto level = snac::getComponent<component::Level>(mLevel);
+            mSystems.get()->get<system::AllowMovement>().update(level);
+            mSystems.get()->get<system::IntegratePlayerMovement>().update(
+                (float) aTime.mDeltaSeconds);
+            mSystems.get()->get<system::MovementIntegration>().update(
+                (float) aTime.mDeltaSeconds);
+            mSystems.get()->get<system::AnimationManager>().update();
+            mSystems.get()->get<system::AdvanceAnimations>().update(aTime);
+            mSystems.get()->get<system::Pathfinding>().update(level);
+            mSystems.get()->get<system::PortalManagement>().preGraphUpdate();
+            mSystems.get()->get<system::Explosion>().update(aTime);
+            mSystems.get()->get<system::SceneGraphResolver>().update();
+            mSystems.get()->get<system::PortalManagement>().postGraphUpdate(
+                level);
+            mSystems.get()->get<system::TextZoomSystem>().update(aTime);
         }
-
+        else
         {
+            component::LevelSetupData & data = *mLevelData;
+            data.mSeed += 1;
+
+            mSystems.get()->get<system::RoundMonitor>().updateRoundScore();
+
+            // Transfer controller to slot before deleting player models
+            {
+                Phase transferController;
+                mSlots.each(
+                    [&](EntHandle aSlotHandle, component::PlayerSlot & aSlot) {
+                        component::Controller & controller =
+                            snac::getComponent<component::Controller>(
+                                aSlot.mPlayer);
+                        aSlotHandle.get(transferController)->add(controller);
+                    });
+            }
+
             Phase cleanup;
-            // This removes everything from the level players models included
+            // This removes everything from the level players models
+            // included
             eraseEntityRecursive(mLevel, cleanup);
+            mVictoryText.get(cleanup)->erase();
+            mSceneData->changePhase(GamePhase::SpawningSequence, aTime);
+            mGameContext.mSimulationControl.mSpeedRatio = 1;
+            
         }
-        mSceneData->mPhase = GamePhase::SpawningSequence;
         break;
     }
     case GamePhase::Playing:
     {
-        // This should be divided in four phases right now
-        // The cleanup phase
-
-        // The creation of the level
-        // Spawning the players
-        //  if there is an unspawned player and is there room in the map
-        //  spawn the player
-        //  else
-        //  put the player in a queue for the next round
-        //  Add all spawned player to the scene graph
-        // The game phase
         auto level = snac::getComponent<component::Level>(mLevel);
 
-        // TODO: (franz) maybe at some point it would be better to
-        // spawn player between rounds
-        // This however needs to be thought through (like if someone starts
-        // a game alone, should we spawn someone during the round in that case)
-        mSystems.get(update)
-            ->get<system::PlayerSpawner>()
-            .spawnPlayersDuringRound(mLevel);
-
-        mSystems.get(update)->get<system::PlayerInvulFrame>().update(
+        mSystems.get()->get<system::PlayerInvulFrame>().update(
             (float) aTime.mDeltaSeconds);
-        mSystems.get(update)->get<system::AllowMovement>().update(level);
-        mSystems.get(update)->get<system::ConsolidateGridMovement>().update(
+        mSystems.get()->get<system::AllowMovement>().update(level);
+        mSystems.get()->get<system::ConsolidateGridMovement>().update(
             (float) aTime.mDeltaSeconds);
-        mSystems.get(update)->get<system::IntegratePlayerMovement>().update(
+        mSystems.get()->get<system::IntegratePlayerMovement>().update(
             (float) aTime.mDeltaSeconds);
-        mSystems.get(update)->get<system::MovementIntegration>().update(
+        mSystems.get()->get<system::MovementIntegration>().update(
             (float) aTime.mDeltaSeconds);
-        mSystems.get(update)->get<system::AnimationManager>().update();
-        mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
-        mSystems.get(update)->get<system::Pathfinding>().update(level);
-        mSystems.get(update)->get<system::PortalManagement>().preGraphUpdate();
-        mSystems.get(update)->get<system::Explosion>().update(aTime);
+        mSystems.get()->get<system::AnimationManager>().update();
+        mSystems.get()->get<system::AdvanceAnimations>().update(aTime);
+        mSystems.get()->get<system::Pathfinding>().update(level);
+        mSystems.get()->get<system::PortalManagement>().preGraphUpdate();
+        mSystems.get()->get<system::Explosion>().update(aTime);
 
-        mSystems.get(update)->get<system::SceneGraphResolver>().update();
+        mSystems.get()->get<system::SceneGraphResolver>().update();
 
-        mSystems.get(update)->get<system::PortalManagement>().postGraphUpdate(
-            level);
-        mSystems.get(update)->get<system::PowerUpUsage>().update(aTime, mLevel);
-        mSystems.get(update)->get<system::EatPill>().update();
+        mSystems.get()->get<system::PortalManagement>().postGraphUpdate(level);
+        mSystems.get()->get<system::PowerUpUsage>().update(aTime, mLevel);
+        mSystems.get()->get<system::EatPill>().update();
 
-        mSystems.get(update)->get<system::Debug_BoundingBoxes>().update();
+        mSystems.get()->get<system::Debug_BoundingBoxes>().update();
 
         break;
     }

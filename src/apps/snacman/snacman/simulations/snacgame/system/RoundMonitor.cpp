@@ -32,12 +32,13 @@ bool RoundMonitor::isRoundOver()
     return mPills.countMatches() == 0;
 }
 
-void RoundMonitor::updateRoundScore()
+char RoundMonitor::updateRoundScore()
 {
     std::pair<std::vector<component::PlayerGameData *>, int /*score*/>
         winners;
     winners.second = -1;
-    mPlayers.each([&winners](EntHandle aHandle,
+    char leaderBitMask = 0;
+    mPlayers.each([&winners, &leaderBitMask](EntHandle aHandle,
                              component::PlayerRoundData & aRoundData) {
 
         component::PlayerGameData & gameData = snac::getComponent<component::PlayerGameData>(aRoundData.mSlot);
@@ -47,10 +48,12 @@ void RoundMonitor::updateRoundScore()
             winners.first.clear();
             winners.first.push_back(&gameData);
             winners.second = aRoundData.mRoundScore;
+            leaderBitMask = (char)(1 << aRoundData.mSlot.get()->get<component::PlayerSlot>().mSlotIndex);
         }
         else if (winners.second == aRoundData.mRoundScore)
         {
             winners.first.push_back(&gameData);
+            leaderBitMask |= (char)(1 << aRoundData.mSlot.get()->get<component::PlayerSlot>().mSlotIndex);
         }
     });
 
@@ -59,6 +62,7 @@ void RoundMonitor::updateRoundScore()
         ++(gameData->mRoundsWon);
     }
 
+    return leaderBitMask;
 }
 } // namespace system
 } // namespace snacgame

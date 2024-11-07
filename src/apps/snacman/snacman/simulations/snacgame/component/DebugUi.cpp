@@ -5,11 +5,13 @@
 #include "math/Curves/Bezier.h"
 #include "math/Interpolation/ParameterAnimation.h"
 #include "snacman/Profiling.h"
+#include "snacman/simulations/snacgame/component/Text.h"
 
 #include "../InputConstants.h"
 #include "../LevelHelper.h"
 #include "../typedef.h"
 
+#include <cmath>
 #include <imgui.h>
 #include <implot.h>
 
@@ -302,6 +304,44 @@ void Controller::drawUi() const
     case ControllerType::Dummy:
         ImGui::Text("Dummy");
         break;
+    }
+}
+
+void TextZoom::debugRender(const char * n)
+{
+    if (ImGui::TreeNode(n))
+    {
+        auto & paramAnim = mParameter;
+        ImGui::SliderFloat("mass", &paramAnim.mEaser.mMass, 0.01f,  10.f);
+        ImGui::SliderFloat("dampening", &paramAnim.mEaser.mDampening, 0.f, std::sqrt(4 * paramAnim.mEaser.mSpringStrength * paramAnim.mEaser.mMass));
+        ImGui::SliderFloat("spring strength", &paramAnim.mEaser.mSpringStrength, 0.f, 10.f);
+        ImGui::SliderFloat("initial velocity", &paramAnim.mEaser.mInitialVelocity, 0.f, 10.f);
+        ImGui::Text("Start time %d", (int)snac::asSeconds(mStartTime.time_since_epoch()));
+        if (ImPlot::BeginPlot("Plot", ImVec2(-1, 0),
+                      ImPlotFlags_NoTitle | ImPlotFlags_NoLegend))
+        {
+            ImPlot::SetupAxes(nullptr, nullptr);
+            ImPlot::SetupAxesLimits(-0.1f, 1.1f, -0.1f, 1.5f, ImGuiCond_Always);
+            constexpr int resolution = 1000;
+            std::array<float, resolution> xValues;
+            std::array<float, resolution> yValues;
+            int i = 0;
+            for (float & x : xValues)
+            {
+                x = (float)i / (float)resolution;
+                float y = paramAnim.at(x * paramAnim.getPeriod());
+                yValues.at(i) = y;
+                i++;
+            }
+            ImPlot::PlotLine("Curve", xValues.data(), yValues.data(),
+                         resolution);
+            ImPlot::EndPlot();
+        }
+        if (ImGui::Button("reset timer"))
+        {
+            mStartTime = ad::snac::Clock::now();
+        }
+        ImGui::TreePop();
     }
 }
 } // namespace component

@@ -89,6 +89,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/Debug_BoundingBoxes.h
     simulations/snacgame/system/EatPill.h
     simulations/snacgame/system/Explosion.h
+    simulations/snacgame/system/FallingPlayers.h
     simulations/snacgame/system/InputProcessor.h
     simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/MenuManager.h
@@ -102,8 +103,8 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/RoundMonitor.h
     simulations/snacgame/system/SceneGraphResolver.h
     simulations/snacgame/system/SceneStack.h
-    simulations/snacgame/system/SpawningPhaseSystem.h
     simulations/snacgame/system/SystemOrbitalCamera.h
+    simulations/snacgame/system/TextZoom.h
 
     detail/Logger.h
     detail/Common.h

@@ -14,12 +14,12 @@
 
 #include <imgui.h>
 #include <nlohmann/json.hpp>
-#include <ranges>
 #include <reflexion/Concept.h>
 #include <reflexion/NameValuePair.h>
 #include <snac-reflexion/Reflexion.h>
 #include <utility>
 #include <variant>
+#include <ranges>
 
 namespace ad {
 namespace snacgame {
@@ -44,9 +44,7 @@ class Witness;
 
 template <class T_renderable>
 concept ImguiRenderable =
-    ImguiDefaultRenderable<T_renderable>
-    && !reflex::can_be_described_to<T_renderable, Witness>
-    && !reflex::can_be_described_to_by_fn<T_renderable, Witness>;
+    ImguiDefaultRenderable<T_renderable>;
 
 template <class T_witnessable>
 concept ImguiWitnessable =

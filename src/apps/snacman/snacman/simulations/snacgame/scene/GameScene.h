@@ -44,12 +44,19 @@ enum class GamePhase
     SpawningSequence,
     Playing,
     VictorySequence,
+    NullPhase,
 };
 
 struct GameSceneData
 {
-    GamePhase mPhase = GamePhase::SpawningSequence;
-    snac::Clock::time_point mStartOfScene = snac::Clock::now(); 
+    GamePhase mPhase = GamePhase::NullPhase;
+    snac::Clock::time_point mStartOfPhase; 
+
+    inline void changePhase(const GamePhase & aPhase, const snac::Time & aTime)
+    {
+        mPhase = aPhase;
+        mStartOfPhase = aTime.mTimepoint;
+    }
 };
 
 class GameScene : public Scene
@@ -72,17 +79,19 @@ public:
     static constexpr char sToDisconnectedControllerTransition[] = "DisconnectedController";
 private:
 
-    ent::Handle<ent::Entity> createSpawningPhaseText(const std::string & aText, const snac::Time & aTime);
+    char findWinner();
+    ent::Handle<ent::Entity> createSpawningPhaseText(const std::string & aText, const math::hdr::Rgba_f & aColor, const snac::Time & aTimer);
 
     ent::Query<component::LevelTile> mTiles;
     ent::Query<component::RoundTransient> mRoundTransients;
     ent::Query<component::PlayerSlot> mSlots;
     ent::Query<component::PlayerHud> mHuds;
     ent::Query<component::Geometry, component::PlayerRoundData, component::Controller> mPlayers;
-    ent::Query<component::Gravity, component::Geometry> mFallingPlayers;
     ent::Query<component::PathToOnGrid> mPathfinders;
     ent::Handle<ent::Entity> mLevel;
-    ent::Handle<ent::Entity> mReadyGoText;
+    ent::Handle<ent::Entity> mReadyText;
+    ent::Handle<ent::Entity> mGoText;
+    ent::Handle<ent::Entity> mVictoryText;
 };
 
 } // namespace scene

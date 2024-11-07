@@ -95,39 +95,36 @@ DisconnectedControllerScene::DisconnectedControllerScene(
         .add(system::InputProcessor{mGameContext, mMappingContext});
 }
 
+constexpr std::array<const char *, 2> gControllersTextStart{ 
+    "Controller ",
+    "Controllers "
+};
+
+constexpr std::array<const char *, 2> gControllersTextEnd{ 
+    "is disconnected",
+    "are disconnected"
+};
+
 void DisconnectedControllerScene::onEnter(Transition aTransition)
 {
     char sceneTitle[128];
-    std::vector<int> & disconnectedControllers =
-        std::get<DisconnectedControllerInfo>(aTransition.mSceneInfo)
-            .mDisconnectedControllerId;
+    auto & info = std::get<DisconnectedControllerInfo>(aTransition.mSceneInfo);
+    std::array<int, 4> & disconnectedControllers = info.mDisconnectedControllerId;
+    int disconnectedCount = info.mDisconnectedCount;
 
-    if (disconnectedControllers.size() > 1)
-    {
-        safePrint(sceneTitle, "Controllers ");
-    }
-    else
-    {
-        safePrint(sceneTitle, "Controller ");
-    }
+    safePrint(sceneTitle, gControllersTextStart.at((bool)disconnectedCount));
+
     unsigned int stringCursor = (unsigned int)strlen(sceneTitle);
 
-    for (int controllerId : disconnectedControllers)
+    for (int i = 0; i < disconnectedCount; i++)
     {
-        safePrint(sceneTitle + stringCursor, "%d and ", controllerId);
+        safePrint(sceneTitle + stringCursor, "%d and ", disconnectedControllers.at(i));
         stringCursor = (unsigned int)strlen(sceneTitle);
     }
 
     stringCursor -= (unsigned int)strlen("and ");
 
-    if (disconnectedControllers.size() > 1)
-    {
-        safePrint(sceneTitle + stringCursor, "are disconnected");
-    }
-    else
-    {
-        safePrint(sceneTitle + stringCursor, "is disconnected");
-    }
+    safePrint(sceneTitle + stringCursor, gControllersTextEnd.at((bool)disconnectedCount));
 
     Phase onEnterPhase;
     auto font = mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf");

@@ -5,7 +5,7 @@ namespace ad {
 namespace snacgame {
 namespace component {
 
-constexpr float gDefaultGravity = -9.81f * 2.f;
+constexpr float gDefaultGravity = -9.81f * 3.f;
 
 struct Gravity
 {

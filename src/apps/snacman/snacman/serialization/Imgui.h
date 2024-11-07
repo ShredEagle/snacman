@@ -8,4 +8,6 @@
 template<class T_renderable>
 concept ImguiDefaultRenderable = requires(const char * n, T_renderable v) {
     debugRender(n, v);
+} || requires(const char * n, T_renderable v) {
+    v.debugRender(n);
 };

@@ -1,13 +1,16 @@
 #pragma once
 
+#include "imguiui/ImguiUi.h"
 #include "math/Interpolation/ParameterAnimation.h"
 #include "snacman/Timing.h"
 
+#include <implot.h>
 #include <math/Color.h>
 #include <reflexion/NameValuePair.h>
 #include <snac-renderer-V1/text/Text.h>
 #include <snacman/serialization/Serial.h>
 #include <string>
+#include <variant>
 
 namespace ad {
 namespace snacgame {
@@ -49,9 +52,18 @@ struct TextZoom
     template <class T_witness>
     void describeTo(T_witness && aWitness)
     {
-        aWitness.witness(NVP(mStartTime));
-        aWitness.witness(NVP(mParameter));
+        if (std::holds_alternative<nlohmann::json *>(aWitness.mData))
+        {
+            aWitness.witness(NVP(mStartTime));
+            aWitness.witness(NVP(mParameter));
+        }
+        else if (std::holds_alternative<imguiui::ImguiUi *>(aWitness.mData))
+        {
+            debugRender("TextZoom");
+        }
     }
+
+    void debugRender(const char * n);
 };
 
 REFLEXION_REGISTER(TextZoom)

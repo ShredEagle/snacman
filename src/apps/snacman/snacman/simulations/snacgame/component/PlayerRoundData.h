@@ -78,7 +78,7 @@ struct ControllingMissile
 struct PlayerRoundData
 {
     int mRoundScore = 0;
-    float mInvulFrameCounter = gBaseInvulFrameDuration;
+    float mInvulFrameCounter = 0;
 
     //Movement data
     int mMoveState = gPlayerMoveFlagNone;

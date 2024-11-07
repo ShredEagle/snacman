@@ -60,12 +60,14 @@ struct GameSceneInfo
 
 struct DisconnectedControllerInfo
 {
-    std::vector<int> mDisconnectedControllerId;
+    std::array<int, 4> mDisconnectedControllerId;
+    int mDisconnectedCount;
 
     template<class T_witness>
     void describeTo(T_witness && aWitness)
     {
         aWitness.witness(NVP(mDisconnectedControllerId));
+        aWitness.witness(NVP(mDisconnectedCount));
     }
 };
 
