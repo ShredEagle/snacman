@@ -503,7 +503,7 @@ void handleAnimations(Node & aNode,
 }
 
 
-void showPointLights(const LightsDataUser & aLights)
+void showPointLights(const LightsDataCommon & aLights)
 {
     for(const auto & pointLight : aLights.spanPointLights())
     {

@@ -97,10 +97,13 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mMappingContext{mGameContext.mWorld, "mapping context", mGameContext.mResources},
     mSystemOrbitalCamera{mGameContext.mWorld, "orbital camera", mGameContext.mWorld,
                          math::getRatio<float>(mAppInterface->getWindowSize())},
+    mMainLight{mGameContext.mWorld, "main light"},
+    mLightAnimationSystem{mGameContext.mWorld, "light animation system", mGameContext},
     mQueryRenderable{mGameContext.mWorld, "query renderable", mGameContext.mWorld},
     mQueryTextWorld{mGameContext.mWorld, "query text world", mGameContext.mWorld},
     mQueryTextScreen{mGameContext.mWorld, "query text screen", mGameContext.mWorld},
     mQueryHuds{mGameContext.mWorld, "query huds", mGameContext.mWorld},
+    mQueryLightDirections{mGameContext.mWorld, "query light directions", mGameContext.mWorld},
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
@@ -117,6 +120,15 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                                                  mMappingContext));
     mGameContext.mSceneStack->pushScene(
         std::make_shared<scene::MenuScene>(mGameContext, mMappingContext));
+
+    *mMainLight = component::LightDirection{
+        .mDirection = math::UnitVec<3, GLfloat>{
+            math::Vec<3, GLfloat>{0.f, 0.f, -1.f} 
+            * math::trans3d::rotateX(-math::Degree<float>{60.f})
+            * math::trans3d::rotateY(math::Degree<float>{20.f})
+        },
+        .mColor = math::hdr::gWhite<float> * 0.8f,
+    };
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
@@ -536,6 +548,8 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
     mSimulationTime.advance(aUpdatePeriod
                             / mGameContext.mSimulationControl.mSpeedRatio);
 
+    mLightAnimationSystem->update((float)mSimulationTime.mDeltaSeconds);
+
     ent::Wrap<system::SceneStack> & sceneStack = mGameContext.mSceneStack;
     sceneStack->getActiveScene()->update(mSimulationTime, aInput);
 
@@ -614,6 +628,30 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
             // place to reset this flag
             aVisualModel.mDisableInterpolation = false;
         });
+
+    //
+    // Lights
+    //
+    static constexpr math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.4f, 0.4f, 0.4f};
+
+    state->mLights = renderer::LightsDataUi{
+        renderer::LightsDataCommon{
+            .mAmbientColor = ambientColor,
+        },
+    };
+
+    mQueryLightDirections
+        ->each([&state, this](const component::LightDirection & aLightDirection)
+            {
+                GLuint lightIdx = state->mLights.mDirectionalCount++;
+                state->mLights.mDirectionalLights[lightIdx] =
+                    renderer::DirectionalLight{
+                        .mDirection = aLightDirection.mDirection,
+                        .mDiffuseColor = aLightDirection.mColor,
+                        .mSpecularColor = aLightDirection.mColor,
+                    },
+                state->mLights.mDirectionalLightProjectShadow[lightIdx].mIsProjectingShadow = true;
+            });
 
     //
     // Worldspace Text

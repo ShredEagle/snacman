@@ -54,6 +54,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/Geometry.h
     simulations/snacgame/component/GlobalPose.h
     simulations/snacgame/component/LevelData.h
+    simulations/snacgame/component/LightDirection.h
     simulations/snacgame/component/MenuItem.h
     simulations/snacgame/component/MovementScreenSpace.h
     simulations/snacgame/component/PathToOnGrid.h
@@ -88,6 +89,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/Debug_BoundingBoxes.h
     simulations/snacgame/system/EatPill.h
     simulations/snacgame/system/Explosion.h
+    simulations/snacgame/system/LightRealisticWeatherSystem.h
     simulations/snacgame/system/InputProcessor.h
     simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/MenuManager.h
@@ -154,6 +156,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/system/Debug_BoundingBoxes.cpp
     simulations/snacgame/system/EatPill.cpp
     simulations/snacgame/system/Explosion.cpp
+    simulations/snacgame/system/LightRealisticWeatherSystem.cpp
     simulations/snacgame/system/InputProcessor.cpp
     simulations/snacgame/system/IntegratePlayerMovement.cpp
     simulations/snacgame/system/MenuManager.cpp

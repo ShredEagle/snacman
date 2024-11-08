@@ -417,15 +417,6 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
     //
     // Load lights and shadow maps
     //
-    math::UnitVec<3, GLfloat> lightDirection_world{
-        math::Vec<3, GLfloat>{0.f, 0.f, -1.f} 
-        * math::trans3d::rotateX(-math::Degree<float>{60.f})
-    };
-    math::UnitVec<3, GLfloat> lightDirection_cam{
-        lightDirection_world
-        * aState.mCamera.getParentToCamera().getLinear()};
-    math::hdr::Rgb_f lightColor = to_hdr<float>(math::sdr::gWhite) * 0.8f;
-    math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.4f, 0.4f, 0.4f};
 
     // Shadow mapping
     
@@ -435,24 +426,9 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
 
     // Use an "infinite" scene bounding box atm
     math::Box<GLfloat> oversizeBox{
-        .mPosition = math::Position<3, GLfloat>{-1000.f, -1000.f, -1000.f},
-        .mDimension = math::Size<3, GLfloat>{2000.f, 2000.f, 2000.f}
+        .mPosition = math::Position<3, GLfloat>{-100.f, -1.f, -100.f},
+        .mDimension = math::Size<3, GLfloat>{200.f, 10.f, 200.f}
     };
-
-    renderer::LightsDataUi lightsDataUi_world{
-        renderer::LightsDataUser{
-            .mDirectionalCount = 1,
-            .mAmbientColor = ambientColor,
-            .mDirectionalLights{{
-                renderer::DirectionalLight{
-                    .mDirection = lightDirection_world,
-                    .mDiffuseColor = lightColor,
-                    .mSpecularColor = lightColor,
-                },
-            }}
-        },
-    };
-    lightsDataUi_world.mDirectionalLightProjectShadow[0].mIsProjectingShadow = true;
 
     // For the moment, it is the client responsibility to call that
     // but it might be better to integrate it behind fillShadowMap()
@@ -462,7 +438,7 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
         mShadowMapping,
         oversizeBox, 
         aState.mCamera,
-        lightsDataUi_world,
+        aState.mLights,
         renderer::ShadowMapUbos{
             .mViewingUbo = &mGraphUbos.mViewingProjectionUbo,
             .mLightViewProjectionUbo = &mGraphUbos.mLightViewProjectionUbo,
@@ -477,24 +453,27 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
 
     // Load lights UBO, with lights in camera space
     {
-        renderer::LightsDataUser lightsData_cam{
-            renderer::LightsDataUser{
-                .mDirectionalCount = 1,
-                .mAmbientColor = ambientColor,
-                .mDirectionalLights{{
-                    renderer::DirectionalLight{
-                        .mDirection = lightDirection_cam,
-                        .mDiffuseColor = lightColor,
-                        .mSpecularColor = lightColor,
-                    },
-                }}
-            },
-        };
+        // Transform the lights from world to camera space
+        // (We intended to mutate, but the state is const. This is probably safer.)
+        renderer::LightsDataCommon lightsData = aState.mLights;
+        for(auto & light : lightsData.spanDirectionalLights())
+        {
+            light.mDirection *= aState.mCamera.getParentToCamera().getLinear();
+        }
+        for(auto & light : lightsData.spanPointLights())
+        {
+            light.mPosition = math::homogeneous::homogenize(
+                math::homogeneous::makePosition(light.mPosition)
+                * aState.mCamera.getParentToCamera()
+            ).xyz();
+        }
 
-        renderer::loadLightsUbo(mGraphUbos.mLightsUbo, {lightsData_cam, lightsInternal});
+        renderer::loadLightsUbo(mGraphUbos.mLightsUbo, {lightsData, lightsInternal});
     }
 
+    //
     // Load the viewing projection data
+    //
     renderer::loadCameraUbo(
         mGraphUbos.mViewingProjectionUbo,
         renderer::GpuViewProjectionBlock{aState.mCamera});

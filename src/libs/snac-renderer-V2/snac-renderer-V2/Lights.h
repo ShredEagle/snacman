@@ -92,8 +92,9 @@ void r(T_visitor & aV, PointLight & aLight)
 }
 
 
+// TODO Ad 2024/11/06: Rename, this is too close to LightsDataUi
 /// @brief Data that is user controlled, and part of the LightsBlock UBO
-struct LightsDataUser
+struct LightsDataCommon
 {
     // see: https://registry.khronos.org/OpenGL/specs/gl/glspec45.core.pdf#page=159
     // "If the member is a scalar consuming N basic machine units, the base alignment is N.""
@@ -154,7 +155,7 @@ struct LightsDataInternal
 
 
 /// @brief Concatenate all structures to be pushed as LightsBlock UBO.
-struct LightsData_glsl : public LightsDataUser, LightsDataInternal
+struct LightsData_glsl : public LightsDataCommon, LightsDataInternal
 {};
 
 
@@ -183,7 +184,7 @@ struct LightsDataToggleShadow
 
 
 /// @brief Concatenate all structures that are user facing.
-struct LightsDataUi : public LightsDataUser, LightsDataToggleShadow
+struct LightsDataUi : public LightsDataCommon, LightsDataToggleShadow
 {
     std::span<ProjectShadowToggle> spanDirectionalLightProjectShadow()
     { return std::span{mDirectionalLightProjectShadow.data(), mDirectionalCount}; }

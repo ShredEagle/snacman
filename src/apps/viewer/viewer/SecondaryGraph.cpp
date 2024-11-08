@@ -89,7 +89,7 @@ void SecondaryGraph::setupSizeDependentTextures()
 void SecondaryGraph::renderFrame(const Scene & aScene, 
                                  const ViewerPartList & aPartList,
                                  const Camera & aCamera,
-                                 const LightsDataUser & aLights_camera,
+                                 const LightsDataCommon & aLights_camera,
                                  const GraphShared & aGraphShared,
                                  Storage & aStorage,
                                  bool aShowTextures,
