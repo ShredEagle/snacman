@@ -55,6 +55,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/GlobalPose.h
     simulations/snacgame/component/LevelData.h
     simulations/snacgame/component/LightDirection.h
+    simulations/snacgame/component/LightPoint.h
     simulations/snacgame/component/MenuItem.h
     simulations/snacgame/component/MovementScreenSpace.h
     simulations/snacgame/component/PathToOnGrid.h

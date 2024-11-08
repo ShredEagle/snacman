@@ -104,6 +104,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mQueryTextScreen{mGameContext.mWorld, "query text screen", mGameContext.mWorld},
     mQueryHuds{mGameContext.mWorld, "query huds", mGameContext.mWorld},
     mQueryLightDirections{mGameContext.mWorld, "query light directions", mGameContext.mWorld},
+    mQueryLightPoints{mGameContext.mWorld, "query light points", mGameContext.mWorld},
     mImguiUi{aImguiUi}
 {
     ent::Phase init;
@@ -649,8 +650,23 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
                         .mDirection = aLightDirection.mDirection,
                         .mDiffuseColor = aLightDirection.mColor,
                         .mSpecularColor = aLightDirection.mColor,
-                    },
+                    };
+                // TODO HANDLE THAT
                 state->mLights.mDirectionalLightProjectShadow[lightIdx].mIsProjectingShadow = true;
+            });
+
+    mQueryLightPoints
+        ->each([&state, this](const component::GlobalPose & aGlobalPose,
+                              const component::LightPoint & aLightPoint)
+            {
+                GLuint lightIdx = state->mLights.mPointCount++;
+                state->mLights.mPointLights[lightIdx] =
+                    renderer::PointLight{
+                        .mPosition = aGlobalPose.mPosition,
+                        .mRadius = aLightPoint.mRadius,
+                        .mDiffuseColor = aLightPoint.mColors.mDiffuse,
+                        .mSpecularColor = aLightPoint.mColors.mSpecular,
+                    };
             });
 
     //

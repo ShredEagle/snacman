@@ -7,6 +7,7 @@
 #include "component/PlayerSlot.h"
 #include "component/PlayerGameData.h"
 #include "component/LightDirection.h"
+#include "component/LightPoint.h"
 
 #include "system/LightRealisticWeatherSystem.h"
 
@@ -130,6 +131,7 @@ private:
     ent::Wrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
     ent::Wrap<ent::Query<component::PlayerHud>> mQueryHuds;
     ent::Wrap<ent::Query<component::LightDirection>> mQueryLightDirections;
+    ent::Wrap<ent::Query<component::GlobalPose, component::LightPoint>> mQueryLightPoints;
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;
