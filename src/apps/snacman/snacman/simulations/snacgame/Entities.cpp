@@ -193,7 +193,18 @@ createPowerUp(GameContext & aContext,
             .mSwapPeriod = aSwapPeriod,
         })
         .add(component::Collision{component::gPowerUpHitbox})
-        .add(component::RoundTransient{});
+        .add(component::RoundTransient{})
+        .add(component::LightPoint{
+            .mRadius = {
+                .mMin = 1.5f,
+                .mMax = 3.f,
+            },
+            .mColors = {
+                .mDiffuse  = math::hdr::Rgb_f{184/255.f, 134/255.f, 11/255.f},
+                .mSpecular = math::hdr::Rgb_f{184/255.f, 134/255.f, 11/255.f},
+            },
+        })
+        ;
     return handle;
 }
 
