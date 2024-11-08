@@ -34,7 +34,7 @@ struct LightPoint
     template<class T_witness>
     void describeTo(T_witness && aWitness)
     {
-        aWitness.witness(NVP(mPosition));
+        aWitness.witness(NVP(mRadius));
         aWitness.witness(NVP(mColors));
     }
 };

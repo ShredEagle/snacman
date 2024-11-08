@@ -122,13 +122,18 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mGameContext.mSceneStack->pushScene(
         std::make_shared<scene::MenuScene>(mGameContext, mMappingContext));
 
+    // Initial setup of the directional main light
     *mMainLight = component::LightDirection{
         .mDirection = math::UnitVec<3, GLfloat>{
             math::Vec<3, GLfloat>{0.f, 0.f, -1.f} 
             * math::trans3d::rotateX(-math::Degree<float>{60.f})
             * math::trans3d::rotateY(math::Degree<float>{20.f})
         },
-        .mColor = math::hdr::gWhite<float> * 0.8f,
+        .mColors{
+            .mDiffuse = math::hdr::gWhite<float> * 0.8f,
+            .mSpecular = math::hdr::gWhite<float> * 0.8f,
+        },
+        .mProjectShadow = true,
     };
 }
 
@@ -648,11 +653,11 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
                 state->mLights.mDirectionalLights[lightIdx] =
                     renderer::DirectionalLight{
                         .mDirection = aLightDirection.mDirection,
-                        .mDiffuseColor = aLightDirection.mColor,
-                        .mSpecularColor = aLightDirection.mColor,
+                        .mDiffuseColor = aLightDirection.mColors.mDiffuse,
+                        .mSpecularColor = aLightDirection.mColors.mSpecular,
                     };
-                // TODO HANDLE THAT
-                state->mLights.mDirectionalLightProjectShadow[lightIdx].mIsProjectingShadow = true;
+                state->mLights.mDirectionalLightProjectShadow[lightIdx].mIsProjectingShadow = 
+                    aLightDirection.mProjectShadow;
             });
 
     mQueryLightPoints

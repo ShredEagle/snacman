@@ -60,6 +60,13 @@ struct Radius
     // max is used as r_max, i.e. where both light intensity & derivative should reach zero.
     GLfloat mMin;
     GLfloat mMax;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mMin));
+        aWitness.witness(NVP(mMax));
+    }
 };
 
 
