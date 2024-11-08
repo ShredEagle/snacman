@@ -20,7 +20,7 @@ void LightRealisticWeatherSystem::update(float aDelta)
         [aDelta]
         (component::LightDirection & aDirectional) 
         {
-            aDirectional.mDirection *= math::trans3d::rotateZ(math::Degree{5.f * aDelta});
+            aDirectional.mDirection *= math::trans3d::rotateZ(math::Degree<float>{5.f * aDelta});
         }
     );
 }

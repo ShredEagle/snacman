@@ -647,7 +647,7 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
     };
 
     mQueryLightDirections
-        ->each([&state, this](const component::LightDirection & aLightDirection)
+        ->each([&state](const component::LightDirection & aLightDirection)
             {
                 GLuint lightIdx = state->mLights.mDirectionalCount++;
                 state->mLights.mDirectionalLights[lightIdx] =
@@ -661,8 +661,8 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
             });
 
     mQueryLightPoints
-        ->each([&state, this](const component::GlobalPose & aGlobalPose,
-                              const component::LightPoint & aLightPoint)
+        ->each([&state](const component::GlobalPose & aGlobalPose,
+                        const component::LightPoint & aLightPoint)
             {
                 GLuint lightIdx = state->mLights.mPointCount++;
                 state->mLights.mPointLights[lightIdx] =
