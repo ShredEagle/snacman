@@ -71,7 +71,7 @@ void AllowedMovement::drawUi() const
 
 int getIndexAroundPosition(math::Position<2, float> aPos, float * aPointsXs, float * aPointsYs, size_t aSize, float aRadius)
 {
-    for (int i = 0; i < aSize; i++)
+    for (int i = 0; i < (int)aSize; i++)
     {
         ImVec2 point = ImPlot::PlotToPixels(ImPlotPoint(aPointsXs[i], aPointsYs[i]));
         math::Position<2, float> pointPos{point.x, point.y};
@@ -97,9 +97,9 @@ void drawBezierUi(ParameterAnimation<float,
         std::array<float, numberOfSegments> xValues;
         auto cubic_root_test = BEGIN_RECURRING(Main, "cubic_roots");
         float xStep = 1.f / (float) numberOfSegments;
-        for (int i = 0; i < numberOfSegments; i++)
+        for (int i = 0; i < (int)numberOfSegments; i++)
         {
-            float x = i * xStep;
+            float x = (float)i * xStep;
             xValues.at(i) = x;
             yValues.at(i) = aCurve.at(x);
         }
@@ -216,7 +216,7 @@ void drawBezierUi(ParameterAnimation<float,
 
         if (ImGui::IsKeyPressed(ImGuiKey_H) && nearestIndex != -1
             && nearestIndex % 3 == 0 && nearestIndex > 1
-            && nearestIndex < knots.size() - 1)
+            && nearestIndex < (int)knots.size() - 1)
         {
             aCurve.mEaser.changePoint(
                 nearestIndex - 1,
@@ -228,7 +228,7 @@ void drawBezierUi(ParameterAnimation<float,
 
         if (ImGui::IsKeyPressed(ImGuiKey_X) && nearestIndex != -1
             && nearestIndex % 3 == 0 && nearestIndex > 1
-            && nearestIndex < knots.size() - 1)
+            && nearestIndex < (int)knots.size() - 1)
         {
             aCurve.mEaser.removePoint(nearestIndex);
         }
@@ -241,7 +241,7 @@ void drawBezierUi(ParameterAnimation<float,
             }
 
             if (!ImGui::IsKeyDown(ImGuiKey_LeftAlt) && selectedIndex > 1
-                && selectedIndex < knots.size() - 2)
+                && selectedIndex < (int)knots.size() - 2)
             {
                 switch (selectedIndex % 3)
                 {
