@@ -21,8 +21,8 @@ namespace component {
 void Geometry::drawUi() const
 {
     Pos2_i intPos = getLevelPosition_i(mPosition.xy());
-    float fracPosX = mPosition.x() - intPos.x();
-    float fracPosY = mPosition.y() - intPos.y();
+    float fracPosX = mPosition.x() - (float)intPos.x();
+    float fracPosY = mPosition.y() - (float)intPos.y();
     ImGui::Text("Player pos: %f, %f", mPosition.x(), mPosition.y());
     ImGui::Text("Player integral part: %d, %d", intPos.x(), intPos.y());
     ImGui::Text("Player frac part: %f, %f", fracPosX, fracPosY);
@@ -71,7 +71,7 @@ void AllowedMovement::drawUi() const
 
 int getIndexAroundPosition(math::Position<2, float> aPos, float * aPointsXs, float * aPointsYs, size_t aSize, float aRadius)
 {
-    for (int i = 0; i < aSize; i++)
+    for (int i = 0; i < (int)aSize; i++)
     {
         ImVec2 point = ImPlot::PlotToPixels(ImPlotPoint(aPointsXs[i], aPointsYs[i]));
         math::Position<2, float> pointPos{point.x, point.y};
@@ -97,9 +97,9 @@ void drawBezierUi(ParameterAnimation<float,
         std::array<float, numberOfSegments> xValues;
         auto cubic_root_test = BEGIN_RECURRING(Main, "cubic_roots");
         float xStep = 1.f / (float) numberOfSegments;
-        for (int i = 0; i < numberOfSegments; i++)
+        for (int i = 0; i < (int)numberOfSegments; i++)
         {
-            float x = i * xStep;
+            float x = (float)i * xStep;
             xValues.at(i) = x;
             yValues.at(i) = aCurve.at(x);
         }
@@ -123,7 +123,7 @@ void drawBezierUi(ParameterAnimation<float,
         math::Position<2, float> mouseScreenPos = {imguiMouseScreenPos.x,
                                                    imguiMouseScreenPos.y};
         math::Position<2, float> mousePos = {(float) mouse.x, (float) mouse.y};
-        float yValue = aCurve.at(mouse.x);
+        float yValue = aCurve.at((float)mouse.x);
 
         constexpr size_t maxOnCurve = math::ease::Bezier<float>::sMaxOnCurve;
         constexpr size_t maxOffCurve = (maxOnCurve - 1) * 2;
@@ -210,13 +210,13 @@ void drawBezierUi(ParameterAnimation<float,
             math::Position<2, float> pointOnLine{(float) mouse.x, yValue};
             if ((mousePos - pointOnLine).getNormSquared() < 0.005)
             {
-                selectedIndex = aCurve.mEaser.addPoint((float) mouse.x);
+                selectedIndex = (int)aCurve.mEaser.addPoint((float) mouse.x);
             }
         }
 
         if (ImGui::IsKeyPressed(ImGuiKey_H) && nearestIndex != -1
             && nearestIndex % 3 == 0 && nearestIndex > 1
-            && nearestIndex < knots.size() - 1)
+            && nearestIndex < (int)knots.size() - 1)
         {
             aCurve.mEaser.changePoint(
                 nearestIndex - 1,
@@ -228,7 +228,7 @@ void drawBezierUi(ParameterAnimation<float,
 
         if (ImGui::IsKeyPressed(ImGuiKey_X) && nearestIndex != -1
             && nearestIndex % 3 == 0 && nearestIndex > 1
-            && nearestIndex < knots.size() - 1)
+            && nearestIndex < (int)knots.size() - 1)
         {
             aCurve.mEaser.removePoint(nearestIndex);
         }
@@ -241,7 +241,7 @@ void drawBezierUi(ParameterAnimation<float,
             }
 
             if (!ImGui::IsKeyDown(ImGuiKey_LeftAlt) && selectedIndex > 1
-                && selectedIndex < knots.size() - 2)
+                && selectedIndex < (int)knots.size() - 2)
             {
                 switch (selectedIndex % 3)
                 {
@@ -281,7 +281,7 @@ void drawBezierUi(ParameterAnimation<float,
             ImPlot::PlotScatter("nearest", &knots.at(nearestIndex).x(),
                                 &knots.at(nearestIndex).y(), 1);
         }
-        for (int i = 0; i < onSize * 2 - 2; i++)
+        for (int i = 0; i < (int)onSize * 2 - 2; i++)
         {
             ImPlot::PlotLine("Curve handle", xlines.at(i).data(),
                              ylines.at(i).data(), 2);
