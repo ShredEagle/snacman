@@ -14,18 +14,15 @@ using json = nlohmann::json;
 template<class T_type>
 void TypedProcessor<T_type>::addComponentToHandle(const ad::serial::Witness && aWitness, ad::ent::Handle<ad::ent::Entity> aHandle)
 {
+    ad::ent::Phase phase;
     if constexpr (std::is_default_constructible_v<T_type>)
     {
-        {
-            ad::ent::Phase phase;
-            T_type t;
-            aHandle.get(phase)->add(t);
-        }
-        aHandle.get()->get<T_type>().describeTo(aWitness);
+        T_type t;
+        t.describeTo(aWitness);
+        aHandle.get(phase)->add(t);
     }
     else
     {
-        ad::ent::Phase phase;
         aHandle.get(phase)->add(T_type::construct(aWitness));
     }
 }
