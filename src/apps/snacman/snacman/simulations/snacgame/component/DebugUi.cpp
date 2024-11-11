@@ -111,7 +111,7 @@ void drawBezierUi(ParameterAnimation<float,
         ImPlot::SetupAxes(nullptr, nullptr);
         ImPlot::SetupAxesLimits(-0.1f, 1.1f, -0.1f, 1.1f, ImGuiCond_Always);
         ImPlot::PlotLine("Curve", xValues.data(), yValues.data(),
-                         yValues.size());
+                         (int)yValues.size());
         END_RECURRING(draw_plot);
 
         auto knots = aCurve.mEaser.getKnots();
