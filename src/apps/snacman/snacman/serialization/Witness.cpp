@@ -63,7 +63,6 @@ std::vector<ent::Handle<ent::Entity>> testify_json(ent::EntityManager & aWorld, 
     std::unordered_map<std::string, ent::Handle<ent::Entity>> nameHandleMap;
     json * data = std::get<json *>(aData.mData);
     std::vector<ent::Handle<ent::Entity>> resultEntities(data->size());
-    ad::ent::EntityManager & world = aData.mGameContext.mWorld;
 
     int dataIndex = 0;
     for (auto & [name, ent] : data->items())
@@ -73,13 +72,20 @@ std::vector<ent::Handle<ent::Entity>> testify_json(ent::EntityManager & aWorld, 
         resultEntities.at(dataIndex++) = (handle);
     }
 
+    resolveRequestsInstance(aData.mGameContext);
+
+    return resultEntities;
+}
+
+void resolveRequestsInstance(snacgame::GameContext & aGameContext)
+{
+
     for (auto & pair : reflexion::handleRequestsInstance())
     {
         auto [handle, nameRequested] = pair;
-        // TODO(franz): maybe add the invalid handle to the nameHandleMap with a
-        // special name
-        ent::Handle<ent::Entity> requestedHandle = world.handleFromName(nameRequested);
-        if (handle->isValid())
+
+        ent::Handle<ent::Entity> requestedHandle = aGameContext.mWorld.handleFromName(nameRequested);
+        if (requestedHandle.isValid())
         {
             *handle = requestedHandle;
         }
@@ -91,8 +97,7 @@ std::vector<ent::Handle<ent::Entity>> testify_json(ent::EntityManager & aWorld, 
 #endif
     }
     reflexion::handleRequestsInstance().clear();
-
-    return resultEntities;
+    
 }
 
 void testify_json(ent::Handle<ent::Entity> & aHandle, const Witness && aData)
@@ -112,6 +117,8 @@ void testify_json(ent::Handle<ent::Entity> & aHandle, const Witness && aData)
         reflexion::typedProcessorStore().at(index)->addComponentToHandle(
             Witness::make_const(&comp, aData.mGameContext), aHandle);
     }
+
+    serial::resolveRequestsInstance(aData.mGameContext);
 }
 
 void witness_json(ent::Handle<ent::Entity> & aHandle, Witness && aData)

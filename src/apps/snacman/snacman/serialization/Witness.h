@@ -507,6 +507,8 @@ public:
                       std::shared_ptr<snac::Font> * aObject) const;
 };
 
+void resolveRequestsInstance(snacgame::GameContext & aWorld);
+
 #define WITNESS_FUNC_DECLARATION(name)                                         \
     std::vector<ent::Handle<ent::Entity>> testify_##name(ent::EntityManager & aWorld, const Witness && aData);  \
     void testify_##name(ent::Handle<ent::Entity> & aHandle,                    \

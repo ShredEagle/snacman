@@ -442,7 +442,7 @@ ent::Handle<ent::Entity> createCrown(GameContext & aContext)
     Entity crown = *crownHandle.get(createCrown);
 
     addMeshGeoNode(
-        aContext, crown, "models/crown/crown.sel",
+        aContext, crown, "models/crown/crown.seum",
         gMeshGenericEffect, gBaseCrownPosition, 1.f,
         gBaseCrownInstanceScaling, gBaseCrownOrientation);
     crownHandle.get(createCrown)->add(component::Crown{});
