@@ -44,6 +44,7 @@
 #include "system/SystemOrbitalCamera.h"
 #include "typedef.h"
 
+#include <implot.h>
 #include <snacman/DevmodeControl.h>
 #include <snacman/LoopSettings.h>
 #include <snacman/Profiling.h>
@@ -93,7 +94,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mAppInterface{&aAppInterface},
     mGameContext(
         snac::Resources{std::move(aResourceFinder), aFreetype, aRenderThread},
-        aRenderThread),
+        aRenderThread, aAppInterface),
     mMappingContext{mGameContext.mWorld, "mapping context", mGameContext.mResources},
     mSystemOrbitalCamera{mGameContext.mWorld, "orbital camera", mGameContext.mWorld,
                          math::getRatio<float>(mAppInterface->getWindowSize())},
@@ -101,9 +102,11 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mQueryTextWorld{mGameContext.mWorld, "query text world", mGameContext.mWorld},
     mQueryTextScreen{mGameContext.mWorld, "query text screen", mGameContext.mWorld},
     mQueryHuds{mGameContext.mWorld, "query huds", mGameContext.mWorld},
-    mImguiUi{aImguiUi}
+    mImguiUi{aImguiUi},
+    mDestroyPlotContext{[]() { ImPlot::DestroyContext(); }}
 {
     ent::Phase init;
+    ImPlot::CreateContext();
 
     /* // Add permanent game title */
     /* makeText(mGameContext, init, "Snacman", */

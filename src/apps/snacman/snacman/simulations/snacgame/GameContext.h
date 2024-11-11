@@ -4,6 +4,7 @@
 #include "SimulationControl.h"
 #include "PlayerSlotManager.h"
 
+#include "graphics/AppInterface.h"
 #include "handy/Guard.h"
 #include "snacman/EntityUtilities.h"
 
@@ -35,7 +36,7 @@ struct LevelSetupData;
 
 struct GameContext
 {
-    GameContext(snac::Resources aResources, snac::RenderThread<Renderer_t> & aRenderThread);
+    GameContext(snac::Resources aResources, snac::RenderThread<Renderer_t> & aRenderThread, const graphics::AppInterface & aAppInterface);
 
     snac::Resources mResources;
     ent::EntityManager mWorld;
@@ -45,6 +46,7 @@ struct GameContext
     ent::Wrap<system::SceneStack> mSceneStack;
     ent::Handle<ent::Entity> mSceneRoot;
     PlayerSlotManager mSlotManager;
+    const graphics::AppInterface & mAppInterface;
 };
 
 } // namespace snacgame

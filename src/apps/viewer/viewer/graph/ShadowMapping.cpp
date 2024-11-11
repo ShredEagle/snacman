@@ -1,5 +1,6 @@
 #include "Passes.h"
 #include "ShadowCascadeBlock.h"
+#include "math/Utilities.h"
 
 #include "../ColorPalettes.h"
 #include "../DebugDrawUtilities.h"
@@ -8,6 +9,7 @@
 // This should vanish when we end-up with a cleaner design of the Graph / Passes abstractions.
 #include "../TheGraph.h"
 
+#include <limits>
 #include <profiler/GlApi.h>
 
 #include <snac-renderer-V2/Camera.h>
@@ -463,7 +465,7 @@ std::array<math::Matrix<4, 4, GLfloat>, gCascadesPerShadow> zParitionCameraFrust
         far = near * distanceRatio;
     }
     // The last far value, which was assigned to near, should match the overall camera far
-    assert(near = cameraFar);
+    assert(math::absoluteTolerance(near, cameraFar, 100 * std::numeric_limits<float>::epsilon()));
 
     return frustaCascade;
 }

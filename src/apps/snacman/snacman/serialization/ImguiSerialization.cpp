@@ -1,5 +1,7 @@
 #include "ImguiSerialization.h"
 #include <imgui.h>
+#include "snacman/Timing.h"
+#include "snacman/simulations/snacgame/component/Text.h"
 
 void debugRender(const char * n, int & a)
 {

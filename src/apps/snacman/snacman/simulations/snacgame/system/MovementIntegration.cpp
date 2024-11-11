@@ -18,7 +18,9 @@ namespace snacgame {
 namespace system {
 
 MovementIntegration::MovementIntegration(GameContext & aGameContext) :
-    mMovables{aGameContext.mWorld}, mScreenMovables{aGameContext.mWorld}
+    mGravityObject{aGameContext.mWorld},
+    mMovables{aGameContext.mWorld},
+    mScreenMovables{aGameContext.mWorld}
 {}
 
 void MovementIntegration::update(float aDelta)
@@ -26,6 +28,13 @@ void MovementIntegration::update(float aDelta)
     TIME_RECURRING_CLASSFUNC(Main);
 
     ent::Phase integrate;
+    mGravityObject.each(
+        [aDelta]
+        (component::Speed & aMovement, const component::Gravity & aGravity) 
+        {
+            aMovement.mSpeed.z() += aGravity.mGravityAccel * aDelta;
+        }
+    );
     mMovables.each(
         [aDelta]
         (const component::Speed & aMovement, component::Geometry & aPose) 

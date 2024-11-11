@@ -14,12 +14,12 @@
 
 #include <imgui.h>
 #include <nlohmann/json.hpp>
-#include <ranges>
 #include <reflexion/Concept.h>
 #include <reflexion/NameValuePair.h>
 #include <snac-reflexion/Reflexion.h>
 #include <utility>
 #include <variant>
+#include <ranges>
 
 namespace ad {
 namespace snacgame {
@@ -44,9 +44,7 @@ class Witness;
 
 template <class T_renderable>
 concept ImguiRenderable =
-    ImguiDefaultRenderable<T_renderable>
-    && !reflex::can_be_described_to<T_renderable, Witness>
-    && !reflex::can_be_described_to_by_fn<T_renderable, Witness>;
+    ImguiDefaultRenderable<T_renderable>;
 
 template <class T_witnessable>
 concept ImguiWitnessable =
@@ -236,6 +234,58 @@ public:
             mData);
     }
 
+    template<class T_value>
+    void describeWithMemberOrFunction(const Witness && aWitness, T_value & aValue) const
+    {
+        if constexpr(reflex::can_be_described_to_by_fn<T_value, Witness>)
+        {
+            describeTo(aWitness, aValue);
+        }
+        else
+        {
+            aValue.describeTo(aWitness);
+        }
+    }
+
+    template<class T_value>
+    void describeWithMemberOrFunction(const Witness & aWitness, T_value & aValue) const
+    {
+        if constexpr(reflex::can_be_described_to_by_fn<T_value, Witness>)
+        {
+            describeTo(aWitness, aValue);
+        }
+        else
+        {
+            aValue.describeTo(aWitness);
+        }
+    }
+
+    template<class T_value>
+    void describeWithMemberOrFunction(Witness && aWitness, T_value & aValue)
+    {
+        if constexpr(reflex::can_be_described_to_by_fn<T_value, Witness>)
+        {
+            describeTo(aWitness, aValue);
+        }
+        else
+        {
+            aValue.describeTo(aWitness);
+        }
+    }
+
+    template<class T_value>
+    void describeWithMemberOrFunction(Witness & aWitness, T_value & aValue)
+    {
+        if constexpr(reflex::can_be_described_to_by_fn<T_value, Witness>)
+        {
+            describeTo(aWitness, aValue);
+        }
+        else
+        {
+            aValue.describeTo(aWitness);
+        }
+    }
+
     template <ImguiRenderable T_value>
     void witness_imgui(const char * aName, T_value * aValue)
     {
@@ -268,7 +318,7 @@ public:
             ImGui::SameLine();
             if (clickedNode > -1)
             {
-                aRange->at(clickedNode).describeTo(*this);
+                describeWithMemberOrFunction(*this, aRange->at(clickedNode));
             }
             ImGui::TreePop();
         }
@@ -287,7 +337,7 @@ public:
     {
         std::visit(
             [&](auto && value) {
-                value.describeTo(*this);
+                describeWithMemberOrFunction(*this, value);
             },
             *aVariant);
     }
@@ -298,7 +348,7 @@ public:
     {
         if (ImGui::TreeNode(aName))
         {
-            aValue->describeTo(*this);
+            describeWithMemberOrFunction(*this, *aValue);
             ImGui::TreePop();
         }
     }
@@ -346,7 +396,7 @@ public:
         int i = 0;
         for (T_value & value : *aRange)
         {
-            value.describeTo(Witness::make(&data[aName][i++], mGameContext));
+            describeWithMemberOrFunction(Witness::make(&data[aName][i++], mGameContext), value);
         }
     }
 
@@ -361,8 +411,7 @@ public:
         data[aName]["variant_index"] = aVariant->index();
         std::visit(
             [&](auto && value) {
-                value.describeTo(
-                    Witness::make(&data[aName]["value"], mGameContext));
+                describeWithMemberOrFunction(Witness::make(&data[aName]["value"], mGameContext), value);
             },
             *aVariant);
     }
@@ -371,7 +420,7 @@ public:
     void witness_json(const char * aName, T_value * aValue)
     {
         json & data = *std::get<json *>(mData);
-        aValue->describeTo(Witness::make(&data[aName], mGameContext));
+        describeWithMemberOrFunction(Witness::make(&data[aName], mGameContext), *aValue);
     }
 
     // This is to witness a reference to handle in components, not to be
@@ -403,7 +452,7 @@ public:
     void testify_json(const char * aName, T_value * aValue) const
     {
         json & data = *std::get<json *>(mData);
-        aValue->describeTo(Witness::make_const(&data[aName], mGameContext));
+        describeWithMemberOrFunction(Witness::make_const(&data[aName], mGameContext), *aValue);
     }
 
     template <JsonTestifyable T_value,
@@ -418,8 +467,7 @@ public:
         for (auto & value : data[aName])
         {
             aRange->emplace_back();
-            aRange->back().describeTo(
-                Witness::make_const(&value, mGameContext));
+            describeWithMemberOrFunction(Witness::make_const(&value, mGameContext), aRange->back());
         }
     }
 

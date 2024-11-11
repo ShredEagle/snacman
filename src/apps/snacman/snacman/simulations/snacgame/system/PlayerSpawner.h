@@ -18,7 +18,9 @@ class PlayerSpawner
 public:
     PlayerSpawner(GameContext & aGameContext);
 
-    void spawnPlayers(ent::Handle<ent::Entity> aLevel);
+    void spawnPlayersDuringRound(ent::Handle<ent::Entity> aLevel);
+
+    void spawnPlayersBeforeRound(ent::Handle<ent::Entity> aLevel);
 
 private:
     GameContext * mGameContext;

@@ -2,6 +2,7 @@
 
 #include "InputConstants.h"
 #include "LevelHelper.h"
+#include "reflexion/NameValuePair.h"
 
 #include <snacman/Input.h>
 #include <snacman/Logging.h>

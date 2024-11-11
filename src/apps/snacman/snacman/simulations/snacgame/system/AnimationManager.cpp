@@ -31,7 +31,7 @@ void AnimationManager::update()
                | gPlayerMoveFlagLeft))
         {
             newAnimName = "run";
-            animSpeed = 1.3f;
+            animSpeed = 3.0f;
         }
 
         component::RigAnimation & playerAnim = aRoundData.mModel.get(animPhase)->get<component::RigAnimation>();

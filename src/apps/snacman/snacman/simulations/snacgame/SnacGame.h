@@ -7,6 +7,7 @@
 #include "component/PlayerSlot.h"
 #include "component/PlayerGameData.h"
 
+#include <implot.h>
 #include <snacman/Input.h>
 #include <snacman/Timing.h>
 
@@ -129,6 +130,7 @@ private:
     SceneEditor mSceneEditor;
 
     snac::Time mSimulationTime;
+    Guard mDestroyPlotContext;
 };
 
 } // namespace snacgame

@@ -57,6 +57,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/MenuItem.h
     simulations/snacgame/component/MovementScreenSpace.h
     simulations/snacgame/component/PathToOnGrid.h
+    simulations/snacgame/component/Physics.h
     simulations/snacgame/component/PlayerHud.h
     simulations/snacgame/component/PlayerJoinData.h
     simulations/snacgame/component/PlayerSlot.h
@@ -88,6 +89,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/Debug_BoundingBoxes.h
     simulations/snacgame/system/EatPill.h
     simulations/snacgame/system/Explosion.h
+    simulations/snacgame/system/FallingPlayers.h
     simulations/snacgame/system/InputProcessor.h
     simulations/snacgame/system/IntegratePlayerMovement.h
     simulations/snacgame/system/MenuManager.h
@@ -99,9 +101,10 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/system/PortalManagement.h
     simulations/snacgame/system/PowerUpUsage.h
     simulations/snacgame/system/RoundMonitor.h
-    simulations/snacgame/system/SystemOrbitalCamera.h
     simulations/snacgame/system/SceneGraphResolver.h
     simulations/snacgame/system/SceneStack.h
+    simulations/snacgame/system/SystemOrbitalCamera.h
+    simulations/snacgame/system/TextZoom.h
 
     detail/Logger.h
     detail/Common.h
@@ -232,9 +235,11 @@ find_package(Graphics CONFIG REQUIRED arte graphics imguiui)
 find_package(Math CONFIG REQUIRED math)
 find_package(Handy CONFIG REQUIRED platform)
 find_package(MarkovJunior CONFIG REQUIRED markovjunior)
+find_package(Reflexion CONFIG REQUIRED reflexion)
 
 find_package(nlohmann_json 3.11.2 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+find_package(implot CONFIG REQUIRED)
 
 target_link_libraries(${TARGET_NAME}
     PRIVATE
@@ -252,7 +257,9 @@ target_link_libraries(${TARGET_NAME}
         ad::math
         ad::platform
         ad::markovjunior
+        ad::reflexion
 
+        implot::implot
         spdlog::spdlog
         nlohmann_json::nlohmann_json
 )
