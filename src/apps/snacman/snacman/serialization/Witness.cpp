@@ -79,7 +79,7 @@ std::vector<ent::Handle<ent::Entity>> testify_json(ent::EntityManager & aWorld, 
         // TODO(franz): maybe add the invalid handle to the nameHandleMap with a
         // special name
         ent::Handle<ent::Entity> requestedHandle = world.handleFromName(nameRequested);
-        if (handle->isValid())
+        if (requestedHandle.isValid())
         {
             *handle = requestedHandle;
         }
