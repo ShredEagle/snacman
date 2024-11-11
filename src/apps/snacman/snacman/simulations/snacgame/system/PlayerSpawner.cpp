@@ -56,7 +56,7 @@ void PlayerSpawner::spawnPlayersBeforeRound(EntHandle aLevel)
             math::Position<3, float> spawnPosition{
                 spawner.mSpawnPosition.x(),
                 spawner.mSpawnPosition.y(),
-                20.f + 5.f * slot.mSlotIndex,
+                20.f + 5.f * (float)slot.mSlotIndex,
             };
             slot.mPlayer = createInGamePlayer(*mGameContext, aSlotHandle,
                                               spawnPosition);
