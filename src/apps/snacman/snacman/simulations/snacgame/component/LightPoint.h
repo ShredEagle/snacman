@@ -37,6 +37,17 @@ struct LightPoint
         aWitness.witness(NVP(mRadius));
         aWitness.witness(NVP(mColors));
     }
+
+    template<class T_witness>
+    static LightPoint construct(T_witness && aWitness)
+    {
+        renderer::Radius r{0.f,0.f};
+        LightColors color;
+        aWitness.witness(NVP_NAMED("mRadius", r));
+        aWitness.witness(NVP_NAMED("mColor", color));
+        return LightPoint{r, color};
+
+    }
 };
 
 REFLEXION_REGISTER(LightPoint)

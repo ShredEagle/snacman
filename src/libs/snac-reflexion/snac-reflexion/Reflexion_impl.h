@@ -5,6 +5,7 @@
 #include <entity/Entity.h>
 #include <entity/EntityManager.h>
 #include <nlohmann/json.hpp>
+#include <type_traits>
 
 namespace reflexion {
 
@@ -13,12 +14,17 @@ using json = nlohmann::json;
 template<class T_type>
 void TypedProcessor<T_type>::addComponentToHandle(const ad::serial::Witness && aWitness, ad::ent::Handle<ad::ent::Entity> aHandle)
 {
+    ad::ent::Phase phase;
+    if constexpr (IsStaticConstructible<T_type, ad::serial::Witness>)
     {
-        ad::ent::Phase phase;
+        aHandle.get(phase)->add(T_type::construct(aWitness));
+    }
+    else
+    {
         T_type t;
+        t.describeTo(aWitness);
         aHandle.get(phase)->add(t);
     }
-    aHandle.get()->get<T_type>().describeTo(aWitness);
 }
 
 template<class T_type>

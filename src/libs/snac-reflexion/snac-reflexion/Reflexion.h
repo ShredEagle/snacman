@@ -18,6 +18,11 @@ namespace reflexion {
 
 using json = nlohmann::json;
 
+template<class T_value, class T_witness>
+concept IsStaticConstructible = requires(T_witness && aW) {
+    T_value::construct(aW);
+};
+
 class TypeErasedProcessor;
 
 template <class T_type>
