@@ -114,6 +114,7 @@ target_link_libraries(${TARGET_NAME}
 
         #TODO Remove this! Currently needed for the debug drawer
         ad::snac-renderer-V1
+        ad::reflexion
     PRIVATE
         ad::graphics
         ad::math

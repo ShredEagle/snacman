@@ -4,6 +4,7 @@
 #include "runtime_reflect/ReflectHelpers.h"
 
 #include <handy/array_utils.h>
+#include <reflexion/NameValuePair.h>
 
 #include <math/Color.h>
 #include <math/Vector.h>
@@ -66,6 +67,15 @@ struct Radius
     {
         aWitness.witness(NVP(mMin));
         aWitness.witness(NVP(mMax));
+    }
+
+    template<class T_witness>
+    static Radius construct(T_witness && aWitness)
+    {
+        GLfloat min;   
+        GLfloat max;
+        aWitness.witness(NVP(min));
+        aWitness.witness(NVP(max));
     }
 };
 
