@@ -81,7 +81,7 @@ struct Scene
 
     ViewerPartList populatePartList() const;
 
-    LightsDataUser getLightsInCamera(const Camera & aCamera,
+    LightsDataCommon getLightsInCamera(const Camera & aCamera,
                                      bool aTransformDirectionalLights) const;
 
     Node mRoot{
@@ -92,7 +92,7 @@ struct Scene
 
     
     LightsDataUi mLights_world{
-        LightsDataUser{
+        LightsDataCommon{
             .mDirectionalCount = 1,
             .mPointCount = 0,
             .mAmbientColor = math::hdr::gWhite<GLfloat> / 12.f,

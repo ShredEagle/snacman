@@ -21,7 +21,6 @@ set(${TARGET_NAME}_HEADERS
     Rigging.h
     Semantics.h
     SetupDrawing.h
-    VertexStreamUtilities.h
 
     debug/DebugDrawing.h
     debug/DebugRenderer.h
@@ -32,8 +31,19 @@ set(${TARGET_NAME}_HEADERS
     files/Loader.h
     files/Versioning.h
 
+    graph/Clipping.h
+    graph/DepthMethod.h
+    graph/ShadowCascadeBlock.h
+    graph/ShadowMapping.h
+
     runtime_reflect/DearImguiVisitor.h
     runtime_reflect/ReflectHelpers.h
+
+    utilities/ColorPalettes.h
+    utilities/DebugDrawUtilities.h
+    utilities/FrustumUtilities.h
+    utilities/LoadUbos.h
+    utilities/VertexStreamUtilities.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -45,13 +55,17 @@ set(${TARGET_NAME}_SOURCES
     Pass.cpp
     Rigging.cpp
     SetupDrawing.cpp
-    VertexStreamUtilities.cpp
 
     debug/DebugDrawing.cpp
     debug/DebugRenderer.cpp
 
     files/Dds.cpp
     files/Loader.cpp
+
+    graph/ShadowMapping.cpp
+
+    utilities/LoadUbos.cpp
+    utilities/VertexStreamUtilities.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -100,6 +114,7 @@ target_link_libraries(${TARGET_NAME}
 
         #TODO Remove this! Currently needed for the debug drawer
         ad::snac-renderer-V1
+        ad::reflexion
     PRIVATE
         ad::graphics
         ad::math

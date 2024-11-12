@@ -2,4 +2,5 @@
 @find_package@(Handy CONFIG @REQUIRED@ resource)
 @find_package@(Math CONFIG @REQUIRED@ math)
 @find_package@(Snacman CONFIG @REQUIRED@ profiler)
+@find_package@(Reflexion CONFIG @REQUIRED@ reflexion)
 @find_package@(ittapi CONFIG @REQUIRED@)

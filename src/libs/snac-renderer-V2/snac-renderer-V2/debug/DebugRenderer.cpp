@@ -5,7 +5,7 @@
 #include "../RendererReimplement.h"
 #include "../Semantics.h"
 #include "../SetupDrawing.h"
-#include "../VertexStreamUtilities.h"
+#include "../utilities/VertexStreamUtilities.h"
 
 #include "../files/Loader.h"
 
@@ -197,9 +197,9 @@ DebugRenderer::DebugRenderer(Storage & aStorage, const Loader & aLoader) :
                                            mLineVertexBuffer),
         .mPrimitiveMode = GL_LINES,
     },
-    mLineProgram{storeConfiguredProgram(aLoader.loadProgram("shaders/DebugDraw.prog"), aStorage)},
+    mLineProgram{storeConfiguredProgram(aLoader.loadProgram("programs/DebugDraw.prog"), aStorage)},
     mEntryInstanceBuffer{makeBuffer(0, 0, GL_STREAM_DRAW, aStorage)},
-    mEntryProgram{storeConfiguredProgram(aLoader.loadProgram("shaders/DebugDrawModelTransform.prog"), aStorage)},
+    mEntryProgram{storeConfiguredProgram(aLoader.loadProgram("programs/DebugDrawModelTransform.prog"), aStorage)},
     mBox{setupInstancedShape<BoxTag>("DebugBox", aStorage, mEntryInstanceBuffer)},
     mArrow{setupInstancedShape<arrow::Maker>("DebugArrow", aStorage, mEntryInstanceBuffer)}
 {

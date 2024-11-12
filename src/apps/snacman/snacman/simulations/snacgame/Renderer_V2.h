@@ -15,9 +15,14 @@
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/Semantics.h>
-#include <snac-renderer-V2/VertexStreamUtilities.h>
+
 #include <snac-renderer-V2/debug/DebugRenderer.h>
+
 #include <snac-renderer-V2/files/Loader.h>
+
+#include <snac-renderer-V2/graph/ShadowMapping.h>
+
+#include <snac-renderer-V2/utilities/VertexStreamUtilities.h>
 
 #include <filesystem>
 #include <memory>
@@ -46,13 +51,13 @@ struct SnacGraph
     struct alignas(16) EntityData_glsl
     {
         // Note: 16-aligned, because it is intended to be stored as an array in a buffer object
-        // and then the elements are accessed via a std140 uniform block 
+        // and then the elements are accessed via a std140 uniform block
 
         math::AffineMatrix<4, GLfloat> mModelTransform;
         math::hdr::Rgba_f mColorFactor;
     };
-    
-    static_assert(sizeof(EntityData_glsl) % 16 == 0, 
+
+    static_assert(sizeof(EntityData_glsl) % 16 == 0,
         "Size a multiple of 16 so successive loads work as expected.");
 
     /// @brief The data to populate the GL instance attribute buffer, for instanced rendering.
@@ -61,7 +66,7 @@ struct SnacGraph
     struct InstanceData
     {
         GLuint mEntityIdx;
-        GLuint mMaterialParametersIdx; 
+        GLuint mMaterialParametersIdx;
         GLuint mMatrixPaletteOffset = (GLuint)-1;
     };
 
@@ -83,7 +88,7 @@ struct SnacGraph
         //std::vector<GLuint> mEntityIdx;
     };
 
-    static renderer::PassCache preparePass(renderer::StringKey aPass,
+    static renderer::PassCache preparePass(std::vector<renderer::Technique::Annotation> aAnnotations,
                                            const PartList & aPartList,
                                            renderer::Storage & aStorage);
 
@@ -147,9 +152,16 @@ struct SnacGraph
                              renderer::StringKey aPass,
                              renderer::Storage & aStorage);
 
-    void renderFrame(const visu_V2::GraphicState & aState, renderer::Storage & aStorage);
+    void renderFrame(const visu_V2::GraphicState & aState,
+                     renderer::Storage & aStorage,
+                     math::Size<2, int> aFramebufferSize);
 
     void renderDebugFrame(const snac::DebugDrawer::DrawList & aDrawList, renderer::Storage & aStorage);
+
+    void passDepth(SnacGraph::PartList aPartList,
+                   renderer::RepositoryTexture aTextureRepository,
+                   renderer::Storage & aStorage,
+                   renderer::DepthMethod aDepthMethod);
 
     static constexpr bool gMultiIndirectDraw = true;
 
@@ -164,13 +176,17 @@ struct SnacGraph
         // TODO should they be hosted in renderer::Storage instead of this class?
         graphics::UniformBufferObject mJointMatricesUbo;
         graphics::UniformBufferObject mEntitiesUbo;
-        graphics::UniformBufferObject mLightingUbo;
+        graphics::UniformBufferObject mLightsUbo;
+        graphics::UniformBufferObject mLightViewProjectionUbo;
+        graphics::UniformBufferObject mShadowCascadeUbo;
         graphics::UniformBufferObject mViewingProjectionUbo;
 
         renderer::RepositoryUbo mUboRepository{
             {renderer::semantic::gJointMatrices, &mJointMatricesUbo},
             {renderer::semantic::gEntities, &mEntitiesUbo},
-            {renderer::semantic::gLights, &mLightingUbo},
+            {renderer::semantic::gLights, &mLightsUbo},
+            {renderer::semantic::gLightViewProjection, &mLightViewProjectionUbo},
+            {renderer::semantic::gShadowCascade, &mShadowCascadeUbo},
             {renderer::semantic::gViewProjection, &mViewingProjectionUbo},
         };
     } mGraphUbos;
@@ -178,6 +194,8 @@ struct SnacGraph
     // Intended for function-local storage, made a member so its reuses the allocated memory between frames.
     std::vector<math::AffineMatrix<4, GLfloat>> mRiggingPalettesBuffer;
     std::vector<SnacGraph::InstanceData> mInstanceBuffer;
+
+    renderer::ShadowMapping mShadowMapping;
 
     renderer::DebugRenderer mDebugRenderer;
 };
@@ -191,9 +209,18 @@ struct Impl_V2
     Impl_V2(const renderer::Loader & aLoader) :
         mRenderGraph{
             .mInstanceStream = SnacGraph::makeInstanceStream(mStorage),
+            .mShadowMapping = renderer::ShadowMapping{mStorage},
             .mDebugRenderer = renderer::DebugRenderer{mStorage, aLoader},
         }
-    {}
+    {
+        // TODO use cascades
+        mRenderGraph.mShadowMapping.mControls.mUseCascades = true;
+        mRenderGraph.mShadowMapping.mControls.mCsmNearPlaneLimit = -5.f;
+        mRenderGraph.mShadowMapping.mControls.mSlopeScale = 3.f;
+        mRenderGraph.mShadowMapping.mControls.mUnitScale = 100.f;
+        // Because at the moment we can only debug draw from main (game) thread
+        mRenderGraph.mShadowMapping.mControls.turnOffDebugDrawing();
+    }
 
     renderer::Storage mStorage;
     SnacGraph mRenderGraph;

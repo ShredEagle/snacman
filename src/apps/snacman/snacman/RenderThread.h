@@ -164,6 +164,10 @@ public:
 
     void resizeViewport(math::Size<2, int> aFramebufferSize)
     {
+        // NOTE: Turns out to be mostly useless to resize the viewport here:
+        // any non-trivial framegraph will render to custom framebuffers of custom sizes
+        // before rendering to the default framebuffer.
+        // So we mostly need to forward the size to the frame rendering graph.
         push([=](T_renderer & /*aRenderer*/) {
             glViewport(0, 0, aFramebufferSize.width(),
                        aFramebufferSize.height());

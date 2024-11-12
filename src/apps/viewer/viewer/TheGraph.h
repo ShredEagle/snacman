@@ -3,8 +3,6 @@
 #include "DrawQuad.h"
 #include "GraphCommon.h"
 
-#include "graph/ShadowMapping.h"
-
 #include <graphics/ApplicationGlfw.h>
 
 #include <renderer/FrameBuffer.h>
@@ -15,6 +13,8 @@
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Repositories.h>
 #include <snac-renderer-V2/debug/DebugRenderer.h>
+#include <snac-renderer-V2/graph/ShadowMapping.h>
+
 
 
 namespace ad::renderer {
@@ -22,7 +22,7 @@ namespace ad::renderer {
 
 class Camera;
 struct Environment;
-struct LightsDataUser;
+struct LightsDataCommon;
 struct Loader;
 struct Scene;
 struct Storage;
@@ -50,7 +50,7 @@ struct TheGraph
     void renderFrame(const Scene & aScene,
                      const ViewerPartList & aPartList,
                      const Camera & aCamera,
-                     const LightsDataUser & aLights_camera,
+                     const LightsDataCommon & aLights_camera,
                      const GraphShared & aGraphShared,
                      Storage & aStorage,
                      bool aShowTextures,

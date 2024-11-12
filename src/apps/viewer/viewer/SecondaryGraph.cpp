@@ -16,6 +16,8 @@
 
 #include <snac-renderer-V2/files/Loader.h>
 
+#include <snac-renderer-V2/utilities/LoadUbos.h>
+
 #include <renderer/Uniforms.h>
 
 
@@ -87,7 +89,7 @@ void SecondaryGraph::setupSizeDependentTextures()
 void SecondaryGraph::renderFrame(const Scene & aScene, 
                                  const ViewerPartList & aPartList,
                                  const Camera & aCamera,
-                                 const LightsDataUser & aLights_camera,
+                                 const LightsDataCommon & aLights_camera,
                                  const GraphShared & aGraphShared,
                                  Storage & aStorage,
                                  bool aShowTextures,

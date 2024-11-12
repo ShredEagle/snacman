@@ -1,3 +1,7 @@
+#if !defined(LIGHTS_GLSL_INCLUDE_GUARD)
+#define LIGHTS_GLSL_INCLUDE_GUARD
+
+
 #include "Constants.glsl"
 
 struct LightColors
@@ -44,6 +48,13 @@ struct LightContributions
 };
 
 
+void scale(inout LightContributions aLightContribution, float aFactor)
+{
+    aLightContribution.diffuse  = aLightContribution.diffuse  * aFactor;
+    aLightContribution.specular = aLightContribution.specular * aFactor;
+}
+
+
 LightContributions applyLight(vec3 aView, vec3 aLightDir, vec3 aShadingNormal,
                               LightColors aColors, float aSpecularExponent)
 {
@@ -83,3 +94,5 @@ float attenuatePoint(PointLight aLight, float aRadius)
             2);
 }
 
+
+#endif //LIGHTS_GLSL_INCLUDE_GUARD

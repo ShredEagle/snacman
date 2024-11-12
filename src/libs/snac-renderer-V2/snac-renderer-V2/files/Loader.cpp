@@ -12,7 +12,7 @@
 #include "../RendererReimplement.h"
 #include "../Rigging.h"
 #include "../Semantics.h"
-#include "../VertexStreamUtilities.h"
+#include "../utilities/VertexStreamUtilities.h"
 
 #include <arte/Image.h>
 
@@ -1355,7 +1355,7 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
         throw;
     }
 
-    // TODO decide if we want the shader path to be relative to the prog file (with FileLookup)
+    // TODO #resource_redesign Decide if we want the shader path to be relative to the prog file (with FileLookup)
     // or to be found in the current "assets" folders of ResourceFinder.
     graphics::FileLookup lookup{programPath};
 

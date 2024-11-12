@@ -83,7 +83,7 @@ int getIndexAroundPosition(math::Position<2, float> aPos, float * aPointsXs, flo
     return -1;
 }
 
-void drawBezierUi(ParameterAnimation<float,
+void drawBezierUi(math::ParameterAnimation<float,
                                      math::AnimationResult::FullRange,
                                      math::None,
                                      math::ease::Bezier> & aCurve)

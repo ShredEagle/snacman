@@ -1,0 +1,6 @@
+{
+    "defines": ["TRANSFORM_TO_WORLD"],
+    "vertex": "shaders/FullVertexTransform.vert",
+    "geometry": "shaders/InstantiatedViewpoint.geom",
+    "fragment": "shaders/Depth.frag"
+}

@@ -6,12 +6,9 @@ configure_file(build_info.h.in build_info.h @ONLY)
 
 set(${TARGET_NAME}_HEADERS
     CameraSystem.h
-    ColorPalettes.h
     DebugAndLogGui.h
-    DebugDrawUtilities.h
     DrawQuad.h
     EnvironmentUtilities.h
-    FrustumUtilities.h
     GraphCommon.h
     GraphGui.h
     Json.h
@@ -24,10 +21,7 @@ set(${TARGET_NAME}_HEADERS
     TheGraph.h
     ViewerApplication.h
 
-    graph/Clipping.h
     graph/Passes.h
-    graph/ShadowCascadeBlock.h
-    graph/ShadowMapping.h
 )
 
 set(${TARGET_NAME}_SOURCES
@@ -49,7 +43,6 @@ set(${TARGET_NAME}_SOURCES
     ViewerApplication.cpp
 
     graph/Passes.cpp
-    graph/ShadowMapping.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}

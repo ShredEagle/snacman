@@ -1,4 +1,0 @@
-{
-    "vertex": "FullscreenQuad.vert",
-    "fragment": "IntegrateEnvironmentBrdf.frag"
-}

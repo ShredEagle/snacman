@@ -6,6 +6,10 @@
 
 #include "component/PlayerSlot.h"
 #include "component/PlayerGameData.h"
+#include "component/LightDirection.h"
+#include "component/LightPoint.h"
+
+#include "system/LightRealisticWeatherSystem.h"
 
 #include <implot.h>
 #include <snacman/Input.h>
@@ -120,10 +124,15 @@ private:
     ent::Wrap<component::MappingContext> mMappingContext; // TODO: should probably be accessed via query
     ent::Wrap<system::OrbitalCamera> mSystemOrbitalCamera; // EntityWrap is used to avoid the handle being changed
 
+    ent::Wrap<component::LightDirection> mMainLight;
+    ent::Wrap<system::LightRealisticWeatherSystem> mLightAnimationSystem;
+
     ent::Wrap<ent::Query<component::GlobalPose, component::VisualModel>> mQueryRenderable;
     ent::Wrap<ent::Query<component::Text, component::GlobalPose>> mQueryTextWorld;
     ent::Wrap<ent::Query<component::Text, component::PoseScreenSpace>> mQueryTextScreen;
     ent::Wrap<ent::Query<component::PlayerHud>> mQueryHuds;
+    ent::Wrap<ent::Query<component::LightDirection>> mQueryLightDirections;
+    ent::Wrap<ent::Query<component::GlobalPose, component::LightPoint>> mQueryLightPoints;
 
     imguiui::ImguiUi & mImguiUi;
     ImguiDisplays mImguiDisplays;

@@ -1,7 +1,7 @@
 #include "Cubemap.h"
 
 #include "Cube.h"
-#include "VertexStreamUtilities.h"
+#include "utilities/VertexStreamUtilities.h"
 #include "files/Loader.h"
 
 #include <arte/Image.h>

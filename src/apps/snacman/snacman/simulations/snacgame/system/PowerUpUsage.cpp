@@ -106,63 +106,63 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                                   const component::GlobalPose & aPowerupGeo,
                                   const component::Collision & aPowerupCol)
                     {
-                    const Box_f powerupHitbox = component::transformHitbox(
-                        aPowerupGeo.mPosition, aPowerupCol.mHitbox);
+                        const Box_f powerupHitbox = component::transformHitbox(
+                            aPowerupGeo.mPosition, aPowerupCol.mHitbox);
 
-                    DBGDRAW(snac::gHitboxDrawer,
-                            snac::DebugDrawer::Level::debug)
-                        .addBox(
-                            snac::DebugDrawer::Entry{
-                                .mPosition = {0.f, 0.f, 0.f},
-                                .mColor = math::hdr::gBlue<float>,
-                            },
-                            powerupHitbox);
+                        DBGDRAW(snac::gHitboxDrawer,
+                                snac::DebugDrawer::Level::debug)
+                            .addBox(
+                                snac::DebugDrawer::Entry{
+                                    .mPosition = {0.f, 0.f, 0.f},
+                                    .mColor = math::hdr::gBlue<float>,
+                                },
+                                powerupHitbox);
 
-                    if (component::collideWithSat(powerupHitbox, playerHitbox))
-                    {
-                        EntHandle hud =
-                            snac::getComponent<component::PlayerGameData>(aRoundData.mSlot)
-                                .mHud;
-                        auto & playerHud = snac::getComponent<component::PlayerHud>(hud);
-                        EntHandle playerPowerup =
-                            createPlayerPowerUp(*mGameContext, aPowerup.mType);
-                        aRoundData.mType = aPowerup.mType;
-                        aRoundData.mPowerUp = playerPowerup;
-
-                        insertEntityInScene(
-                            playerPowerup,
-                            aRoundData.mModel);
-                        updateGlobalPosition(
-                            snac::getComponent<component::SceneNode>(
-                                playerPowerup));
-                        aPowerupHandle.get(powerupDestroyOnPickup)->erase();
-
-                        switch (aRoundData.mType)
+                        if (component::collideWithSat(powerupHitbox, playerHitbox))
                         {
-                        case component::PowerUpType::Dog:
-                        {
-                            break;
-                        }
-                        case component::PowerUpType::Teleport:
-                        {
-                            aRoundData.mInfo = component::TeleportPowerUpInfo{};
-                            break;
-                        }
-                        case component::PowerUpType::Missile:
-                        {
-                            aRoundData.mInfo = component::MissilePowerUpInfo{};
-                            break;
-                        }
-                        default:
-                            break;
-                        }
+                            EntHandle hud =
+                                snac::getComponent<component::PlayerGameData>(aRoundData.mSlot)
+                                    .mHud;
+                            auto & playerHud = snac::getComponent<component::PlayerHud>(hud);
+                            EntHandle playerPowerup =
+                                createPlayerPowerUp(*mGameContext, aPowerup.mType);
+                            aRoundData.mType = aPowerup.mType;
+                            aRoundData.mPowerUp = playerPowerup;
 
-                        // Update power-up name in HUD
-                        snac::getComponent<component::Text>(
-                            playerHud.mPowerupText)
-                            .mString = component::getPowerUpName(aPlayer);
-                    }
-                });
+                            insertEntityInScene(
+                                playerPowerup,
+                                aRoundData.mModel);
+                            updateGlobalPosition(
+                                snac::getComponent<component::SceneNode>(
+                                    playerPowerup));
+                            aPowerupHandle.get(powerupDestroyOnPickup)->erase();
+
+                            switch (aRoundData.mType)
+                            {
+                            case component::PowerUpType::Dog:
+                            {
+                                break;
+                            }
+                            case component::PowerUpType::Teleport:
+                            {
+                                aRoundData.mInfo = component::TeleportPowerUpInfo{};
+                                break;
+                            }
+                            case component::PowerUpType::Missile:
+                            {
+                                aRoundData.mInfo = component::MissilePowerUpInfo{};
+                                break;
+                            }
+                            default:
+                                break;
+                            }
+
+                            // Update power-up name in HUD
+                            snac::getComponent<component::Text>(
+                                playerHud.mPowerupText)
+                                .mString = component::getPowerUpName(aPlayer);
+                        }
+                    });
             }
         });
     }

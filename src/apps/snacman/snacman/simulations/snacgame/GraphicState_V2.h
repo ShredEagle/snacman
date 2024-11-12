@@ -16,6 +16,7 @@
 #include <snac-renderer-V1/text/Text.h>
 
 #include <snac-renderer-V2/Camera.h>
+#include <snac-renderer-V2/Lights.h>
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Rigging.h>
 
@@ -114,6 +115,7 @@ struct GraphicState
     snac::SparseSet<visu_V1::Text, MaxEntityId> mTextWorldEntities;
     // TODO #interpolation Interpolate the camera pose
     renderer::Camera mCamera; 
+    renderer::LightsDataUi mLights;
 
     snac::SparseSet<visu_V1::Text, MaxEntityId> mTextScreenEntities;
 
@@ -144,6 +146,8 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         // TODO #pose
         //.mCamera = math::lerp(aLeft.mCamera.mPosition_world, aRight.mCamera.mPosition_world, aInterpolant),
         .mCamera{aRight.mCamera},
+        // We probably do not want to interpolate lights, unlikely this would be noticeable
+        .mLights{aRight.mLights},
         // Note: For the moment, we do not interpolate the debug drawings, both for simplicity and performance
         .mDebugDrawList{aRight.mDebugDrawList},
     };

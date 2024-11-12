@@ -6,6 +6,7 @@
 #include "component/Explosion.h"
 #include "component/Geometry.h"
 #include "component/GlobalPose.h"
+#include "component/LightPoint.h"
 #include "component/MenuItem.h"
 #include "component/PlayerGameData.h"
 #include "component/PlayerHud.h"
@@ -192,7 +193,18 @@ createPowerUp(GameContext & aContext,
             .mSwapPeriod = aSwapPeriod,
         })
         .add(component::Collision{component::gPowerUpHitbox})
-        .add(component::RoundTransient{});
+        .add(component::RoundTransient{})
+        .add(component::LightPoint{
+            .mRadius = {
+                .mMin = 1.5f,
+                .mMax = 3.f,
+            },
+            .mColors = {
+                .mDiffuse  = math::hdr::Rgb_f{184/255.f, 134/255.f, 11/255.f},
+                .mSpecular = math::hdr::Rgb_f{184/255.f, 134/255.f, 11/255.f},
+            },
+        })
+        ;
     return handle;
 }
 
@@ -661,7 +673,17 @@ EntHandle createExplosion(GameContext & aContext,
                 .mStartTime = aTime.mTimepoint,
                 .mParameter = math::ParameterAnimation<
                     float, math::AnimationResult::Clamp>(0.5f)})
-            .add(component::RoundTransient{});
+            .add(component::RoundTransient{})
+            .add(component::LightPoint{
+                .mRadius = {
+                    .mMin = 3.f,
+                    .mMax = 8.f,
+                },
+                .mColors = {
+                    .mDiffuse = math::hdr::gRed<float>,
+                },
+            })
+        ;    
     }
     return explosion;
 }

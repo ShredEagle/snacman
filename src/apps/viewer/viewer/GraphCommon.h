@@ -9,12 +9,8 @@
 namespace ad::renderer {
 
 
-class Camera;
-struct GpuViewProjectionBlock;
-struct LightsData_glsl;
-struct LightViewProjection;
-struct Storage;
 struct ViewerPassCache;
+struct Storage;
 
 
 constexpr std::size_t gMaxDrawInstances = 2048;
@@ -71,29 +67,9 @@ struct GraphShared
 };
 
 
-void loadFrameUbo(const graphics::UniformBufferObject & aUbo);
-
-
-void loadLightsUbo(const graphics::UniformBufferObject & aUbo, const LightsData_glsl & aLights);
-
-
 // TODO Ad 2024/10/03: Not sure it needs to be part of the API
 void loadDrawBuffers(const GraphShared & aGraphShared,
                      const ViewerPassCache & aPassCache);
-
-/// @brief Load data from aCamera into aUbo.
-/// @note It is proving useful to have access to it to re-use passes outside of the main renderFrame()
-void loadCameraUbo(const graphics::UniformBufferObject & aUbo,
-                   const Camera & aCamera);
-
-void loadCameraUbo(const graphics::UniformBufferObject & aUbo,
-                   const GpuViewProjectionBlock & aViewProjection);
-
-void loadLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo,
-                                const LightViewProjection & aLightViewProjection);
-
-void updateOffsetInLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo,
-                                          const LightViewProjection & aLightViewProjection);
 
 
 } // namespace ad::renderer

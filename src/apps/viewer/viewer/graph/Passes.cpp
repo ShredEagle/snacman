@@ -36,8 +36,6 @@ void passOpaqueDepth(const GraphShared & aGraphShared,
     //
     // Set pipeline state
     //
-    // Note: Must be set before any drawing operations, including glClear(),
-    // otherwise results becomes real mysterious real quick.
     {
         PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_pipeline_state", CpuTime);
         glEnable(GL_CULL_FACE);

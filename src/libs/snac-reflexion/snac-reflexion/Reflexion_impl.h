@@ -15,15 +15,15 @@ template<class T_type>
 void TypedProcessor<T_type>::addComponentToHandle(const ad::serial::Witness && aWitness, ad::ent::Handle<ad::ent::Entity> aHandle)
 {
     ad::ent::Phase phase;
-    if constexpr (std::is_default_constructible_v<T_type>)
+    if constexpr (IsStaticConstructible<T_type, ad::serial::Witness>)
+    {
+        aHandle.get(phase)->add(T_type::construct(aWitness));
+    }
+    else
     {
         T_type t;
         t.describeTo(aWitness);
         aHandle.get(phase)->add(t);
-    }
-    else
-    {
-        aHandle.get(phase)->add(T_type::construct(aWitness));
     }
 }
 

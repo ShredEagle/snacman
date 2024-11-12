@@ -1,4 +1,0 @@
-{
-    "vertex": "Skybox.vert",
-    "fragment": "PrefilterCubemap.frag"
-}

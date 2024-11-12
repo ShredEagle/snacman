@@ -30,6 +30,16 @@ uniform sampler2DArray u_NormalTexture;
 #endif //NAIVE_TEXTURES
 #endif
 
+#ifdef SHADOW_MAPPING
+
+#if defined(SHADOW_CASCADE)
+#include "ShadowCascadeBlock.glsl"
+#endif //SHADOW_CASCADE
+
+#include "Shadow.glsl"
+
+#endif //SHADOW_MAPPING
+
 out vec4 out_Color;
 
 void main()
@@ -48,7 +58,11 @@ void main()
 #endif //ENTITIES
 
 #ifdef TEXTURED
-    albedo = albedo * texture(u_DiffuseTexture, vec3(ex_Uv[material.diffuseUvChannel], material.diffuseTextureIndex));
+    // TODO Remove this test when models are fixed (no parts without textures)
+    if(material.diffuseUvChannel != uint(-1))
+    {
+        albedo = albedo * texture(u_DiffuseTexture, vec3(ex_Uv[material.diffuseUvChannel], material.diffuseTextureIndex));
+    }
 #endif
 
     // Implement "cut-out" transparency: everything below 50% opacity is discarded (i.e. no depth write).
@@ -124,6 +138,18 @@ void main()
     vec3 diffuseAccum = vec3(0.);
     vec3 specularAccum = vec3(0.);
 
+//vec3 cascadeSelectionDebugColor = vec3(1.); 
+#if defined(SHADOW_CASCADE)
+    //
+    // Cascade selection (independant of the light)
+    //
+    uint shadowCascadeIdx = selectShadowCascade_IntervalBased(ex_Position_cam);
+    //if(debugTintCascade)
+    //{
+    //    cascadeSelectionDebugColor = gColorBrewerSet1_linear[shadowCascadeIdx]; 
+    //}
+#endif //SHADOW_CASCADE
+
     // Directional lights
     for(uint directionalIdx = 0; directionalIdx != ub_DirectionalCount.x; ++directionalIdx)
     {
@@ -133,6 +159,17 @@ void main()
         LightContributions lighting = 
             applyLight(view_cam, lightDir_cam, shadingNormal_cam,
                        directional.colors, material.specularExponent);
+
+#if defined(SHADOW_MAPPING)
+        applyShadowToLighting(
+            lighting,
+            directionalIdx
+#if defined(SHADOW_CASCADE)
+            , shadowCascadeIdx
+#endif //SHADOW_CASCADE
+        );
+#endif // SHADOW_MAPPING
+
         diffuseAccum += lighting.diffuse;
         specularAccum += lighting.specular;
     }

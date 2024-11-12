@@ -98,10 +98,14 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mMappingContext{mGameContext.mWorld, "mapping context", mGameContext.mResources},
     mSystemOrbitalCamera{mGameContext.mWorld, "orbital camera", mGameContext.mWorld,
                          math::getRatio<float>(mAppInterface->getWindowSize())},
+    mMainLight{mGameContext.mWorld, "main light"},
+    mLightAnimationSystem{mGameContext.mWorld, "light animation system", mGameContext},
     mQueryRenderable{mGameContext.mWorld, "query renderable", mGameContext.mWorld},
     mQueryTextWorld{mGameContext.mWorld, "query text world", mGameContext.mWorld},
     mQueryTextScreen{mGameContext.mWorld, "query text screen", mGameContext.mWorld},
     mQueryHuds{mGameContext.mWorld, "query huds", mGameContext.mWorld},
+    mQueryLightDirections{mGameContext.mWorld, "query light directions", mGameContext.mWorld},
+    mQueryLightPoints{mGameContext.mWorld, "query light points", mGameContext.mWorld},
     mImguiUi{aImguiUi},
     mDestroyPlotContext{[]() { ImPlot::DestroyContext(); }}
 {
@@ -120,6 +124,20 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
                                                  mMappingContext));
     mGameContext.mSceneStack->pushScene(
         std::make_shared<scene::MenuScene>(mGameContext, mMappingContext));
+
+    // Initial setup of the directional main light
+    *mMainLight = component::LightDirection{
+        .mDirection = math::UnitVec<3, GLfloat>{
+            math::Vec<3, GLfloat>{0.f, 0.f, -1.f} 
+            * math::trans3d::rotateX(-math::Degree<float>{60.f})
+            * math::trans3d::rotateY(math::Degree<float>{20.f})
+        },
+        .mColors{
+            .mDiffuse = math::hdr::gWhite<float> * 0.8f,
+            .mSpecular = math::hdr::gWhite<float> * 0.8f,
+        },
+        .mProjectShadow = true,
+    };
 }
 
 void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
@@ -539,6 +557,8 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
     mSimulationTime.advance(aUpdatePeriod
                             / mGameContext.mSimulationControl.mSpeedRatio);
 
+    mLightAnimationSystem->update((float)mSimulationTime.mDeltaSeconds);
+
     ent::Wrap<system::SceneStack> & sceneStack = mGameContext.mSceneStack;
     sceneStack->getActiveScene()->update(mSimulationTime, aInput);
 
@@ -617,6 +637,45 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
             // place to reset this flag
             aVisualModel.mDisableInterpolation = false;
         });
+
+    //
+    // Lights
+    //
+    static constexpr math::hdr::Rgb_f ambientColor = math::hdr::Rgb_f{0.4f, 0.4f, 0.4f};
+
+    state->mLights = renderer::LightsDataUi{
+        renderer::LightsDataCommon{
+            .mAmbientColor = ambientColor,
+        },
+    };
+
+    mQueryLightDirections
+        ->each([&state](const component::LightDirection & aLightDirection)
+            {
+                GLuint lightIdx = state->mLights.mDirectionalCount++;
+                state->mLights.mDirectionalLights[lightIdx] =
+                    renderer::DirectionalLight{
+                        .mDirection = aLightDirection.mDirection,
+                        .mDiffuseColor = aLightDirection.mColors.mDiffuse,
+                        .mSpecularColor = aLightDirection.mColors.mSpecular,
+                    };
+                state->mLights.mDirectionalLightProjectShadow[lightIdx].mIsProjectingShadow = 
+                    aLightDirection.mProjectShadow;
+            });
+
+    mQueryLightPoints
+        ->each([&state](const component::GlobalPose & aGlobalPose,
+                        const component::LightPoint & aLightPoint)
+            {
+                GLuint lightIdx = state->mLights.mPointCount++;
+                state->mLights.mPointLights[lightIdx] =
+                    renderer::PointLight{
+                        .mPosition = aGlobalPose.mPosition,
+                        .mRadius = aLightPoint.mRadius,
+                        .mDiffuseColor = aLightPoint.mColors.mDiffuse,
+                        .mSpecularColor = aLightPoint.mColors.mSpecular,
+                    };
+            });
 
     //
     // Worldspace Text

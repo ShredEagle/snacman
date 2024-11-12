@@ -1,7 +1,5 @@
 #include "ViewerApplication.h"
 
-#include "ColorPalettes.h"
-#include "DebugDrawUtilities.h"
 #include "EnvironmentUtilities.h"
 #include "Json.h"
 #include "Logging.h"
@@ -26,7 +24,12 @@
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/Semantics.h>
+
 #include <snac-renderer-V2/debug/DebugDrawing.h>
+
+#include <snac-renderer-V2/utilities/ColorPalettes.h>
+#include <snac-renderer-V2/utilities/DebugDrawUtilities.h>
+#include <snac-renderer-V2/utilities/LoadUbos.h>
 
 #include <utilities/Time.h>
 
@@ -500,7 +503,7 @@ void handleAnimations(Node & aNode,
 }
 
 
-void showPointLights(const LightsDataUser & aLights)
+void showPointLights(const LightsDataCommon & aLights)
 {
     for(const auto & pointLight : aLights.spanPointLights())
     {

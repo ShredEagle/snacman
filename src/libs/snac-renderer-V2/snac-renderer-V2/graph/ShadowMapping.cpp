@@ -1,37 +1,20 @@
-#include "Passes.h"
-#include "ShadowCascadeBlock.h"
-#include "math/Utilities.h"
+#include "ShadowMapping.h"
 
-#include "../ColorPalettes.h"
-#include "../DebugDrawUtilities.h"
-#include "../Logging.h"
-// This is almost circular, but we need a lot of stuff, such as passes and HardcodedUbos
-// This should vanish when we end-up with a cleaner design of the Graph / Passes abstractions.
-#include "../TheGraph.h"
+#include "ShadowCascadeBlock.h"
 
 #include <limits>
 #include <profiler/GlApi.h>
 
+#include <snac-renderer-V2/Logging.h>
 #include <snac-renderer-V2/Camera.h>
 #include <snac-renderer-V2/RendererReimplement.h>
 
+#include <snac-renderer-V2/utilities/ColorPalettes.h>
+#include <snac-renderer-V2/utilities/DebugDrawUtilities.h>
+#include <snac-renderer-V2/utilities/LoadUbos.h>
+
 
 namespace ad::renderer {
-
-
-
-void debugDrawTriangle(const Triangle & aTri, math::hdr::Rgb_f aColor = math::hdr::gGreen<GLfloat>)
-{
-    DBGDRAW_INFO(drawer::gShadow).addLine(
-        aTri[0].xyz(), aTri[1].xyz(),
-        aColor);
-    DBGDRAW_INFO(drawer::gShadow).addLine(
-        aTri[0].xyz(), aTri[2].xyz(),
-        aColor);
-    DBGDRAW_INFO(drawer::gShadow).addLine(
-        aTri[1].xyz(), aTri[2].xyz(),
-        aColor);
-}
 
 
 namespace {
@@ -90,6 +73,15 @@ namespace {
     }
 
 } // unnamed namespace
+
+
+ShadowMapping::ShadowMapping(renderer::Storage & aStorage) :
+    mShadowMap{
+        makeTexture(aStorage, GL_TEXTURE_2D_ARRAY, "shadow_map")
+    }
+{
+    prepareShadowMap();
+}
 
 
 void ShadowMapping::prepareShadowMap()
@@ -297,11 +289,15 @@ math::Matrix<4, 4, float> getProjectionChangeNearFar(const Camera & aCamera, flo
 }
 
 
-struct DebugColors
-{
-    math::hdr::Rgb_f mViewFrustrum;
-    math::hdr::Rgb_f mLight;
-};
+namespace {
+
+    struct DebugColors
+    {
+        math::hdr::Rgb_f mViewFrustrum;
+        math::hdr::Rgb_f mLight;
+    };
+
+} // unnamed namespace
 
 
 /// @brief Compute a tight projection matrix, allowing to render a shadow map 
@@ -471,14 +467,26 @@ std::array<math::Matrix<4, 4, GLfloat>, gCascadesPerShadow> zParitionCameraFrust
 }
 
 
+// TODO Ad 2024/11/06: #pass_API There is an inherent tension here, where the generic meets the specialized:
+// * Generic: 
+//   * the overall process to determine the shadow frustum and to make a pass on them
+//   * the need to fill buffers with some data that makes the shadow maps usable by later passes
+// * Specialized (to the actual application / graph):
+//   * how the concrete depth pass is implemented (the type of glsl instance data, the type of partlist)
+//   * what kind of GL buffer / where to get the buffer object to fill with shadow mapping data
+//     -> Might be addressed via return value instead, but that has an impact on stack usage and potentially on data-transfer time distribution
+// I do not want to implement everything via heavy templating (though that would ensure static polymorphism).
+// From the above analysis, either we couple the implementation to the application (which seems narrow sighted)
+// or we rely on a run-time dynamic behaviour. Some pieces are already in place (TextureRepo, UniformRepo),
+// do we want to somehow use polymorphism too?
+// An alternative would be to redesign this logic as utilities, called by each specialized application
+// between its calls to the specialized passes (but it transfers the tension down to the passes implementations)
 LightsDataInternal fillShadowMap(const ShadowMapping & aPass, 
-                                 const RepositoryTexture & aTextureRepository,
-                                 Storage & aStorage,
-                                 const GraphShared & aGraphShared,
-                                 const ViewerPartList & aPartList,
                                  math::Box<GLfloat> aSceneAabb_world,
                                  const Camera & aCamera,
-                                 const LightsDataUi & aLights)
+                                 const LightsDataUi & aLights,
+                                 ShadowMapUbos aUbos,
+                                 std::function<void(DepthMethod)> aOpaquePass)
 {
     const ShadowMapping::Controls & c = aPass.mControls;
     const DepthMethod method = c.mUseCascades ? DepthMethod::Cascaded : DepthMethod::Single;
@@ -499,7 +507,7 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
         // (it does not fell well-structured).
         // The goal of the frame graph is to make this kind of data dependency very explicit, such as:
         // This call produces the ShadowCascadeUbo, which is later consummed by other passes (e.g. forward pass)
-        proto::loadSingle(*aGraphShared.mUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
+        proto::loadSingle(*aUbos.mShadowCascadeUbo, shadowCascadeBlock, graphics::BufferHint::DynamicDraw);
     }
 
     // Will receive the view-projection matrix (ie. form world to light clipping space)
@@ -612,9 +620,9 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
                 // number of GS invocations (lights) we would only need a single "draw call".
                 // and it would be more uniform with the CSM version: using the same instanced-GS program,
                 // done once after this for-loop.
-                loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
-                            GpuViewProjectionBlock{orientationWorldToLight, fullProjection});
-                passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Single);
+                loadCameraUbo(*aUbos.mViewingUbo, 
+                              GpuViewProjectionBlock{orientationWorldToLight, fullProjection});
+                aOpaquePass(DepthMethod::Single);
             }
 
             ++shadowLightIdx;
@@ -626,7 +634,7 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
         }
     }
 
-    loadLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo, lightViewProjection);
+    loadLightViewProjectionUbo(*aUbos.mLightViewProjectionUbo, lightViewProjection);
 
     //
     // Render shadow maps
@@ -648,10 +656,9 @@ LightsDataInternal fillShadowMap(const ShadowMapping & aPass,
             ++directionalIdx)
         {
             lightViewProjection.mLightViewProjectionOffset = gCascadesPerShadow * directionalIdx;
-            updateOffsetInLightViewProjectionUbo(*aGraphShared.mUbos.mLightViewProjectionUbo,
+            updateOffsetInLightViewProjectionUbo(*aUbos.mLightViewProjectionUbo,
                                                 lightViewProjection);
-            // TODO avoid the instanciated stuff when the cascades are disabled
-            passOpaqueDepth(aGraphShared, aPartList, aTextureRepository, aStorage, DepthMethod::Cascaded);
+            aOpaquePass(DepthMethod::Cascaded);
         }
     }
     else
