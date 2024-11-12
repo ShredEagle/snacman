@@ -9,7 +9,7 @@ editables:
         path: ../../../MarkovJunior.cpp/conan
     math/329f6705a1@adnn/develop:
         path: ../../../math/conan
-    reflexion/57198786a6@adnn/develop:
+    reflexion/ea47c1e3f1@adnn/develop:
         path: ../../../reflexion/conan
     snacman/local:
         path: ../../conan
