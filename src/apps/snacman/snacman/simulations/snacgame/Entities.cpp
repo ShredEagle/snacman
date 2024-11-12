@@ -457,7 +457,20 @@ ent::Handle<ent::Entity> createCrown(GameContext & aContext)
         aContext, crown, "models/crown/crown.seum",
         gMeshGenericEffect, gBaseCrownPosition, 1.f,
         gBaseCrownInstanceScaling, gBaseCrownOrientation);
-    crownHandle.get(createCrown)->add(component::Crown{});
+    //Light should be around the crown
+    //or the crown should be glowing
+    crownHandle.get(createCrown)
+        ->add(component::LightPoint{
+            .mRadius = {
+                .mMin = 1.5f,
+                .mMax = 4.f,
+            },
+            .mColors = {
+                .mDiffuse  = math::hdr::Rgb_f{184/255.f, 174/255.f, 11/255.f},
+                .mSpecular = math::hdr::Rgb_f{184/255.f, 174/255.f, 11/255.f},
+            },
+        })
+        .add(component::Crown{});
 
     return crownHandle;
 }

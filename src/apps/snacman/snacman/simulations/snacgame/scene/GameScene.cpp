@@ -102,7 +102,8 @@ GameScene::GameScene(GameContext & aGameContext,
     mSlots{mGameContext.mWorld},
     mHuds{mGameContext.mWorld},
     mPlayers{mGameContext.mWorld},
-    mPathfinders{mGameContext.mWorld}
+    mPathfinders{mGameContext.mWorld},
+    mCrowns{mGameContext.mWorld}
 {
     TIME_SINGLE(Main, "Constructor game scene");
     // Preload models to avoid loading time when they first appear in the game
@@ -372,6 +373,13 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         // Creating level from markov data
         if (!mLevel.isValid())
         {
+            {
+                Phase removeCrown;
+                mCrowns.each([&removeCrown](EntHandle aHandle) {
+                    aHandle.get(removeCrown)->erase();
+                });
+
+            }
             mLevel = mSystems.get()->get<system::LevelManager>().createLevel(
                 *mLevelData);
             insertEntityInScene(mLevel, mGameContext.mSceneRoot);
@@ -380,7 +388,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
                 .spawnPlayersBeforeRound(mLevel);
             std::array<std::pair<EntHandle, component::PlayerRoundData *>, 4> leaders;
             int leaderCount = 0;
-            int leaderScore = 0;
+            int leaderScore = -1;
             mPlayers.each(
                 [&leaders, &leaderCount, &leaderScore](EntHandle aHandle,
                                          component::PlayerRoundData & aRoundData, const component::Controller & aController) {
@@ -388,7 +396,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
                         snac::getComponent<component::PlayerGameData>(aRoundData.mSlot);
                     if (!aRoundData.mCrown.isValid())
                     {
-                        if (gameData.mRoundsWon > leaderScore)
+                        if (gameData.mRoundsWon > leaderScore && gameData.mRoundsWon > 0)
                         {
                             leaderCount = 0;
                             leaders.at(leaderCount++) = {aHandle, &aRoundData};
@@ -467,6 +475,12 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
             }
             auto level = snac::getComponent<component::Level>(mLevel);
             mSystems.get()->get<system::AllowMovement>().update(level);
+            mPlayers.each([](component::PlayerRoundData & aRoundData, const component::AllowedMovement & aAllowedMovement) {
+                if ((aRoundData.mMoveState & aAllowedMovement.mAllowedMovement) == gPlayerMoveFlagNone)
+                {
+                    aRoundData.mMoveState = (aRoundData.mMoveState % 15) << 1;
+                }
+            });
             mSystems.get()->get<system::IntegratePlayerMovement>().update(
                 (float) aTime.mDeltaSeconds);
             mSystems.get()->get<system::MovementIntegration>().update(

@@ -2,8 +2,10 @@
 
 #include "Scene.h"
 #include "snacman/Timing.h"
+#include "snacman/simulations/snacgame/component/AllowedMovement.h"
 #include "snacman/simulations/snacgame/component/Geometry.h"
 #include "snacman/simulations/snacgame/component/Speed.h"
+#include "snacman/simulations/snacgame/component/Tags.h"
 
 #include <snac-renderer-V1/Camera.h>
 
@@ -86,8 +88,9 @@ private:
     ent::Query<component::RoundTransient> mRoundTransients;
     ent::Query<component::PlayerSlot> mSlots;
     ent::Query<component::PlayerHud> mHuds;
-    ent::Query<component::Geometry, component::PlayerRoundData, component::Controller> mPlayers;
+    ent::Query<component::Geometry, component::PlayerRoundData, component::Controller, component::AllowedMovement> mPlayers;
     ent::Query<component::PathToOnGrid> mPathfinders;
+    ent::Query<component::Crown> mCrowns;
     ent::Handle<ent::Entity> mLevel;
     ent::Handle<ent::Entity> mReadyText;
     ent::Handle<ent::Entity> mGoText;
