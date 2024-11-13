@@ -145,7 +145,8 @@ class Witness
 {
 private:
     Witness(WitnessData aData, snacgame::GameContext & aContext) :
-        mData(aData), mGameContext(aContext){};
+        mData(aData), mGameContext(aContext)
+    {}
 
 public:
     WitnessData mData;
