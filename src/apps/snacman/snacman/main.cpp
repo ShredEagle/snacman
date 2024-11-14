@@ -113,7 +113,7 @@ void runApplication()
         getVersionedName(),
         1920, 1024,
         glfwFlags,// TODO, handle applicationFlags via settings
-        4, 1,
+        4, 6,
         { {GLFW_SAMPLES, 4} },
     };
 
