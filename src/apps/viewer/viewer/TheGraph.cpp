@@ -45,9 +45,29 @@ namespace {
             0,
             0,
             GL_NONE,
-            /*AttributeDescription*/{},
+            {},
             aStorage,
-            GenericStream{});
+            makeGlyphInstanceStream(aStorage));
+
+        std::array<GlyphInstanceData, 3> instances{{
+            {
+                .mGlyphIdx = 50,
+                .mPosition_stringPix = {0.f, 50.f},
+            },
+            {
+                .mGlyphIdx = 51,
+                .mPosition_stringPix = {50.f, 50.f},
+            },
+            {
+                .mGlyphIdx = 52,
+                .mPosition_stringPix = {100.f, 50.f},
+            },
+        }};
+        // TODO should be a forward way to store the underlying buffer
+        const renderer::BufferView & glyphInstanceBuffer =
+            getBufferView(*consolidatedStream, semantic::gGlyphIdx);
+
+        proto::load(*glyphInstanceBuffer.mGLBuffer, std::span{instances}, graphics::BufferHint::StreamDraw);
 
         aStorage.mUbos.emplace_back();
         Handle<graphics::UniformBufferObject> ubo = &aStorage.mUbos.back();
@@ -337,6 +357,19 @@ void TheGraph::renderFrame(const Scene & aScene,
                 setTextures(textProgram->mProgram, textureRepo);
             }
 
+            // Load an orthographic camera, projecting the screen space from pixels to clip space [-1, 1]
+            loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
+                GpuViewProjectionBlock{
+                    math::AffineMatrix<4, GLfloat>::Identity(),
+                    math::trans3d::orthographicProjection(
+                        math::Box<float>{
+                            {-static_cast<math::Position<2, float>>(mRenderSize) / 2, -1.f},
+                            {static_cast<math::Size<2, float>>(mRenderSize), 2.f}
+                        }
+                    )
+                }
+            );
+
             graphics::ScopedBind programScope{textProgram->mProgram};
 
             {
@@ -345,7 +378,7 @@ void TheGraph::renderFrame(const Scene & aScene,
 
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw text", CpuTime/*, GpuTime*/);
                 
-                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+                glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 3);
             }
         }
     }

@@ -66,6 +66,7 @@ set(${TARGET_NAME}_SOURCES
 
     graph/ShadowMapping.cpp
     graph/text/Font.cpp
+    graph/text/TextGlsl.cpp
 
     utilities/LoadUbos.cpp
     utilities/VertexStreamUtilities.cpp

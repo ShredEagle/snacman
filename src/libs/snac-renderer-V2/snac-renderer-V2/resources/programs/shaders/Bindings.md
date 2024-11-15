@@ -8,6 +8,7 @@ Waiting for a better solution, here are our hardcoded bindings
 * 4: Lights
 * 5: LightViewProjection
 * 6: ShadowCascade
+* 7: GlyphMetrics
 
 ## Textures
 

@@ -8,8 +8,6 @@ out vec4 out_Color;
 
 void main(void)
 {
-    //out_Color = vec4(0.5, 0.2, 0.1, 1.);
-
     float atlasOpacity = texture(u_GlyphAtlas, ex_AtlasUv_pix).r;
     out_Color = vec4(atlasOpacity, 0.2, 0.1, atlasOpacity);
 }

@@ -17,6 +17,7 @@ namespace semantic
     const Semantic gColor{"Color"};
     const Semantic gUv{"Uv"};
     SEM(GlyphAtlas);
+    SEM(GlyphIdx);
     SEM(ShadowMap);
     SEM(Joints0);
     SEM(Weights0);
