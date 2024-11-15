@@ -168,6 +168,8 @@ Handle<ConfiguredProgram> storeConfiguredProgram(IntrospectProgram aProgram, Sto
 }
 
 
+// TODO Ad 2024/11/15: Have a special "empty" vertex stream (e.g. vertex pulling)
+// maybe static, so it reuse the VAO from ProgramConfig
 Handle<VertexStream> makeVertexStream(unsigned int aVerticesCount,
                                       unsigned int aIndicesCount,
                                       GLenum aIndexType,
@@ -175,13 +177,17 @@ Handle<VertexStream> makeVertexStream(unsigned int aVerticesCount,
                                       Storage & aStorage,
                                       const GenericStream & aStream)
 {
+    BufferView iboView;
     // TODO Ad 2023/10/11: Should we support smaller index types.
-    BufferView iboView = makeBufferGetView(
-        graphics::getByteSize(aIndexType),
-        aIndicesCount,
-        0,
-        GL_STATIC_DRAW,
-        aStorage);
+    if(aIndexType != GL_NONE)
+    {
+        iboView = makeBufferGetView(
+            graphics::getByteSize(aIndexType),
+            aIndicesCount,
+            0,
+            GL_STATIC_DRAW,
+            aStorage);
+    }
 
     // The consolidated vertex stream
     aStorage.mVertexStreams.push_back({

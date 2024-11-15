@@ -2,6 +2,7 @@
 
 #include "Logging.h"
 #include "Model.h"
+#include "Semantics.h"
 
 #include <renderer/Uniforms.h>
 #include <renderer/ScopeGuards.h>
@@ -73,9 +74,9 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
     graphics::VertexArrayObject vertexArray;
     graphics::ScopedBind scopedVao{vertexArray};
 
-    if (const graphics::BufferAny * ibo = aVertices.mIndexBufferView.mGLBuffer;
-        ibo != nullptr)
+    if (useElementIndices(aVertices))
     {
+        const graphics::BufferAny * ibo = aVertices.mIndexBufferView.mGLBuffer;
         // Now that the VAO is bound, it can store the index buffer binding.
         // Note that this binding is permanent, no need to scope it.
         graphics::bind(*ibo, graphics::BufferType::ElementArray);
@@ -83,6 +84,10 @@ graphics::VertexArrayObject prepareVAO(const IntrospectProgram & aProgram,
 
     for (const IntrospectProgram::Attribute & shaderAttribute : aProgram.mAttributes)
     {
+        if(shaderAttribute.mSemantic == semantic::g_builtin)
+        {
+            continue;
+        }
         if(auto found = aVertices.mSemanticToAttribute.find(shaderAttribute.mSemantic);
            found != aVertices.mSemanticToAttribute.end())
         {

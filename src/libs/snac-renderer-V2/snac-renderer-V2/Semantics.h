@@ -8,6 +8,7 @@ namespace semantic
 {
     #define SEM(s) const Semantic g ## s{#s}
 
+    const Semantic g_builtin = "_builtin";
     const Semantic gPosition{"Position"};
     SEM(ModelTransform);
     const Semantic gNormal{"Normal"};
@@ -15,6 +16,7 @@ namespace semantic
     SEM(Bitangent);
     const Semantic gColor{"Color"};
     const Semantic gUv{"Uv"};
+    SEM(GlyphAtlas);
     SEM(ShadowMap);
     SEM(Joints0);
     SEM(Weights0);
@@ -36,6 +38,7 @@ namespace semantic
 
     BLOCK_SEM(Entities);
     const BlockSemantic gFrame{"Frame"};
+    BLOCK_SEM(GlyphMetrics);
     BLOCK_SEM(JointMatrices);
     BLOCK_SEM(Lights);
     BLOCK_SEM(LightViewProjection);

@@ -17,6 +17,7 @@
 #include <snac-renderer-V2/files/Loader.h>
 
 #include <snac-renderer-V2/utilities/LoadUbos.h>
+#include <snac-renderer-V2/utilities/VertexStreamUtilities.h>
 
 #include <renderer/Uniforms.h>
 
@@ -26,6 +27,113 @@ namespace ad::renderer {
 
 namespace {
 
+    struct GlyphMetrics_glsl
+    {
+        math::Size<2, GLfloat> mBoundingBox_pix; // glyph bounding box in texture pixel coordinates, including margins.
+        math::Vec<2, GLfloat> mBearing_pix; // bearing, including  margins.
+        // TODO change to vec2
+        GLuint mOffsetInTexture_pix; // horizontal offset to the glyph in its ribbon texture.
+        // TODO Ad 2024/11/14: alignas
+        math::Vec<3, GLuint> _padding; // layout std140 imposes that array are 16 bytes aligned
+    };
+
+    GlyphMetrics_glsl toGlyphMetrics(const GlyphData & aData)
+    {
+        return GlyphMetrics_glsl{
+            .mBoundingBox_pix = aData.controlBoxSize,
+            .mBearing_pix = aData.bearing,
+            .mOffsetInTexture_pix = aData.offsetInTexture,
+        };
+    }
+
+    Font loadTheFont(const Loader & aLoader, Storage & aStorage)
+    {
+        static arte::Freetype gFreetype;
+        return Font{
+            gFreetype.load(aLoader.mFinder.pathFor("fonts/FredokaOne-Regular.ttf")),
+            64,
+            aStorage
+        };
+    }
+
+    Part loadThePart(const Loader & aLoader,
+                     Storage & aStorage,
+                     const Font & aFont)
+    {
+        Handle<VertexStream> consolidatedStream = makeVertexStream(
+            0,
+            0,
+            GL_NONE,
+            /*AttributeDescription*/{},
+            aStorage,
+            GenericStream{});
+
+        aStorage.mUbos.emplace_back();
+        Handle<graphics::UniformBufferObject> ubo = &aStorage.mUbos.back();
+
+        std::vector<GlyphMetrics_glsl> metrics;
+        metrics.reserve(aFont.mCharMap.size());
+        for (const GlyphData & data : aFont.mCharMap)
+        {
+            metrics.emplace_back(toGlyphMetrics(data));
+        }
+
+        proto::load(*ubo, std::span{metrics}, graphics::BufferHint::StaticDraw);
+
+        aStorage.mMaterialContexts.emplace_back(
+            MaterialContext{
+                .mUboRepo = RepositoryUbo{
+                    {semantic::gGlyphMetrics, ubo},
+                },
+            }
+        );
+        Handle<MaterialContext> materialContext = &aStorage.mMaterialContexts.back();
+
+        return Part{
+            .mName = "proto_glyph",
+            .mMaterial = Material{
+                .mContext = materialContext,
+                .mEffect = aLoader.loadEffect("effects/Text.sefx", aStorage),
+            },
+            .mVertexStream = std::move(consolidatedStream),
+            .mPrimitiveMode = GL_TRIANGLE_STRIP,
+            .mVertexCount = 4,
+        };
+    }
+
+    // This is much more complicated than I hoped
+    // plus it does not work because it is breaking asserts in generateDrawCall()
+    PassCache prepareTextPassCache(const Part & aPart, Storage & aStorage)
+    {
+        PassCache result;
+
+
+        AnnotationsSelector annotations = {};
+        DrawEntryHelper helper;
+        std::vector<PartDrawEntry> entries = 
+            helper.generateDrawEntries(annotations,
+                                       PartList{
+                                            .mParts{{&aPart}},
+                                            .mMaterials{{&aPart.mMaterial}},},
+                                       aStorage);
+        assert(entries.size() == 1);
+
+        const VertexStream & vertexStream = *aPart.mVertexStream;
+
+        result.mCalls.push_back(helper.generateDrawCall(entries.front(), aPart, vertexStream));
+
+        result.mDrawCommands.push_back(
+            DrawElementsIndirectCommand{
+                .mCount = 4,
+                .mInstanceCount = 1,
+                //.mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset / indiceSize)
+                //                + part.mIndexFirst,
+                //.mBaseVertex = part.mVertexFirst,
+                //.mBaseInstance = (GLuint)result.mDrawInstances.size(), // pushed below
+            });
+
+        return result;
+    }
 
     void setupShowTextureSampler(const graphics::Sampler & aSampler)
     {
@@ -51,7 +159,9 @@ TheGraph::TheGraph(math::Size<2, int> aRenderSize,
                    const Loader & aLoader) :
     mRenderSize{aRenderSize},
     mTransparencyResolver{aLoader.loadShader("programs/shaders/TransparencyResolve.frag")},
-    mShadowPass{aStorage}
+    mShadowPass{aStorage},
+    mFont{loadTheFont(aLoader, aStorage)},
+    mGlyphPart{loadThePart(aLoader, aStorage, mFont)}
 {
     allocateSizeDependentTextures(mRenderSize);
     setupSizeDependentTextures();
@@ -217,6 +327,53 @@ void TheGraph::renderFrame(const Scene & aScene,
 
         // When normally rendering the skybox, we are "inside" the cube, so only render backfaces
         passDrawSkybox(aGraphShared, *aScene.mEnvironment, aStorage, GL_FRONT, mControls);
+    }
+
+    // Text
+    {
+        Handle<ConfiguredProgram> textProgram = getProgram(*mGlyphPart.mMaterial.mEffect, {});
+
+        textureRepository[semantic::gGlyphAtlas] = mFont.mGlyphAtlas;
+
+        Handle<graphics::VertexArrayObject> vao = getVao(*textProgram, mGlyphPart, aStorage);
+
+        {
+            graphics::ScopedBind vaoScope{*vao};
+            {
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
+                // TODO #repos This should be consolidated
+                RepositoryUbo uboRepo{aGraphShared.mUbos.mUboRepository};
+                if(mGlyphPart.mMaterial.mContext)
+                {
+                    RepositoryUbo callRepo{mGlyphPart.mMaterial.mContext->mUboRepo};
+                    uboRepo.merge(callRepo);
+                }
+                setBufferBackedBlocks(textProgram->mProgram, uboRepo);
+            }
+
+            {
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
+                // TODO #repos This should be consolidated
+                RepositoryTexture textureRepo{textureRepository};
+                if(mGlyphPart.mMaterial.mContext)
+                {
+                    RepositoryTexture callRepo{mGlyphPart.mMaterial.mContext->mTextureRepo};
+                    textureRepo.merge(callRepo);
+                }
+                setTextures(textProgram->mProgram, textureRepo);
+            }
+
+            graphics::ScopedBind programScope{textProgram->mProgram};
+
+            {
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
+                glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
+
+                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw text", CpuTime/*, GpuTime*/);
+                
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            }
+        }
     }
 
     //

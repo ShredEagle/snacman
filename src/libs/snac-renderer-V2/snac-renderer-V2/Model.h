@@ -177,7 +177,7 @@ struct VertexStream /*: public SemanticBufferViews*/
 {
     SEMANTIC_BUFFER_MEMBERS                 
     BufferView mIndexBufferView;
-    GLenum mIndicesType = 0;/*NULL; for some reason Clang complains about NULL*/
+    GLenum mIndicesType = GL_NONE;
 };
 
 #undef SEMANTIC_BUFFER_MEMBERS
@@ -223,6 +223,19 @@ struct Part
     math::Box<GLfloat> mAabb;
     //FeatureSet mFeatures;
 };
+
+
+
+/// @return `true` if the VertexStream use indices for vertex attributes (`glDrawElement()`)
+/// `false` otherwise (`glDrawArray()`).
+inline bool useElementIndices(const VertexStream & aVertexStream)
+{ return aVertexStream.mIndicesType != GL_NONE; }
+
+
+/// @return `true` if the Part indices for vertex attributes (`glDrawElement()`)
+/// `false` otherwise (`glDrawArray()`).
+inline bool useElementIndices(const Part & aPart)
+{ return useElementIndices(*aPart.mVertexStream); }
 
 
 struct Object

@@ -14,6 +14,7 @@
 #include <snac-renderer-V2/Repositories.h>
 #include <snac-renderer-V2/debug/DebugRenderer.h>
 #include <snac-renderer-V2/graph/ShadowMapping.h>
+#include <snac-renderer-V2/graph/text/Font.h>
 
 
 
@@ -99,6 +100,9 @@ struct TheGraph
 
     // Debug texture rendering (this should be encapsulated somewhere else)
     graphics::Sampler mShowTextureSampler;
+
+    Font mFont;
+    Part mGlyphPart;
 };
 
 

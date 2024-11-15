@@ -35,6 +35,7 @@ set(${TARGET_NAME}_HEADERS
     graph/DepthMethod.h
     graph/ShadowCascadeBlock.h
     graph/ShadowMapping.h
+    graph/text/Font.h
 
     runtime_reflect/DearImguiVisitor.h
     runtime_reflect/ReflectHelpers.h
@@ -63,6 +64,7 @@ set(${TARGET_NAME}_SOURCES
     files/Loader.cpp
 
     graph/ShadowMapping.cpp
+    graph/text/Font.cpp
 
     utilities/LoadUbos.cpp
     utilities/VertexStreamUtilities.cpp
