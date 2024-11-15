@@ -2,6 +2,7 @@
 // * Render text in Viewer
 //   * Move text into scene
 //   * Provide constant values via defines or something similar
+//   * Ensure several fonts can be stored in the same texture (array?) and do a single draw call
 // * Implement cache files
 // * Name font atlas textures
 // * Allow to load from a loader interface (for render thread / cache handling)
@@ -51,6 +52,7 @@ Font::Font(arte::FontFace aFontFace,
            Storage & aStorage,
            arte::CharCode aFirstChar,
            arte::CharCode aLastChar) :
+    mFontFace{std::move(aFontFace)},
     mFirstChar{aFirstChar},
     mCharMap{aLastChar - aFirstChar}
 {
@@ -73,6 +75,35 @@ Font::Font(arte::FontFace aFontFace,
     aStorage.mTextures.push_back(std::move(atlas));
     mGlyphAtlas = &aStorage.mTextures.back();
     glObjectLabel(GL_TEXTURE, *mGlyphAtlas, -1, "Font_Atlas");
+}
+
+
+std::vector<GlyphInstanceData> prepareText(const Font & aFont, const std::string & aString)
+{
+    std::vector<GlyphInstanceData> result;
+    result.reserve(aString.size());
+
+    graphics::PenPosition penPosition;
+    for (std::string::const_iterator it = aString.begin();
+         it != aString.end();
+         /* in body */)
+    {
+        // Decode utf8 encoded string to individual Unicode code points,
+        // and advance the iterator accordingly.
+        arte::CharCode codePoint = utf8::next(it, aString.end());
+        assert(codePoint >= aFont.mFirstChar 
+               && codePoint < aFont.mFirstChar + aFont.mCharMap.size());
+
+        GLuint glyphIndex = codePoint - aFont.mFirstChar;
+        const GlyphData::FreeTypeData & ftData = aFont.mCharMap.mFt[glyphIndex];
+
+        result.push_back(GlyphInstanceData{
+            .mGlyphIdx = glyphIndex,
+            .mPosition_stringPix = 
+                penPosition.advance(ftData.mPenAdvance, ftData.mFreetypeIndex, aFont.mFontFace)
+        });
+    }
+    return result;
 }
 
 

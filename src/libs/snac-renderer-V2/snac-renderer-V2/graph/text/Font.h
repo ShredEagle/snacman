@@ -17,7 +17,7 @@ namespace ad::renderer {
 struct Storage;
 
 
-constexpr arte::CharCode gFirstCharCode = 20;
+constexpr arte::CharCode gFirstCharCode = 32;
 constexpr arte::CharCode gLastCharCode = 126;
 
 
@@ -64,10 +64,15 @@ struct Font
          arte::CharCode aFirstChar = gFirstCharCode,
          arte::CharCode aLastChar = gLastCharCode);
 
+    // Needed for kerning
+    arte::FontFace mFontFace;
     arte::CharCode mFirstChar;
     CharMap_t mCharMap;
     renderer::Handle<graphics::Texture> mGlyphAtlas;
 };
+
+
+std::vector<GlyphInstanceData> prepareText(const Font & aFont, const std::string & aString);
 
 
 } // namespace ad::renderer

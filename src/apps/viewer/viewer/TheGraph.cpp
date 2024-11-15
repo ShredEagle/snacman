@@ -49,25 +49,14 @@ namespace {
             aStorage,
             makeGlyphInstanceStream(aStorage));
 
-        std::array<GlyphInstanceData, 3> instances{{
-            {
-                .mGlyphIdx = 50,
-                .mPosition_stringPix = {0.f, 50.f},
-            },
-            {
-                .mGlyphIdx = 51,
-                .mPosition_stringPix = {50.f, 50.f},
-            },
-            {
-                .mGlyphIdx = 52,
-                .mPosition_stringPix = {100.f, 50.f},
-            },
-        }};
         // TODO should be a forward way to store the underlying buffer
         const renderer::BufferView & glyphInstanceBuffer =
             getBufferView(*consolidatedStream, semantic::gGlyphIdx);
 
-        proto::load(*glyphInstanceBuffer.mGLBuffer, std::span{instances}, graphics::BufferHint::StreamDraw);
+        auto message = prepareText(aFont, "Rest biche");
+        proto::load(*glyphInstanceBuffer.mGLBuffer,
+                    std::span{message},
+                    graphics::BufferHint::StreamDraw);
 
         aStorage.mUbos.emplace_back();
         Handle<graphics::UniformBufferObject> ubo = &aStorage.mUbos.back();
@@ -376,9 +365,11 @@ void TheGraph::renderFrame(const Scene & aScene,
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
                 glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
 
+                glEnable(GL_BLEND);
+
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw text", CpuTime/*, GpuTime*/);
                 
-                glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 3);
+                glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 10);
             }
         }
     }
