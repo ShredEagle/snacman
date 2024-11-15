@@ -27,25 +27,6 @@ namespace ad::renderer {
 
 namespace {
 
-    struct GlyphMetrics_glsl
-    {
-        math::Size<2, GLfloat> mBoundingBox_pix; // glyph bounding box in texture pixel coordinates, including margins.
-        math::Vec<2, GLfloat> mBearing_pix; // bearing, including  margins.
-        // TODO change to vec2
-        GLuint mOffsetInTexture_pix; // horizontal offset to the glyph in its ribbon texture.
-        // TODO Ad 2024/11/14: alignas
-        math::Vec<3, GLuint> _padding; // layout std140 imposes that array are 16 bytes aligned
-    };
-
-    GlyphMetrics_glsl toGlyphMetrics(const GlyphData & aData)
-    {
-        return GlyphMetrics_glsl{
-            .mBoundingBox_pix = aData.controlBoxSize,
-            .mBearing_pix = aData.bearing,
-            .mOffsetInTexture_pix = aData.offsetInTexture,
-        };
-    }
-
     Font loadTheFont(const Loader & aLoader, Storage & aStorage)
     {
         static arte::Freetype gFreetype;
@@ -70,20 +51,15 @@ namespace {
 
         aStorage.mUbos.emplace_back();
         Handle<graphics::UniformBufferObject> ubo = &aStorage.mUbos.back();
-
-        std::vector<GlyphMetrics_glsl> metrics;
-        metrics.reserve(aFont.mCharMap.size());
-        for (const GlyphData & data : aFont.mCharMap)
-        {
-            metrics.emplace_back(toGlyphMetrics(data));
-        }
-
-        proto::load(*ubo, std::span{metrics}, graphics::BufferHint::StaticDraw);
+        proto::load(*ubo, std::span{aFont.mCharMap.mMetrics}, graphics::BufferHint::StaticDraw);
 
         aStorage.mMaterialContexts.emplace_back(
             MaterialContext{
                 .mUboRepo = RepositoryUbo{
                     {semantic::gGlyphMetrics, ubo},
+                },
+                .mTextureRepo = {
+                    {semantic::gGlyphAtlas, aFont.mGlyphAtlas}
                 },
             }
         );
@@ -332,8 +308,6 @@ void TheGraph::renderFrame(const Scene & aScene,
     // Text
     {
         Handle<ConfiguredProgram> textProgram = getProgram(*mGlyphPart.mMaterial.mEffect, {});
-
-        textureRepository[semantic::gGlyphAtlas] = mFont.mGlyphAtlas;
 
         Handle<graphics::VertexArrayObject> vao = getVao(*textProgram, mGlyphPart, aStorage);
 

@@ -36,6 +36,7 @@ set(${TARGET_NAME}_HEADERS
     graph/ShadowCascadeBlock.h
     graph/ShadowMapping.h
     graph/text/Font.h
+    graph/text/TextGlsl.h
 
     runtime_reflect/DearImguiVisitor.h
     runtime_reflect/ReflectHelpers.h

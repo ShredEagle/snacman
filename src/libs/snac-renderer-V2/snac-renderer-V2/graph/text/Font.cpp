@@ -13,8 +13,37 @@
 // TODO Ad 2024/11/14: Remove this include
 #include <graphics/TextUtilities.h>
 
+#include <type_traits>
+
 
 namespace ad::renderer {
+
+
+namespace {
+
+    GlyphMetrics_glsl toGlyphMetrics(const graphics::RenderedGlyph & aGlyph)
+    {
+        static_assert(std::is_same_v<decltype(aGlyph.offsetInTexture), GLuint>,
+            "If the offset become 2 dimensionnal, the code below must be updated.");
+
+        return GlyphMetrics_glsl{
+            .mBoundingBox_pix = aGlyph.controlBoxSize,
+            .mBearing_pix = aGlyph.bearing,
+            .mOffsetInTexture_pix = {aGlyph.offsetInTexture, 0u},
+        };
+    }
+
+} // unnamed namespace
+
+
+void GlyphData::push(const graphics::RenderedGlyph & aGlyph)
+{
+    mMetrics.push_back(toGlyphMetrics(aGlyph));
+    mFt.push_back(FreeTypeData{
+        .mPenAdvance = aGlyph.penAdvance,
+        .mFreetypeIndex = aGlyph.freetypeIndex,
+    });
+}
 
 
 Font::Font(arte::FontFace aFontFace,
@@ -22,10 +51,10 @@ Font::Font(arte::FontFace aFontFace,
            Storage & aStorage,
            arte::CharCode aFirstChar,
            arte::CharCode aLastChar) :
-    mFirstChar{aFirstChar}
+    mFirstChar{aFirstChar},
+    mCharMap{aLastChar - aFirstChar}
 {
     assert(aLastChar >= aFirstChar);
-    mCharMap.reserve(aLastChar - aFirstChar);
 
     aFontFace.setPixelHeight(aFontPixelHeight)
              .inverseYAxis(true);
@@ -36,7 +65,7 @@ Font::Font(arte::FontFace aFontFace,
         aLastChar,
         [this](arte::CharCode aCode, const graphics::RenderedGlyph & aGlyph)
         {
-            mCharMap.push_back(aGlyph);
+            mCharMap.push(aGlyph);
         },
         {1, 1}
     );

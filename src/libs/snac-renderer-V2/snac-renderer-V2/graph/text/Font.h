@@ -1,5 +1,7 @@
 #pragma once
 
+#include "TextGlsl.h"
+
 #include "../../Handle.h"
 
 #include <arte/Freetype.h>
@@ -18,16 +20,42 @@ struct Storage;
 constexpr arte::CharCode gFirstCharCode = 20;
 constexpr arte::CharCode gLastCharCode = 126;
 
-//struct GlyphData
-//{
-//
-//};
-// TODO define a custom type
-using GlyphData = graphics::RenderedGlyph;
 
+/// @brief SoA for per-glyph information. Can be used as a character map
+/// if the charcode is used as index.
+struct GlyphData
+{
+    struct FreeTypeData
+    {
+        math::Vec<2, GLfloat> mPenAdvance;
+        unsigned int mFreetypeIndex; // Notably usefull for kerning queries.
+    };
+
+    GlyphData(std::size_t aCapacity)
+    {
+        mMetrics.reserve(aCapacity);
+        mFt.reserve(aCapacity);
+    }
+
+    std::size_t size() const
+    {
+        assert(mMetrics.size() == mFt.size());
+        return mMetrics.size();
+    }
+
+    void push(const graphics::RenderedGlyph & aGlyph);
+
+    /// @brief Data that should be loaded as a GLSL buffer
+    std::vector<GlyphMetrics_glsl> mMetrics;
+    /// @brief Data required to layout a string as a serie of glyphs
+    std::vector<FreeTypeData> mFt;
+};
+
+
+/// @brief Model a font at a given size as a resource.
 struct Font
 {
-    using CharMap_t = std::vector<GlyphData>;
+    using CharMap_t = GlyphData;
 
     // Add a ctor that loads form cache file
     Font(arte::FontFace aFontFace,
