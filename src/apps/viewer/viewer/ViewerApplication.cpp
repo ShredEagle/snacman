@@ -330,6 +330,11 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
     mLoader{makeResourceFinder()},
+    mFont{
+        mFreetype.load(mLoader.mFinder.pathFor("fonts/FredokaOne-Regular.ttf")),
+        64,
+        mStorage
+    },
     mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage},
     // Track the size of the default framebuffer, which will be the destination of mGraph::render().
     mDebugRenderer{mStorage, mLoader},
@@ -353,6 +358,32 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
         SELOG(info)("Model viewer mode (inferred from single node)");
         mPrimaryView.mCameraSystem.setupAsModelViewer(children.front().mAabb);
     }
+
+    //
+    // Prepare text
+    //
+
+    // Initialize the Part in Scene, for the loaded Font.
+    mScene.mScreenText.mGlyphPart = 
+        makePartForFont(mFont, mLoader.loadEffect("effects/Text.sefx", mStorage), mStorage);
+
+    // Add a few instances of a message
+    mScene.mScreenText.mStrings.push_back(
+        ProtoTexts::StringEntities{
+            .mStringGlyphs = prepareText(mFont, "Viewer text"),
+            .mEntities = {
+                {
+                    .mStringPixToWorld = math::AffineMatrix<4, GLfloat>::Identity(),
+                },
+                {
+                    .mStringPixToWorld = math::trans3d::translate<GLfloat>({0.f, -100.f, 0.f}),
+                },
+                {
+                    .mStringPixToWorld = math::trans3d::translate<GLfloat>({0.f, 100.f, 0.f}),
+                },
+            }
+        }
+    );
 
     //// Add basic shapes to the the scene
     //Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);

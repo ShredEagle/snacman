@@ -100,9 +100,6 @@ struct TheGraph
 
     // Debug texture rendering (this should be encapsulated somewhere else)
     graphics::Sampler mShowTextureSampler;
-
-    Font mFont;
-    Part mGlyphPart;
 };
 
 

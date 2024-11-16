@@ -10,9 +10,14 @@
 #include "Font.h"
 
 #include "../../Model.h"
+#include "../../Semantics.h"
+#include "../../utilities/VertexStreamUtilities.h"
 
 // TODO Ad 2024/11/14: Remove this include
 #include <graphics/TextUtilities.h>
+
+// TODO Ad 2023/10/18: Should get rid of this repeated implementation
+#include <snac-renderer-V2/RendererReimplement.h>
 
 #include <type_traits>
 
@@ -78,7 +83,7 @@ Font::Font(arte::FontFace aFontFace,
 }
 
 
-std::vector<GlyphInstanceData> prepareText(const Font & aFont, const std::string & aString)
+ClientText prepareText(const Font & aFont, const std::string & aString)
 {
     std::vector<GlyphInstanceData> result;
     result.reserve(aString.size());
@@ -103,6 +108,64 @@ std::vector<GlyphInstanceData> prepareText(const Font & aFont, const std::string
                 penPosition.advance(ftData.mPenAdvance, ftData.mFreetypeIndex, aFont.mFontFace)
         });
     }
+    return result;
+}
+
+
+TextPart makePartForFont(const Font & aFont,
+                         Handle<Effect> aEffect,
+                         Storage & aStorage)
+{
+    Handle<VertexStream> consolidatedStream = makeVertexStream(
+        0,
+        0,
+        GL_NONE,
+        {},
+        aStorage,
+        makeGlyphInstanceStream(aStorage));
+
+    // Glyph metrics UBO
+    aStorage.mUbos.emplace_back();
+    Handle<graphics::UniformBufferObject> metricsUbo = &aStorage.mUbos.back();
+    proto::load(*metricsUbo, std::span{aFont.mCharMap.mMetrics}, graphics::BufferHint::StaticDraw);
+
+    // String entities UBO
+    aStorage.mUbos.emplace_back();
+    Handle<graphics::UniformBufferObject> entitiesUbo = &aStorage.mUbos.back();
+
+    aStorage.mMaterialContexts.emplace_back(
+        MaterialContext{
+            .mUboRepo = RepositoryUbo{
+                {semantic::gGlyphMetrics, metricsUbo},
+                {semantic::gEntities, entitiesUbo},
+            },
+            .mTextureRepo = {
+                {semantic::gGlyphAtlas, aFont.mGlyphAtlas}
+            },
+        }
+    );
+    Handle<MaterialContext> materialContext = &aStorage.mMaterialContexts.back();
+
+    Handle<const graphics::BufferAny> glyphInstanceBuffer =
+        getBufferView(*consolidatedStream, semantic::gGlyphIdx).mGLBuffer;
+    Handle<const graphics::BufferAny> instanceToStringEntityBuffer =
+        getBufferView(*consolidatedStream, semantic::gEntityIdx).mGLBuffer;
+
+    TextPart result{
+        Part{
+            .mName = "glyph",
+            .mMaterial = Material{
+                .mContext = materialContext,
+                .mEffect = aEffect,
+            },
+            .mVertexStream = std::move(consolidatedStream),
+            .mPrimitiveMode = GL_TRIANGLE_STRIP,
+            .mVertexCount = 4,
+        },
+    };
+    result.mGlyphInstanceBuffer = glyphInstanceBuffer;
+    result.mInstanceToStringEntityBuffer = instanceToStringEntityBuffer;
+    result.mStringEntitiesUbo = entitiesUbo;
     return result;
 }
 

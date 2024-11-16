@@ -1,5 +1,6 @@
 #version 420
 
+#include "Constants.glsl"
 #include "ViewProjectionBlock.glsl"
 
 // TODO This should not be hardcoded, but somehow provided by client code
@@ -13,17 +14,20 @@ const vec2 gPositions[4] = vec2[4](
 );
 
 
-in uint in_GlyphIdx;
-// Position of the pen for this glyph instance, in the overall string
-in vec2 in_Position_stringPix;
-
-
 const vec2 gUvs[4] = vec2[4](
     vec2(0, 0),
     vec2(1, 0),
     vec2(0, 1),
     vec2(1, 1)
 );
+
+
+in uint in_GlyphIdx;
+// Position of the pen for this glyph instance, in the overall string
+in vec2 in_Position_stringPix;
+// The string entity this glyph is part of
+in uint in_EntityIdx;
+
 
 struct GlyphMetrics 
 {
@@ -37,7 +41,21 @@ layout(std140, binding = 7) uniform GlyphMetricsBlock
     GlyphMetrics glyphs[GlyphMetricsLength];
 };
 
+
+struct StringEntity
+{
+    mat4 stringPixToWorld;
+    vec4 color;
+};
+
+layout(std140, binding = 1) uniform EntitiesBlock
+{
+    StringEntity stringEntities[MAX_ENTITIES];
+};
+
+
 out vec2 ex_AtlasUv_pix;
+out vec4 ex_Color;
 
 void main(void)
 {
@@ -45,6 +63,9 @@ void main(void)
 
     ex_AtlasUv_pix = (gUvs[gl_VertexID % 4] * glyph.boundingBox_pix)
         + vec2(glyph.linearOffset_pix, 0);
+
+    StringEntity entity = stringEntities[in_EntityIdx];
+    ex_Color = entity.color;
 
     // Position of this vertex relative to the current pen position in pixels.
     // Note: we consider the glyph coordinate system to go from [0, 0] to [+width, -height]
@@ -54,9 +75,8 @@ void main(void)
     vec2 position_penPix = gPositions[gl_VertexID % 4] * glyph.boundingBox_pix + glyph.bearing_pix;
     // Position of this vertex in the overall string coordinate system, in pixels.
     vec2 position_stringPix = in_Position_stringPix + position_penPix;
-
     // Transform from local string space to clip space
-    gl_Position = viewingProjection * vec4(position_stringPix, 0, 1);
+    gl_Position = viewingProjection * entity.stringPixToWorld * vec4(position_stringPix, 0, 1);
 }
 
 

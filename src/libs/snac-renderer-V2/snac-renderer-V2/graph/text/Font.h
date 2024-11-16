@@ -72,7 +72,15 @@ struct Font
 };
 
 
-std::vector<GlyphInstanceData> prepareText(const Font & aFont, const std::string & aString);
+// TODO Ad 2024/11/15: We should actually be able to share a part for several fonts,
+// as long as the atlases are accessible from the same texture (e.g. texture array)
+// And there is a complication with the UBO of glyph metrics...
+// TODO Ad 2024/11/15: Should we also store Parts in Storage to return an handle here?
+TextPart makePartForFont(const Font & aFont,
+                         Handle<Effect> aEffect,
+                         Storage & aStorage);
+
+ClientText prepareText(const Font & aFont, const std::string & aString);
 
 
 } // namespace ad::renderer

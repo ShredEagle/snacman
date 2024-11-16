@@ -11,7 +11,13 @@ namespace ad::renderer {
 
 GenericStream makeGlyphInstanceStream(Storage & aStorage)
 {
-    BufferView vboView = makeBufferGetView(sizeof(GlyphInstanceData),
+    BufferView glyphView = makeBufferGetView(sizeof(GlyphInstanceData),
+                                             0, // Do not allocate storage space
+                                             1, // intance divisor
+                                             GL_STREAM_DRAW,
+                                             aStorage);
+
+    BufferView glyphToStringView = makeBufferGetView(sizeof(GLuint),
                                                      0, // Do not allocate storage space
                                                      1, // intance divisor
                                                      GL_STREAM_DRAW,
@@ -20,7 +26,7 @@ GenericStream makeGlyphInstanceStream(Storage & aStorage)
     // TODO Ad 2024/04/04: #perf Indices should be grouped by 4 in vertex attributes,
     // instead of using a distinct attribute each.
     return GenericStream{
-        .mVertexBufferViews = { vboView, },
+        .mVertexBufferViews = {glyphView, glyphToStringView},
         .mSemanticToAttribute{
             {
                 semantic::gGlyphIdx,
@@ -41,6 +47,17 @@ GenericStream makeGlyphInstanceStream(Storage & aStorage)
                         .mDimension = 2,
                         .mOffset = offsetof(GlyphInstanceData, mPosition_stringPix),
                         .mComponentType = GL_FLOAT,
+                    },
+                }
+            },
+            {
+                semantic::gEntityIdx,
+                AttributeAccessor{
+                    .mBufferViewIndex = 1, // view is added above
+                    .mClientDataFormat{
+                        .mDimension = 1,
+                        .mOffset = 0,
+                        .mComponentType = GL_UNSIGNED_INT
                     },
                 }
             },

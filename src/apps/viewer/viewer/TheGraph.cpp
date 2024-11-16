@@ -17,7 +17,6 @@
 #include <snac-renderer-V2/files/Loader.h>
 
 #include <snac-renderer-V2/utilities/LoadUbos.h>
-#include <snac-renderer-V2/utilities/VertexStreamUtilities.h>
 
 #include <renderer/Uniforms.h>
 
@@ -26,65 +25,6 @@ namespace ad::renderer {
 
 
 namespace {
-
-    Font loadTheFont(const Loader & aLoader, Storage & aStorage)
-    {
-        static arte::Freetype gFreetype;
-        return Font{
-            gFreetype.load(aLoader.mFinder.pathFor("fonts/FredokaOne-Regular.ttf")),
-            64,
-            aStorage
-        };
-    }
-
-    Part loadThePart(const Loader & aLoader,
-                     Storage & aStorage,
-                     const Font & aFont)
-    {
-        Handle<VertexStream> consolidatedStream = makeVertexStream(
-            0,
-            0,
-            GL_NONE,
-            {},
-            aStorage,
-            makeGlyphInstanceStream(aStorage));
-
-        // TODO should be a forward way to store the underlying buffer
-        const renderer::BufferView & glyphInstanceBuffer =
-            getBufferView(*consolidatedStream, semantic::gGlyphIdx);
-
-        auto message = prepareText(aFont, "Rest biche");
-        proto::load(*glyphInstanceBuffer.mGLBuffer,
-                    std::span{message},
-                    graphics::BufferHint::StreamDraw);
-
-        aStorage.mUbos.emplace_back();
-        Handle<graphics::UniformBufferObject> ubo = &aStorage.mUbos.back();
-        proto::load(*ubo, std::span{aFont.mCharMap.mMetrics}, graphics::BufferHint::StaticDraw);
-
-        aStorage.mMaterialContexts.emplace_back(
-            MaterialContext{
-                .mUboRepo = RepositoryUbo{
-                    {semantic::gGlyphMetrics, ubo},
-                },
-                .mTextureRepo = {
-                    {semantic::gGlyphAtlas, aFont.mGlyphAtlas}
-                },
-            }
-        );
-        Handle<MaterialContext> materialContext = &aStorage.mMaterialContexts.back();
-
-        return Part{
-            .mName = "proto_glyph",
-            .mMaterial = Material{
-                .mContext = materialContext,
-                .mEffect = aLoader.loadEffect("effects/Text.sefx", aStorage),
-            },
-            .mVertexStream = std::move(consolidatedStream),
-            .mPrimitiveMode = GL_TRIANGLE_STRIP,
-            .mVertexCount = 4,
-        };
-    }
 
     // This is much more complicated than I hoped
     // plus it does not work because it is breaking asserts in generateDrawCall()
@@ -144,9 +84,7 @@ TheGraph::TheGraph(math::Size<2, int> aRenderSize,
                    const Loader & aLoader) :
     mRenderSize{aRenderSize},
     mTransparencyResolver{aLoader.loadShader("programs/shaders/TransparencyResolve.frag")},
-    mShadowPass{aStorage},
-    mFont{loadTheFont(aLoader, aStorage)},
-    mGlyphPart{loadThePart(aLoader, aStorage, mFont)}
+    mShadowPass{aStorage}
 {
     allocateSizeDependentTextures(mRenderSize);
     setupSizeDependentTextures();
@@ -316,19 +254,51 @@ void TheGraph::renderFrame(const Scene & aScene,
 
     // Text
     {
-        Handle<ConfiguredProgram> textProgram = getProgram(*mGlyphPart.mMaterial.mEffect, {});
+        const TextPart & glyphPart = aScene.mScreenText.mGlyphPart;
 
-        Handle<graphics::VertexArrayObject> vao = getVao(*textProgram, mGlyphPart, aStorage);
+        // Load all buffers required to render text
+        ClientText allGlyphInstances;
+        std::vector<GLuint> glyphInstanceToStringEntity;
+        std::vector<StringEntity_glsl> stringEntities;
+        GLuint stringEntityIdx = 0;
+        for(const ProtoTexts::StringEntities & stringEntries : aScene.mScreenText.mStrings)
+        {
+            stringEntities.insert(stringEntities.end(),
+                                  stringEntries.mEntities.begin(), stringEntries.mEntities.end());
+            for(;
+                stringEntityIdx != stringEntities.size();
+                ++stringEntityIdx)
+            {
+                allGlyphInstances.insert(allGlyphInstances.end(),
+                                        stringEntries.mStringGlyphs.begin(), stringEntries.mStringGlyphs.end());
+                // Insert a copy of the current string entity index for each glyph instance
+                glyphInstanceToStringEntity.insert(glyphInstanceToStringEntity.end(),
+                                                   stringEntries.mStringGlyphs.size(), stringEntityIdx);
+            }
+        }
+        proto::load(*glyphPart.mGlyphInstanceBuffer,
+                    std::span{allGlyphInstances},
+                    graphics::BufferHint::StreamDraw);
+        proto::load(*glyphPart.mInstanceToStringEntityBuffer,
+                    std::span{glyphInstanceToStringEntity},
+                    graphics::BufferHint::StreamDraw);
+        proto::load(*glyphPart.mStringEntitiesUbo,
+                    std::span{stringEntities},
+                    graphics::BufferHint::StreamDraw);
+        const GLsizei glyphCount = (GLsizei)allGlyphInstances.size();
 
+        // TODO: factorize
+        Handle<ConfiguredProgram> textProgram = getProgram(*glyphPart.mMaterial.mEffect, {});
+        Handle<graphics::VertexArrayObject> vao = getVao(*textProgram, glyphPart, aStorage);
         {
             graphics::ScopedBind vaoScope{*vao};
             {
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
                 // TODO #repos This should be consolidated
                 RepositoryUbo uboRepo{aGraphShared.mUbos.mUboRepository};
-                if(mGlyphPart.mMaterial.mContext)
+                if(glyphPart.mMaterial.mContext)
                 {
-                    RepositoryUbo callRepo{mGlyphPart.mMaterial.mContext->mUboRepo};
+                    RepositoryUbo callRepo{glyphPart.mMaterial.mContext->mUboRepo};
                     uboRepo.merge(callRepo);
                 }
                 setBufferBackedBlocks(textProgram->mProgram, uboRepo);
@@ -338,9 +308,9 @@ void TheGraph::renderFrame(const Scene & aScene,
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
                 // TODO #repos This should be consolidated
                 RepositoryTexture textureRepo{textureRepository};
-                if(mGlyphPart.mMaterial.mContext)
+                if(glyphPart.mMaterial.mContext)
                 {
-                    RepositoryTexture callRepo{mGlyphPart.mMaterial.mContext->mTextureRepo};
+                    RepositoryTexture callRepo{glyphPart.mMaterial.mContext->mTextureRepo};
                     textureRepo.merge(callRepo);
                 }
                 setTextures(textProgram->mProgram, textureRepo);
@@ -369,7 +339,8 @@ void TheGraph::renderFrame(const Scene & aScene,
 
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw text", CpuTime/*, GpuTime*/);
                 
-                glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 10);
+                // TODO: dynamic instance count
+                glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, glyphCount);
             }
         }
     }
