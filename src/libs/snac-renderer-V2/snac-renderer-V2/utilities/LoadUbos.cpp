@@ -17,20 +17,20 @@ void loadFrameUbo(const graphics::UniformBufferObject & aUbo)
     GLfloat time =
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 1000.f;
-    proto::loadSingle(aUbo, time, graphics::BufferHint::DynamicDraw);
+    proto::loadSingle(aUbo, time, graphics::BufferHint::StreamDraw);
 }
 
 
 void loadLightsUbo(const graphics::UniformBufferObject & aUbo,
                    const LightsData_glsl & aLights)
 {
-    proto::loadSingle(aUbo, aLights, graphics::BufferHint::DynamicDraw);
+    proto::loadSingle(aUbo, aLights, graphics::BufferHint::StreamDraw);
 }
 
 
 void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const GpuViewProjectionBlock & aViewProjection)
 {
-    proto::loadSingle(aUbo, aViewProjection, graphics::BufferHint::DynamicDraw);
+    proto::loadSingle(aUbo, aViewProjection, graphics::BufferHint::StreamDraw);
 }
 
 
@@ -42,7 +42,7 @@ void loadCameraUbo(const graphics::UniformBufferObject & aUbo, const Camera & aC
 
 void loadLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo, const LightViewProjection & aLightViewProjection)
 {
-    proto::loadSingle(aUbo, aLightViewProjection, graphics::BufferHint::DynamicDraw);
+    proto::loadSingle(aUbo, aLightViewProjection, graphics::BufferHint::StreamDraw);
 }
 
 
