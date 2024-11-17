@@ -257,6 +257,35 @@ DrawCall DrawEntryHelper::generateDrawCall(const PartDrawEntry & aEntry,
 }
 
 
+void setupProgramRepositories(Handle<MaterialContext> aContext,
+                              RepositoryUbo aUboRepository,
+                              RepositoryTexture aTextureRepository,
+                              const IntrospectProgram & aIntrospectProgram)
+{
+    {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
+        // TODO #repos This should be consolidated
+        if(aContext)
+        {
+            RepositoryUbo callRepo{aContext->mUboRepo};
+            aUboRepository.merge(callRepo);
+        }
+        setBufferBackedBlocks(aIntrospectProgram, aUboRepository);
+    }
+
+    {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
+        // TODO #repos This should be consolidated
+        if(aContext)
+        {
+            RepositoryTexture callRepo{aContext->mTextureRepo};
+            aTextureRepository.merge(callRepo);
+        }
+        setTextures(aIntrospectProgram, aTextureRepository);
+    }
+}
+
+
 void draw(const PassCache & aPassCache,
           const RepositoryUbo & aUboRepository,
           const RepositoryTexture & aTextureRepository)
@@ -283,29 +312,7 @@ void draw(const PassCache & aPassCache,
             graphics::ScopedBind vaoScope{vao};
             PROFILER_END_SECTION(bindVaoProfiling);
             
-            {
-                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
-                // TODO #repos This should be consolidated
-                RepositoryUbo uboRepo{aUboRepository};
-                if(call.mCallContext)
-                {
-                    RepositoryUbo callRepo{call.mCallContext->mUboRepo};
-                    uboRepo.merge(callRepo);
-                }
-                setBufferBackedBlocks(selectedProgram, uboRepo);
-            }
-
-            {
-                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
-                // TODO #repos This should be consolidated
-                RepositoryTexture textureRepo{aTextureRepository};
-                if(call.mCallContext)
-                {
-                    RepositoryTexture callRepo{call.mCallContext->mTextureRepo};
-                    textureRepo.merge(callRepo);
-                }
-                setTextures(selectedProgram, textureRepo);
-            }
+            setupProgramRepositories(call.mCallContext, aUboRepository, aTextureRepository, selectedProgram);
 
             auto bindProgramProfiling = PROFILER_BEGIN_RECURRING_SECTION(gRenderProfiler, "bind_program", CpuTime);
             graphics::ScopedBind programScope{selectedProgram};

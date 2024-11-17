@@ -287,59 +287,38 @@ void TheGraph::renderFrame(const Scene & aScene,
                     graphics::BufferHint::StreamDraw);
         const GLsizei glyphCount = (GLsizei)allGlyphInstances.size();
 
-        // TODO: factorize
-        Handle<ConfiguredProgram> textProgram = getProgram(*glyphPart.mMaterial.mEffect, {});
-        Handle<graphics::VertexArrayObject> vao = getVao(*textProgram, glyphPart, aStorage);
+        // Load an orthographic camera, projecting the screen space from pixels to clip space [-1, 1]
+        loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
+            GpuViewProjectionBlock{
+                math::AffineMatrix<4, GLfloat>::Identity(),
+                math::trans3d::orthographicProjection(
+                    math::Box<float>{
+                        {-static_cast<math::Position<2, float>>(mRenderSize) / 2, -1.f},
+                        {static_cast<math::Size<2, float>>(mRenderSize), 2.f}
+                    }
+                )
+            }
+        );
+
+        // Setup viewport and pipeline state
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
+        glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
+
+        glEnable(GL_BLEND);
+
+        // Draw
         {
+            Handle<ConfiguredProgram> textProgram = getProgram(*glyphPart.mMaterial.mEffect, {});
+            Handle<graphics::VertexArrayObject> vao = getVao(*textProgram, glyphPart, aStorage);
             graphics::ScopedBind vaoScope{*vao};
-            {
-                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
-                // TODO #repos This should be consolidated
-                RepositoryUbo uboRepo{aGraphShared.mUbos.mUboRepository};
-                if(glyphPart.mMaterial.mContext)
-                {
-                    RepositoryUbo callRepo{glyphPart.mMaterial.mContext->mUboRepo};
-                    uboRepo.merge(callRepo);
-                }
-                setBufferBackedBlocks(textProgram->mProgram, uboRepo);
-            }
-
-            {
-                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
-                // TODO #repos This should be consolidated
-                RepositoryTexture textureRepo{textureRepository};
-                if(glyphPart.mMaterial.mContext)
-                {
-                    RepositoryTexture callRepo{glyphPart.mMaterial.mContext->mTextureRepo};
-                    textureRepo.merge(callRepo);
-                }
-                setTextures(textProgram->mProgram, textureRepo);
-            }
-
-            // Load an orthographic camera, projecting the screen space from pixels to clip space [-1, 1]
-            loadCameraUbo(*aGraphShared.mUbos.mViewingUbo, 
-                GpuViewProjectionBlock{
-                    math::AffineMatrix<4, GLfloat>::Identity(),
-                    math::trans3d::orthographicProjection(
-                        math::Box<float>{
-                            {-static_cast<math::Position<2, float>>(mRenderSize) / 2, -1.f},
-                            {static_cast<math::Size<2, float>>(mRenderSize), 2.f}
-                        }
-                    )
-                }
-            );
-
             graphics::ScopedBind programScope{textProgram->mProgram};
 
+            setupProgramRepositories(glyphPart.mMaterial.mContext,
+                                     aGraphShared.mUbos.mUboRepository,
+                                     textureRepository,
+                                     textProgram->mProgram);
             {
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, aFramebuffer);
-                glViewport(0, 0, mRenderSize.width(), mRenderSize.height());
-
-                glEnable(GL_BLEND);
-
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw text", CpuTime/*, GpuTime*/);
-                
-                // TODO: dynamic instance count
                 glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, glyphCount);
             }
         }

@@ -151,4 +151,10 @@ Handle<graphics::VertexArrayObject> getVao(const ConfiguredProgram & aProgram,
                                            const Part & aPart,
                                            Storage & aStorage);
 
+/// @attention Takes repositories by value, since the copies will be mutated in the function.
+void setupProgramRepositories(Handle<MaterialContext> aContext,
+                              RepositoryUbo aUboRepository,
+                              RepositoryTexture aTextureRepository,
+                              const IntrospectProgram & aIntrospectProgram);
+
 } // namespace ad::renderer

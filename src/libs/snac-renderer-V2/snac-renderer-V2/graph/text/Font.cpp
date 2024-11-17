@@ -1,12 +1,14 @@
 // TODO Ad 2024/11/14: 
 // * Render text in Viewer
-//   * Move text into scene
+//   * Restore SDF functionnality
+//   * Handle color
+//   * Factorize the draw/setup code
 //   * Provide constant values via defines or something similar
 //   * Ensure several fonts can be stored in the same texture (array?) and do a single draw call
 // * Implement cache files
 // * Name font atlas textures
 // * Allow to load from a loader interface (for render thread / cache handling)
-// * Decomissin renderer_V1 completely
+// * Decomission renderer_V1 completely
 #include "Font.h"
 
 #include "../../Model.h"
