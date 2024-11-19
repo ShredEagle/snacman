@@ -65,8 +65,4 @@ graphics::Texture highLightSamples(const Environment & aEnvironment,
                                    const Loader & aLoader);
 
 
-// TODO Ad 2024/07/05: It should be moved into a more general header of a library
-void dumpToFile(const graphics::Texture & aTexture, std::filesystem::path aOutput, GLint aLevel = 0);
-
-
 } // namespace ad::renderer

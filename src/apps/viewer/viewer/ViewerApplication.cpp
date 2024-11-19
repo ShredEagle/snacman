@@ -20,6 +20,8 @@
 
 #include <profiler/GlApi.h>
 
+#include <renderer/TextureUtilities.h>
+
 #include <snac-renderer-V2/Cube.h>
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/RendererReimplement.h>
@@ -330,11 +332,10 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
     mLoader{makeResourceFinder()},
-    mFont{
-        mFreetype.load(mLoader.mFinder.pathFor("fonts/FredokaOne-Regular.ttf")),
-        64,
-        mStorage
-    },
+    mFont{Font::makeUseCache(mFreetype,
+                             mLoader.mFinder.pathFor("fonts/FredokaOne-Regular.ttf"),
+                             64,
+                             mStorage)},
     mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage},
     // Track the size of the default framebuffer, which will be the destination of mGraph::render().
     mDebugRenderer{mStorage, mLoader},
@@ -655,11 +656,16 @@ void ViewerApplication::drawMainUi(const renderer::Timing & aTime)
                                  roughness,
                                  mLoader);
             glObjectLabel(GL_TEXTURE, highlights, -1, "highlight-samples");
-            dumpToFile(highlights,
-                    mScene.mEnvironment->mMapFile.parent_path() /
+
+            std::ofstream samplesOut{
+                mScene.mEnvironment->mMapFile.parent_path() /
                         "samples-" += 
                             mScene.mEnvironment->mMapFile.filename().replace_extension("png"),
-                    0);
+                std::ios::binary};
+            graphics::serializeTexture<math::sdr::Rgb>(highlights,
+                                                       0,
+                                                       arte::ImageFormat::Png,
+                                                       samplesOut);
         }
     }
 

@@ -14,6 +14,8 @@
 namespace ad::renderer {
 
 
+struct BinaryInArchive;
+struct BinaryOutArchive;
 struct Storage;
 
 
@@ -31,11 +33,15 @@ struct GlyphData
         unsigned int mFreetypeIndex; // Notably usefull for kerning queries.
     };
 
-    GlyphData(std::size_t aCapacity)
+    explicit GlyphData(std::size_t aCapacity)
     {
         mMetrics.reserve(aCapacity);
         mFt.reserve(aCapacity);
     }
+
+    GlyphData() :
+        GlyphData(0)
+    {}
 
     std::size_t size() const
     {
@@ -44,6 +50,9 @@ struct GlyphData
     }
 
     void push(const graphics::RenderedGlyph & aGlyph);
+
+    void serialize(BinaryOutArchive & aOut) const;
+    void deserialize(BinaryInArchive & aIn);
 
     /// @brief Data that should be loaded as a GLSL buffer
     std::vector<GlyphMetrics_glsl> mMetrics;
@@ -63,7 +72,29 @@ struct Font
          Storage & aStorage,
          arte::CharCode aFirstChar = gFirstCharCode,
          arte::CharCode aLastChar = gLastCharCode);
+        
+    /// @brief Load a Font, using a simple cache system looking for serialized files next to the font path.
+    /// Create the cache file if they are not found.
+    static Font makeUseCache(const arte::Freetype & aFreetype,
+                             std::filesystem::path aFontFullPath,
+                             int aFontPixelHeight,
+                             Storage & aStorage,
+                             arte::CharCode aFirstChar = gFirstCharCode,
+                             arte::CharCode aLastChar = gLastCharCode);
 
+    void serialize(BinaryOutArchive & aDataOut, std::ostream & aAtlasOut) const;
+    void deserialize(BinaryInArchive & aData, std::istream & aAtlas, Storage & aStorage);
+
+private:
+    // Ideally, we would ZII and have a public default ctor
+    // but it means we should go over all functions an make sure they just do nothing
+    // on the zero inited Font. 
+    // Plus, there is a complication that the FontFace data member has no default ctor
+    // and adding one would essentially mean having a "null" font face, and null values 
+    // are not a good thing in interfaces.
+    Font(arte::FontFace aFontFace);
+    
+public:
     // Needed for kerning
     arte::FontFace mFontFace;
     arte::CharCode mFirstChar;

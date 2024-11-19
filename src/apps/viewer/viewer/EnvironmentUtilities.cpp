@@ -439,30 +439,4 @@ graphics::Texture highLightSamples(const Environment & aEnvironment,
 }
 
 
-void dumpToFile(const graphics::Texture & aTexture, std::filesystem::path aOutput, GLint aLevel)
-{
-    graphics::ScopedBind boundTexture{aTexture};
-
-    math::Size<2, GLint> size;
-    glGetTexLevelParameteriv(aTexture.mTarget,
-                             0,
-                             GL_TEXTURE_WIDTH,
-                             &size.width());
-    glGetTexLevelParameteriv(aTexture.mTarget,
-                             0,
-                             GL_TEXTURE_HEIGHT,
-                             &size.height());
-
-    using Pixel = math::sdr::Rgb;
-
-    std::unique_ptr<unsigned char[]> raster = 
-        std::make_unique<unsigned char[]>(sizeof(Pixel) * size.area());
-    // Return as RGB unsigned bytes
-    glGetTexImage(aTexture.mTarget, aLevel, GL_RGB, GL_UNSIGNED_BYTE, raster.get());
-
-    arte::Image<Pixel> result{size, std::move(raster)};
-    result.saveFile(aOutput);
-}
-
-
 } // namespace ad::renderer
