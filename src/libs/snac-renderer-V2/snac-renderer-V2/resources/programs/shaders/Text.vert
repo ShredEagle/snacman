@@ -56,6 +56,8 @@ layout(std140, binding = 1) uniform EntitiesBlock
 
 out vec2 ex_AtlasUv_pix;
 out vec4 ex_Color;
+// Used to adapt the smoothing factor.
+out float ex_Scale;
 
 void main(void)
 {
@@ -66,6 +68,14 @@ void main(void)
 
     StringEntity entity = stringEntities[in_EntityIdx];
     ex_Color = entity.color;
+
+    // Compute the scaling factor applied to the glyph
+    // Note: at the moment, we only consider the scaling applied by the model transform
+    // and we assume it is uniform.
+    // This is likely to evolve, and will raises questions, such as:
+    // * should the text outline grow with camera zoom (currently the case)
+    mat4 m = entity.stringPixToWorld;
+    ex_Scale = sqrt(m[0][0] * m[0][0] + m[0][1] * m[0][1] + m[0][2] * m[0][2]);
 
     // Position of this vertex relative to the current pen position in pixels.
     // Note: we consider the glyph coordinate system to go from [0, 0] to [+width, -height]

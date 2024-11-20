@@ -6,21 +6,24 @@ uniform sampler2DRect u_GlyphAtlas;
 
 in vec2 ex_AtlasUv_pix;
 in vec4 ex_Color;
+in float ex_Scale;
 
 out vec4 out_Color;
 
 #define SMOOTH_TEXT
 #if defined(SMOOTH_TEXT) 
-float smoothing = 0.25 / 2 / 2;
+const float smoothingBase = 0.25 / 5;
 #endif // SMOOTH_TEXT
 
 
 #define OUTLINE_TEXT
 #if defined(OUTLINE_TEXT)
 const float outlineFade = 0.1; // the fade-in / out size
-const float outlineSolid_half = 0.01; // half of the solid(core) outline width
-const vec2 OUTLINE_MIN = vec2(0.5 - outlineSolid_half - outlineFade, 0.5 - outlineSolid_half);
-const vec2 OUTLINE_MAX = vec2(0.5 + outlineSolid_half, 0.5 + outlineSolid_half + outlineFade);
+const float outlineSolid_half = 0.02; // half of the solid(core) outline width
+const vec2 OUTLINE_MIN = vec2(outlineSolid_half + outlineFade, outlineSolid_half);
+const vec2 OUTLINE_MAX = vec2(outlineSolid_half,               outlineSolid_half + outlineFade);
+//const vec2 OUTLINE_MIN = vec2(0.5 - outlineSolid_half - outlineFade, 0.5 - outlineSolid_half);
+//const vec2 OUTLINE_MAX = vec2(0.5 + outlineSolid_half, 0.5 + outlineSolid_half + outlineFade);
 const vec3 OUTLINE_COLOR = vec3(0.);
 #endif //OUTLINE_TEXT
 
@@ -29,6 +32,13 @@ void main(void)
     // Sample the SDF from the glyph atlas
     // TODO rename distance
     float atlasOpacity = texture(u_GlyphAtlas, ex_AtlasUv_pix).r;
+
+#if defined(OUTLINE_TEXT)
+    vec2 oMin = vec2(0.5, 0.5) - (OUTLINE_MIN / ex_Scale);
+    vec2 oMax = vec2(0.5, 0.5) + (OUTLINE_MAX / ex_Scale);
+    //vec2 oMin = OUTLINE_MIN ;
+    //vec2 oMax = OUTLINE_MAX ;
+#endif //OUTLINE_TEXT
 
 #if !defined(SMOOTH_TEXT)
     #if !defined(OUTLINE_TEXT)
@@ -39,11 +49,11 @@ void main(void)
         }
         out_Color = ex_Color;
     #else // OUTLINE_TEXT && !(SMOOTH_TEXT)
-        if (atlasOpacity < OUTLINE_MIN[0])
+        if (atlasOpacity < oMin[0])
         {
             discard;
         }
-        else if(atlasOpacity <= OUTLINE_MAX[1])
+        else if(atlasOpacity <= oMax[1])
         {
             // This fragment in the outline (opacity between min[0] and max[1])
             out_Color = vec4(OUTLINE_COLOR, ex_Color.a);
@@ -56,10 +66,10 @@ void main(void)
 #else // SMOOTHING
     #if defined(OUTLINE_TEXT)
         // Smoothing, with outline
-        if(atlasOpacity <= OUTLINE_MIN[1])
+        if(atlasOpacity <= oMin[1])
         {
             // The outline fade-in zone: fades between color-buffer and outline-color
-            float oFactor = smoothstep(OUTLINE_MIN[0], OUTLINE_MIN[1], atlasOpacity);
+            float oFactor = smoothstep(oMin[0], oMin[1], atlasOpacity);
             out_Color = vec4(OUTLINE_COLOR, oFactor * ex_Color.a);
         }
         else
@@ -68,15 +78,15 @@ void main(void)
 
             // Note: interestingly, smoothsteps works with edge0 > edge1
             // (the inversion to a more usual edge0 < edge1 is trivial)
-            float oFactor = smoothstep(OUTLINE_MAX[1], OUTLINE_MAX[0], atlasOpacity);
+            float oFactor = smoothstep(oMax[1], oMax[0], atlasOpacity);
             vec3 albedo = mix(ex_Color.rgb, OUTLINE_COLOR, oFactor);
             out_Color = vec4(albedo, ex_Color.a);
         }
     #else // !(OUTLINE_TEXT)
         // Smoothing, without oultine
-        albedo = ex_Color.rgb;
+        float smoothing = smoothingBase / ex_Scale;
         float opacity = smoothstep(0.5 - smoothing, 0.5 + smoothing, atlasOpacity);
-        out_Color = vec4(albedo, ex_Color.a * opacity);
+        out_Color = vec4(ex_Color.rgb, ex_Color.a * opacity);
     #endif //OUTLINE_TEXT
 #endif // SMOOTH_TEXT
 
