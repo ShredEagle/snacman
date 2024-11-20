@@ -4,6 +4,7 @@
 //   * Handle color
 //   * Provide constant values via defines or something similar
 //   * Ensure several fonts can be stored in the same texture (array?) and do a single draw call
+//   * Move defines out of Text.frag into prog
 // * X Implement cache files
 // * Name font atlas textures
 // * Allow to load from a loader interface (for render thread / cache handling)

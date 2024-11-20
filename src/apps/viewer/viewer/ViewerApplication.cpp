@@ -375,12 +375,15 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
             .mEntities = {
                 {
                     .mStringPixToWorld = math::AffineMatrix<4, GLfloat>::Identity(),
+                    .mColor = math::hdr::gWhite<GLfloat>,
                 },
                 {
                     .mStringPixToWorld = math::trans3d::translate<GLfloat>({0.f, -100.f, 0.f}),
+                    .mColor = math::hdr::gYellow<GLfloat>,
                 },
                 {
                     .mStringPixToWorld = math::trans3d::translate<GLfloat>({0.f, 100.f, 0.f}),
+                    .mColor = math::hdr::gCyan<GLfloat>,
                 },
             }
         }
