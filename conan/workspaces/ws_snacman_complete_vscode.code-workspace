@@ -122,7 +122,8 @@
 			"strstream": "cpp",
 			"numbers": "cpp",
 			"resumable": "cpp",
-			"codecvt": "cpp"
+			"codecvt": "cpp",
+			"unordered_set": "cpp"
 		},
 		"cmake.buildDirectory": "D:\\projects\\Gamedev\\2\\ws_snacman_complete_vscode",
 		"[cpp]": {
@@ -217,6 +218,18 @@
             "environment": [],
 			// Has a bug with /c...
             //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) Block cube neon",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/snac-assets/block_scene.sew",
+				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/neon_photostudio_8k-cubemap.dds"
+			],
+            "cwd": "${command:cmake.launchTargetDirectory}",
             "console": "integratedTerminal"
 			},
 			{
