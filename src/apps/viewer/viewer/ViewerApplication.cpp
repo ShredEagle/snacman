@@ -378,11 +378,11 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
                     .mColor = math::hdr::gWhite<GLfloat>,
                 },
                 {
-                    .mStringPixToWorld = math::trans3d::translate<GLfloat>({0.f, -100.f, 0.f}),
+                    .mStringPixToWorld = math::trans3d::scaleUniform(3.f) * math::trans3d::translate<GLfloat>({0.f, -200.f, 0.f}),
                     .mColor = math::hdr::gYellow<GLfloat>,
                 },
                 {
-                    .mStringPixToWorld = math::trans3d::translate<GLfloat>({0.f, 100.f, 0.f}),
+                    .mStringPixToWorld = math::trans3d::scaleUniform(1/3.f) * math::trans3d::translate<GLfloat>({0.f, 80.f, 0.f}),
                     .mColor = math::hdr::gCyan<GLfloat>,
                 },
             }

@@ -4,7 +4,7 @@
 
 uniform sampler2DRect u_GlyphAtlas;
 
-in vec2 ex_AtlasUv_pix;
+in vec2 ex_AtlasUv_tex;
 in vec4 ex_Color;
 in float ex_Scale;
 
@@ -26,16 +26,47 @@ const float outlineFade = 0.1; // the fade-in / out size
 const float outlineSolid_half = 0.01; // half of the solid(core) outline width
 const vec2 OUTLINE_MIN = vec2(-outlineSolid_half - outlineFade, -outlineSolid_half);
 const vec2 OUTLINE_MAX = vec2(outlineSolid_half,                 outlineSolid_half + outlineFade);
-//const vec2 OUTLINE_MIN = vec2(0.5 - outlineSolid_half - outlineFade, 0.5 - outlineSolid_half);
-//const vec2 OUTLINE_MAX = vec2(0.5 + outlineSolid_half, 0.5 + outlineSolid_half + outlineFade);
 const vec3 OUTLINE_COLOR = vec3(0.);
 #endif //OUTLINE_TEXT
 
 void main(void)
 {
-    // Sample the SDF from the glyph atlas
-    // TODO rename distance
-    float signedDistance = texture(u_GlyphAtlas, ex_AtlasUv_pix).r - gBorderCutoff;
+    // Sample the SDF from the glyph atlas.
+    // The signed distance of this fragment from the border (offset by cutoff), in range [-0.5, 0.5] (unit: texels/(2*spread)).
+    // see: https://freetype.org/freetype2/docs/reference/ft2-properties.html#spread
+    // Note: FreeType render SDF on 8 bits with [0..127] meaning outside, 128 meaning on edge, and [129..255] meaning inside.
+    // So after offseting by cutoff, positive values are inside the glyph, and negative values are outside.
+    float signedDistance = texture(u_GlyphAtlas, ex_AtlasUv_tex).r - gBorderCutoff;
+
+#if 1
+    // Note: this antialising method, which does not require to produce any scaling factor
+    // in the vertex shader, is presented by:
+    // https://drewcassidy.me/2020/06/26/sdf-antialiasing/
+    // (note: uses reversed sign)
+
+    float spreadDoubled = 8 * 2;
+    // Default is 8,
+    // see: https://freetype.org/freetype2/docs/reference/ft2-properties.html#spread
+    // The signed distance is in texel/(2*spread), see above.
+    float distance_texAtlas = signedDistance * spreadDoubled;
+    
+    // The difference in uv coordinates with neighboring fragment.
+    // Already in texels because the UV coordinates of a sampler2DRect are in texels.
+    vec2 duv_texel = fwidth(ex_AtlasUv_tex);
+    // Note: I do not think the length is the exact metric, but we need to move
+    // from the 2-dimension differential to a scalar, since the atlas is a 1-D SDF.
+    float texelPerFragment = length(duv_texel);
+
+    float distance_fragmentViewport = distance_texAtlas / texelPerFragment;
+
+    // `distance_fragmentViewport` is from the center of the fragment to the edge of the font.
+    // A distance of 0 thus means that the edge passes by the fragment center, leading to half-coverage.
+    // 0.5 (resp -0.5) distance means the edge is aligned on the fragment border, fragment being inside (resp. outside).
+    // see: https://mortoray.com/antialiasing-with-a-signed-distance-field/
+    // (note: uses reversed sign)
+    out_Color = vec4(ex_Color.rgb,
+                     ex_Color.a * clamp(0.5 + distance_fragmentViewport, 0, 1));
+#else
 
 #if defined(OUTLINE_TEXT)
     vec2 oMin = OUTLINE_MIN / ex_Scale;
@@ -91,6 +122,8 @@ void main(void)
         out_Color = vec4(ex_Color.rgb, ex_Color.a * opacity);
     #endif //OUTLINE_TEXT
 #endif // SMOOTH_TEXT
+
+#endif // IF 1
 
     out_Color = correctGamma(out_Color);
 }

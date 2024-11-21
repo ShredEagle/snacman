@@ -54,7 +54,7 @@ layout(std140, binding = 1) uniform EntitiesBlock
 };
 
 
-out vec2 ex_AtlasUv_pix;
+out vec2 ex_AtlasUv_tex;
 out vec4 ex_Color;
 // Used to adapt the smoothing factor.
 out float ex_Scale;
@@ -63,7 +63,7 @@ void main(void)
 {
     GlyphMetrics glyph = glyphs[in_GlyphIdx];
 
-    ex_AtlasUv_pix = (gUvs[gl_VertexID % 4] * glyph.boundingBox_pix)
+    ex_AtlasUv_tex = (gUvs[gl_VertexID % 4] * glyph.boundingBox_pix)
         + vec2(glyph.linearOffset_pix, 0);
 
     StringEntity entity = stringEntities[in_EntityIdx];
