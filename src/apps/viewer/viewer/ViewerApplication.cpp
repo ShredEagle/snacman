@@ -63,7 +63,7 @@ const char * gVertexShader = R"#(
     // TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
     layout(std140, binding = 0) uniform LocalToWorldBlock
     {
-        mat4 localToWorld[512];
+        mat4 localToWorld[CLIENT_MAX_ENTITIES];
     };
 
     out vec4 ex_Color;

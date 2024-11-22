@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "Constants.h"
 #include "runtime_reflect/ReflectHelpers.h"
 
 #include <handy/array_utils.h>
@@ -17,13 +18,6 @@
 
 namespace ad::renderer {
 
-
-// TODO Ad 2024/06/05: How to keep that in sync with the shader code?
-// TODO can we use the define system to forward those upper limit to shaders?
-constexpr unsigned int gMaxLights = 16;
-constexpr unsigned int gMaxShadowLights = 4;
-constexpr unsigned int gCascadesPerShadow = 4;
-constexpr unsigned int gMaxShadowMaps = gMaxShadowLights * gCascadesPerShadow;
 
 // TODO there are obvious ways to pack the values much more tightly
 

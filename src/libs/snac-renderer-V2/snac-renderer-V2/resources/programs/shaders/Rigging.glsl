@@ -7,7 +7,7 @@ in uint in_MatrixPaletteOffset; // default value of 0 is what we need when a sin
 // Yet this seems to be required to avoid collisions with other uniform blocks.
 layout(std140, binding = 3) uniform JointMatricesBlock
 {
-    mat4 joints[512];
+    mat4 joints[MAX_JOINTS];
 };
 
 mat4 assembleSkinningMatrix()

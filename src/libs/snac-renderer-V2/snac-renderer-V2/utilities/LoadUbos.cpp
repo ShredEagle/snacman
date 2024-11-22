@@ -1,5 +1,6 @@
 #include "LoadUbos.h"
 
+#include "../Constants.h"
 // TODO Ad 2023/10/18: Should get rid of this repeated implementation
 #include "../RendererReimplement.h"
 
@@ -56,6 +57,17 @@ void updateOffsetInLightViewProjectionUbo(const graphics::UniformBufferObject & 
         sizeof(LightViewProjection::mLightViewProjectionOffset),
         &aLightViewProjection.mLightViewProjectionOffset
     );
+}
+
+
+void loadJoints(const graphics::UniformBufferObject & aUbo,
+                std::span<math::AffineMatrix<4, GLfloat>> aJointMatrices)
+{
+    // Check that we will not exceed the UBO capacity
+    assert(aJointMatrices.size() <= gMaxJoints);
+    renderer::proto::load(aUbo,
+                          aJointMatrices,
+                          graphics::BufferHint::StreamDraw);
 }
 
 

@@ -25,6 +25,7 @@
 #include <snac-renderer-V1/Mesh.h>
 #include <snac-renderer-V1/ResourceLoad.h>
 
+#include <snac-renderer-V2/Constants.h>
 #include <snac-renderer-V2/Lights.h>
 #include <snac-renderer-V2/Pass.h>
 #include <snac-renderer-V2/RendererReimplement.h>
@@ -339,9 +340,8 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
     //
     // Load the matrix palettes UBO with all palettes computed during the loop
     //
-    renderer::proto::load(mGraphUbos.mJointMatricesUbo,
-                          std::span{mRiggingPalettesBuffer},
-                          graphics::BufferHint::StreamDraw);
+    renderer::loadJoints(mGraphUbos.mJointMatricesUbo,
+                         std::span{mRiggingPalettesBuffer});
 
     END_RECURRING_GL(sortModelEntry);
 
@@ -354,8 +354,8 @@ void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
     //
     {
         // TODO Ad 2024/04/04: Should we use SSBO for this kind of "unbound" data?
-        assert(totalEntities <= 512
-            && "Currently, the shader Uniform Block array is 512.");
+        assert(totalEntities <= renderer::gMaxEntities
+            && ("Currently, the shader Uniform Block array is " + std::to_string(renderer::gMaxEntities) + ".").c_str());
 
         graphics::ScopedBind boundEntitiesUbo{mGraphUbos.mEntitiesUbo};
         // Orphan the buffer, and set it to the current size 
