@@ -5,6 +5,7 @@
 #include "Flags.h" 
 #include "Versioning.h" 
 
+#include "../Constants.h"
 #include "../Cube.h"
 #include "../Json.h"
 #include "../Logging.h"
@@ -1250,7 +1251,9 @@ std::vector<Technique> populateTechniques(const Loader & aLoader,
 
         result.push_back(Technique{
             .mConfiguredProgram =
-                storeConfiguredProgram(aLoader.loadProgram(technique.at("programfile"), std::move(definesCopy)), aStorage),
+                storeConfiguredProgram(
+                    aLoader.loadProgram(technique.at("programfile"), std::move(definesCopy)),
+                    aStorage),
         });
 
         if(technique.contains("annotations"))
@@ -1300,7 +1303,7 @@ bool recompileEffects(const Loader & aLoader, Storage & aStorage)
 
 Handle<Effect> Loader::loadEffect(const std::filesystem::path & aEffectFile,
                                   Storage & aStorage,
-                                  const std::vector<std::string> & aDefines_temp) const
+                                  const std::vector<graphics::MacroDefine> & aDefines_temp) const
 {
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
@@ -1319,7 +1322,7 @@ Handle<Effect> Loader::loadEffect(const std::filesystem::path & aEffectFile,
 
 
 IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
-                                      std::vector<std::string> aDefines_temp) const
+                                      std::vector<graphics::MacroDefine> aDefines_temp) const
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 
@@ -1336,6 +1339,9 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
         SELOG(critical)("Rethrowing exception from attempt to parse Json from '{}'.", aProgFile.string());
         throw;
     }
+
+    // Copy the constant defines
+    aDefines_temp.insert(aDefines_temp.end(), gClientConstantDefines.begin(), gClientConstantDefines.end());
 
     // TODO #resource_redesign Decide if we want the shader path to be relative to the prog file (with FileLookup)
     // or to be found in the current "assets" folders of ResourceFinder.

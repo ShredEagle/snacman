@@ -1,5 +1,6 @@
 #version 420
 
+#include "Constants.glsl"
 #include "Gamma.glsl"
 
 uniform sampler2DRect u_GlyphAtlas;
@@ -41,11 +42,8 @@ float computeDistanceInAtlasSpread(float signedDistance_fragment)
 
     float distance_texel = signedDistance_fragment * texelPerFragment;
 
-    float spreadDoubled = 8 * 2;
-    // Default is 8,
-    // see: https://freetype.org/freetype2/docs/reference/ft2-properties.html#spread
-    // The signed distance is in texel/(2*spread), see above.
-    float distance_AtlasSpread = distance_texel / spreadDoubled;
+    // The signed distance is in texel/(2*spread).
+    float distance_AtlasSpread = distance_texel / SDF_DOUBLE_SPREAD;
     
     return distance_AtlasSpread;
 }
@@ -54,11 +52,8 @@ float computeDistanceInAtlasSpread(float signedDistance_fragment)
 /// @param signedDistance value in atlas spread on [-0.5..0.5], with positive being inside.
 float computeDistanceInFragmentUnit(float signedDistance)
 {
-    float spreadDoubled = 8 * 2;
-    // Default is 8,
-    // see: https://freetype.org/freetype2/docs/reference/ft2-properties.html#spread
-    // The signed distance is in texel/(2*spread), see above.
-    float distance_texAtlas = signedDistance * spreadDoubled;
+    // The signed distance is in texel/(2*spread).
+    float distance_texAtlas = signedDistance * SDF_DOUBLE_SPREAD;
     
     // The difference in uv coordinates with neighboring fragment.
     // Already in texels because the UV coordinates of a sampler2DRect are in texels.

@@ -5,6 +5,13 @@
 //   * Provide constant values via defines or something similar
 //   * Ensure several fonts can be stored in the same texture (array?) and do a single draw call
 //   * Move defines out of Text.frag into prog
+//   * Try mipmapping
+//   * Control freetype sdf spread, and forward to shaders
+//   * Take notes regarding the paper
+//     - Introduces using SDF instead of alpha-coverage for font rendering. Applicable with alpha-testing or alpha-blending (for smoothing)
+//     - Add a few more effects: outline, glow, drop-shadow.
+//     - In addition to line-arte (text, signe, UI), propose to use it more generally for alpha-tested images (such as foliage impostors)
+//     - The core advantage is a better magnification behaviour with bilinear-filtering (coverage function is not linear).
 // * X Implement cache files
 // * Name font atlas textures
 // * Allow to load from a loader interface (for render thread / cache handling)

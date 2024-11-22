@@ -3,6 +3,7 @@ set(TARGET_NAME snac-renderer-V2)
 set(${TARGET_NAME}_HEADERS
     Camera.h
     Commons.h
+    Constants.h
     Cube.h
     Cubemap.h
     Handle.h

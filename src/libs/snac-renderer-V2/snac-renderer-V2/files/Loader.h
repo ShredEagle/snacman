@@ -71,12 +71,12 @@ struct Loader
     Handle<Effect> loadEffect(const std::filesystem::path & aEffectFile,
                               Storage & aStorage,
                               // TODO Ad 2023/10/03: #shader-system Remove this temporary.
-                              const std::vector<std::string> & aDefines_temp = {}) const;
+                              const std::vector<graphics::MacroDefine> & aDefines_temp = {}) const;
 
     /// @brief Load a `.prog` file as an IntrospectProgram.
     IntrospectProgram loadProgram(const filesystem::path & aProgFile,
                                   // TODO Ad 2023/10/03: #shader-system Remove this temporary.
-                                  std::vector<std::string> aDefines_temp = {}) const;
+                                  std::vector<graphics::MacroDefine> aDefines_temp = {}) const;
 
     graphics::ShaderSource loadShader(const filesystem::path & aShaderFile) const;
 
