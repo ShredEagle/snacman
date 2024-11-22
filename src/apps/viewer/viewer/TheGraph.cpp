@@ -26,39 +26,6 @@ namespace ad::renderer {
 
 namespace {
 
-    // This is much more complicated than I hoped
-    // plus it does not work because it is breaking asserts in generateDrawCall()
-    PassCache prepareTextPassCache(const Part & aPart, Storage & aStorage)
-    {
-        PassCache result;
-
-
-        AnnotationsSelector annotations = {};
-        DrawEntryHelper helper;
-        std::vector<PartDrawEntry> entries = 
-            helper.generateDrawEntries(annotations,
-                                       PartList{
-                                            .mParts{{&aPart}},
-                                            .mMaterials{{&aPart.mMaterial}},},
-                                       aStorage);
-        assert(entries.size() == 1);
-
-        const VertexStream & vertexStream = *aPart.mVertexStream;
-
-        result.mCalls.push_back(helper.generateDrawCall(entries.front(), aPart, vertexStream));
-
-        result.mDrawCommands.push_back(
-            DrawElementsIndirectCommand{
-                .mCount = 4,
-                .mInstanceCount = 1,
-                //.mFirstIndex = (GLuint)(vertexStream.mIndexBufferView.mOffset / indiceSize)
-                //                + part.mIndexFirst,
-                //.mBaseVertex = part.mVertexFirst,
-                //.mBaseInstance = (GLuint)result.mDrawInstances.size(), // pushed below
-            });
-
-        return result;
-    }
 
     void setupShowTextureSampler(const graphics::Sampler & aSampler)
     {

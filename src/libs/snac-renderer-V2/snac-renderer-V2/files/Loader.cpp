@@ -33,14 +33,6 @@ namespace ad::renderer {
 
 namespace {
 
-    // TODO move to math library
-    template <std::floating_point T_value>
-    bool isWithinTolerance(T_value aLhs, T_value aRhs, T_value aRelativeTolerance)
-    {
-        T_value diff = std::abs(aLhs - aRhs);
-        T_value maxMagnitude = std::max(std::abs(aLhs), std::abs(aRhs));
-        return diff <= (maxMagnitude * aRelativeTolerance);
-    }
 
     // TODO #math #linearalgebra move to a more generic library (graphics?)
     Pose decompose(const math::AffineMatrix<4, GLfloat> & aTransformation)
@@ -61,8 +53,8 @@ namespace {
             rows[2].getNorm(),
         };
 
-        assert(isWithinTolerance(scale[1], scale[0], 1E-6f));
-        assert(isWithinTolerance(scale[2], scale[0], 1E-6f));
+        assert(math::relativeTolerance(scale[1], scale[0], 1E-6f));
+        assert(math::relativeTolerance(scale[2], scale[0], 1E-6f));
         //assert(scale[0] == scale[1] && scale[0] == scale[2]);
         result.mUniformScale = scale[0];
 
