@@ -92,7 +92,7 @@ void dumpEnvironmentCubemap(const Environment & aEnvironment,
     arte::Image<Pixel> image{renderSize.cwMul({(GLsizei)gFaceCount, 1}), std::move(raster)};
 
     // Set the stride between consecutive rows of pixel to be the image width
-    auto scopedRowLength = graphics::detail::scopePixelStorageMode(GL_PACK_ROW_LENGTH, image.width());
+    auto scopedRowLength = graphics::scopePixelStorageMode(GL_PACK_ROW_LENGTH, image.width());
 
     // Render the skybox
     for(unsigned int faceIdx = 0; faceIdx != gFaceCount; ++faceIdx)

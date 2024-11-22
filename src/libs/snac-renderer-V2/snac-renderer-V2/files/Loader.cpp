@@ -22,6 +22,7 @@
 #include <renderer/BufferLoad.h>
 #include <renderer/ShaderSource.h>
 #include <renderer/Texture.h>
+#include <renderer/TextureUtilities.h>
 #include <renderer/utilities/FileLookup.h>
 
 #include <cassert>
@@ -508,7 +509,7 @@ namespace {
         std::unique_ptr<char []> imageData{new char[imageByteSize]};
 
         // TODO: Should we handle alignment?
-        //Guard scopedAlignemnt = graphics::detail::scopeUnpackAlignment(aInput.alignment);
+        //Guard scopedAlignemnt = graphics::scopeUnpackAlignment(aInput.alignment);
 
         assert((aDdsHeader.h.dwFlags & DDSD_MIPMAPCOUNT) == DDSD_MIPMAPCOUNT);
         const GLint mipmapCount = aDdsHeader.h.dwMipMapCount;

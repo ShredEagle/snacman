@@ -12,6 +12,7 @@
 #include <handy/StringUtilities.h>
 
 #include <renderer/MappedGL.h>
+#include <renderer/TextureUtilities.h>
 
 #include <spdlog/spdlog.h>
 

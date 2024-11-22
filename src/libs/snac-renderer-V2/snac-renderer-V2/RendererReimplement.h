@@ -2,6 +2,7 @@
 
 
 #include <renderer/Texture.h>
+#include <renderer/TextureUtilities.h>
 #include <renderer/ScopeGuards.h>
 
 #include <profiler/GlApi.h>
@@ -80,7 +81,7 @@ namespace proto {
         graphics::ScopedBind bound(aTexture);
 
         // Handle alignment
-        Guard scopedAlignemnt = graphics::detail::scopeUnpackAlignment(aInput.alignment);
+        Guard scopedAlignemnt = graphics::scopeUnpackAlignment(aInput.alignment);
 
         gl.TexSubImage3D(aTexture.mTarget, aMipmapLevelId,
                          aTextureOffset.x(), aTextureOffset.y(), aTextureOffset.z(),
