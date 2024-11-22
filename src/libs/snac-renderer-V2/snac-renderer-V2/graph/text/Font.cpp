@@ -1,12 +1,10 @@
 // TODO Ad 2024/11/14: 
 // * Render text in Viewer
-//   * Restore SDF functionnality
-//   * Handle color
-//   * Provide constant values via defines or something similar
-//   * Ensure several fonts can be stored in the same texture (array?) and do a single draw call
-//   * Move defines out of Text.frag into prog
-//   * Try mipmapping
-//   * Control freetype sdf spread, and forward to shaders
+//   X * Restore SDF functionnality
+//   X * Handle color
+//   X * Provide constant values via defines or something similar
+//   X * Move defines out of Text.frag into prog
+//   X * Control freetype sdf spread, and forward to shaders
 //   * Take notes regarding the paper
 //     - Introduces using SDF instead of alpha-coverage for font rendering. Applicable with alpha-testing or alpha-blending (for smoothing)
 //     - Add a few more effects: outline, glow, drop-shadow.
@@ -17,6 +15,9 @@
 // * Allow to load from a loader interface (for render thread / cache handling)
 //   * Maybe allow a name in the interface (for debug glLabel)
 // * Decomission renderer_V1 completely
+// Future directions:
+//   * Try mipmapping
+//   * Ensure several fonts can be stored in the same texture (array?) and do a single draw call
 #include "Font.h"
 
 #include "../../Logging.h"

@@ -15,9 +15,6 @@ out vec4 out_Color;
 // 0.5 is the canonical value here, but effects can be achieved by changing.
 const float gBorderCutoff = 0.5;
 
-#define SMOOTH_TEXT
-
-#define OUTLINE_TEXT
 #if defined(OUTLINE_TEXT)
 // half of the solid(core) outline width, in fragment unit
 const float halfOutline_fragment = 1.2; 
