@@ -1340,17 +1340,19 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
     // or to be found in the current "assets" folders of ResourceFinder.
     graphics::FileLookup lookup{programPath};
 
+    // Handle the defines at the .prog level before we start preprocessing
+    // the individual stages.
+    for(std::string macro : program.value("defines", Json{}))
+    {
+        aDefines_temp.push_back(std::move(macro));
+    }
+
     for (auto [shaderStage, shaderFile] : program.items())
     {
         GLenum stageEnumerator;
         if(shaderStage == "defines")
         {
-            // Load the defines found at the .prog level
-            // Special case, not a shader stage
-            for (std::string macro : shaderFile)
-            {
-                aDefines_temp.push_back(std::move(macro));
-            }
+            // Handled before entering the loop
             continue;
         }
         else if(shaderStage == "vertex")
