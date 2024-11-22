@@ -51,6 +51,7 @@ set(${TARGET_NAME}_HEADERS
 
 set(${TARGET_NAME}_SOURCES
     Camera.cpp
+    Constants.cpp
     Cubemap.cpp
     IntrospectProgram.cpp
     Logging-init.cpp

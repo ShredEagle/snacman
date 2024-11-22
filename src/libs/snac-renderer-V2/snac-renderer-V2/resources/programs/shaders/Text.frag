@@ -16,14 +16,9 @@ out vec4 out_Color;
 const float gBorderCutoff = 0.5;
 
 #define SMOOTH_TEXT
-#if defined(SMOOTH_TEXT) 
-const float smoothingBase = 0.25 / 5;
-#endif // SMOOTH_TEXT
-
 
 #define OUTLINE_TEXT
 #if defined(OUTLINE_TEXT)
-const float outlineFade = 0.1; // the fade-in / out size
 // half of the solid(core) outline width, in fragment unit
 const float halfOutline_fragment = 1.2; 
 const vec3 OUTLINE_COLOR = vec3(0.);
@@ -153,6 +148,7 @@ void main(void)
         else
         {
             // The outline solid + fad-out zone: fades between outline-color and text-color
+            //#define OUTLINE_ONLY
             #ifdef OUTLINE_ONLY
                 float coverage = clamp(0.5 + halfOutline_fragment - distance_fragment, 0, 1);
                 out_Color = vec4(OUTLINE_COLOR, coverage * ex_Color.a);

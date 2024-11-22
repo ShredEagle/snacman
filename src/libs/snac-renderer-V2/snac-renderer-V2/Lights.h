@@ -19,8 +19,13 @@
 namespace ad::renderer {
 
 
-// TODO there are obvious ways to pack the values much more tightly
+constexpr unsigned int gMaxLights = 16;
+constexpr unsigned int gMaxShadowLights = 4;
+constexpr unsigned int gCascadesPerShadow = 4;
+constexpr unsigned int gMaxShadowMaps = gMaxShadowLights * gCascadesPerShadow;
 
+
+// TODO there are obvious ways to pack the values much more tightly
 
 using Index = GLuint;
 inline constexpr Index gNoEntryIndex = std::numeric_limits<Index>::max();
