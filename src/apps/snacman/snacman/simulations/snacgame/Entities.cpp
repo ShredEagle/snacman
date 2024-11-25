@@ -597,8 +597,10 @@ makeText(GameContext & aContext,
             .mFont = std::move(aFont),
             .mColor = aColor,
         })
-        .add(component::PoseScreenSpace{.mPosition_u = aPosition_unitscreen,
-                                        .mScale = aScale});
+        .add(component::PoseScreenSpace{
+            .mPosition_u = aPosition_unitscreen,
+            .mScale = aScale
+        });
 
     return handle;
 }
