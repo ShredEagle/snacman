@@ -102,13 +102,7 @@ void JoinGameScene::update(const snac::Time & aTime, RawInput & aInput)
         {
             if (controller.mInput.mCommand & gJoin)
             {
-                EntHandle slotHandle = addPlayer(mGameContext, controller.mId);
-                const component::PlayerSlot & slot =
-                    slotHandle.get()->get<component::PlayerSlot>();
-                EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, slot.mSlotIndex);
-                insertEntityInScene(joinGamePlayer, mJoinGameRoot);
-                Phase joinPlayer;
-                slotHandle.get(joinPlayer)->add(component::PlayerJoinData{.mJoinPlayerModel = joinGamePlayer});
+                addPlayerFromControllerId(controller.mId);
             }
         }
     }
@@ -152,14 +146,20 @@ void JoinGameScene::onEnter(Transition aTransition) {
         // We need to create a player slot for the player
         // that pressed start
         JoinGameSceneInfo info = std::get<JoinGameSceneInfo>(aTransition.mSceneInfo);
-        EntHandle slotHandle = addPlayer(mGameContext, info.mTransitionControllerId);
-        const component::PlayerSlot & slot =
-            slotHandle.get()->get<component::PlayerSlot>();
-        EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, (int)slot.mSlotIndex);
-        insertEntityInScene(joinGamePlayer, mJoinGameRoot);
-        Phase joinPlayer;
-        slotHandle.get(joinPlayer)->add(component::PlayerJoinData{.mJoinPlayerModel = joinGamePlayer});
+        addPlayerFromControllerId(info.mTransitionControllerId);
     }
+}
+
+void JoinGameScene::addPlayerFromControllerId(int controllerId)
+{
+    EntHandle slotHandle = addPlayer(mGameContext, controllerId);
+    const component::PlayerSlot & slot =
+        slotHandle.get()->get<component::PlayerSlot>();
+    EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, (int)slot.mSlotIndex);
+    insertEntityInScene(joinGamePlayer, mJoinGameRoot);
+    Phase joinPlayer;
+    slotHandle.get(joinPlayer)->add(component::PlayerJoinData{.mJoinPlayerModel = joinGamePlayer});
+
 }
 
 void JoinGameScene::onExit(Transition aTransition) {

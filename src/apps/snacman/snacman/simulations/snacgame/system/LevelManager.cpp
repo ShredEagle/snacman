@@ -83,131 +83,134 @@ LevelManager::createLevel(const component::LevelSetupData & aSetupData)
     // Right now it's 15 ms in release for 225 entity that's 66us per
     // instantiation
     {
-        Phase createLevel;
+        TIME_SINGLE(Main, "Create elements with phase destruction");
+        {
+            Phase createLevel;
 
-        // There is no 3rd dimension right now
-        int z = 0;
-        
-        {
-        TIME_SINGLE(Main, "Create elements");
-        for (int y = 0; y < aGrid.mSize.height(); y++)
-        {
-            for (int x = 0; x < aGrid.mSize.width(); x++)
+            // There is no 3rd dimension right now
+            int z = 0;
+            
             {
-                float xFloat = static_cast<float>(x);
-                float yFloat = static_cast<float>(y);
-                size_t flatIndex = aGrid.getFlatGridIndex({x, y, z});
-                unsigned char value =
-                    aGrid.mCharacters.at(aGrid.mState.at(flatIndex));
-                nodes.push_back({
-                    .mIndex = flatIndex,
-                    .mPos = math::Position<2, float>{static_cast<float>(x),
-                                                     static_cast<float>(y)},
-                    .mPathable = value != 'B',
-                });
-                component::TileType type = component::TileType::Void;
-                Pos2 tilePos{xFloat, yFloat};
-
-                switch (value)
-                {
-                case 'W':
-                {
-                    type = component::TileType::Path;
-                    createPathEntity(*mGameContext, createLevel, tilePos);
-                    createPill(*mGameContext, createLevel, tilePos);
-                    break;
-                }
-                case 'O':
-                {
-                    type = component::TileType::Powerup;
-                    createPathEntity(*mGameContext, createLevel, tilePos);
-
-                    using component::PowerUpType;
-                    createPowerUp(
-                        *mGameContext, createLevel, tilePos,
-                        static_cast<PowerUpType>(
-                            mRandom() % static_cast<int>(PowerUpType::None)),
-                        gMinPowerUpPeriod
-                            + (gMaxPowerUpPeriod - gMinPowerUpPeriod)
-                                  * ((float)mRandom() / (float) gMaxRand));
-                    break;
-                }
-                case 'K':
-                {
-                    type = component::TileType::Portal;
-                    portalIndices.push_back((int)flatIndex);
-                    createPortalEntity(*mGameContext, createLevel, tilePos,
-                                       (int)flatIndex);
-                    break;
-                }
-                case 'F':
-                {
-                    type = component::TileType::Spawn;
-                    createPlayerSpawnEntity(*mGameContext, createLevel,
-                                            tilePos);
-                    break;
-                }
-                default:
-                    break;
-                }
-
-                tiles.push_back(component::Tile{
-                    .mType = type,
-                    .mPos = tilePos,
-                });
-            }
-        }
-        }
-
-        /* createAnimatedTest(*mGameContext, createLevel, snac::Clock::now(),
-         * {14.f, 7.f}); */
-        /* createAnimatedTest(*mGameContext, createLevel, snac::Clock::now() +
-         * snac::ms{1000}, { 0.f, 7.f}); */
-
-        {
-        TIME_SINGLE(Main, "Allow movement setup");
-        for (int i = 1; i < height - 1; ++i)
-        {
-            for (int j = 1; j < stride - 1; ++j)
+            TIME_SINGLE(Main, "Create elements no phase destruction");
+            for (int y = 0; y < aGrid.mSize.height(); y++)
             {
-                component::Tile & tile = tiles.at(i + j * stride);
-
-                for (size_t moveIndex = 0; moveIndex < gDirections.size();
-                     ++moveIndex)
+                for (int x = 0; x < aGrid.mSize.width(); x++)
                 {
-                    const Vec2_i dir = gDirections.at(moveIndex);
-                    const int move = gAllowedMovement.at(moveIndex);
-                    if (tiles.at(i + dir.x() + (j + dir.y()) * stride).mType
-                        != component::TileType::Void)
+                    float xFloat = static_cast<float>(x);
+                    float yFloat = static_cast<float>(y);
+                    size_t flatIndex = aGrid.getFlatGridIndex({x, y, z});
+                    unsigned char value =
+                        aGrid.mCharacters.at(aGrid.mState.at(flatIndex));
+                    nodes.push_back({
+                        .mIndex = flatIndex,
+                        .mPos = math::Position<2, float>{static_cast<float>(x),
+                                                         static_cast<float>(y)},
+                        .mPathable = value != 'B',
+                    });
+                    component::TileType type = component::TileType::Void;
+                    Pos2 tilePos{xFloat, yFloat};
+
+                    switch (value)
                     {
-                        tile.mAllowedMove |= move;
-                        if (tile.mType == component::TileType::Portal)
+                    case 'W':
+                    {
+                        type = component::TileType::Path;
+                        createPathEntity(*mGameContext, createLevel, tilePos);
+                        createPill(*mGameContext, createLevel, tilePos);
+                        break;
+                    }
+                    case 'O':
+                    {
+                        type = component::TileType::Powerup;
+                        createPathEntity(*mGameContext, createLevel, tilePos);
+
+                        using component::PowerUpType;
+                        createPowerUp(
+                            *mGameContext, createLevel, tilePos,
+                            static_cast<PowerUpType>(
+                                mRandom() % static_cast<int>(PowerUpType::None)),
+                            gMinPowerUpPeriod
+                                + (gMaxPowerUpPeriod - gMinPowerUpPeriod)
+                                      * ((float)mRandom() / (float) gMaxRand));
+                        break;
+                    }
+                    case 'K':
+                    {
+                        type = component::TileType::Portal;
+                        portalIndices.push_back((int)flatIndex);
+                        createPortalEntity(*mGameContext, createLevel, tilePos,
+                                           (int)flatIndex);
+                        break;
+                    }
+                    case 'F':
+                    {
+                        type = component::TileType::Spawn;
+                        createPlayerSpawnEntity(*mGameContext, createLevel,
+                                                tilePos);
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+
+                    tiles.push_back(component::Tile{
+                        .mType = type,
+                        .mPos = tilePos,
+                    });
+                }
+            }
+            }
+
+            /* createAnimatedTest(*mGameContext, createLevel, snac::Clock::now(),
+             * {14.f, 7.f}); */
+            /* createAnimatedTest(*mGameContext, createLevel, snac::Clock::now() +
+             * snac::ms{1000}, { 0.f, 7.f}); */
+
+            {
+            TIME_SINGLE(Main, "Allow movement setup");
+            for (int i = 1; i < height - 1; ++i)
+            {
+                for (int j = 1; j < stride - 1; ++j)
+                {
+                    component::Tile & tile = tiles.at(i + j * stride);
+
+                    for (size_t moveIndex = 0; moveIndex < gDirections.size();
+                         ++moveIndex)
+                    {
+                        const Vec2_i dir = gDirections.at(moveIndex);
+                        const int move = gAllowedMovement.at(moveIndex);
+                        if (tiles.at(i + dir.x() + (j + dir.y()) * stride).mType
+                            != component::TileType::Void)
                         {
-                            // This inverse the allowed Movement flag up becomes
-                            // down and right becomes left because this flip the
-                            // least significant bit
-                            tile.mAllowedMove |=
-                                gAllowedMovement.at(moveIndex ^ 0b01);
+                            tile.mAllowedMove |= move;
+                            if (tile.mType == component::TileType::Portal)
+                            {
+                                // This inverse the allowed Movement flag up becomes
+                                // down and right becomes left because this flip the
+                                // least significant bit
+                                tile.mAllowedMove |=
+                                    gAllowedMovement.at(moveIndex ^ 0b01);
+                            }
                         }
                     }
                 }
             }
-        }
-        }
+            }
 
-        levelData.mTiles = std::move(tiles);
-        levelData.mNodes = std::move(nodes);
-        levelData.mPortalIndex = std::move(portalIndices);
+            levelData.mTiles = std::move(tiles);
+            levelData.mNodes = std::move(nodes);
+            levelData.mPortalIndex = std::move(portalIndices);
 
-        level.get(createLevel)
-            ->add(levelData)
-            .add(component::SceneNode{})
-            .add(component::Geometry{
-                .mPosition = gBaseLevelPos,
-                .mScaling = gBaseLevelScalingNumerator
-                            / (float) std::max(stride, height)})
-            .add(component::GlobalPose{});
-    } // End createLevel Phase
+            level.get(createLevel)
+                ->add(levelData)
+                .add(component::SceneNode{})
+                .add(component::Geometry{
+                    .mPosition = gBaseLevelPos,
+                    .mScaling = gBaseLevelScalingNumerator
+                                / (float) std::max(stride, height)})
+                .add(component::GlobalPose{});
+        } // End createLevel Phase
+    }
 
     {
     TIME_SINGLE(Main, "Scene insertion");

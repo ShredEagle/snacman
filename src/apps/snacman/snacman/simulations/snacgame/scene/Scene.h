@@ -1,5 +1,7 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/component/PlayerGameData.h"
+#include "snacman/simulations/snacgame/component/PlayerRoundData.h"
 #include "snacman/simulations/snacgame/system/SystemOrbitalCamera.h"
 #include <snacman/serialization/Serial.h>
 #include <reflexion/NameValuePair.h>
@@ -28,6 +30,35 @@ struct MappingContext;
 namespace scene {
 
 const inline std::string gQuitTransitionName = "quit";
+
+struct RankingList
+{
+    using Rank = std::pair<ent::Handle<ent::Entity>, component::PlayerGameData>;
+    std::array<Rank, 4> ranking;
+    int playerCount = 0;
+
+    void sort() {
+        std::sort(
+            ranking.begin(),
+            ranking.begin() + playerCount,
+            [](RankingList::Rank & a, RankingList::Rank & b) -> bool {
+                return a.second.mRoundsWon > b.second.mRoundsWon;
+            }
+        );
+    }
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+    }
+};
+
+struct WinnerList
+{
+    std::array<std::pair<ent::Handle<ent::Entity>, component::PlayerRoundData *>, 4> leaders;
+    int leaderCount = 0;
+    int leaderScore = -1;
+};
 
 struct MenuSceneInfo
 {
@@ -58,6 +89,18 @@ struct GameSceneInfo
     }
 };
 
+struct PodiumSceneInfo
+{
+
+    RankingList mRanking;
+
+    template<class T_witness>
+    void describeTo(T_witness && aWitness)
+    {
+        aWitness.witness(NVP(mRanking));
+    }
+};
+
 struct DisconnectedControllerInfo
 {
     std::array<int, 4> mDisconnectedControllerId;
@@ -76,7 +119,7 @@ struct Transition
     std::string mTransitionName;
     bool shouldTeardown = true;
     bool shouldSetup = true;
-    std::variant<MenuSceneInfo, JoinGameSceneInfo, GameSceneInfo, DisconnectedControllerInfo> mSceneInfo;
+    std::variant<MenuSceneInfo, JoinGameSceneInfo, GameSceneInfo, DisconnectedControllerInfo, PodiumSceneInfo> mSceneInfo;
 
     bool operator==(const Transition & aRhs) const
     {

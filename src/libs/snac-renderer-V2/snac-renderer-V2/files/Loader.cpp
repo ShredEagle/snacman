@@ -14,6 +14,7 @@
 #include "../Semantics.h"
 #include "../utilities/VertexStreamUtilities.h"
 
+#include <algorithm>
 #include <arte/Image.h>
 
 #include <math/Transformations.h>
@@ -1320,14 +1321,43 @@ Handle<Effect> Loader::loadEffect(const std::filesystem::path & aEffectFile,
                                   Storage & aStorage,
                                   const std::vector<std::string> & aDefines_temp) const
 {
+    // auto res = std::find_if(aStorage.mEffectLoadInfo.begin(), aStorage.mEffectLoadInfo.end(), [&aEffectFile, &aDefines_temp, this](const Storage::EffectLoadInfo & aEffectLI) {
+    //     bool matching = aEffectLI.mPath == mFinder.pathFor(aEffectFile);
+    //     for (const auto & def : aDefines_temp)
+    //     {
+    //         matching &= std::find(aEffectLI.mDefines.begin(), aEffectLI.mDefines.end(), def) != aEffectLI.mDefines.end();
+    //     }
+    //
+    //     if (matching)
+    //     {
+    //         SELOG(debug)(
+    //             "Found a matching cached effect for {} and defines {}.",
+    //             aEffectFile.string(),
+    //             fmt::format("{}", fmt::join(aDefines_temp, ", "))
+    //         );
+    //     }
+    //
+    //     return matching;
+    // });
+    //
+    // if (res != aStorage.mEffectLoadInfo.end())
+    // {
+    //     SELOG(debug)(
+    //         "Returning cache effect"
+    //     );
+    //     return res->mEffectPtr;
+    // }
+    //
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
+
     result.mName = aEffectFile.string();
 
     filesystem::path effectPath = mFinder.pathFor(aEffectFile);
     aStorage.mEffectLoadInfo.push_back({
         .mPath = effectPath,
         .mDefines = aDefines_temp,
+
     });
 
     result.mTechniques = populateTechniques(*this, effectPath, aStorage, aDefines_temp);

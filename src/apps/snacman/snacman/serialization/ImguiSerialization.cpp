@@ -45,3 +45,44 @@ void debugRender(const char * n, const bool & a)
 {
     ImGui::Text("%s", a ? "true" : "false");
 }
+
+void debugRender(const char * n, ad::math::Vec<3, float> & a)
+{
+    ImGui::InputFloat3(n, &a.at(0));
+}
+
+void debugRender(const char * n, ad::math::Position<3, float> & a)
+{
+    ImGui::InputFloat3(n, &a.at(0));
+}
+
+void debugRender(const char * n, ad::math::Size<3, float> & a)
+{
+    ImGui::InputFloat3(n, &a.at(0));
+}
+
+void debugRender(const char * n, ad::math::Quaternion<float> & a)
+{
+    ImGui::SliderFloat4(n, &a.x(), -1.f, 1.f);
+}
+
+void debugRender(const char * n, ad::math::Rgb_base<float> & a)
+{
+    ImGui::ColorEdit3(n, &a.at(0));
+}
+
+void debugRender(const char * n, ad::math::Rgb_base<std::uint8_t> & a)
+{
+    ImGui::ColorEdit3(n, (float*)&a.at(0), ImGuiColorEditFlags_Uint8);
+}
+
+void debugRender(const char * n, ad::math::RgbAlpha_base<float> & a)
+{
+    ImGui::ColorEdit4(n, &a.at(0));
+}
+
+void debugRender(const char * n, ad::math::RgbAlpha_base<std::uint8_t> & a)
+{
+    ImGui::ColorEdit4(n, (float*)&a.at(0), ImGuiColorEditFlags_Uint8);
+}
+

@@ -64,11 +64,18 @@ inline void imguiLogLevelSelection(bool * open = nullptr)
             }
         });
 }
-
-
 /// @brief List all registered debug drawers, and provide a combo to control their verbose level.
 inline void imguiDebugDrawerLevelSection()
 {
+
+    if (ImGui::Button("Turn off"))
+    {
+        for(const auto & [name, drawer] : ::ad::snac::DebugDrawer::IterateDrawers{})
+        {
+            drawer->getLevel() = ::ad::snac::DebugDrawer::gLevels[5];
+        }
+    }
+
     for(const auto & [name, drawer] : ::ad::snac::DebugDrawer::IterateDrawers{})
     {
         imguiui::addCombo(name.c_str(), drawer->getLevel(), std::span{::ad::snac::DebugDrawer::gLevels});

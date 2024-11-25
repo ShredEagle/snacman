@@ -70,6 +70,7 @@ struct ImguiDisplays
     bool mShowRenderControls = false;
     bool mPathfinding = false;
     bool mGameControl = false;
+    bool mShowEntities = false;
     bool mTestSerialization = false;
 
     void display()
@@ -88,7 +89,7 @@ struct ImguiDisplays
         ImGui::Checkbox("Render controls",  &mShowRenderControls);
         ImGui::Checkbox("Pathfinding", &mPathfinding);
         ImGui::Checkbox("Game control", &mGameControl);
-        ImGui::Checkbox("Test serialization", &mTestSerialization);
+        ImGui::Checkbox("Show Entities", &mShowEntities);
         ImGui::Checkbox("ImguiDemo", &mShowImguiDemo);
         ImGui::End();
     }

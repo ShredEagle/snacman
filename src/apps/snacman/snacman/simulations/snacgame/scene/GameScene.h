@@ -4,6 +4,7 @@
 #include "snacman/Timing.h"
 #include "snacman/simulations/snacgame/component/AllowedMovement.h"
 #include "snacman/simulations/snacgame/component/Geometry.h"
+#include "snacman/simulations/snacgame/component/PlayerGameData.h"
 #include "snacman/simulations/snacgame/component/Speed.h"
 #include "snacman/simulations/snacgame/component/Tags.h"
 
@@ -79,16 +80,18 @@ public:
     static constexpr char sFromPauseTransition[] = "GameFromPauseTransition";
     static constexpr char sToPauseTransition[] = "Pause";
     static constexpr char sToDisconnectedControllerTransition[] = "DisconnectedController";
+    static constexpr char sToPodiumTransition[] = "PodiumTransition";
 private:
 
     char findWinner();
+    WinnerList getLeaderList();
     ent::Handle<ent::Entity> createSpawningPhaseText(const std::string & aText, const math::hdr::Rgba_f & aColor, const snac::Time & aTimer);
 
     ent::Query<component::LevelTile> mTiles;
     ent::Query<component::RoundTransient> mRoundTransients;
     ent::Query<component::PlayerSlot> mSlots;
     ent::Query<component::PlayerHud> mHuds;
-    ent::Query<component::Geometry, component::PlayerRoundData, component::Controller, component::AllowedMovement> mPlayers;
+    ent::Query<component::Geometry, component::PlayerRoundData, component::Controller, component::PlayerGameData, component::AllowedMovement> mPlayers;
     ent::Query<component::PathToOnGrid> mPathfinders;
     ent::Query<component::Crown> mCrowns;
     ent::Handle<ent::Entity> mLevel;

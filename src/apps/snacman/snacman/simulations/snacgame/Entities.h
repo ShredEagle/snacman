@@ -161,5 +161,7 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
                                          std::string aText,
                                          const component::GlobalPose & aPose);
 
+ent::Handle<ent::Entity> createPodium(GameContext & aContext, ent::Handle<ent::Entity> aRoot);
+
 } // namespace snacgame
 } // namespace ad

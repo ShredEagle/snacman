@@ -343,6 +343,7 @@ struct Storage
     {
         filesystem::path mPath;
         std::vector<std::string> mDefines;
+        Effect * mEffectPtr;
 
         bool operator==(const EffectLoadInfo &) const = default;
     };

@@ -11,6 +11,7 @@
 #include "snacman/simulations/snacgame/scene/DisconnectedControllerScene.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "snacman/simulations/snacgame/scene/PauseScene.h"
+#include "snacman/simulations/snacgame/scene/PodiumScene.h"
 #include "snacman/simulations/snacgame/system/FallingPlayers.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/Timing.h"
@@ -132,6 +133,10 @@ GameScene::GameScene(GameContext & aGameContext,
     mGameContext.mResources.getModel(gDonutModel,
                                      gMeshGenericEffect);
     mGameContext.mResources.getModel("models/arrow/arrow.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/portal/portal.sel",
+                                     gMeshGenericEffect);
+    mGameContext.mResources.getModel("models/podium/podium.sel",
                                      gMeshGenericEffect);
     {
         Phase init;
@@ -294,6 +299,26 @@ EntHandle GameScene::createSpawningPhaseText(const std::string & aText,
     return textHandle;
 }
 
+WinnerList GameScene::getLeaderList()
+{
+    WinnerList leaderList;
+    mPlayers.each(
+        [&leaderList](EntHandle aHandle,
+                                 component::PlayerRoundData & aRoundData, const component::Controller & aController, const component::PlayerGameData & aGameData) {
+            if (aGameData.mRoundsWon > leaderList.leaderScore && aGameData.mRoundsWon > 0)
+            {
+                leaderList.leaderCount = 0;
+                leaderList.leaders.at(leaderList.leaderCount++) = {aHandle, &aRoundData};
+                leaderList.leaderScore = aGameData.mRoundsWon;
+            }
+            else if (aGameData.mRoundsWon == leaderList.leaderScore)
+            {
+                leaderList.leaders.at(leaderList.leaderCount++) = {aHandle, &aRoundData};
+            }
+        });
+    return leaderList;
+}
+
 void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
@@ -386,32 +411,12 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
             mSystems.get()
                 ->get<system::PlayerSpawner>()
                 .spawnPlayersBeforeRound(mLevel);
-            std::array<std::pair<EntHandle, component::PlayerRoundData *>, 4> leaders;
-            int leaderCount = 0;
-            int leaderScore = -1;
-            mPlayers.each(
-                [&leaders, &leaderCount, &leaderScore](EntHandle aHandle,
-                                         component::PlayerRoundData & aRoundData, const component::Controller & aController) {
-                    component::PlayerGameData & gameData =
-                        snac::getComponent<component::PlayerGameData>(aRoundData.mSlot);
-                    if (!aRoundData.mCrown.isValid())
-                    {
-                        if (gameData.mRoundsWon > leaderScore && gameData.mRoundsWon > 0)
-                        {
-                            leaderCount = 0;
-                            leaders.at(leaderCount++) = {aHandle, &aRoundData};
-                            leaderScore = gameData.mRoundsWon;
-                        }
-                        else if (gameData.mRoundsWon == leaderScore)
-                        {
-                            leaders.at(leaderCount++) = {aHandle, &aRoundData};
-                        }
-                    }
-                });
 
-            for (int i = 0; i < leaderCount; i++)
+            WinnerList leaderList = getLeaderList();
+
+            for (int i = 0; i < leaderList.leaderCount; i++)
             {
-                auto & [leaderEnt, leaderData] = leaders.at(i);
+                auto & [leaderEnt, leaderData] = leaderList.leaders.at(i);
                 EntHandle crown = createCrown(mGameContext);
                 leaderData->mCrown = crown;
                 insertEntityInScene(crown, leaderEnt);
@@ -478,6 +483,8 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
             mPlayers.each([](component::PlayerRoundData & aRoundData, const component::AllowedMovement & aAllowedMovement) {
                 if ((aRoundData.mMoveState & aAllowedMovement.mAllowedMovement) == gPlayerMoveFlagNone)
                 {
+                    // This just shift the bit by one if it's less than 16
+                    // And transforms 16 into 2 (basically a rotation between 2,4,8 and 16)
                     aRoundData.mMoveState = (aRoundData.mMoveState % 15) << 1;
                 }
             });
@@ -519,8 +526,26 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
             // included
             eraseEntityRecursive(mLevel, cleanup);
             mVictoryText.get(cleanup)->erase();
-            mSceneData->changePhase(GamePhase::SpawningSequence, aTime);
-            mGameContext.mSimulationControl.mSpeedRatio = 1;
+
+            RankingList players;
+            mPlayers.each([&players](EntHandle aHandle, component::PlayerGameData & aGameData) {
+                players.ranking.at(players.playerCount) = {aHandle, aGameData};
+            });
+            players.sort();
+
+            if (players.ranking.at(0).second.mRoundsWon == 10)
+            {
+                mGameContext.mSceneStack->popScene();
+                mGameContext.mSceneStack->pushScene(
+                    std::make_shared<PodiumScene>(mGameContext, mMappingContext),
+                    Transition{.mTransitionName = sToPodiumTransition, .mSceneInfo = PodiumSceneInfo{players}});
+                return;
+            }
+            else
+            {
+                mSceneData->changePhase(GamePhase::SpawningSequence, aTime);
+                mGameContext.mSimulationControl.mSpeedRatio = 1;
+            }
             
         }
         break;

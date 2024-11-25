@@ -79,7 +79,6 @@ std::vector<ent::Handle<ent::Entity>> testify_json(ent::EntityManager & aWorld, 
 
 void resolveRequestsInstance(snacgame::GameContext & aGameContext)
 {
-
     for (auto & pair : reflexion::handleRequestsInstance())
     {
         auto [handle, nameRequested] = pair;
@@ -191,13 +190,19 @@ void witness_imgui(ent::Handle<ent::Entity> & aHandle, Witness && aData)
 
 void witness_imgui(ent::EntityManager & aWorld, Witness && aData)
 {
+    static std::string search;
+    ImGui::InputText("search", &search);
     aWorld.forEachHandle(
         [&aData](ent::Handle<ent::Entity> aHandle, const char * aName) {
-            if (ImGui::TreeNode(aName))
+            std::string nameStr(aName);
+            if (nameStr.find(search) != std::string::npos || search == "")
             {
-                witness_imgui(aHandle,
-                              Witness::make(aData.mData, aData.mGameContext));
-                ImGui::TreePop();
+                if (ImGui::TreeNode(aName))
+                {
+                    witness_imgui(aHandle,
+                                  Witness::make(aData.mData, aData.mGameContext));
+                    ImGui::TreePop();
+                }
             }
         });
 }

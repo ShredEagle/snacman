@@ -29,6 +29,7 @@
 #include "ModelInfos.h"
 #include "typedef.h"
 
+#include <cstdio>
 #include <snacman/TemporaryRendererHelpers.h>
 
 #include <algorithm>
@@ -416,11 +417,11 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
 }
 
 // TODO: (franz) does not need the slot handle just the index
-EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
+EntHandle createPlayerModel(GameContext & aContext, const component::PlayerSlot & aSlot)
 {
-    const component::PlayerSlot & slot =
-        aSlotHandle.get()->get<component::PlayerSlot>();
-    EntHandle playerModelHandle = aContext.mWorld.addEntity();
+    char name[16];
+    snprintf(name, 9, "Player %d", aSlot.mSlotIndex);
+    EntHandle playerModelHandle = aContext.mWorld.addEntity(name);
     {
         Phase createModel;
         Entity model = *playerModelHandle.get(createModel);
@@ -430,7 +431,7 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
             gMeshGenericEffect,
             Pos3::Zero(), 1.f,
             gBasePlayerModelInstanceScaling, gBasePlayerModelOrientation,
-            gSlotColors.at(slot.mSlotIndex));
+            gSlotColors.at(aSlot.mSlotIndex));
 
         const std::string animName = "idle";
         const renderer::RigAnimation & animation = modelData->mAnimatedRig->mNameToAnimation.at(animName);
@@ -450,7 +451,7 @@ EntHandle createPlayerModel(GameContext & aContext, EntHandle aSlotHandle)
 ent::Handle<ent::Entity> createCrown(GameContext & aContext)
 {
     Phase createCrown;
-    EntHandle crownHandle = aContext.mWorld.addEntity();
+    EntHandle crownHandle = aContext.mWorld.addEntity("crown");
     Entity crown = *crownHandle.get(createCrown);
 
     addMeshGeoNode(
@@ -479,8 +480,12 @@ ent::Handle<ent::Entity> createCrown(GameContext & aContext)
 // TODO: (franz) does not need the slot handle just the index
 EntHandle createJoinGamePlayer(GameContext & aContext, EntHandle aSlotHandle, int aSlotIndex)
 {
-    EntHandle playerModelHandle = createPlayerModel(aContext, aSlotHandle);
-    EntHandle numberHandle = aContext.mWorld.addEntity();
+    const component::PlayerSlot & slot =
+        aSlotHandle.get()->get<component::PlayerSlot>();
+    EntHandle playerModelHandle = createPlayerModel(aContext, slot);
+    char name[16];
+    snprintf(name, 16, "Player number %d", slot.mSlotIndex);
+    EntHandle numberHandle = aContext.mWorld.addEntity(name);
 
     component::Geometry & aGeo =
         snac::getComponent<component::Geometry>(playerModelHandle);
@@ -491,7 +496,7 @@ EntHandle createJoinGamePlayer(GameContext & aContext, EntHandle aSlotHandle, in
     aGeo.mPosition = Pos3{
         -4.5f + 3.f * (float)aSlotIndex,
         -5.f,
-        0.f
+        -0.08f
     };
 
     {
@@ -525,7 +530,9 @@ EntHandle createInGamePlayer(GameContext & aContext,
                              EntHandle aSlotHandle,
                              const Pos3 & aPosition)
 {
-    EntHandle playerModelHandle = createPlayerModel(aContext, aSlotHandle);
+    const component::PlayerSlot & slot =
+        aSlotHandle.get()->get<component::PlayerSlot>();
+    EntHandle playerModelHandle = createPlayerModel(aContext, slot);
     EntHandle playerHandle = aContext.mWorld.addEntity();
 
     {
@@ -737,6 +744,19 @@ EntHandle createPortalImage(GameContext & aContext,
     }
 
     return newPortalImage;
+}
+
+EntHandle createPodium(GameContext & aContext, EntHandle aRoot)
+{
+    EntHandle podium = aContext.mWorld.addEntity("podium");
+    {
+        Phase phase;
+        ent::Entity podiumEnt = *podium.get(phase);
+        addMeshGeoNode(aContext, podiumEnt, "models/podium/podium.sel", gMeshGenericEffect);
+    }
+    insertEntityInScene(podium, aRoot);
+
+    return podium;
 }
 
 } // namespace snacgame
