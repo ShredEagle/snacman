@@ -49,13 +49,31 @@ MenuScene::MenuScene(GameContext & aGameContext,
 {
     auto font = mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf");
 
-    serial::EntityLedger menuLedger = serial::loadLedgerFromJson(
-        "scenes/menu_scene.json", mGameContext.mWorld, mGameContext);
-
-    //TODO(franz): this should change on ledger are a bit more integrated
-    mOwnedEntities = menuLedger.mEntities;
+    // serial::EntityLedger menuLedger = serial::loadLedgerFromJson(
+    //     "scenes/menu_scene.json", mGameContext.mWorld, mGameContext);
+    // mOwnedEntities = menuLedger.mEntities;
 
     ent::Phase init;
+    auto startHandle = createMenuItem(
+        mGameContext, init, "Start", font,
+        math::Position<2, float>{-0.55f, 0.0f},
+        {
+            {gGoDown, "Quit"},
+        },
+        Transition{.mTransitionName = JoinGameScene::sFromMenuTransition}, true,
+        {1.5f, 1.5f});
+    auto quitHandle =
+        createMenuItem(mGameContext, init, "Quit", font,
+                       math::Position<2, float>{-0.55f, -0.3f},
+                       {
+                           {gGoUp, "Start"},
+                       },
+                       Transition{.mTransitionName = gQuitTransitionName},
+                       false, {1.5f, 1.5f});
+
+    mOwnedEntities.push_back(startHandle);
+    mOwnedEntities.push_back(quitHandle);
+
     mSystems.get(init)
         ->add(system::SceneGraphResolver{mGameContext, mGameContext.mSceneRoot})
         .add(system::MenuManager{mGameContext})
