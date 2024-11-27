@@ -5,6 +5,8 @@
 #include "snacman/simulations/snacgame/component/AllowedMovement.h"
 #include "snacman/simulations/snacgame/component/Geometry.h"
 #include "snacman/simulations/snacgame/component/PlayerGameData.h"
+#include "snacman/simulations/snacgame/component/PlayerHud.h"
+#include "snacman/simulations/snacgame/component/PathToOnGrid.h"
 #include "snacman/simulations/snacgame/component/Speed.h"
 #include "snacman/simulations/snacgame/component/Tags.h"
 
