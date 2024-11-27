@@ -9,15 +9,13 @@
 #include "ProfilingGPU.h"
 #include "Timing.h"
 
+#include <arte/Freetype.h>
+
 #include <graphics/ApplicationGlfw.h>
 
 #include <imguiui/ImguiUi.h>
 
 #include <resource/ResourceFinder.h>
-
-// TODO Ad 2024/02/14: #RV2 Remove V1 includes
-#include <snac-renderer-V1/Mesh.h>
-#include <snac-renderer-V1/text/Text.h>
 
 #include <snac-renderer-V2/Model.h>
 
@@ -33,6 +31,11 @@
 #endif
 
 namespace ad {
+
+namespace snacgame {
+    struct FontAndPart;
+} // namespace snacgame
+
 namespace snac {
 
 
@@ -212,31 +215,29 @@ public:
         return future;
     }
 
-    std::future<std::shared_ptr<snac::Font>> loadFont(
+    std::future<std::shared_ptr<snacgame::FontAndPart>> loadFont(
         arte::FontFace aFontFace,
         unsigned int aPixelHeight,
-        filesystem::path aEffect,
         Resources & aResources)
     {
         assert(std::this_thread::get_id() != mThread.get_id());
 
         // std::function require the type-erased functor to be copy constructible.
         // all captured types must be copyable.
-        auto promise = std::make_shared<std::promise<std::shared_ptr<snac::Font>>>();
-        std::future<std::shared_ptr<snac::Font>> future = promise->get_future();
+        auto promise = std::make_shared<std::promise<std::shared_ptr<snacgame::FontAndPart>>>();
+        std::future<std::shared_ptr<snacgame::FontAndPart>> future = promise->get_future();
         // TODO the Text system has to be deeply refactored. It is tightly coupled to the texture creation
         // making it hard to properly load asynchronously, and leading to horrors such as this move into shared_ptr
         auto sharedFontFace = std::make_shared<arte::FontFace>(std::move(aFontFace));
         push([promise = std::move(promise),
               fontFace = std::move(sharedFontFace),
               aPixelHeight,
-              effect = std::move(aEffect),
               &aResources]
              (T_renderer & aRenderer) mutable
              {
                 try
                 {
-                    promise->set_value(aRenderer.loadFont(std::move(*fontFace), aPixelHeight, effect, aResources));
+                    promise->set_value(aRenderer.loadFont(std::move(*fontFace), aPixelHeight, aResources));
                 }
                 catch(...)
                 {

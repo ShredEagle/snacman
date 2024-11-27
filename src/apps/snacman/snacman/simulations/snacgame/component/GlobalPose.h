@@ -34,6 +34,15 @@ struct GlobalPose
     }
 };
 
+inline renderer::Pose toPose(const GlobalPose & aGlobal)
+{
+    return renderer::Pose{
+        .mPosition = aGlobal.mPosition.as<math::Vec>(),
+        .mUniformScale = aGlobal.mScaling,
+        .mOrientation = aGlobal.mOrientation,
+    };
+}
+
 REFLEXION_REGISTER(GlobalPose)
 
 }

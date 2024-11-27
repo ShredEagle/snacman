@@ -144,6 +144,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/component/Context.cpp
     simulations/snacgame/component/DebugUi.cpp
     simulations/snacgame/component/PlayerHud.cpp
+    simulations/snacgame/component/Text.cpp
 
     simulations/snacgame/scene/Scene.cpp
     simulations/snacgame/scene/GameScene.cpp

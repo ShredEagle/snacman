@@ -7,6 +7,8 @@
 
 #include <renderer/GL_Loader.h>
 
+#include <reflexion/NameValuePair.h>
+
 
 namespace ad::renderer {
 
@@ -24,7 +26,15 @@ namespace ad::renderer {
     {
         GLuint mGlyphIdx;
         math::Position<2, GLfloat> mPosition_stringPix;
+
+        template <class T_witness>
+        void describeTo(T_witness && aWitness)
+        {
+            aWitness.witness(NVP(mGlyphIdx));
+            aWitness.witness(NVP(mPosition_stringPix));
+        }
     };
+
 
     using ClientText = std::vector<GlyphInstanceData>;
 

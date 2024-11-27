@@ -158,9 +158,9 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                             }
 
                             // Update power-up name in HUD
-                            snac::getComponent<component::Text>(
-                                playerHud.mPowerupText)
-                                .mString = component::getPowerUpName(aPlayer);
+                            changeString(snac::getComponent<component::Text>(playerHud.mPowerupText),
+                                         component::getPowerUpName(aPlayer),
+                                         getBillpadFont(*mGameContext)->mFont);
                         }
                     });
             }

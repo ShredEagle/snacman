@@ -7,4 +7,6 @@
 * RV2: Renderer V2
 * renderer_API: The client API of the render engine. Initially mainly implemented as a graphic state
   with a flat-list of objects to draw, and other important entities (cameras, lights).
+* text: Relate to text rendering and fonts.
 * UB: Undefined Behaviour, should be fixed ASAP
+* complications: real-life examples of complications arising from using certain patterns & paradigms 

@@ -31,11 +31,11 @@ public:
 
             aPose.mScale = {value, value};
 
-            math::Vec<2, float> size = aText.mFont->mFontData.computeTextSize(aText.mString) * value;
+            math::Size<2, float> size = aText.mDimensions * value;
             const math::Size<2, int> & windowSize =
                 mGameContext->mAppInterface.getFramebufferSize();
-            aPose.mPosition_u = {0.f - (size.x() / (float)windowSize.width()),
-                                     0.f - (size.y() / (float)windowSize.height())};
+            aPose.mPosition_u = {0.f - (size.width() / (float)windowSize.width()),
+                                     0.f - (size.height() / (float)windowSize.height())};
         });
     }
 

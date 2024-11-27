@@ -20,7 +20,7 @@ class EatPill
 public:
     EatPill(GameContext & aGameContext);
 
-    void update();
+    void update(GameContext & aGameContext);
 
 private:
     ent::Query<component::GlobalPose,

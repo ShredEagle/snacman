@@ -14,7 +14,7 @@
 // * Name font atlas textures
 // * Allow to load from a loader interface (for render thread / cache handling)
 //   * Maybe allow a name in the interface (for debug glLabel)
-// * Decomission renderer_V1 completely
+// * Decomission renderer_V1 completely (review #decommissionRV1)
 // Future directions:
 //   * Try mipmapping
 //   * Ensure several fonts can be stored in the same texture (array?) and do a single draw call
@@ -213,10 +213,14 @@ void Font::deserialize(BinaryInArchive & aData, std::istream & aAtlas, Storage &
 }
 
 
-ClientText prepareText(const Font & aFont, const std::string & aString)
+std::pair<ClientText, math::Size<2, float>>
+prepareText(const Font & aFont, const std::string & aString)
 {
     std::vector<GlyphInstanceData> result;
     result.reserve(aString.size());
+
+    // 0: yMin, 1: yMax
+    math::Vec<2, float> yExtremas;
 
     graphics::PenPosition penPosition;
     for (std::string::const_iterator it = aString.begin();
@@ -237,8 +241,17 @@ ClientText prepareText(const Font & aFont, const std::string & aString)
             .mPosition_stringPix = 
                 penPosition.advance(ftData.mPenAdvance, ftData.mFreetypeIndex, aFont.mFontFace)
         });
+
+        const GlyphMetrics_glsl & metrics = aFont.mCharMap.mMetrics[glyphIndex];
+        yExtremas[0] = std::min(yExtremas[0],
+                                metrics.mBearing_pix.y() - metrics.mBoundingBox_pix.height() );
+        yExtremas[1] = std::max(yExtremas[1],
+                                metrics.mBearing_pix.y());
     }
-    return result;
+    return {
+        result,
+        {penPosition.getPosition().x(), yExtremas[1] - yExtremas[0]},
+    };
 }
 
 
@@ -267,7 +280,7 @@ TextPart makePartForFont(const Font & aFont,
         MaterialContext{
             .mUboRepo = RepositoryUbo{
                 {semantic::gGlyphMetrics, metricsUbo},
-                {semantic::gEntities, entitiesUbo},
+                {semantic::gTextEntities, entitiesUbo},
             },
             .mTextureRepo = {
                 {semantic::gGlyphAtlas, aFont.mGlyphAtlas}

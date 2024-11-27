@@ -371,7 +371,7 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // Add a few instances of a message
     mScene.mScreenText.mStrings.push_back(
         ProtoTexts::StringEntities{
-            .mStringGlyphs = prepareText(mFont, "Viewer text"),
+            .mStringGlyphs = prepareText(mFont, "Viewer text").first,
             .mEntities = {
                 {
                     .mStringPixToWorld = math::AffineMatrix<4, GLfloat>::Identity(),

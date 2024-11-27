@@ -3,7 +3,7 @@
 #include "entity/EntityManager.h"
 #include "simulations/snacgame/Renderer.h"  // for Renderer
 
-// TODO might become useless once Resources itselfs become the Load<> implementer
+// TODO #decommissionRV1 might become useless once Resources itselfs become the Load<> implementer
 #include <snac-renderer-V1/ResourceLoad.h>
 #include "entity/Entity.h"
 #include "entity/HandleKey.h"
@@ -21,6 +21,7 @@
 
 namespace ad {
 
+
 namespace snacgame {
 struct GameContext;
 }
@@ -28,12 +29,10 @@ struct GameContext;
 namespace snac {
 
 struct Effect;
-struct Font;
 struct FontSerialData
 {
     filesystem::path mFontPath;
     unsigned int mPixelHeight;
-    filesystem::path mEffectPath;
 };
 struct Model;
 struct ModelData
@@ -53,6 +52,8 @@ constexpr unsigned int gDefaultPixelHeight = 64;
 class Resources
 {
 public:
+    using LoadedFont_t = snacgame::FontAndPart;
+
     Resources(resource::ResourceFinder aFinder,
               arte::Freetype & aFreetype,
               RenderThread<snacgame::Renderer_t> & aRenderThread) :
@@ -72,11 +73,9 @@ public:
     ModelData getModelDataFromResource(snacgame::Renderer_t::Handle_t<const renderer::Object> aResource)
     { return mModelDataFromResource.at(aResource); }
 
-    // TODO Ad 2024/03/28: #RV2 #text
-    std::shared_ptr<Font> getFont(filesystem::path aFont,
-                                  unsigned int aPixelHeight = gDefaultPixelHeight,
-                                  filesystem::path aEffect = "effects/Text.sefx");
-    FontSerialData getFontDataFromResource(std::shared_ptr<Font> & aResource)
+    std::shared_ptr<LoadedFont_t> getFont(filesystem::path aFont,
+                                            unsigned int aPixelHeight = gDefaultPixelHeight);
+    FontSerialData getFontDataFromResource(std::shared_ptr<LoadedFont_t> & aResource)
     { return mFontDataFromResource.at(aResource); }
     ent::Handle<ent::Entity> getBlueprint(const filesystem::path & aBpFile, ent::EntityManager & aWorld, snacgame::GameContext & GameContext);
 
@@ -87,7 +86,7 @@ public:
     auto find(const filesystem::path & aPath) const
     { return mFinder.find(aPath); }
 
-    // TODO might become useless once Resources itselfs become the Load<> implementer
+    // TODO #decommissionRV1 might become useless once Resources itselfs become the Load<> implementer
     snac::TechniqueLoader getTechniqueLoader() const
     { return {mFinder}; }
 
@@ -97,13 +96,12 @@ public:
     void recompilePrograms();
 
 private:
-    static std::shared_ptr<Font> FontLoader(
+    static std::shared_ptr<LoadedFont_t> FontLoader(
         filesystem::path aFont, 
         unsigned int aPixelHeight,
-        filesystem::path aEffect,
         RenderThread<snacgame::Renderer_t> & aRenderThread,
         Resources & aResources);
-    std::unordered_map<std::shared_ptr<Font>, FontSerialData> mFontDataFromResource;
+    std::unordered_map<std::shared_ptr<LoadedFont_t>, FontSerialData> mFontDataFromResource;
 
     static std::shared_ptr<Effect> EffectLoader(
         filesystem::path aProgram, 
@@ -132,7 +130,7 @@ private:
     snacgame::Resources_V2 mResources_V2;
     
     std::shared_ptr<Model> mCube = nullptr;
-    resource::ResourceManager<std::shared_ptr<Font>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;
+    resource::ResourceManager<std::shared_ptr<LoadedFont_t>,   resource::ResourceFinder, &Resources::FontLoader>   mFonts;
     resource::ResourceManager<std::shared_ptr<Effect>, resource::ResourceFinder, &Resources::EffectLoader> mEffects;
     resource::ResourceManager<snacgame::Renderer_t::Handle_t<const renderer::Object>,   resource::ResourceFinder, &Resources::ModelLoader> mModels;
     resource::ResourceManager<ent::Handle<ent::Entity>,   resource::ResourceFinder, &Resources::BpLoader> mBlueprints;

@@ -48,7 +48,7 @@ struct StringEntity
     vec4 color;
 };
 
-layout(std140, binding = 1) uniform EntitiesBlock
+layout(std140, binding = 1) uniform TextEntitiesBlock
 {
     StringEntity stringEntities[MAX_ENTITIES];
 };

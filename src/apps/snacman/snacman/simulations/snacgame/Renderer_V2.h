@@ -29,14 +29,19 @@
 
 
 namespace ad {
+
 namespace arte { class FontFace; }
 namespace graphics { class AppInterface; }
+namespace renderer {
+    struct Font;
+} // namespace renderer
 
 // Forward declarations
 namespace snac {
     class Resources;
-    struct Font;
 } // namespace snac
+
+
 
 namespace snacgame {
 
@@ -152,11 +157,15 @@ struct SnacGraph
                              renderer::StringKey aPass,
                              renderer::Storage & aStorage);
 
-    void renderFrame(const visu_V2::GraphicState & aState,
+    void renderWorld(const visu_V2::GraphicState & aState,
                      renderer::Storage & aStorage,
                      math::Size<2, int> aFramebufferSize);
 
     void renderDebugFrame(const snac::DebugDrawer::DrawList & aDrawList, renderer::Storage & aStorage);
+
+    void renderScreenText(const visu_V2::GraphicState & aState,
+                          renderer::Storage & aStorage,
+                          math::Size<2, int> aFramebufferSize);
 
     void passDepth(SnacGraph::PartList aPartList,
                    renderer::RepositoryTexture aTextureRepository,
@@ -261,11 +270,11 @@ public:
                                                        filesystem::path aEffect,
                                                        Resources_t & aResources);
 
-    // TODO Ad 2024/03/28: #font #RV2 still using the V1 renderer (and V1 type of handle)
-    std::shared_ptr<snac::Font> loadFont(arte::FontFace aFontFace,
-                                         unsigned int aPixelHeight,
-                                         filesystem::path aEffect,
-                                         snac::Resources & aResources);
+    // No, changing that now
+    //// TODO Ad 2024/03/28: #font #RV2 still using the V1 renderer (and V1 type of handle)
+    std::shared_ptr<FontAndPart> loadFont(arte::FontFace aFontFace,
+                                          unsigned int aPixelHeight,
+                                          snac::Resources & aResources);
 
     void continueGui();
 
@@ -278,9 +287,6 @@ public:
     void recompileEffectsV2();
 
 private:
-    template <class T_range>
-    void renderText(const T_range & aTexts, snac::ProgramSetup & aProgramSetup);
-
     Control mControl;
     graphics::AppInterface & mAppInterface;
     snac::Renderer mRendererToDecomission; // TODO #RV2 Remove this data member

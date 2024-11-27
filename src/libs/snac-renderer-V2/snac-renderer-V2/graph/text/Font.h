@@ -111,7 +111,8 @@ TextPart makePartForFont(const Font & aFont,
                          Handle<Effect> aEffect,
                          Storage & aStorage);
 
-ClientText prepareText(const Font & aFont, const std::string & aString);
+std::pair<ClientText, math::Size<2, float>>
+prepareText(const Font & aFont, const std::string & aString);
 
 
 } // namespace ad::renderer

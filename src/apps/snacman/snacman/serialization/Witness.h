@@ -9,7 +9,6 @@
 #include "imguiui/ImguiUi.h"
 #include "Json.h"
 #include "JsonSerialization.h"
-#include "snac-renderer-V1/text/Text.h"
 #include "snacman/Resources.h"
 
 #include <imgui.h>
@@ -377,7 +376,7 @@ public:
                       renderer::Handle<const renderer::Object> * aObject);
 
     void witness_imgui(const char * aName,
-                      std::shared_ptr<snac::Font> * aObject);
+                      std::shared_ptr<snac::Resources::LoadedFont_t> * aObject);
 
     template <JsonSerializable T_value>
     void witness_json(const char * aName, T_value * aValue)
@@ -441,7 +440,7 @@ public:
                       renderer::Handle<const renderer::Object> * aObject);
 
     void witness_json(const char * aName,
-                      std::shared_ptr<snac::Font> * aObject);
+                      std::shared_ptr<snac::Resources::LoadedFont_t> * aObject);
 
     template <JsonExtractable T_value>
     void testify_json(const char * aName, T_value * aValue) const
@@ -506,7 +505,7 @@ public:
                       renderer::Handle<const renderer::Object> * aObject) const;
 
     void testify_json(const char * aName,
-                      std::shared_ptr<snac::Font> * aObject) const;
+                      std::shared_ptr<snac::Resources::LoadedFont_t> * aObject) const;
 };
 
 void resolveRequestsInstance(snacgame::GameContext & aWorld);

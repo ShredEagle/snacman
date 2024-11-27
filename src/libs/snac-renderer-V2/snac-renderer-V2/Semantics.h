@@ -38,6 +38,7 @@ namespace semantic
     #define BLOCK_SEM(s) const BlockSemantic g ## s{#s}
 
     BLOCK_SEM(Entities);
+    BLOCK_SEM(TextEntities);
     const BlockSemantic gFrame{"Frame"};
     BLOCK_SEM(GlyphMetrics);
     BLOCK_SEM(JointMatrices);

@@ -5,7 +5,6 @@
 #include "GameScene.h"
 
 #include "math/Color.h"
-#include "snac-renderer-V1/text/Text.h"
 #include "snacman/EntityUtilities.h"
 #include "snacman/simulations/snacgame/scene/DataScene.h"
 #include "snacman/simulations/snacgame/scene/DisconnectedControllerScene.h"
@@ -274,7 +273,7 @@ EntHandle GameScene::createSpawningPhaseText(const std::string & aText,
                                              const snac::Time & aTime)
 {
     Phase phase;
-    std::shared_ptr<snac::Font> boigaFont =
+    std::shared_ptr<snac::Resources::LoadedFont_t> boigaFont =
         mGameContext.mResources.getFont("fonts/fill_boiga.ttf", gTextSize);
 
     math::Position<2, float> position = {0.f, 0.f};
@@ -534,7 +533,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 
         mSystems.get()->get<system::PortalManagement>().postGraphUpdate(level);
         mSystems.get()->get<system::PowerUpUsage>().update(aTime, mLevel);
-        mSystems.get()->get<system::EatPill>().update();
+        mSystems.get()->get<system::EatPill>().update(mGameContext);
 
         mSystems.get()->get<system::Debug_BoundingBoxes>().update();
 

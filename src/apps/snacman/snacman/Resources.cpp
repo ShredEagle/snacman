@@ -14,12 +14,7 @@
 #include <future>                     // for future
 #include <string>                     // for operator==, string
 
-namespace ad {
-namespace snac {
-
-struct Effect;
-struct Font;
-struct Model;
+namespace ad::snac {
 
 Resources::~Resources()
 {
@@ -60,16 +55,16 @@ Resources::getModel(filesystem::path aModel, filesystem::path aEffect)
     }
 }
 
-std::shared_ptr<Font> Resources::getFont(filesystem::path aFont,
-                                         unsigned int aPixelHeight,
-                                         filesystem::path aEffect)
+std::shared_ptr<Resources::LoadedFont_t> Resources::getFont(filesystem::path aFont,
+                                                            unsigned int aPixelHeight)
 {
-    auto font = mFonts.load(aFont, mFinder, aPixelHeight, aEffect,
+    auto font = mFonts.load(aFont, mFinder, aPixelHeight,
                             mRenderThread, *this);
     mFontDataFromResource.insert_or_assign(
-        font, FontSerialData{aFont, aPixelHeight, aEffect});
+        font, FontSerialData{aFont, aPixelHeight});
     return font;
 }
+
 ent::Handle<ent::Entity>
 Resources::getBlueprint(const filesystem::path & aBpFile,
                         ent::EntityManager & aWorld,
@@ -93,15 +88,14 @@ Resources::EffectLoader(filesystem::path aEffect,
     return loadEffect(aEffect, aResources.getTechniqueLoader());
 }
 
-std::shared_ptr<Font>
+std::shared_ptr<Resources::LoadedFont_t>
 Resources::FontLoader(filesystem::path aFont,
                       unsigned int aPixelHeight,
-                      filesystem::path aEffect,
                       RenderThread<snacgame::Renderer_t> & aRenderThread,
                       Resources & aResources)
 {
     return aRenderThread
-        .loadFont(aResources.getFreetype().load(aFont), aPixelHeight, aEffect,
+        .loadFont(aResources.getFreetype().load(aFont), aPixelHeight,
                   aResources)
         .get(); // synchronize call
 }
@@ -155,5 +149,4 @@ void Resources::recompilePrograms()
     }
 }
 
-} // namespace snac
-} // namespace ad
+} // namespace ad::snac

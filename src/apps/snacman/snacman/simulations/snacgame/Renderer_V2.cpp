@@ -19,7 +19,6 @@
 #include <renderer/Uniforms.h>
 
 // TODO #RV2 Remove V1 includes
-#include <snac-renderer-V1/text/Text.h>
 #include <snac-renderer-V1/Instances.h>
 #include <snac-renderer-V1/Render.h>
 #include <snac-renderer-V1/Mesh.h>
@@ -28,9 +27,12 @@
 #include <snac-renderer-V2/Constants.h>
 #include <snac-renderer-V2/Lights.h>
 #include <snac-renderer-V2/Pass.h>
+#include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/RendererReimplement.h>
 #include <snac-renderer-V2/SetupDrawing.h>
 #include <snac-renderer-V2/Semantics.h>
+
+#include <snac-renderer-V2/graph/text/Font.h>
 
 #include <snac-renderer-V2/utilities/LoadUbos.h>
 
@@ -269,7 +271,7 @@ void SnacGraph::passDepth(SnacGraph::PartList aPartList,
 }
 
 
-void SnacGraph::renderFrame(const visu_V2::GraphicState & aState,
+void SnacGraph::renderWorld(const visu_V2::GraphicState & aState,
                             renderer::Storage & aStorage,
                             math::Size<2, int> aFramebufferSize)
 {
@@ -548,6 +550,98 @@ void SnacGraph::renderDebugFrame(const snac::DebugDrawer::DrawList & aDrawList,
 }
 
 
+void SnacGraph::renderScreenText(const visu_V2::GraphicState & aState,
+                                 renderer::Storage & aStorage,
+                                 math::Size<2, int> aFramebufferSize)
+{
+    std::unordered_map<const FontAndPart *, std::vector<const visu_V2::Text *>> partToTexts;
+
+    for(const visu_V2::Text & text : aState.mTextScreenEntities)
+    {
+        assert(text.mFontRef != nullptr);
+        partToTexts[text.mFontRef.get()].push_back(&text);
+    }
+
+    // Load an orthographic camera, projecting the framebuffer space from pixels to clip space [-1, 1]
+    renderer::loadCameraUbo(
+        mGraphUbos.mViewingProjectionUbo, 
+        renderer::GpuViewProjectionBlock{
+            math::AffineMatrix<4, GLfloat>::Identity(),
+            math::trans3d::orthographicProjection(
+                math::Box<float>{
+                    {-static_cast<math::Position<2, float>>(aFramebufferSize) / 2, -1.f},
+                    {static_cast<math::Size<2, float>>(aFramebufferSize), 2.f}
+                }
+            )
+        }
+    );
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, graphics::FrameBuffer::Default());
+    glViewport(0, 0, aFramebufferSize.width(), aFramebufferSize.height());
+    glEnable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    // Treat each font (so, each Part) separately
+    for(const auto [fontAndPart, texts] : partToTexts)
+    {
+        const renderer::TextPart & glyphPart = fontAndPart->mPart;
+
+        // Load all buffers
+        renderer::ClientText allGlyphInstances;
+        std::vector<GLuint> glyphInstanceToStringEntity;
+        std::vector<renderer::StringEntity_glsl> stringEntities;
+        GLuint stringEntityIdx = 0;
+
+        for(const visu_V2::Text * text : texts)
+        {
+            // Insert a string entity for this text
+            stringEntities.push_back(renderer::StringEntity_glsl{
+                .mStringPixToWorld = math::AffineMatrix<4, GLfloat>(text->mPose),
+                .mColor = text->mColor,
+            });
+
+            // Copy all glyphs of this text in the glyph instances buffer
+            allGlyphInstances.insert(
+                allGlyphInstances.end(),
+                text->mString.begin(), text->mString.end());
+
+            // Each glyph of the current text refers to the current string entity
+            glyphInstanceToStringEntity.insert(glyphInstanceToStringEntity.end(),
+                                               text->mString.size(), stringEntityIdx);
+            ++stringEntityIdx;
+        }
+
+        renderer::proto::load(*glyphPart.mGlyphInstanceBuffer,
+                              std::span{allGlyphInstances},
+                              graphics::BufferHint::StreamDraw);
+        renderer::proto::load(*glyphPart.mInstanceToStringEntityBuffer,
+                              std::span{glyphInstanceToStringEntity},
+                              graphics::BufferHint::StreamDraw);
+        renderer::proto::load(*glyphPart.mStringEntitiesUbo,
+                              std::span{stringEntities},
+                              graphics::BufferHint::StreamDraw);
+        const GLsizei glyphCount = (GLsizei)allGlyphInstances.size();
+
+        renderer::Handle<renderer::ConfiguredProgram> textProgram = getProgram(*glyphPart.mMaterial.mEffect, {});
+        renderer::Handle<graphics::VertexArrayObject> vao = getVao(*textProgram, glyphPart, aStorage);
+        graphics::ScopedBind vaoScope{*vao};
+        graphics::ScopedBind programScope{textProgram->mProgram};
+
+        setupProgramRepositories(glyphPart.mMaterial.mContext,
+                                 mGraphUbos.mUboRepository,
+                                 renderer::RepositoryTexture{},
+                                 textProgram->mProgram);
+        {
+            PROFILER_SCOPE_RECURRING_SECTION(renderer::gRenderProfiler, "glDraw text", renderer::CpuTime/*, GpuTime*/);
+            glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, glyphCount);
+        }
+    }
+
+    
+}
+
+
 Renderer_V2::Renderer_V2(graphics::AppInterface & aAppInterface,
                          resource::ResourceFinder & aResourcesFinder,
                          arte::FontFace aDebugFontFace) :
@@ -613,16 +707,25 @@ renderer::Handle<const renderer::Object> Renderer_V2::loadModel(filesystem::path
     }
 }
 
-std::shared_ptr<snac::Font> Renderer_V2::loadFont(arte::FontFace aFontFace,
-                                               unsigned int aPixelHeight,
-                                               filesystem::path aEffect,
-                                               snac::Resources & aResources)
+std::shared_ptr<FontAndPart> Renderer_V2::loadFont(arte::FontFace aFontFace,
+                                                   unsigned int aPixelHeight,
+                                                   snac::Resources & aResources)
 {
-    return std::make_shared<snac::Font>(
-        std::move(aFontFace),
-        aPixelHeight,
-        aResources.getShaderEffect(aEffect)
-    );
+    // TODO: #RV2 #text should receive the path to cached load
+    // or maybe the font should be moved entirely to main thread?
+    auto result = std::make_shared<FontAndPart>(FontAndPart{
+        .mFont = renderer::Font{
+            std::move(aFontFace),
+            (int)aPixelHeight,
+            mRendererToKeep.mStorage},
+        .mPart = renderer::Part{}
+    });
+    result->mPart = renderer::makePartForFont(
+        result->mFont, 
+        mLoader.loadEffect("effects/Text.sefx", mRendererToKeep.mStorage),
+        mRendererToKeep.mStorage);
+    
+    return result;
 }
 
 
@@ -644,38 +747,6 @@ void Renderer_V2::continueGui()
 }
 
 
-template <class T_range>
-void Renderer_V2::renderText(const T_range & aTexts, snac::ProgramSetup & aProgramSetup)
-{
-    // Note: this is pessimised code.
-    // Most of these expensive operations should be taken out and the results
-    // cached.
-    for (const visu_V1::Text & text : aTexts)
-    {
-        auto localToWorld = 
-            math::trans3d::scale(text.mScaling)
-            * text.mOrientation.toRotationMatrix()
-            * math::trans3d::translate(text.mPosition_world.as<math::Vec>());
-
-        // TODO should be cached once in the string and forwarded here
-        std::vector<snac::GlyphInstance> textBufferData =
-            text.mFont->mFontData.populateInstances(text.mString,
-                                                    to_sdr(text.mColor),
-                                                    localToWorld);
-
-        // TODO should be consolidated, a single call for all string of the same
-        // font.
-        mDynamicStrings.respecifyData(std::span{textBufferData});
-
-        glEnable(GL_BLEND);
-
-        auto drawStringEntry = BEGIN_RECURRING_GL("Draw string");
-        mTextRenderer.render(mDynamicStrings, *text.mFont, mRendererToDecomission, aProgramSetup);
-        END_RECURRING_GL(drawStringEntry);
-    }
-}
-
-
 void Renderer_V2::render(const GraphicState_t & aState)
 {
 
@@ -685,7 +756,7 @@ void Renderer_V2::render(const GraphicState_t & aState)
 
     if (mControl.mRenderModels)
     {
-        mRendererToKeep.mRenderGraph.renderFrame(aState, mRendererToKeep.mStorage, framebufferSize);
+        mRendererToKeep.mRenderGraph.renderWorld(aState, mRendererToKeep.mStorage, framebufferSize);
     }
 
     //
@@ -693,7 +764,7 @@ void Renderer_V2::render(const GraphicState_t & aState)
     //
     {
         // TODO Ad 2024/04/03: #profiling currently the count of draw calls is not working (returning 0)
-        // because we currently have to explicity instrument the draw calls (making it easy to miss some)
+        // because we currently have to explicitly instrument the draw calls (making it easy to miss some)
         TIME_RECURRING_GL("Draw_texts", renderer::DrawCalls);
 
         //// 3D world text
@@ -706,24 +777,12 @@ void Renderer_V2::render(const GraphicState_t & aState)
         //    renderText(aState.mTextWorldEntities, programSetup);
         //}
 
-        // For the screen space text, the viewing transform is composed as follows:
-        // The world-to-camera is identity
-        // The projection is orthographic, mapping framebuffer resolution (with origin at screen center) to NDC.
-        snac::ProgramSetup programSetup{
-            .mUniforms{
-                {
-                    snac::Semantic::ViewingMatrix,
-                    math::trans3d::orthographicProjection(
-                        math::Box<float>{
-                            {-static_cast<math::Position<2, float>>(framebufferSize) / 2, -1.f},
-                            {static_cast<math::Size<2, float>>(framebufferSize), 2.f}
-                        })
-                }}
-        };
-
         if (mControl.mRenderText)
         {
-            renderText(aState.mTextScreenEntities, programSetup);
+            mRendererToKeep.mRenderGraph.renderScreenText(
+                aState,
+                mRendererToKeep.mStorage,
+                framebufferSize);
         }
     }
 
