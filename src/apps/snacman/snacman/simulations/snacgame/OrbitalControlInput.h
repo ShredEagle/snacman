@@ -1,5 +1,6 @@
 #pragma once
 
+#include "reflexion/NameValuePair.h"
 #include <math/Angle.h>
 
 #include <snac-renderer-V2/Camera.h>

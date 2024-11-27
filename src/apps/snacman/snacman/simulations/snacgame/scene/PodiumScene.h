@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Scene.h"
+#include "snacman/simulations/snacgame/component/PlayerSlot.h"
+#include "snacman/simulations/snacgame/component/VisualModel.h"
 
 #include "../component/Text.h"
 #include "../component/MenuItem.h"
@@ -25,8 +27,13 @@ public:
 
     void onExit(Transition aTransition) override;
 
+    static constexpr char sToGame[] = "ToGame";
+    static constexpr char sToJoin[] = "ToJoin";
+    static constexpr char sToMain[] = "ToMain";
+
 private:
     ent::Query<component::MenuItem, component::Text> mItems;
+    ent::Query<component::PlayerSlot> mSlots;
 };
 
 } // namespace scene

@@ -52,15 +52,6 @@ inline std::unordered_map<std::string, std::type_index> & nameTypeIndexStore()
     return nameTypeIndexStoreInstance;
 }
 
-inline std::vector<std::pair<ad::ent::Handle<ad::ent::Entity> *, std::string>> &
-handleRequestsInstance()
-{
-    static std::vector<
-        std::pair<ad::ent::Handle<ad::ent::Entity> *, std::string>>
-        handleRequestsStore = {};
-    return handleRequestsStore;
-}
-
 /// \brief Abstract component processor provides a type erased
 /// interface for component creation and serialization
 class TypeErasedProcessor

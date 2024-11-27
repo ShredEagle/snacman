@@ -7,6 +7,7 @@
 #include "Material.h"
 #include "Repositories.h"
 #include "Rigging.h"
+#include "handy/StringId.h"
 
 #include <renderer/Texture.h>
 #include <renderer/UniformBuffer.h>
@@ -357,6 +358,7 @@ struct Storage
     std::list<Object> mObjects;
     std::list<Effect> mEffects;
     std::list<EffectLoadInfo> mEffectLoadInfo;
+    std::unordered_map<handy::StringId, EffectLoadInfo> mEffectLoadCache;
     std::list<ConfiguredProgram> mPrograms;
     std::list<graphics::Texture> mTextures;
     std::list<graphics::UniformBufferObject> mUbos;

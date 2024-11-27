@@ -16,6 +16,7 @@
 #include "../component/SceneNode.h"
 #include "../component/Controller.h"
 #include "../component/PlayerRoundData.h"
+#include "../component/RigAnimation.h"
 #include "../system/SceneStack.h"
 
 #include "snacman/EntityUtilities.h"
@@ -27,6 +28,7 @@
 #include "snacman/simulations/snacgame/scene/GameScene.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "snacman/simulations/snacgame/scene/Scene.h"
+#include "snacman/simulations/snacgame/system/AdvanceAnimations.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 
@@ -35,17 +37,23 @@
 namespace ad {
 namespace snacgame {
 namespace scene {
+
+constexpr math::Spherical<float> gJoinGameSceneInitialCameraSpherical{
+    13.5f,
+    math::Radian<float>{0.956f},
+    math::Turn<float>{0.f}
+};
+
+constexpr math::Position<3, float> gJoinGameSceneInitialCameraPos{
+    0.f, -2.237f, -8.f
+};
+
 JoinGameScene::JoinGameScene(GameContext & aGameContext,
                              ent::Wrap<component::MappingContext> & aMappingContext) :
     Scene(gJoinGameSceneName, aGameContext, aMappingContext),
     mSlots{aGameContext.mWorld},
     mJoinGameRoot{mGameContext.mWorld.addEntity("join game root")}
 {
-    Phase init;
-    mSystems.get(init)
-        ->add(system::SceneGraphResolver{mGameContext, mGameContext.mSceneRoot})
-        .add(system::InputProcessor{mGameContext, mMappingContext});
-
     {
         Phase createRoot;
         Entity root = *mJoinGameRoot.get(createRoot);
@@ -65,8 +73,8 @@ JoinGameScene::JoinGameScene(GameContext & aGameContext,
 
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
     renderer::Orbital & camOrbital = snac::getComponent<system::OrbitalCamera>(camera).mControl.mOrbital;
-    camOrbital.mSpherical.polar() = math::Turn<float>{0.22f};
-    camOrbital.mSpherical.radius() = 15.f;
+    camOrbital.mSpherical = gJoinGameSceneInitialCameraSpherical;
+    camOrbital.mSphericalOrigin = gJoinGameSceneInitialCameraPos;
 }
 
 void JoinGameScene::update(const snac::Time & aTime, RawInput & aInput)
@@ -118,7 +126,7 @@ void JoinGameScene::update(const snac::Time & aTime, RawInput & aInput)
 
     if (mSlots.countMatches() == 0)
     {
-        mGameContext.mSceneStack->popScene(Transition{.mTransitionName = sQuitTransition});
+        mGameContext.mSceneStack->popScene(Transition{.mTransitionType = TransType::QuitToMenu});
         mGameContext.mSceneStack->pushScene(
             std::make_shared<MenuScene>(mGameContext, mMappingContext));
         return;
@@ -126,28 +134,80 @@ void JoinGameScene::update(const snac::Time & aTime, RawInput & aInput)
 
     if (start)
     {
-        mGameContext.mSceneStack->popScene(Transition{.mTransitionName = sToGameTransition});
+        mGameContext.mSceneStack->popScene(Transition{.mTransitionType = TransType::GameFromJoinGame});
         mGameContext.mSceneStack->pushScene(
             std::make_shared<GameScene>(mGameContext, mMappingContext));
         return;
     }
 
     mSystems.get(update)->get<system::SceneGraphResolver>().update();
+    mSystems.get(update)->get<system::AdvanceAnimations>().update(aTime);
 }
 
 void JoinGameScene::onEnter(Transition aTransition) {
-    if (aTransition.mTransitionName == sFromGameTransition)
+    // There is 3 possible transition to JoinGameScene
+    // From the main menu (press start)
+    // From the pause (press quit)
+    // From the podium (press change players)
+    mSystems = mGameContext.mWorld.addEntity("System for JoinGame");
+    Phase init;
+    mSystems.get(init)
+        ->add(system::SceneGraphResolver{mGameContext, mGameContext.mSceneRoot})
+        .add(system::AdvanceAnimations{mGameContext})
+        .add(system::InputProcessor{mGameContext, mMappingContext});
+
+    switch (aTransition.mTransitionType)
     {
-        // From game transition there is no need to create a player slot
-        // we can just use the existing slot
+        case TransType::JoinGameFromMenu:
+        {
+            // We need to create a player slot for the player
+            // that pressed start
+            JoinGameSceneInfo info = std::get<JoinGameSceneInfo>(aTransition.mSceneInfo);
+            addPlayerFromControllerId(info.mTransitionControllerId);
+            break;
+        }
+        case TransType::JoinGameFromPause:
+        {
+            // From game transition there is no need to create a player slot
+            // we can just use the existing slot
+            mSlots.each([this](EntHandle aSlotHandle, component::PlayerSlot & aSlot) {
+                createPlayerModelFromSlot(aSlotHandle, aSlot);
+            });
+            break;
+        }
+        case TransType::JoinGameFromPodium:
+        {
+            mSlots.each([this](EntHandle aSlotHandle, component::PlayerSlot & aSlot) {
+                createPlayerModelFromSlot(aSlotHandle, aSlot);
+            });
+            break;
+        }
+        default:
+            break;   
     }
-    else if (aTransition.mTransitionName == sFromMenuTransition)
+}
+
+void JoinGameScene::onExit(Transition aTransition) {
+    // There is 2 possible transition to JoinGameScene
+    // To the game
+    // To the menu
+    Phase onExitPhase;
+    eraseEntityRecursive(mJoinGameRoot, onExitPhase);
+    if (aTransition.mTransitionType == TransType::QuitToMenu)
     {
-        // We need to create a player slot for the player
-        // that pressed start
-        JoinGameSceneInfo info = std::get<JoinGameSceneInfo>(aTransition.mSceneInfo);
-        addPlayerFromControllerId(info.mTransitionControllerId);
+        snac::eraseAllInQuery(mSlots);
     }
+    mSystems.get(onExitPhase)->erase();
+}
+
+void JoinGameScene::createPlayerModelFromSlot(
+    ent::Handle<ent::Entity> & aSlotHandle,
+    const component::PlayerSlot & aSlot)
+{
+    EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, aSlotHandle, (int)aSlot.mSlotIndex);
+    insertEntityInScene(joinGamePlayer, mJoinGameRoot);
+    Phase joinPlayer;
+    aSlotHandle.get(joinPlayer)->add(component::PlayerJoinData{.mJoinPlayerModel = joinGamePlayer});
 }
 
 void JoinGameScene::addPlayerFromControllerId(int controllerId)
@@ -155,20 +215,7 @@ void JoinGameScene::addPlayerFromControllerId(int controllerId)
     EntHandle slotHandle = addPlayer(mGameContext, controllerId);
     const component::PlayerSlot & slot =
         slotHandle.get()->get<component::PlayerSlot>();
-    EntHandle joinGamePlayer = createJoinGamePlayer(mGameContext, slotHandle, (int)slot.mSlotIndex);
-    insertEntityInScene(joinGamePlayer, mJoinGameRoot);
-    Phase joinPlayer;
-    slotHandle.get(joinPlayer)->add(component::PlayerJoinData{.mJoinPlayerModel = joinGamePlayer});
-
-}
-
-void JoinGameScene::onExit(Transition aTransition) {
-    Phase onExitPhase;
-    eraseEntityRecursive(mJoinGameRoot, onExitPhase);
-    if (aTransition.mTransitionName != sToGameTransition)
-    {
-        snac::eraseAllInQuery(mSlots);
-    }
+    createPlayerModelFromSlot(slotHandle, slot);
 }
 
 } // namespace scene

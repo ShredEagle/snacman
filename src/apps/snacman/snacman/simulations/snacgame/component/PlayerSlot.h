@@ -22,6 +22,8 @@ struct Unspawned
     }
 };
 
+REFLEXION_REGISTER(Unspawned)
+
 struct PlayerSlot
 {
     unsigned int mSlotIndex;

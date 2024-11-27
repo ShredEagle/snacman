@@ -112,7 +112,7 @@ struct GpuViewProjectionBlock
 /// and looking toward the orbit origin.
 struct Orbital
 {
-    Orbital(float aRadius,
+    Orbital(float aRadius = 1.f,
             math::Radian<float> aPolar = math::Degree<float>{90.f},
             math::Radian<float> aAzimuthal = math::Radian<float>{0.f},
             math::Position<3, float> aPosition = {0.f, 0.f, 0.f}) :

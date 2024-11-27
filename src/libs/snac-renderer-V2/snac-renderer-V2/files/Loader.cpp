@@ -1321,43 +1321,46 @@ Handle<Effect> Loader::loadEffect(const std::filesystem::path & aEffectFile,
                                   Storage & aStorage,
                                   const std::vector<std::string> & aDefines_temp) const
 {
-    // auto res = std::find_if(aStorage.mEffectLoadInfo.begin(), aStorage.mEffectLoadInfo.end(), [&aEffectFile, &aDefines_temp, this](const Storage::EffectLoadInfo & aEffectLI) {
-    //     bool matching = aEffectLI.mPath == mFinder.pathFor(aEffectFile);
-    //     for (const auto & def : aDefines_temp)
-    //     {
-    //         matching &= std::find(aEffectLI.mDefines.begin(), aEffectLI.mDefines.end(), def) != aEffectLI.mDefines.end();
-    //     }
-    //
-    //     if (matching)
-    //     {
-    //         SELOG(debug)(
-    //             "Found a matching cached effect for {} and defines {}.",
-    //             aEffectFile.string(),
-    //             fmt::format("{}", fmt::join(aDefines_temp, ", "))
-    //         );
-    //     }
-    //
-    //     return matching;
-    // });
-    //
-    // if (res != aStorage.mEffectLoadInfo.end())
-    // {
-    //     SELOG(debug)(
-    //         "Returning cache effect"
-    //     );
-    //     return res->mEffectPtr;
-    // }
-    //
+// This basically works for caching effect (by that I mean it does not crash) however it 
+// seems improvement in performance is marginal (from 8s asset loading to 7s in debug
+// in release it's a bit better 1.98s and 2.4s).
+#define SNAC_CACHE_EFFECT
+#ifdef SNAC_CACHE_EFFECT
+    handy::StringId effectId{mFinder.pathFor(aEffectFile).string() + fmt::format("{}", fmt::join(aDefines_temp, ", "))}; 
+
+    if (aStorage.mEffectLoadCache.contains(effectId))
+    {
+        Storage::EffectLoadInfo & eli = aStorage.mEffectLoadCache.at(effectId);
+        SELOG(debug)(
+            "Found a matching cached effect for {} and defines {} / {}.",
+            aEffectFile.string(),
+            fmt::format("{}", fmt::join(aDefines_temp, ", ")),
+            fmt::format("{}", fmt::join(eli.mDefines, ", "))
+        );
+
+        return eli.mEffectPtr;
+    }
+#endif
+
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
 
     result.mName = aEffectFile.string();
 
     filesystem::path effectPath = mFinder.pathFor(aEffectFile);
+
+#ifdef SNAC_CACHE_EFFECT
+    aStorage.mEffectLoadCache.insert_or_assign(effectId, Storage::EffectLoadInfo{
+        .mPath = effectPath,
+        .mDefines = aDefines_temp,
+        .mEffectPtr = &result,
+    });
+#endif
+
     aStorage.mEffectLoadInfo.push_back({
         .mPath = effectPath,
         .mDefines = aDefines_temp,
-
+        .mEffectPtr = &result,
     });
 
     result.mTechniques = populateTechniques(*this, effectPath, aStorage, aDefines_temp);

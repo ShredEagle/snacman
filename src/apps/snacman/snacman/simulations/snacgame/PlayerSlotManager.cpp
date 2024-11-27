@@ -55,10 +55,7 @@ bool PlayerSlotManager::addPlayer(GameContext & aContext,
                 .add(component::Controller{
                     .mType = getControllerType(aControllerIndex),
                     .mControllerId = aControllerIndex})
-                .add(component::Unspawned{})
                 .add(component::PlayerGameData{});
-
-            addGeoNode(aContext, playerEnt);
 
             return true;
         }

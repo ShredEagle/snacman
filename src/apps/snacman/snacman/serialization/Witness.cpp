@@ -62,41 +62,33 @@ std::vector<ent::Handle<ent::Entity>> testify_json(ent::EntityManager & aWorld, 
 {
     std::unordered_map<std::string, ent::Handle<ent::Entity>> nameHandleMap;
     json * data = std::get<json *>(aData.mData);
+    // TODO(franz): This would be a great for a scratch memory
+    // We could use an array and cap the amount of entities that can be serialized
+    // at once. But I think it would be better to use a preallocated scratch memory
+    // to avoid the next to vector allocation
     std::vector<ent::Handle<ent::Entity>> resultEntities(data->size());
+    std::vector<std::pair<ent::Handle<ent::Entity>, json>> handleJsonPair;
+
+    // We create all the handle before deserializing the components because
+    // this allows us to consider that all handle in the components that will
+    // be deserialized will exists. If they do not we can emit an error because
+    // it will mean that their a reference to a non persisted entity
+    for (const auto & [name, ent] : data->items())
+    {
+        // This posits that ent that references to json elements
+        // are owned by the parent json element
+        handleJsonPair.push_back(std::make_pair(aWorld.addEntity(name.c_str()), ent));
+    }
 
     int dataIndex = 0;
-    for (auto & [name, ent] : data->items())
+
+    for (auto & [handle, ent] : handleJsonPair)
     {
-        ent::Handle<ent::Entity> handle = aWorld.addEntity(name.c_str());
         testify_json(handle, Witness::make_const(&ent, aData.mGameContext));
         resultEntities.at(dataIndex++) = (handle);
     }
 
-    resolveRequestsInstance(aData.mGameContext);
-
     return resultEntities;
-}
-
-void resolveRequestsInstance(snacgame::GameContext & aGameContext)
-{
-    for (auto & pair : reflexion::handleRequestsInstance())
-    {
-        auto [handle, nameRequested] = pair;
-
-        ent::Handle<ent::Entity> requestedHandle = aGameContext.mWorld.handleFromName(nameRequested);
-        if (requestedHandle.isValid())
-        {
-            *handle = requestedHandle;
-        }
-#ifndef NDEBUG
-        else
-        {
-            SELOG(error)("Requested Handle {} does not exists.", nameRequested);
-        }
-#endif
-    }
-    reflexion::handleRequestsInstance().clear();
-    
 }
 
 void testify_json(ent::Handle<ent::Entity> & aHandle, const Witness && aData)
@@ -116,8 +108,6 @@ void testify_json(ent::Handle<ent::Entity> & aHandle, const Witness && aData)
         reflexion::typedProcessorStore().at(index)->addComponentToHandle(
             Witness::make_const(&comp, aData.mGameContext), aHandle);
     }
-
-    serial::resolveRequestsInstance(aData.mGameContext);
 }
 
 void witness_json(ent::Handle<ent::Entity> & aHandle, Witness && aData)
@@ -174,6 +164,13 @@ void witness_imgui(ent::Handle<ent::Entity> & aHandle, Witness && aData)
     static std::string blueprint;
     static bool showBlueprint;
     static int lineCount = 0;
+#ifndef NDEBUG
+    if (!canBeJsonified && ImGui::Button("Crash game and get component name"))
+    {
+        json jsonSerial;
+        witness_json(aHandle, Witness::make(&jsonSerial, aData.mGameContext));
+    }
+#endif
     if (canBeJsonified && ImGui::Button("Get blueprint"))
     {
         json jsonSerial;
@@ -192,6 +189,7 @@ void witness_imgui(ent::EntityManager & aWorld, Witness && aData)
 {
     static std::string search;
     ImGui::InputText("search", &search);
+    ImGui::Text("entity count: %lu", aWorld.countLiveEntities());
     aWorld.forEachHandle(
         [&aData](ent::Handle<ent::Entity> aHandle, const char * aName) {
             std::string nameStr(aName);
@@ -205,6 +203,20 @@ void witness_imgui(ent::EntityManager & aWorld, Witness && aData)
                 }
             }
         });
+}
+
+// since all handle are created before deserialization we can
+// search for them by name directly during deserialization
+void Witness::testify_json(const char * aName,
+                  ent::Handle<ent::Entity> * aHandle) const
+{
+    json & data = *std::get<json *>(mData);
+    // TODO(franz): should add the invalid handle to nameHandleMap
+    if (data.contains(aName))
+    {
+        *aHandle = mGameContext.mWorld.handleFromName(data[aName]);
+        assert(aHandle->isValid() && "Could not find handle during deserialization");
+    }
 }
 
 void Witness::witness_imgui(const char * aName,

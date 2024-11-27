@@ -130,7 +130,6 @@ Resources::BpLoader(const filesystem::path & aBpFile,
     ent::Handle<ent::Entity> bp =
         aWorld.addBlueprint(data["name"].get<std::string>().c_str());
     serial::testify_json(bp, serial::Witness::make_const(&data["data"], aGameContext));
-    serial::resolveRequestsInstance(aGameContext);
     return bp;
 }
 

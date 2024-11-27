@@ -51,9 +51,19 @@ void debugRender(const char * n, ad::math::Vec<3, float> & a)
     ImGui::InputFloat3(n, &a.at(0));
 }
 
+void debugRender(const char * n, ad::math::Vec<2, float> & a)
+{
+    ImGui::InputFloat2(n, &a.at(0));
+}
+
 void debugRender(const char * n, ad::math::Position<3, float> & a)
 {
     ImGui::InputFloat3(n, &a.at(0));
+}
+
+void debugRender(const char * n, ad::math::Position<2, float> & a)
+{
+    ImGui::InputFloat2(n, &a.at(0));
 }
 
 void debugRender(const char * n, ad::math::Size<3, float> & a)
@@ -61,9 +71,21 @@ void debugRender(const char * n, ad::math::Size<3, float> & a)
     ImGui::InputFloat3(n, &a.at(0));
 }
 
+void debugRender(const char * n, ad::math::Size<2, float> & a)
+{
+    ImGui::InputFloat2(n, &a.at(0));
+}
+
 void debugRender(const char * n, ad::math::Quaternion<float> & a)
 {
     ImGui::SliderFloat4(n, &a.x(), -1.f, 1.f);
+}
+
+void debugRender(const char * n, ad::math::Spherical<float> & a)
+{
+    ImGui::InputFloat("radius", &a.radius());
+    ImGui::InputFloat("polar", &a.polar().data());
+    ImGui::InputFloat("azimuthal", &a.azimuthal().data());
 }
 
 void debugRender(const char * n, ad::math::Rgb_base<float> & a)

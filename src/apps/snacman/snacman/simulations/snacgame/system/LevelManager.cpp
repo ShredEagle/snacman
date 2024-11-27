@@ -45,7 +45,7 @@ void LevelManager::destroyTilesEntities()
 EntHandle
 LevelManager::createLevel(const component::LevelSetupData & aSetupData)
 {
-    EntHandle level = mGameContext->mWorld.addEntity();
+    EntHandle level = mGameContext->mWorld.addEntity("Level");
 
     math::Size<3, int> levelSize = aSetupData.mAvailableSizes.at(0);
     component::Level levelData{

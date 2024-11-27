@@ -28,7 +28,7 @@ public:
 
     void onExit(Transition aTransition) override
     {
-        if (aTransition.mTransitionName == sQuitTransition)
+        if (aTransition.mTransitionType == TransType::QuitAll)
         {
             ent::Phase destroy;
             mStageDecor.get(destroy)->erase();
@@ -37,15 +37,13 @@ public:
 
     void onEnter(Transition aTransition) override
     {
-        if (aTransition.mTransitionName == sQuitTransition)
+        if (aTransition.mTransitionType == TransType::QuitAll)
         {
             mGameContext.mSceneStack->popScene(aTransition);
         }
     }
 
     void update(const snac::Time & aTime, RawInput & aInput) override {}
-
-    static constexpr char sQuitTransition[] = "Quit";
 
     ent::Handle<ent::Entity> mStageDecor;
 };

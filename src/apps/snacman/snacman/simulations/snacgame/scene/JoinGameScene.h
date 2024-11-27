@@ -48,6 +48,9 @@ public:
 private:
 
     void addPlayerFromControllerId(int controllerId);
+    void createPlayerModelFromSlot(
+        ent::Handle<ent::Entity> & aSlotHandle,
+        const component::PlayerSlot & aSlot);
 
     ent::Query<component::PlayerSlot, component::Controller> mSlots;
     ent::Handle<ent::Entity> mJoinGameRoot;
