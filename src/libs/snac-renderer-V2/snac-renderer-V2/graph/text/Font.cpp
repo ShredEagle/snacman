@@ -95,7 +95,7 @@ std::string getTextureName()
 
 
 Font::Font(arte::FontFace aFontFace,
-           int aFontPixelHeight,
+           unsigned int aFontPixelHeight,
            Storage & aStorage,
            arte::CharCode aFirstChar,
            arte::CharCode aLastChar) :
@@ -132,7 +132,7 @@ Font::Font(arte::FontFace aFontFace) :
 
 Font Font::makeUseCache(const arte::Freetype & aFreetype,
                         std::filesystem::path aFontFullPath,
-                        int aFontPixelHeight,
+                        unsigned int aFontPixelHeight,
                         Storage & aStorage,
                         arte::CharCode aFirstChar,
                         arte::CharCode aLastChar)

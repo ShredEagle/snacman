@@ -68,7 +68,7 @@ struct Font
 
     // Add a ctor that loads form cache file
     Font(arte::FontFace aFontFace,
-         int aFontPixelHeight,
+         unsigned int aFontPixelHeight,
          Storage & aStorage,
          arte::CharCode aFirstChar = gFirstCharCode,
          arte::CharCode aLastChar = gLastCharCode);
@@ -77,7 +77,7 @@ struct Font
     /// Create the cache file if they are not found.
     static Font makeUseCache(const arte::Freetype & aFreetype,
                              std::filesystem::path aFontFullPath,
-                             int aFontPixelHeight,
+                             unsigned int aFontPixelHeight,
                              Storage & aStorage,
                              arte::CharCode aFirstChar = gFirstCharCode,
                              arte::CharCode aLastChar = gLastCharCode);

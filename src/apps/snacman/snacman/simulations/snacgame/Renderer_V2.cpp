@@ -716,7 +716,7 @@ std::shared_ptr<FontAndPart> Renderer_V2::loadFont(arte::FontFace aFontFace,
     auto result = std::make_shared<FontAndPart>(FontAndPart{
         .mFont = renderer::Font{
             std::move(aFontFace),
-            (int)aPixelHeight,
+            aPixelHeight,
             mRendererToKeep.mStorage},
         .mPart = renderer::Part{}
     });
@@ -741,6 +741,8 @@ void Renderer_V2::continueGui()
     if (mControl.mShowShadowControls)
     {
         ImGui::Begin("ForwardShadow");
+        // TODO Ad 2024/11/27: Provide controls over shadow system
+        // Note that the controls already exist, as provided by ViewerApplication.
         ImGui::Text("TODO for Renderer V2");
         ImGui::End();
     }

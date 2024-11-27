@@ -257,7 +257,7 @@ struct Object
 
 struct Pose
 {
-    // TODO change to math::Position ?
+    // Position is modeled as a Vec, because in a graph it can be seen as relative displacements. 
     math::Vec<3, float> mPosition;
     // TODO #scaling #skew Should we allow non-uniform (3D) scaling? 
     // That would allow skewing, making decomposition unpractical
