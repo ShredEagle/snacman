@@ -52,11 +52,6 @@ MenuScene::MenuScene(GameContext & aGameContext,
                      ent::Wrap<component::MappingContext> & aContext) :
     Scene(gMenuSceneName, aGameContext, aContext), mItems{mGameContext.mWorld}
 {
-    auto font = mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf");
-
-    // serial::EntityLedger menuLedger = serial::loadLedgerFromJson(
-    //     "scenes/menu_scene.json", mGameContext.mWorld, mGameContext);
-    // mOwnedEntities = menuLedger.mEntities;
 
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
     OrbitalControlInput & orbitalControl =
@@ -66,6 +61,12 @@ MenuScene::MenuScene(GameContext & aGameContext,
 }
 
 void MenuScene::onEnter(Transition aTransition) {
+    auto font = mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf");
+
+    // serial::EntityLedger menuLedger = serial::loadLedgerFromJson(
+    //     "scenes/menu_scene.json", mGameContext.mWorld, mGameContext);
+    // mOwnedEntities = menuLedger.mEntities;
+
     mSystems = mGameContext.mWorld.addEntity("System for Menu");
 
     ent::Phase init;
@@ -75,7 +76,7 @@ void MenuScene::onEnter(Transition aTransition) {
         {
             {gGoDown, "Quit"},
         },
-        Transition{.mTransitionName = JoinGameScene::sFromMenuTransition}, true,
+        Transition{.mTransitionType = TransType::JoinGameFromMenu}, true,
         {1.5f, 1.5f});
     auto quitHandle =
         createMenuItem(mGameContext, init, "Quit", font,
@@ -83,7 +84,7 @@ void MenuScene::onEnter(Transition aTransition) {
                        {
                            {gGoUp, "Start"},
                        },
-                       Transition{.mTransitionName = gQuitTransitionName},
+                       Transition{.mTransitionType = TransType::QuitAll},
                        false, {1.5f, 1.5f});
 
     mOwnedEntities.push_back(startHandle);
