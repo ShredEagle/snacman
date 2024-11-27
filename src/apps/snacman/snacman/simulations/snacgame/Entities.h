@@ -116,6 +116,7 @@ createMenuItem(GameContext & aContext,
 // Player utils
 ent::Handle<ent::Entity> addPlayer(GameContext & aContext, const int aControllerIndex);
 ent::Handle<ent::Entity> createCrown(GameContext & aContext);
+ent::Handle<ent::Entity> createPlayerModel(GameContext & aContext, const component::PlayerSlot & aSlot);
 ent::Handle<ent::Entity> createInGamePlayer(GameContext & aContext,
                                             ent::Handle<ent::Entity> aSlotHandle,
                                             const math::Position<3, float> & aPosition);
@@ -160,6 +161,8 @@ createPortalImage(GameContext & aContext,
 ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
                                          std::string aText,
                                          const component::GlobalPose & aPose);
+
+ent::Handle<ent::Entity> createPodium(GameContext & aContext, ent::Handle<ent::Entity> aRoot);
 
 } // namespace snacgame
 } // namespace ad

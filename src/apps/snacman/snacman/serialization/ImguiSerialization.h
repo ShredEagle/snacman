@@ -1,5 +1,10 @@
 #pragma once
 
+#include "math/Color.h"
+#include "math/Quaternion.h"
+#include "math/Spherical.h"
+#include <math/Vector.h>
+
 #include <algorithm>
 #include <imgui.h>
 #include <map>
@@ -16,6 +21,18 @@ void debugRender(const char * n, std::string & a);
 void debugRender(const char * n, const std::string & a);
 void debugRender(const char * n, float & a);
 void debugRender(const char * n, const float & a);
+void debugRender(const char * n, ad::math::Vec<3, float> & a);
+void debugRender(const char * n, ad::math::Vec<2, float> & a);
+void debugRender(const char * n, ad::math::Position<3, float> & a);
+void debugRender(const char * n, ad::math::Position<2, float> & a);
+void debugRender(const char * n, ad::math::Size<3, float> & a);
+void debugRender(const char * n, ad::math::Size<2, float> & a);
+void debugRender(const char * n, ad::math::Quaternion<float> & a);
+void debugRender(const char * n, ad::math::Spherical<float> & a);
+void debugRender(const char * n, ad::math::Rgb_base<float> & a);
+void debugRender(const char * n, ad::math::Rgb_base<std::uint8_t> & a);
+void debugRender(const char * n, ad::math::RgbAlpha_base<float> & a);
+void debugRender(const char * n, ad::math::RgbAlpha_base<std::uint8_t> & a);
 
 template<class T_key, class T_value, class... T_args, template<class...> class T_map_like>
 requires (

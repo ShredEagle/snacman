@@ -59,23 +59,17 @@ struct Radius
     // * r_0 (the distance at which the intensities are given)
     // * r_min (the distance below which light will not gain intensities anymore)
     // max is used as r_max, i.e. where both light intensity & derivative should reach zero.
-    GLfloat mMin;
-    GLfloat mMax;
+    GLfloat mMin = 0.f;
+    GLfloat mMax = 0.f;
+    // Until the maybe_uninitialized warning works better we need
+    // mMin and mMax to have default values or gcc will shout on
+    // us
 
     template<class T_witness>
     void describeTo(T_witness && aWitness)
     {
         aWitness.witness(NVP(mMin));
         aWitness.witness(NVP(mMax));
-    }
-
-    template<class T_witness>
-    static Radius construct(T_witness && aWitness)
-    {
-        GLfloat min;   
-        GLfloat max;
-        aWitness.witness(NVP(min));
-        aWitness.witness(NVP(max));
     }
 };
 

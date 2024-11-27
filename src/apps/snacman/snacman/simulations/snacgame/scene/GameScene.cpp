@@ -7,10 +7,12 @@
 #include "math/Color.h"
 #include "snac-renderer-V1/text/Text.h"
 #include "snacman/EntityUtilities.h"
+#include "snacman/simulations/snacgame/component/SceneNode.h"
 #include "snacman/simulations/snacgame/scene/DataScene.h"
 #include "snacman/simulations/snacgame/scene/DisconnectedControllerScene.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "snacman/simulations/snacgame/scene/PauseScene.h"
+#include "snacman/simulations/snacgame/scene/PodiumScene.h"
 #include "snacman/simulations/snacgame/system/FallingPlayers.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/Timing.h"
@@ -85,7 +87,10 @@ namespace snacgame {
 namespace scene {
 
 constexpr const char * gMarkovRoot = {"markov/"};
-constexpr int gTextSize = snac::gDefaultPixelHeight * 3;
+
+constexpr math::Position<3, float> gGameSceneInitialCameraPos{
+    0.f, 0.f, 0.f
+};
 
 GameScene::GameScene(GameContext & aGameContext,
                      ent::Wrap<component::MappingContext> & aContext) :
@@ -102,133 +107,157 @@ GameScene::GameScene(GameContext & aGameContext,
     mSlots{mGameContext.mWorld},
     mHuds{mGameContext.mWorld},
     mPlayers{mGameContext.mWorld},
-    mPathfinders{mGameContext.mWorld}
+    mPathfinders{mGameContext.mWorld},
+    mCrowns{mGameContext.mWorld}
 {
     TIME_SINGLE(Main, "Constructor game scene");
-    // Preload models to avoid loading time when they first appear in the game
-    mGameContext.mResources.getFont("fonts/fill_boiga.ttf", gTextSize);
-    mGameContext.mResources.getModel("models/collar/collar.sel",
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel("models/teleport/teleport.sel",
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel("models/missile/missile.sel",
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel("models/boom/boom.sel",
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel("models/portal/portal.sel",
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel("models/dog/dog.sel",
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel("models/missile/area.sel",
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel(
-        "models/square_biscuit/square_biscuit.sel",
-        gMeshGenericEffect);
-    mGameContext.mResources.getModel("models/burger/burger.sel",
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel("models/billpad/billpad.sel",
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel(gDonutModel,
-                                     gMeshGenericEffect);
-    mGameContext.mResources.getModel("models/arrow/arrow.sel",
-                                     gMeshGenericEffect);
+
     {
-        Phase init;
-        mSystems.get(init)
-            ->add(system::SceneGraphResolver{mGameContext,
-                                             mGameContext.mSceneRoot})
-            .add(system::InputProcessor{mGameContext, mMappingContext})
-            .add(system::PlayerSpawner{mGameContext})
-            .add(system::RoundMonitor{mGameContext})
-            .add(system::PlayerInvulFrame{mGameContext})
-            .add(system::Explosion{mGameContext})
-            .add(system::AllowMovement{mGameContext})
-            .add(system::ConsolidateGridMovement{mGameContext})
-            .add(system::IntegratePlayerMovement{mGameContext})
-            .add(system::LevelManager{mGameContext})
-            .add(system::MovementIntegration{mGameContext})
-            .add(system::AdvanceAnimations{mGameContext})
-            .add(system::AnimationManager{mGameContext})
-            .add(system::EatPill{mGameContext})
-            .add(system::PortalManagement{mGameContext})
-            .add(system::PowerUpUsage{mGameContext})
-            .add(system::Pathfinding{mGameContext})
-            .add(system::Debug_BoundingBoxes{mGameContext})
-            .add(system::FallingPlayersSystem{mGameContext})
-            .add(system::TextZoomSystem{mGameContext});
+        TIME_SINGLE(Main, "Load game assets");
+        // Preload models to avoid loading time when they first appear in the game
+        mGameContext.mResources.getFont("fonts/fill_boiga.ttf", gTextSize);
+        mGameContext.mResources.getModel("models/collar/collar.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/teleport/teleport.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/missile/missile.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/boom/boom.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/portal/portal.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/dog/dog.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/missile/area.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel(
+            "models/square_biscuit/square_biscuit.sel",
+            gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/burger/burger.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/billpad/billpad.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel(gDonutModel,
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/arrow/arrow.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/portal/portal.sel",
+                                         gMeshGenericEffect);
+        mGameContext.mResources.getModel("models/podium/podium.sel",
+                                         gMeshGenericEffect);
     }
 
-    EntHandle camera = snac::getFirstHandle(mCameraQuery);
-    renderer::Orbital & camOrbital =
-        snac::getComponent<system::OrbitalCamera>(camera).mControl.mOrbital;
-    camOrbital.mSpherical.polar() = gInitialCameraSpherical.polar();
-    camOrbital.mSpherical.radius() = gInitialCameraSpherical.radius();
-
-    mSlots.each([this](EntHandle aHandle, const component::PlayerSlot &) {
-        addBillpadHud(mGameContext, aHandle);
-    });
 }
 
 void GameScene::onEnter(Transition aTransition)
 {
-    if (aTransition.mTransitionName == gQuitTransitionName)
+    switch(aTransition.mTransitionType)
     {
-        mGameContext.mSceneStack->popScene();
-        mGameContext.mSceneStack->pushScene(
-            std::make_shared<MenuScene>(mGameContext, mMappingContext));
+        case TransType::QuitToMenu:
+            mGameContext.mSceneStack->popScene(aTransition);
+            mGameContext.mSceneStack->pushScene(
+                std::make_shared<MenuScene>(mGameContext, mMappingContext));
+            break;
+        default:
+
+            EntHandle camera = snac::getFirstHandle(mCameraQuery);
+            renderer::Orbital & camOrbital =
+                snac::getComponent<system::OrbitalCamera>(camera).mControl.mOrbital;
+            camOrbital.mSpherical = gInitialCameraSpherical;
+            camOrbital.mSphericalOrigin = gGameSceneInitialCameraPos;
+
+            mSlots.each([this](EntHandle aHandle, const component::PlayerSlot &) {
+                addBillpadHud(mGameContext, aHandle);
+            });
+
+            mSystems = mGameContext.mWorld.addEntity("System for Game");
+            Phase init;
+            mSystems.get(init)
+                ->add(system::SceneGraphResolver{mGameContext,
+                                                 mGameContext.mSceneRoot})
+                .add(system::InputProcessor{mGameContext, mMappingContext})
+                .add(system::PlayerSpawner{mGameContext})
+                .add(system::RoundMonitor{mGameContext})
+                .add(system::PlayerInvulFrame{mGameContext})
+                .add(system::Explosion{mGameContext})
+                .add(system::AllowMovement{mGameContext})
+                .add(system::ConsolidateGridMovement{mGameContext})
+                .add(system::IntegratePlayerMovement{mGameContext})
+                .add(system::LevelManager{mGameContext})
+                .add(system::MovementIntegration{mGameContext})
+                .add(system::AdvanceAnimations{mGameContext})
+                .add(system::AnimationManager{mGameContext})
+                .add(system::EatPill{mGameContext})
+                .add(system::PortalManagement{mGameContext})
+                .add(system::PowerUpUsage{mGameContext})
+                .add(system::Pathfinding{mGameContext})
+                .add(system::Debug_BoundingBoxes{mGameContext})
+                .add(system::FallingPlayersSystem{mGameContext})
+                .add(system::TextZoomSystem{mGameContext});
+            break;
+    }
+}
+
+void GameScene::cleanGameScene(Phase & destroyPhase)
+{
+    // Delete hud
+    mHuds.each(
+        [&destroyPhase](EntHandle aHandle, const component::PlayerHud &) {
+            eraseEntityRecursive(aHandle, destroyPhase);
+        });
+    mSystems.get(destroyPhase)->erase();
+
+    if (mReadyText.isValid())
+    {
+        mReadyText.get(destroyPhase)->erase();
+    }
+    if (mGoText.isValid())
+    {
+        mGoText.get(destroyPhase)->erase();
+    }
+    if (mVictoryText.isValid())
+    {
+        mVictoryText.get(destroyPhase)->erase();
     }
 }
 
 void GameScene::onExit(Transition aTransition)
 {
     TIME_SINGLE(Main, "teardown game scene");
-    if (aTransition.mTransitionName == GameScene::sToPauseTransition)
+    Phase onExitPhase;
+    switch(aTransition.mTransitionType)
     {
-        return;
-    }
+        case TransType::PauseFromGame: {
+            break;
+        }
+        case TransType::PodiumFromGame: 
+        {
+            cleanGameScene(onExitPhase);
+            break;
+        }
+        case TransType::QuitToMenu:
+        {
+            cleanGameScene(onExitPhase);
+            mSlots.each(
+                [&onExitPhase](EntHandle aHandle, const component::PlayerSlot & slot) {
+                    aHandle.get(onExitPhase)->erase();
+                });
 
-    {
-        Phase destroyPlayer;
-        mSlots.each(
-            [&destroyPlayer](EntHandle aHandle, const component::PlayerSlot &) {
-                eraseEntityRecursive(aHandle, destroyPlayer);
+            // TODO(franz): This erase the player models also
+            // However this is kind of a flawed view of entity lifetime
+            // And should be handle by the scene in the future
+            eraseEntityRecursive(mLevel, onExitPhase);
+#ifndef NDEBUG
+            // TODO: (franz) remove this at some point
+            Phase debugDestroy;
+            mPathfinders.each([&debugDestroy](EntHandle aHandle,
+                                              const component::PathToOnGrid &) {
+                aHandle.get(debugDestroy)->erase();
             });
-        // Delete hud
-        mHuds.each(
-            [&destroyPlayer](EntHandle aHandle, const component::PlayerHud &) {
-                eraseEntityRecursive(aHandle, destroyPlayer);
-            });
-    }
-    {
-        Phase destroyEnvironment;
-
-        eraseEntityRecursive(mLevel, destroyEnvironment);
-
-        mSystems.get(destroyEnvironment)->erase();
-        mSystems = mGameContext.mWorld.addEntity();
-    }
-    {
-        // TODO: (franz) remove this at some point
-        Phase debugDestroy;
-        mPathfinders.each([&debugDestroy](EntHandle aHandle,
-                                          const component::PathToOnGrid &) {
-            aHandle.get(debugDestroy)->erase();
-        });
-    }
-    {
-        Phase destroyText;
-        if (mReadyText.isValid())
-        {
-            mReadyText.get(destroyText)->erase();
+#endif
+            break;
         }
-        if (mGoText.isValid())
-        {
-            mGoText.get(destroyText)->erase();
-        }
-        if (mVictoryText.isValid())
-        {
-            mVictoryText.get(destroyText)->erase();
-        }
+        default: {assert("Wrong transition to Game");}
     }
 }
 
@@ -293,6 +322,27 @@ EntHandle GameScene::createSpawningPhaseText(const std::string & aText,
     return textHandle;
 }
 
+WinnerList GameScene::getLeaderList()
+{
+    WinnerList leaderList;
+    mSlots.each(
+        [&leaderList](EntHandle aHandle,
+                      const component::PlayerGameData & aGameData, const component::PlayerSlot & aSlot) {
+            component::PlayerRoundData roundData = snac::getComponent<component::PlayerRoundData>(aSlot.mPlayer);
+            if (aGameData.mRoundsWon > leaderList.leaderScore && aGameData.mRoundsWon > 0)
+            {
+                leaderList.leaderCount = 0;
+                leaderList.leaders.at(leaderList.leaderCount++) = {aSlot.mPlayer, &roundData};
+                leaderList.leaderScore = aGameData.mRoundsWon;
+            }
+            else if (aGameData.mRoundsWon == leaderList.leaderScore)
+            {
+                leaderList.leaders.at(leaderList.leaderCount++) = {aSlot.mPlayer, &roundData};
+            }
+        });
+    return leaderList;
+}
+
 void GameScene::update(const snac::Time & aTime, RawInput & aInput)
 {
     TIME_RECURRING(Main, "GameScene::update");
@@ -336,7 +386,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
     {
         mGameContext.mSceneStack->pushScene(
             std::make_shared<PauseScene>(mGameContext, mMappingContext),
-            Transition{.mTransitionName = sToPauseTransition});
+            Transition{.mTransitionType = TransType::PauseFromGame});
         return;
     }
 
@@ -345,7 +395,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         mGameContext.mSceneStack->pushScene(
             std::make_shared<DisconnectedControllerScene>(mGameContext,
                                                           mMappingContext),
-            Transition{.mTransitionName = sToPauseTransition,
+            Transition{.mTransitionType = TransType::DisconnectedFromGame,
                        .mSceneInfo = DisconnectedControllerInfo{
                            disconnectedControllerList}});
         return;
@@ -369,41 +419,34 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         break;
     case GamePhase::SpawningSequence:
     {
+
+        mSystems.get()->get<system::MovementIntegration>().update(
+            (float) aTime.mDeltaSeconds);
+        mSystems.get()->get<system::SceneGraphResolver>().update();
+        mSystems.get()->get<system::FallingPlayersSystem>().update();
+        mSystems.get()->get<system::TextZoomSystem>().update(aTime);
         // Creating level from markov data
         if (!mLevel.isValid())
         {
+            {
+                Phase removeCrown;
+                mCrowns.each([&removeCrown](EntHandle aHandle) {
+                    aHandle.get(removeCrown)->erase();
+                });
+
+            }
             mLevel = mSystems.get()->get<system::LevelManager>().createLevel(
                 *mLevelData);
             insertEntityInScene(mLevel, mGameContext.mSceneRoot);
             mSystems.get()
                 ->get<system::PlayerSpawner>()
                 .spawnPlayersBeforeRound(mLevel);
-            std::array<std::pair<EntHandle, component::PlayerRoundData *>, 4> leaders;
-            int leaderCount = 0;
-            int leaderScore = 0;
-            mPlayers.each(
-                [&leaders, &leaderCount, &leaderScore](EntHandle aHandle,
-                                         component::PlayerRoundData & aRoundData, const component::Controller & aController) {
-                    component::PlayerGameData & gameData =
-                        snac::getComponent<component::PlayerGameData>(aRoundData.mSlot);
-                    if (!aRoundData.mCrown.isValid())
-                    {
-                        if (gameData.mRoundsWon > leaderScore)
-                        {
-                            leaderCount = 0;
-                            leaders.at(leaderCount++) = {aHandle, &aRoundData};
-                            leaderScore = gameData.mRoundsWon;
-                        }
-                        else if (gameData.mRoundsWon == leaderScore)
-                        {
-                            leaders.at(leaderCount++) = {aHandle, &aRoundData};
-                        }
-                    }
-                });
 
-            for (int i = 0; i < leaderCount; i++)
+            WinnerList leaderList = getLeaderList();
+
+            for (int i = 0; i < leaderList.leaderCount; i++)
             {
-                auto & [leaderEnt, leaderData] = leaders.at(i);
+                auto & [leaderEnt, leaderData] = leaderList.leaders.at(i);
                 EntHandle crown = createCrown(mGameContext);
                 leaderData->mCrown = crown;
                 insertEntityInScene(crown, leaderEnt);
@@ -445,12 +488,6 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
                 break;
             }
         }
-
-        mSystems.get()->get<system::MovementIntegration>().update(
-            (float) aTime.mDeltaSeconds);
-        mSystems.get()->get<system::SceneGraphResolver>().update();
-        mSystems.get()->get<system::FallingPlayersSystem>().update();
-        mSystems.get()->get<system::TextZoomSystem>().update(aTime);
         break;
     }
     case GamePhase::VictorySequence:
@@ -467,6 +504,14 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
             }
             auto level = snac::getComponent<component::Level>(mLevel);
             mSystems.get()->get<system::AllowMovement>().update(level);
+            mPlayers.each([](component::PlayerRoundData & aRoundData, const component::AllowedMovement & aAllowedMovement) {
+                if ((aRoundData.mMoveState & aAllowedMovement.mAllowedMovement) == gPlayerMoveFlagNone)
+                {
+                    // This just shift the bit by one if it's less than 16
+                    // And transforms 16 into 2 (basically a rotation between 2,4,8 and 16)
+                    aRoundData.mMoveState = (aRoundData.mMoveState % 15) << 1;
+                }
+            });
             mSystems.get()->get<system::IntegratePlayerMovement>().update(
                 (float) aTime.mDeltaSeconds);
             mSystems.get()->get<system::MovementIntegration>().update(
@@ -483,13 +528,16 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         }
         else
         {
+            mGameContext.mSimulationControl.mSpeedRatio = 1;
             component::LevelSetupData & data = *mLevelData;
             data.mSeed += 1;
 
-            mSystems.get()->get<system::RoundMonitor>().updateRoundScore();
-
             // Transfer controller to slot before deleting player models
             {
+                //TODO(franz): Make function to transition slot
+                // into players in game and the other way around
+                // something like createInGamePlayerFromSlot
+                // and removeInGamePlayerFromSlot
                 Phase transferController;
                 mSlots.each(
                     [&](EntHandle aSlotHandle, component::PlayerSlot & aSlot) {
@@ -500,13 +548,38 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
                     });
             }
 
-            Phase cleanup;
-            // This removes everything from the level players models
-            // included
-            eraseEntityRecursive(mLevel, cleanup);
-            mVictoryText.get(cleanup)->erase();
-            mSceneData->changePhase(GamePhase::SpawningSequence, aTime);
-            mGameContext.mSimulationControl.mSpeedRatio = 1;
+            {
+                Phase cleanup;
+                // This removes everything from the level players models
+                // included
+                eraseEntityRecursive(mLevel, cleanup);
+                mVictoryText.get(cleanup)->erase();
+            }
+
+            RankingList players;
+            mSlots.each([&players](EntHandle aHandle, component::PlayerGameData & aGameData) {
+                players.ranking.at(players.playerCount) = {aHandle, aGameData};
+                players.playerCount++;
+            });
+            players.sort();
+
+            if (players.ranking.at(0).second.mRoundsWon >= 1)
+            {
+                // Reset player rounds won in case we will play again
+                mSlots.each([](EntHandle aHandle, component::PlayerGameData & aGameData) {
+                    aGameData.mRoundsWon = 0;
+                });
+                mGameContext.mSceneStack->popScene(Transition{.mTransitionType = TransType::PodiumFromGame});
+                mGameContext.mSceneStack->pushScene(
+                    std::make_shared<PodiumScene>(mGameContext, mMappingContext),
+                    Transition{.mTransitionType = TransType::PodiumFromGame,
+                               .mSceneInfo = PodiumSceneInfo{std::move(players)}});
+                return;
+            }
+            else
+            {
+                mSceneData->changePhase(GamePhase::SpawningSequence, aTime);
+            }
             
         }
         break;

@@ -67,7 +67,7 @@ DisconnectedControllerScene::DisconnectedControllerScene(
         {
             {gGoDown, "Resume"},
         },
-        scene::Transition{.mTransitionName = sKickTransitionName}, true,
+        scene::Transition{.mTransitionType = TransType::GameFromDiscWithKick}, true,
         {1.5f, 1.5f});
     auto resumeHandle = createMenuItem(
         mGameContext, init, "Resume", font,
@@ -76,7 +76,7 @@ DisconnectedControllerScene::DisconnectedControllerScene(
             {gGoUp, "Kick him"},
             {gGoDown, "Quit"},
         },
-        scene::Transition{.mTransitionName = GameScene::sFromPauseTransition},
+        scene::Transition{.mTransitionType = TransType::GameFromDiscWitoutKick},
         false, {1.5f, 1.5f});
     auto quitHandle = createMenuItem(
         mGameContext, init, "Quit", font,
@@ -84,7 +84,7 @@ DisconnectedControllerScene::DisconnectedControllerScene(
         {
             {gGoUp, "Resume"},
         },
-        scene::Transition{.mTransitionName = gQuitTransitionName}, false,
+        scene::Transition{.mTransitionType = TransType::QuitToMenu}, false,
         {1.5f, 1.5f});
     mOwnedEntities.push_back(startHandle);
     mOwnedEntities.push_back(resumeHandle);
@@ -164,23 +164,17 @@ void DisconnectedControllerScene::update(const snac::Time & aTime,
     if (accumulatedCommand & gQuitCommand)
     {
         mGameContext.mSceneStack->popScene(
-            {.mTransitionName = gQuitTransitionName});
+            {.mTransitionType = TransType::QuitToMenu});
         return;
     }
 
-    if (menuItem.mTransition.mTransitionName == GameScene::sFromPauseTransition
+    if (menuItem.mTransition.mTransitionType == TransType::GameFromDiscWitoutKick
         && accumulatedCommand & gSelectItem)
     {
         mGameContext.mSceneStack->popScene();
         return;
     }
-    if (menuItem.mTransition.mTransitionName == GameScene::sFromPauseTransition
-        && accumulatedCommand & gSelectItem)
-    {
-        mGameContext.mSceneStack->popScene();
-        return;
-    }
-    if (menuItem.mTransition.mTransitionName == gQuitTransitionName
+    if (menuItem.mTransition.mTransitionType == TransType::QuitToMenu
         && accumulatedCommand & gSelectItem)
     {
         mGameContext.mSceneStack->popScene(menuItem.mTransition);
@@ -207,7 +201,7 @@ void DisconnectedControllerScene::update(const snac::Time & aTime,
         GamepadState padState = aInput.mGamepads.at(controller.mControllerId);
         bool controllerIsDisconnected = !padState.mConnected;
 
-        if (menuItem.mTransition.mTransitionName == sKickTransitionName
+        if (menuItem.mTransition.mTransitionType == TransType::GameFromDiscWithKick
             && accumulatedCommand & gSelectItem)
         {
             EntHandle aPlayerModelHandle = aSlot.mPlayer;
@@ -225,7 +219,7 @@ void DisconnectedControllerScene::update(const snac::Time & aTime,
     if (!stillDisconnectedController)
     {
         mGameContext.mSceneStack->popScene(
-            {.mTransitionName = GameScene::sFromPauseTransition});
+            {.mTransitionType = TransType::GameFromDiscWitoutKick});
         return;
     }
 

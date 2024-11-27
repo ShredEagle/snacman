@@ -44,8 +44,8 @@ PauseScene::PauseScene(GameContext & aGameContext,
         {
             {gGoDown, "Quit"},
         },
-        scene::Transition{.mTransitionName =
-                              GameScene::sFromPauseTransition},
+        scene::Transition{.mTransitionType =
+                              TransType::GameFromPause},
         true, {1.5f, 1.5f});
     auto quitHandle = createMenuItem(
         mGameContext, init, "Quit", font,
@@ -53,20 +53,28 @@ PauseScene::PauseScene(GameContext & aGameContext,
         {
             {gGoUp, "Resume"},
         },
-        scene::Transition{.mTransitionName = gQuitTransitionName}, false,
+        scene::Transition{.mTransitionType = TransType::QuitToMenu}, false,
         {1.5f, 1.5f});
     mOwnedEntities.push_back(startHandle);
     mOwnedEntities.push_back(quitHandle);
-    mSystems.get(init)->add(
+}
+
+void PauseScene::onEnter(Transition aTransition) {
+    // There is 1 transition possible
+    // From the game
+    mSystems = mGameContext.mWorld.addEntity("System for Pause");
+    ent::Phase onEnter;
+    mSystems.get(onEnter)->add(
         system::SceneGraphResolver{mGameContext, mGameContext.mSceneRoot})
         .add(system::MenuManager{mGameContext})
         .add(system::InputProcessor{mGameContext, mMappingContext});
 }
 
-void PauseScene::onEnter(Transition aTransition) {}
-
 void PauseScene::onExit(Transition aTransition)
 {
+    // There is 2 transition possible
+    // To the game
+    // To the main menu
     ent::Phase destroy;
 
     for (auto handle : mOwnedEntities)
@@ -76,7 +84,6 @@ void PauseScene::onExit(Transition aTransition)
 
     mOwnedEntities.clear();
     mSystems.get(destroy)->erase();
-    mSystems = mGameContext.mWorld.addEntity();
 }
 
 void PauseScene::update(const snac::Time & aTime, RawInput & aInput)
@@ -92,19 +99,19 @@ void PauseScene::update(const snac::Time & aTime, RawInput & aInput)
 
     if (accumulatedCommand & gQuitCommand)
     {
-        mGameContext.mSceneStack->popScene({.mTransitionName = gQuitTransitionName});
+        mGameContext.mSceneStack->popScene({.mTransitionType = TransType::QuitToMenu});
         return;
     }
 
-    if (menuItem.mTransition.mTransitionName
-             == GameScene::sFromPauseTransition && accumulatedCommand & gSelectItem)
+    if (menuItem.mTransition.mTransitionType
+             == TransType::GameFromPause && accumulatedCommand & gSelectItem)
     {
 
         mGameContext.mSceneStack->popScene();
         return;
     }
-    if (menuItem.mTransition.mTransitionName
-             == gQuitTransitionName && accumulatedCommand & gSelectItem)
+    if (menuItem.mTransition.mTransitionType
+             == TransType::QuitToMenu && accumulatedCommand & gSelectItem)
     {
 
         mGameContext.mSceneStack->popScene(menuItem.mTransition);

@@ -14,6 +14,7 @@
 #include "../Semantics.h"
 #include "../utilities/VertexStreamUtilities.h"
 
+#include <algorithm>
 #include <arte/Image.h>
 
 #include <math/Transformations.h>
@@ -1320,14 +1321,46 @@ Handle<Effect> Loader::loadEffect(const std::filesystem::path & aEffectFile,
                                   Storage & aStorage,
                                   const std::vector<std::string> & aDefines_temp) const
 {
+// This basically works for caching effect (by that I mean it does not crash) however it 
+// seems improvement in performance is marginal (from 8s asset loading to 7s in debug
+// in release it's a bit better 1.98s and 2.4s).
+#define SNAC_CACHE_EFFECT
+#ifdef SNAC_CACHE_EFFECT
+    handy::StringId effectId{mFinder.pathFor(aEffectFile).string() + fmt::format("{}", fmt::join(aDefines_temp, ", "))}; 
+
+    if (aStorage.mEffectLoadCache.contains(effectId))
+    {
+        Storage::EffectLoadInfo & eli = aStorage.mEffectLoadCache.at(effectId);
+        SELOG(debug)(
+            "Found a matching cached effect for {} and defines {} / {}.",
+            aEffectFile.string(),
+            fmt::format("{}", fmt::join(aDefines_temp, ", ")),
+            fmt::format("{}", fmt::join(eli.mDefines, ", "))
+        );
+
+        return eli.mEffectPtr;
+    }
+#endif
+
     aStorage.mEffects.emplace_back();
     Effect & result = aStorage.mEffects.back();
+
     result.mName = aEffectFile.string();
 
     filesystem::path effectPath = mFinder.pathFor(aEffectFile);
+
+#ifdef SNAC_CACHE_EFFECT
+    aStorage.mEffectLoadCache.insert_or_assign(effectId, Storage::EffectLoadInfo{
+        .mPath = effectPath,
+        .mDefines = aDefines_temp,
+        .mEffectPtr = &result,
+    });
+#endif
+
     aStorage.mEffectLoadInfo.push_back({
         .mPath = effectPath,
         .mDefines = aDefines_temp,
+        .mEffectPtr = &result,
     });
 
     result.mTechniques = populateTechniques(*this, effectPath, aStorage, aDefines_temp);

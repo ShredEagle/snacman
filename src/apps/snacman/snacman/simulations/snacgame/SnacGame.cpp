@@ -422,107 +422,11 @@ void SnacGame::drawDebugUi(snac::ConfigurableSettings & aSettings,
             }
             ImGui::End();
         }
-        // TODO(franz): Remove this after serialization is over
-        if (mImguiDisplays.mTestSerialization)
+        if (mImguiDisplays.mShowEntities)
         {
-            {
-                ImGui::SetNextWindowSize({800.f, 400.f}, ImGuiCond_Appearing);
-                ImGui::Begin("test serialization", &mImguiDisplays.mTestSerialization);
+            ImGui::Begin("data");
                 Guard testGuard{[]() { ImGui::End(); }};
-                static std::string resultJsonDump;
-                static std::string otherResultJsonDump;
-                if (ImGui::Button("Launch test"))
-                {
-                    auto handle = mGameContext.mWorld.addEntity("test serial");
-                    auto other = mGameContext.mWorld.addEntity("other test serial");
-                    {
-                        ent::Phase phase;
-                        handle.get(phase)->add(
-                            component::Collision{component::gPillHitbox});
-                        handle.get(phase)->add(component::AllowedMovement{1});
-                        handle.get(phase)->add(component::Controller{
-                            ControllerType::Gamepad,
-                            {1, {0.23f, -0.12f}, {0.1f, 0.2f}},
-                            1});
-                        handle.get(phase)->add(component::Explosion{
-                            snac::Clock::now(),
-                            math::ParameterAnimation<
-                                float, math::AnimationResult::Clamp>(0.5f)});
-                        handle.get(phase)->add(component::Geometry{
-                            {0.1f, 0.2f, 0.3f}, 0.9f, {0.9f, 0.8f, 0.7f}});
-                        handle.get(phase)->add(component::GlobalPose{
-                            {0.1f, 0.2f, 0.3f}, 0.9f, {0.9f, 0.8f, 0.7f}});
-                        handle.get(phase)->add(
-                            component::Tile{component::TileType::Portal,
-                                            gAllowedMovementDown,
-                                            {0.1f, 0.2f}});
-                        handle.get(phase)->add(component::PathfindNode{
-                            0.1f, 0.2f, nullptr, 1, {0.1f, 0.2f}, true, false});
-                        handle.get(phase)->add(component::LevelSetupData{
-                            "hello", "ouais", {{1, 1, 1}, {2, 2, 2}}, 123});
-                        handle.get(phase)->add(component::MenuItem{
-                            "yoyo",
-                            false,
-                            {{0, "Start"}},
-                            scene::Transition{
-                                .mTransitionName =
-                                    scene::JoinGameScene::sFromMenuTransition,
-                                .mSceneInfo = scene::JoinGameSceneInfo{0}}});
-                        handle.get(phase)->add(component::MovementScreenSpace{
-                            math::Radian<float>{0.2f}});
-                        handle.get(phase)->add(
-                            component::PathToOnGrid{other, {1.1f, 1.2f}, false});
-                        handle.get(phase)->add(
-                            component::PlayerGameData{12, other});
-                        handle.get(phase)->add(
-                            component::PlayerHud{other, other, other});
-                        handle.get(phase)->add(component::PlayerRoundData{});
-                        handle.get(phase)->add(component::PoseScreenSpace{
-                            {2.1f, 3.f}, {1.1f, 1.2f}, math::Radian<float>{0.f}});
-                        // other = createPill(mGameContext, phase, {0.f, 0.f});
-                        // handle.get(phase)->add(component::Text{
-                        //     .mString = "ouais",
-                        //     .mFont = mGameContext.mResources.getFont(
-                        //         "fonts/notes/Bitcheese.ttf"),
-                        //     .mColor = math::hdr::gBlack<float>,
-                        // });
-                    }
-                    json result;
-                    witness_json(handle,
-                                 serial::Witness::make(&result, mGameContext));
-                    resultJsonDump = result.dump(2);
-                    json otherResult;
-                    witness_json(other,
-                                 serial::Witness::make(&otherResult, mGameContext));
-                    auto reader = mGameContext.mWorld.addEntity("test deserialize");
-                    json checkResult;
-                    testify_json(
-                        reader, serial::Witness::make_const(&result, mGameContext));
-                    witness_json(reader,
-                                 serial::Witness::make(&checkResult, mGameContext));
-                    otherResultJsonDump = checkResult.dump(2);
-                    {
-                        Phase phase;
-                        handle.get(phase)->erase();
-                        other.get(phase)->erase();
-                        reader.get(phase)->erase();
-                    }
-                }
-                ImGui::SameLine();
-                ImVec2 size = ImVec2((ImGui::GetContentRegionAvail().x
-                                      - 1 * ImGui::GetStyle().ItemSpacing.x),
-                                     0.f);
-                ImGui::BeginChild("result", size, true);
-                ImGui::Text("%s", resultJsonDump.c_str());
-                ImGui::SameLine();
-                ImGui::Text("%s", otherResultJsonDump.c_str());
-                ImGui::EndChild();
-            }
-            {
-                ImGui::Begin("data");
-                Guard testGuard{[]() { ImGui::End(); }};
-                witness_imgui(mGameContext.mWorld, serial::Witness::make(&mImguiUi, mGameContext));
-            }
+            witness_imgui(mGameContext.mWorld, serial::Witness::make(&mImguiUi, mGameContext));
         }
     }
 

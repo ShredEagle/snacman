@@ -6,7 +6,6 @@ namespace ad {
 namespace snacgame {
 struct GameContext;
 namespace component {
-struct Unspawned;
 struct PlayerSlot;
 struct PlayerRoundData;
 struct Spawner;

@@ -485,21 +485,10 @@ public:
             index, Witness::make_const(&data[aName], mGameContext), *aVariant);
     }
 
-    // This is to testify a reference to handle in components, not to be
-    // confused with the free function witness_json that witness Handle as a
-    // proper value This should make a request to associate the handle pointer
-    // to the proper handle once all the entities have been created
+    // since all handle are created before deserialization we can
+    // search for them by name directly during deserialization
     void testify_json(const char * aName,
-                      ent::Handle<ent::Entity> * aHandle) const
-    {
-        json & data = *std::get<json *>(mData);
-        // TODO(franz): should add the invalid handle to nameHandleMap
-        if (data.contains(aName))
-        {
-            reflexion::handleRequestsInstance().emplace_back(aHandle,
-                                                             data[aName]);
-        }
-    }
+                      ent::Handle<ent::Entity> * aHandle) const;
 
     void testify_json(const char * aName,
                       renderer::Handle<const renderer::Object> * aObject) const;

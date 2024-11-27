@@ -7,6 +7,7 @@
 namespace ad {
 namespace snacgame {
 
+constexpr int gTextSize = snac::gDefaultPixelHeight * 3;
 
 constexpr const char * gDonutModel = "models/donut/donut.sel";
 

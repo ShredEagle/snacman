@@ -16,13 +16,13 @@ LightRealisticWeatherSystem::LightRealisticWeatherSystem(GameContext & aGameCont
 void LightRealisticWeatherSystem::update(float aDelta)
 {
     ent::Phase simulate;
-    mLights.each(
-        [aDelta]
-        (component::LightDirection & aDirectional) 
-        {
-            aDirectional.mDirection *= math::trans3d::rotateZ(math::Degree<float>{5.f * aDelta});
-        }
-    );
+    // mLights.each(
+    //     [aDelta]
+    //     (component::LightDirection & aDirectional) 
+    //     {
+    //         aDirectional.mDirection *= math::trans3d::rotateZ(math::Degree<float>{5.f * aDelta});
+    //     }
+    // );
 }
 
 

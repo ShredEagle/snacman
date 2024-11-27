@@ -1,5 +1,5 @@
 editables:
-    entity/66f70dccff@adnn/develop:
+    entity/67b30e2858@adnn/develop:
         path: ../../../entity/conan
     graphics/5b0149ff9a@adnn/develop:
         path: ../../../graphics/conan
@@ -7,7 +7,7 @@ editables:
         path: ../../../handy/conan
     MarkovJunior.cpp/f7022ac731@adnn/develop:
         path: ../../../MarkovJunior.cpp/conan
-    math/329f6705a1@adnn/develop:
+    math/5fabb250e3@adnn/develop:
         path: ../../../math/conan
     reflexion/ea47c1e3f1@adnn/develop:
         path: ../../../reflexion/conan
