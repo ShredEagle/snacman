@@ -707,18 +707,21 @@ renderer::Handle<const renderer::Object> Renderer_V2::loadModel(filesystem::path
     }
 }
 
-std::shared_ptr<FontAndPart> Renderer_V2::loadFont(arte::FontFace aFontFace,
+// TODO Ad 2024/11/27: #text I really dislike that it is taking a reference to Freetype
+// The current loading code is messy, and I suppose that could lead to data-races.
+// Could the font should be moved entirely to main thread? (only calling render-thread to load OpenGL resources)
+// Or should the render thread host the Freetype instance?
+std::shared_ptr<FontAndPart> Renderer_V2::loadFont(const arte::Freetype & aFreetype,
+                                                   std::filesystem::path aFontFullPath,
                                                    unsigned int aPixelHeight,
                                                    snac::Resources & aResources)
 {
-    // TODO: #RV2 #text should receive the path to cached load
-    // or maybe the font should be moved entirely to main thread?
     auto result = std::make_shared<FontAndPart>(FontAndPart{
-        .mFont = renderer::Font{
-            std::move(aFontFace),
+        .mFont = renderer::Font::makeUseCache(
+            aFreetype,
+            aFontFullPath,
             aPixelHeight,
-            mRendererToKeep.mStorage},
-        .mPart = renderer::Part{}
+            mRendererToKeep.mStorage),
     });
     result->mPart = renderer::makePartForFont(
         result->mFont, 

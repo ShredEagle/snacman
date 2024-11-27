@@ -699,7 +699,8 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
     mQueryTextScreen
         ->each([&state, this](ent::Handle<ent::Entity> aHandle,
                              component::Text & aText,
-                             component::PoseScreenSpace & aPose) {
+                             component::PoseScreenSpace & aPose)
+        {
             math::Position<3, float> position_screenPix{
                 aPose.mPosition_u.cwMul(
                     // TODO this multiplication should be done once and
@@ -708,7 +709,8 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
                     static_cast<math::Position<2, GLfloat>>(
                         this->mAppInterface->getFramebufferSize())
                     / 2.f),
-                0.f};
+                0.f
+        };
 
             // You know I like my scales uniform
             assert(aPose.mScale[0] == aPose.mScale[1]);

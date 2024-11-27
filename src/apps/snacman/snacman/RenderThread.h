@@ -216,7 +216,8 @@ public:
     }
 
     std::future<std::shared_ptr<snacgame::FontAndPart>> loadFont(
-        arte::FontFace aFontFace,
+        const arte::Freetype & aFreetype,
+        std::filesystem::path aFontFullPath, 
         unsigned int aPixelHeight,
         Resources & aResources)
     {
@@ -227,17 +228,21 @@ public:
         auto promise = std::make_shared<std::promise<std::shared_ptr<snacgame::FontAndPart>>>();
         std::future<std::shared_ptr<snacgame::FontAndPart>> future = promise->get_future();
         // TODO the Text system has to be deeply refactored. It is tightly coupled to the texture creation
-        // making it hard to properly load asynchronously, and leading to horrors such as this move into shared_ptr
-        auto sharedFontFace = std::make_shared<arte::FontFace>(std::move(aFontFace));
+        // making it hard to properly load asynchronously.
         push([promise = std::move(promise),
-              fontFace = std::move(sharedFontFace),
+              freetype = &aFreetype,
+              fontFullPath = std::move(aFontFullPath),
               aPixelHeight,
               &aResources]
              (T_renderer & aRenderer) mutable
              {
                 try
                 {
-                    promise->set_value(aRenderer.loadFont(std::move(*fontFace), aPixelHeight, aResources));
+                    promise->set_value(aRenderer.loadFont(
+                        *freetype,
+                        std::move(fontFullPath),
+                        aPixelHeight,
+                        aResources));
                 }
                 catch(...)
                 {

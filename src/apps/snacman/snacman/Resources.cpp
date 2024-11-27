@@ -95,7 +95,9 @@ Resources::FontLoader(filesystem::path aFont,
                       Resources & aResources)
 {
     return aRenderThread
-        .loadFont(aResources.getFreetype().load(aFont), aPixelHeight,
+        .loadFont(aResources.getFreetype(),
+                  std::move(aFont),
+                  aPixelHeight,
                   aResources)
         .get(); // synchronize call
 }

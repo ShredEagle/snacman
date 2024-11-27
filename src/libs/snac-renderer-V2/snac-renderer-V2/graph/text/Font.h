@@ -76,7 +76,7 @@ struct Font
     /// @brief Load a Font, using a simple cache system looking for serialized files next to the font path.
     /// Create the cache file if they are not found.
     static Font makeUseCache(const arte::Freetype & aFreetype,
-                             std::filesystem::path aFontFullPath,
+                             const std::filesystem::path & aFontFullPath,
                              unsigned int aFontPixelHeight,
                              Storage & aStorage,
                              arte::CharCode aFirstChar = gFirstCharCode,

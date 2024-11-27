@@ -131,7 +131,7 @@ Font::Font(arte::FontFace aFontFace) :
 
 
 Font Font::makeUseCache(const arte::Freetype & aFreetype,
-                        std::filesystem::path aFontFullPath,
+                        const std::filesystem::path & aFontFullPath,
                         unsigned int aFontPixelHeight,
                         Storage & aStorage,
                         arte::CharCode aFirstChar,

@@ -272,7 +272,8 @@ public:
 
     // No, changing that now
     //// TODO Ad 2024/03/28: #font #RV2 still using the V1 renderer (and V1 type of handle)
-    std::shared_ptr<FontAndPart> loadFont(arte::FontFace aFontFace,
+    std::shared_ptr<FontAndPart> loadFont(const arte::Freetype & aFreetype,
+                                          std::filesystem::path aFontFullPath,
                                           unsigned int aPixelHeight,
                                           snac::Resources & aResources);
 
