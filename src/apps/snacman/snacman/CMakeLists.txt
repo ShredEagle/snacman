@@ -21,6 +21,7 @@ set(${TARGET_NAME}_HEADERS
     Resources.h
     SnacArchive.h
     SparseSet.h
+    CompilerDef.h
     TemporaryRendererHelpers.h # TODO should be removed, this was a hack waiting to host Object instead of Node in VisualModel
     Timing.h
 

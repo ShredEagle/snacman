@@ -7,6 +7,7 @@
 #include "../OrbitalControlInput.h"
 
 #include <snacman/Logging.h>
+#include <snacman/CompilerDef.h>
 #include <snacman/serialization/Serial.h>
 #include <reflexion/NameValuePair.h>
 
@@ -38,6 +39,7 @@ struct RankingList
     std::size_t playerCount = 0;
 
     void sort() {
+        SNAC_GCC_PUSH_DIAG(array-bounds)
         std::sort(
             ranking.begin(),
             ranking.begin() + playerCount,
@@ -45,6 +47,7 @@ struct RankingList
                 return a.second.mRoundsWon > b.second.mRoundsWon;
             }
         );
+        SNAC_GCC_POP_DIAG()
     }
 
     template<class T_witness>
