@@ -163,9 +163,16 @@ struct SnacGraph
 
     void renderDebugFrame(const snac::DebugDrawer::DrawList & aDrawList, renderer::Storage & aStorage);
 
+    void renderTexts(const visu_V2::GraphicState & aState,
+                     renderer::Storage & aStorage,
+                     math::Size<2, int> aFramebufferSize);
+
     void renderScreenText(const visu_V2::GraphicState & aState,
                           renderer::Storage & aStorage,
                           math::Size<2, int> aFramebufferSize);
+
+    template <class T_textContainer>
+    void passText(const T_textContainer & aTexts, renderer::Storage & aStorage);
 
     void passDepth(SnacGraph::PartList aPartList,
                    renderer::RepositoryTexture aTextureRepository,

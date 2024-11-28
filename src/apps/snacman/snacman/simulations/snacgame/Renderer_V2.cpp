@@ -550,37 +550,16 @@ void SnacGraph::renderDebugFrame(const snac::DebugDrawer::DrawList & aDrawList,
 }
 
 
-void SnacGraph::renderScreenText(const visu_V2::GraphicState & aState,
-                                 renderer::Storage & aStorage,
-                                 math::Size<2, int> aFramebufferSize)
+template <class T_textContainer>
+void SnacGraph::passText(const T_textContainer & aTexts, renderer::Storage & aStorage)
 {
     std::unordered_map<const FontAndPart *, std::vector<const visu_V2::Text *>> partToTexts;
 
-    for(const visu_V2::Text & text : aState.mTextScreenEntities)
+    for(const visu_V2::Text & text : aTexts)
     {
         assert(text.mFontRef != nullptr);
         partToTexts[text.mFontRef.get()].push_back(&text);
     }
-
-    // Load an orthographic camera, projecting the framebuffer space from pixels to clip space [-1, 1]
-    renderer::loadCameraUbo(
-        mGraphUbos.mViewingProjectionUbo, 
-        renderer::GpuViewProjectionBlock{
-            math::AffineMatrix<4, GLfloat>::Identity(),
-            math::trans3d::orthographicProjection(
-                math::Box<float>{
-                    {-static_cast<math::Position<2, float>>(aFramebufferSize) / 2, -1.f},
-                    {static_cast<math::Size<2, float>>(aFramebufferSize), 2.f}
-                }
-            )
-        }
-    );
-
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, graphics::FrameBuffer::Default());
-    glViewport(0, 0, aFramebufferSize.width(), aFramebufferSize.height());
-    glEnable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
 
     // Treat each font (so, each Part) separately
     for(const auto [fontAndPart, texts] : partToTexts)
@@ -639,6 +618,50 @@ void SnacGraph::renderScreenText(const visu_V2::GraphicState & aState,
     }
 
     
+}
+
+
+void SnacGraph::renderTexts(const visu_V2::GraphicState & aState,
+                            renderer::Storage & aStorage,
+                            math::Size<2, int> aFramebufferSize)
+{
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, graphics::FrameBuffer::Default());
+    glViewport(0, 0, aFramebufferSize.width(), aFramebufferSize.height());
+    glEnable(GL_BLEND);
+
+    // The world text should be occluded by geometry in front of it, so we must use depth test
+    glEnable(GL_DEPTH_TEST);
+    // Yet the glyph boxes overlap, so glyphs would occlude each other.
+    // For that reason, we disable depth write:
+    // world text must be drawn last to occlude other visuals in the 3D world (smelly).
+    glDepthMask(GL_FALSE);
+
+    // world text
+    {
+        renderer::loadCameraUbo(
+            mGraphUbos.mViewingProjectionUbo,
+            renderer::GpuViewProjectionBlock{aState.mCamera});
+
+        passText(aState.mTextWorldEntities, aStorage);
+    }
+    // screen text
+    {
+        // Load an orthographic camera, projecting the framebuffer space from pixels to clip space [-1, 1]
+        renderer::loadCameraUbo(
+            mGraphUbos.mViewingProjectionUbo, 
+            renderer::GpuViewProjectionBlock{
+                math::AffineMatrix<4, GLfloat>::Identity(),
+                math::trans3d::orthographicProjection(
+                    math::Box<float>{
+                        {-static_cast<math::Position<2, float>>(aFramebufferSize) / 2, -1.f},
+                        {static_cast<math::Size<2, float>>(aFramebufferSize), 2.f}
+                    }
+                )
+            }
+        );
+
+        passText(aState.mTextScreenEntities, aStorage);
+    }
 }
 
 
@@ -759,6 +782,9 @@ void Renderer_V2::render(const GraphicState_t & aState)
 
     const math::Size<2, int> framebufferSize = mAppInterface.getFramebufferSize();
 
+    //
+    // Models
+    //
     if (mControl.mRenderModels)
     {
         mRendererToKeep.mRenderGraph.renderWorld(aState, mRendererToKeep.mStorage, framebufferSize);
@@ -767,30 +793,20 @@ void Renderer_V2::render(const GraphicState_t & aState)
     //
     // Text
     //
+    if (mControl.mRenderText)
     {
         // TODO Ad 2024/04/03: #profiling currently the count of draw calls is not working (returning 0)
         // because we currently have to explicitly instrument the draw calls (making it easy to miss some)
         TIME_RECURRING_GL("Draw_texts", renderer::DrawCalls);
-
-        //// 3D world text
-        //if (mControl.mRenderText)
-        //{
-        //    // This text should be occluded by geometry in front of it.
-        //    // WARNING: (smelly) the text rendering disable depth writes,
-        //    //          so it must be drawn last to occlude other visuals in the 3D world.
-        //    auto scopeDepth = graphics::scopeFeature(GL_DEPTH_TEST, true);
-        //    renderText(aState.mTextWorldEntities, programSetup);
-        //}
-
-        if (mControl.mRenderText)
-        {
-            mRendererToKeep.mRenderGraph.renderScreenText(
-                aState,
-                mRendererToKeep.mStorage,
-                framebufferSize);
-        }
+        mRendererToKeep.mRenderGraph.renderTexts(
+            aState,
+            mRendererToKeep.mStorage,
+            framebufferSize);
     }
 
+    //
+    // Debug draw
+    //
     if (mControl.mRenderDebug)
     {
         TIME_RECURRING_GL("Draw_debug", renderer::DrawCalls);

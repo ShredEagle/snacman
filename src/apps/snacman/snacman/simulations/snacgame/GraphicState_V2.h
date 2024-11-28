@@ -142,12 +142,6 @@ struct Text
     std::shared_ptr<FontAndPart> mFontRef = nullptr;
 };
 
-//inline Pose
-//        .mPosition_world = math::lerp(aLeftEntity.mPosition_world,
-//                                      aRightEntity.mPosition_world,
-//                                      aInterpolant),
-//        .mScaling = math::lerp(aLeftEntity.mScaling, aRightEntity.mScaling, aInterpolant),
-//        .mOrientation = math::slerp(aLeftEntity.mOrientation, aRightEntity.mOrientation, aInterpolant),
 inline Text interpolate(const Text & aLeftEntity, const Text & aRightEntity, float aInterpolant)
 {
     return Text{
@@ -165,7 +159,6 @@ struct GraphicState
     static constexpr std::size_t MaxEntityId{2048};
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
-    //snac::SparseSet<visu_V1::Text, MaxEntityId> mTextWorldEntities;
     snac::SparseSet<Text, MaxEntityId> mTextWorldEntities;
     // TODO #interpolation Interpolate the camera pose
     renderer::Camera mCamera; 
@@ -208,7 +201,7 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
 
     interpolateEach(aInterpolant, aLeft.mEntities, aRight.mEntities, state.mEntities);
 
-    //interpolateEach(aInterpolant, aLeft.mTextWorldEntities, aRight.mTextWorldEntities, state.mTextWorldEntities);
+    interpolateEach(aInterpolant, aLeft.mTextWorldEntities, aRight.mTextWorldEntities, state.mTextWorldEntities);
 
     interpolateEach(aInterpolant, aLeft.mTextScreenEntities, aRight.mTextScreenEntities, state.mTextScreenEntities);
 
