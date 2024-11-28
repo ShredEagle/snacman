@@ -7,7 +7,9 @@
 #include <nlohmann/json.hpp>
 #include <type_traits>
 
+
 namespace reflexion {
+
 
 using json = nlohmann::json;
 
@@ -28,4 +30,6 @@ void TypedProcessor<T_type>::serializeComponent(ad::serial::Witness && aWitness,
     T_type & comp = aHandle.get()->get<T_type>();
     comp.describeTo(aWitness);
 }
-} // namespace ad
+
+
+} // namespace reflexion
