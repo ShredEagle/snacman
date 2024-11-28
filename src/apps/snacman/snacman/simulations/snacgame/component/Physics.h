@@ -9,7 +9,7 @@ constexpr float gDefaultGravity = -9.81f * 3.f;
 
 struct Gravity
 {
-    float mFloorHeight;
+    float mFloorHeight{0};
     float mGravityAccel = gDefaultGravity;
 
     template<class T_witness>
