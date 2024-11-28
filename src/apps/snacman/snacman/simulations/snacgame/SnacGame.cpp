@@ -683,7 +683,14 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
     mQueryTextWorld
         ->each([&state](ent::Handle<ent::Entity> aHandle,
                        component::Text & aText,
-                       component::GlobalPose & aGlobPose) {
+                       // Taken by value to mutate it locally.
+                       component::GlobalPose aGlobPose) {
+            // TODO remove the hardcoded value of 100
+            // Note hardcoded 100 scale down. Because I'd
+            // like a value of 1 for the scale of the
+            // component to still mean "about visible". 
+            aGlobPose.mScaling /= 100;
+
             state->mTextWorldEntities.insert(
                 aHandle.id(), visu_V2::Text{
                                   .mString = aText.mString,
