@@ -20,12 +20,31 @@
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Rigging.h>
 
+#include <snac-renderer-V2/graph/text/TextGlsl.h>
+// TODO Ad 2024/11/27: #text Remove Font.h include
+// I think a well designed visu::Text should not be aware of the Font itself
+#include <snac-renderer-V2/graph/text/Font.h>
+
 #include <functional>
 #include <vector>
 
 
 namespace ad {
 namespace snacgame {
+
+// TODO Ad 2024/11/27: #text this is where the design of the Font system shows its limitations
+// we have to wrape the Font + its Part together so the visual state can easily contain the part
+// that will be used by the renderer...
+// This would totally disapear if it was redesigned so that each string was a precomputed Part instead 
+// of a ClientText. Yet this might cause complications:
+// "how could main thread create such part, short of synchronizing a call to render thread?"
+struct FontAndPart
+{
+    renderer::Font mFont;
+    renderer::TextPart mPart;
+};
+
+
 namespace visu_V2 {
 
 
@@ -73,6 +92,7 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
 } // namespace visu_V2
 
 
+// TODO: remove #decommissionRV1
 namespace visu_V1 {
 
 
@@ -106,18 +126,45 @@ inline Text interpolate(const Text & aLeftEntity, const Text & aRightEntity, flo
 
 namespace visu_V2 {
 
+struct Text
+{
+    // TODO: #text The "string" should ideally be storad via handle:
+    // This way it can be reused (instancing the same string at several poses),
+    // and interpolation does not have to make a copy of a data struct.
+    // (It will probably be required if ClientText becomes an Part or an Object)
+    renderer::ClientText mString;
+    renderer::Pose mPose;
+    math::hdr::Rgba_f mColor;
+
+    // #text This should not be here, but the design lacked so much foresight
+    // We need the Part in the renderer to actually draw the text, and the Part
+    // is tighlty coupled to the renderer::Font instance in the current design.
+    std::shared_ptr<FontAndPart> mFontRef = nullptr;
+};
+
+inline Text interpolate(const Text & aLeftEntity, const Text & aRightEntity, float aInterpolant)
+{
+    return Text{
+        .mString = aLeftEntity.mString,
+        .mPose = interpolate(aLeftEntity.mPose,
+                             aRightEntity.mPose,
+                             aInterpolant),
+        .mColor = math::lerp(aLeftEntity.mColor, aRightEntity.mColor, aInterpolant),
+        .mFontRef = aLeftEntity.mFontRef,
+    };
+}
 
 struct GraphicState
 {
     static constexpr std::size_t MaxEntityId{2048};
 
     snac::SparseSet<Entity, MaxEntityId> mEntities;    
-    snac::SparseSet<visu_V1::Text, MaxEntityId> mTextWorldEntities;
+    snac::SparseSet<Text, MaxEntityId> mTextWorldEntities;
     // TODO #interpolation Interpolate the camera pose
     renderer::Camera mCamera; 
     renderer::LightsDataUi mLights;
 
-    snac::SparseSet<visu_V1::Text, MaxEntityId> mTextScreenEntities;
+    snac::SparseSet<Text, MaxEntityId> mTextScreenEntities;
 
     snac::DebugDrawer::DrawList mDebugDrawList;
 };

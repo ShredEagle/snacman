@@ -1,5 +1,7 @@
 #include "IntrospectProgram.h"
 
+#include "Semantics.h"
+
 #include <handy/StringUtilities.h>
 
 #include <array>
@@ -136,7 +138,15 @@ namespace {
         std::string_view prefix, body, suffix;
         std::tie(prefix, body) = lsplit(aResourceName, delimiter);
         std::tie(body, suffix) = lsplit(body, delimiter);
-        return std::string{body};
+
+        if(prefix == "gl")
+        {
+            return semantic::g_builtin;
+        }
+        else
+        {
+            return std::string{body};
+        }
     }
 
 

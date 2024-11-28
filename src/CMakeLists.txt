@@ -1,5 +1,8 @@
 add_subdirectory(libs/utilities/utilities)
 add_subdirectory(libs/profiler/profiler)
+# TODO #decommissionRV1
+# We decommissioned the renderer-V1 build, but we kept the folder around.
+# We are sentimental like that.
 add_subdirectory(libs/snac-renderer-V1/snac-renderer-V1)
 add_subdirectory(libs/snac-renderer-V2/snac-renderer-V2)
 add_subdirectory(libs/file-processor/file-processor)

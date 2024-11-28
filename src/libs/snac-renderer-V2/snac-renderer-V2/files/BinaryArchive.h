@@ -168,4 +168,34 @@ struct BinaryInArchive
 };
 
 
+template <class T_value>
+T_value readAs(BinaryInArchive & aIn)
+{
+    T_value v;
+    aIn.read(v);
+    return v;
+}
+
+
+template <class T_element>
+std::vector<T_element> readAsVector(BinaryInArchive & aIn,
+                                    std::size_t aElementCount,
+                                    T_element aDefaultValue = {})
+{
+    std::vector<T_element> result(aElementCount, aDefaultValue);
+    aIn.read(std::span{result});
+    return result;
+}
+
+
+template <class T_element>
+void assignVector(std::vector<T_element> & aVector,
+                  BinaryInArchive & aIn,
+                  std::size_t aElementCount,
+                  T_element aDefaultValue = {})
+{
+    aVector = readAsVector<T_element>(aIn, aElementCount, aDefaultValue);
+}
+
+
 } // namespace ad::renderer

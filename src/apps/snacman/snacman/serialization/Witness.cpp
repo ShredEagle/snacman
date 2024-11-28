@@ -30,14 +30,13 @@ void Witness::witness_json(const char * aName,
 }
 
 void Witness::witness_json(const char * aName,
-                           std::shared_ptr<snac::Font> * aObject)
+                           std::shared_ptr<snac::Resources::LoadedFont_t> * aObject)
 {
     json & data = *std::get<json *>(mData);
     snac::FontSerialData fontData =
         mGameContext.mResources.getFontDataFromResource(*aObject);
     data[aName]["fontPath"] = fontData.mFontPath;
     data[aName]["pixelHeight"] = fontData.mPixelHeight;
-    data[aName]["effectPath"] = fontData.mEffectPath;
 }
 
 void Witness::testify_json(
@@ -50,12 +49,11 @@ void Witness::testify_json(
 }
 
 void Witness::testify_json(const char * aName,
-                           std::shared_ptr<snac::Font> * aObject) const
+                           std::shared_ptr<snac::Resources::LoadedFont_t> * aObject) const
 {
     json & data = *std::get<json *>(mData);
     *aObject = mGameContext.mResources.getFont(data[aName]["fontPath"],
-                                               data[aName]["pixelHeight"],
-                                               data[aName]["effectPath"]);
+                                               data[aName]["pixelHeight"]);
 }
 
 std::vector<ent::Handle<ent::Entity>> testify_json(ent::EntityManager & aWorld, const Witness && aData)
@@ -229,13 +227,12 @@ void Witness::witness_imgui(const char * aName,
 }
 
 void Witness::witness_imgui(const char * aName,
-                           std::shared_ptr<snac::Font> * aObject)
+                           std::shared_ptr<snac::Resources::LoadedFont_t> * aObject)
 {
     snac::FontSerialData fontData =
         mGameContext.mResources.getFontDataFromResource(*aObject);
     ImGui::Text("path: %s", fontData.mFontPath.c_str());
     ImGui::Text("pixel height: %d", fontData.mPixelHeight);
-    ImGui::Text("effect path: %s", fontData.mEffectPath.c_str());
 }
 
 EntityLedger loadLedgerFromJson(const filesystem::path & aJsonPath,

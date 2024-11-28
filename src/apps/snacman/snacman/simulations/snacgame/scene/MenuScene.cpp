@@ -52,7 +52,6 @@ MenuScene::MenuScene(GameContext & aGameContext,
                      ent::Wrap<component::MappingContext> & aContext) :
     Scene(gMenuSceneName, aGameContext, aContext), mItems{mGameContext.mWorld}
 {
-
     EntHandle camera = snac::getFirstHandle(mCameraQuery);
     OrbitalControlInput & orbitalControl =
         snac::getComponent<system::OrbitalCamera>(camera).mControl;
@@ -60,7 +59,9 @@ MenuScene::MenuScene(GameContext & aGameContext,
     orbitalControl.mOrbital.mSphericalOrigin = gMenuSceneInitialCameraPos;
 }
 
-void MenuScene::onEnter(Transition aTransition) {
+
+void MenuScene::onEnter(Transition aTransition)
+{
     auto font = mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf");
 
     // serial::EntityLedger menuLedger = serial::loadLedgerFromJson(

@@ -20,6 +20,8 @@
 
 #include <profiler/GlApi.h>
 
+#include <renderer/TextureUtilities.h>
+
 #include <snac-renderer-V2/Cube.h>
 #include <snac-renderer-V2/Profiling.h>
 #include <snac-renderer-V2/RendererReimplement.h>
@@ -61,7 +63,7 @@ const char * gVertexShader = R"#(
     // TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
     layout(std140, binding = 0) uniform LocalToWorldBlock
     {
-        mat4 localToWorld[512];
+        mat4 localToWorld[CLIENT_MAX_ENTITIES];
     };
 
     out vec4 ex_Color;
@@ -330,6 +332,10 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
     // TODO How do we handle the dynamic nature of the number of instance that might be renderered?
     // At the moment, hardcode a maximum number
     mLoader{makeResourceFinder()},
+    mFont{Font::makeUseCache(mFreetype,
+                             mLoader.mFinder.pathFor("fonts/FredokaOne-Regular.ttf"),
+                             64,
+                             mStorage)},
     mSceneGui{mLoader.loadEffect("effects/Highlight.sefx", mStorage), mStorage},
     // Track the size of the default framebuffer, which will be the destination of mGraph::render().
     mDebugRenderer{mStorage, mLoader},
@@ -353,6 +359,35 @@ ViewerApplication::ViewerApplication(std::shared_ptr<graphics::AppInterface> aGl
         SELOG(info)("Model viewer mode (inferred from single node)");
         mPrimaryView.mCameraSystem.setupAsModelViewer(children.front().mAabb);
     }
+
+    //
+    // Prepare text
+    //
+
+    // Initialize the Part in Scene, for the loaded Font.
+    mScene.mScreenText.mGlyphPart = 
+        makePartForFont(mFont, mLoader.loadEffect("effects/Text.sefx", mStorage), mStorage);
+
+    // Add a few instances of a message
+    mScene.mScreenText.mStrings.push_back(
+        ProtoTexts::StringEntities{
+            .mStringGlyphs = prepareText(mFont, "Viewer text").first,
+            .mEntities = {
+                {
+                    .mStringPixToWorld = math::AffineMatrix<4, GLfloat>::Identity(),
+                    .mColor = math::hdr::gWhite<GLfloat>,
+                },
+                {
+                    .mStringPixToWorld = math::trans3d::scaleUniform(3.f) * math::trans3d::translate<GLfloat>({0.f, -200.f, 0.f}),
+                    .mColor = math::hdr::gYellow<GLfloat>,
+                },
+                {
+                    .mStringPixToWorld = math::trans3d::scaleUniform(1/3.f) * math::trans3d::translate<GLfloat>({0.f, 80.f, 0.f}),
+                    .mColor = math::hdr::gCyan<GLfloat>,
+                },
+            }
+        }
+    );
 
     //// Add basic shapes to the the scene
     //Handle<Effect> simpleEffect = makeSimpleEffect(mStorage);
@@ -624,11 +659,16 @@ void ViewerApplication::drawMainUi(const renderer::Timing & aTime)
                                  roughness,
                                  mLoader);
             glObjectLabel(GL_TEXTURE, highlights, -1, "highlight-samples");
-            dumpToFile(highlights,
-                    mScene.mEnvironment->mMapFile.parent_path() /
+
+            std::ofstream samplesOut{
+                mScene.mEnvironment->mMapFile.parent_path() /
                         "samples-" += 
                             mScene.mEnvironment->mMapFile.filename().replace_extension("png"),
-                    0);
+                std::ios::binary};
+            graphics::serializeTexture<math::sdr::Rgb>(highlights,
+                                                       0,
+                                                       arte::ImageFormat::Png,
+                                                       samplesOut);
         }
     }
 

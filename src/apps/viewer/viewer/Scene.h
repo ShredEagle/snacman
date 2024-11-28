@@ -3,6 +3,7 @@
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Lights.h>
 #include <snac-renderer-V2/Semantics.h>
+#include <snac-renderer-V2/graph/text/TextGlsl.h>
 
 
 namespace ad::renderer {
@@ -52,6 +53,22 @@ inline std::string to_string(Environment::Type aEnvironment)
 math::Box<GLfloat> getAabbInParent(const Node & aNode);
 
 
+// Note: this is not a good design, just a quick prototype to show text in viewer
+struct ProtoTexts
+{
+    struct StringEntities
+    {
+        // The glyphs in this string
+        ClientText mStringGlyphs;
+        // The different "instances" of this string
+        std::vector<StringEntity_glsl> mEntities;
+    };
+
+    TextPart mGlyphPart; // At the moment, the part is pretty much coupled to the Font
+    std::vector<StringEntities> mStrings;
+};
+
+
 /// @note The Scene does not contain the camera: this way the same logical scene 
 /// can be rendered from multiple views.
 struct Scene
@@ -90,6 +107,7 @@ struct Scene
         },
     }; 
 
+    ProtoTexts mScreenText; 
     
     LightsDataUi mLights_world{
         LightsDataCommon{

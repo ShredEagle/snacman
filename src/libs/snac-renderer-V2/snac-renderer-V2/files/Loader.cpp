@@ -5,6 +5,7 @@
 #include "Flags.h" 
 #include "Versioning.h" 
 
+#include "../Constants.h"
 #include "../Cube.h"
 #include "../Json.h"
 #include "../Logging.h"
@@ -22,6 +23,7 @@
 #include <renderer/BufferLoad.h>
 #include <renderer/ShaderSource.h>
 #include <renderer/Texture.h>
+#include <renderer/TextureUtilities.h>
 #include <renderer/utilities/FileLookup.h>
 
 #include <cassert>
@@ -32,14 +34,6 @@ namespace ad::renderer {
 
 namespace {
 
-    // TODO move to math library
-    template <std::floating_point T_value>
-    bool isWithinTolerance(T_value aLhs, T_value aRhs, T_value aRelativeTolerance)
-    {
-        T_value diff = std::abs(aLhs - aRhs);
-        T_value maxMagnitude = std::max(std::abs(aLhs), std::abs(aRhs));
-        return diff <= (maxMagnitude * aRelativeTolerance);
-    }
 
     // TODO #math #linearalgebra move to a more generic library (graphics?)
     Pose decompose(const math::AffineMatrix<4, GLfloat> & aTransformation)
@@ -60,29 +54,11 @@ namespace {
             rows[2].getNorm(),
         };
 
-        assert(isWithinTolerance(scale[1], scale[0], 1E-6f));
-        assert(isWithinTolerance(scale[2], scale[0], 1E-6f));
+        assert(math::relativeTolerance(scale[1], scale[0], 1E-6f));
+        assert(math::relativeTolerance(scale[2], scale[0], 1E-6f));
         //assert(scale[0] == scale[1] && scale[0] == scale[2]);
         result.mUniformScale = scale[0];
 
-        return result;
-    }
-
-    template <class T_value>
-    T_value readAs(BinaryInArchive & aIn)
-    {
-        T_value v;
-        aIn.read(v);
-        return v;
-    }
-
-    template <class T_element>
-    std::vector<T_element> readAsVector(BinaryInArchive & aIn,
-                                        std::size_t aElementCount,
-                                        T_element aDefaultValue = {})
-    {
-        std::vector<T_element> result(aElementCount, aDefaultValue);
-        aIn.read(std::span{result});
         return result;
     }
 
@@ -526,7 +502,7 @@ namespace {
         std::unique_ptr<char []> imageData{new char[imageByteSize]};
 
         // TODO: Should we handle alignment?
-        //Guard scopedAlignemnt = graphics::detail::scopeUnpackAlignment(aInput.alignment);
+        //Guard scopedAlignemnt = graphics::scopeUnpackAlignment(aInput.alignment);
 
         assert((aDdsHeader.h.dwFlags & DDSD_MIPMAPCOUNT) == DDSD_MIPMAPCOUNT);
         const GLint mipmapCount = aDdsHeader.h.dwMipMapCount;
@@ -1269,7 +1245,9 @@ std::vector<Technique> populateTechniques(const Loader & aLoader,
 
         result.push_back(Technique{
             .mConfiguredProgram =
-                storeConfiguredProgram(aLoader.loadProgram(technique.at("programfile"), std::move(definesCopy)), aStorage),
+                storeConfiguredProgram(
+                    aLoader.loadProgram(technique.at("programfile"), std::move(definesCopy)),
+                    aStorage),
         });
 
         if(technique.contains("annotations"))
@@ -1319,7 +1297,7 @@ bool recompileEffects(const Loader & aLoader, Storage & aStorage)
 
 Handle<Effect> Loader::loadEffect(const std::filesystem::path & aEffectFile,
                                   Storage & aStorage,
-                                  const std::vector<std::string> & aDefines_temp) const
+                                  const std::vector<graphics::MacroDefine> & aDefines_temp) const
 {
 // This basically works for caching effect (by that I mean it does not crash) however it 
 // seems improvement in performance is marginal (from 8s asset loading to 7s in debug
@@ -1370,7 +1348,7 @@ Handle<Effect> Loader::loadEffect(const std::filesystem::path & aEffectFile,
 
 
 IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
-                                      std::vector<std::string> aDefines_temp) const
+                                      std::vector<graphics::MacroDefine> aDefines_temp) const
 {
     std::vector<std::pair<const GLenum, graphics::ShaderSource>> shaders;
 
@@ -1388,21 +1366,26 @@ IntrospectProgram Loader::loadProgram(const filesystem::path & aProgFile,
         throw;
     }
 
+    // Copy the constant defines
+    aDefines_temp.insert(aDefines_temp.end(), gClientConstantDefines.begin(), gClientConstantDefines.end());
+
     // TODO #resource_redesign Decide if we want the shader path to be relative to the prog file (with FileLookup)
     // or to be found in the current "assets" folders of ResourceFinder.
     graphics::FileLookup lookup{programPath};
+
+    // Handle the defines at the .prog level before we start preprocessing
+    // the individual stages.
+    for(std::string macro : program.value("defines", Json{}))
+    {
+        aDefines_temp.push_back(std::move(macro));
+    }
 
     for (auto [shaderStage, shaderFile] : program.items())
     {
         GLenum stageEnumerator;
         if(shaderStage == "defines")
         {
-            // Load the defines found at the .prog level
-            // Special case, not a shader stage
-            for (std::string macro : shaderFile)
-            {
-                aDefines_temp.push_back(std::move(macro));
-            }
+            // Handled before entering the loop
             continue;
         }
         else if(shaderStage == "vertex")

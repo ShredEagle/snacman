@@ -2,6 +2,7 @@
 
 #include "Profiling.h"
 #include "SetupDrawing.h"
+#include "Logging.h"
 
 #include <profiler/GlApi.h>
 
@@ -257,6 +258,92 @@ DrawCall DrawEntryHelper::generateDrawCall(const PartDrawEntry & aEntry,
 }
 
 
+namespace {
+
+    template <class T_semantic, class T_handled>
+    std::vector<T_semantic> findIdenticalKeys(
+        const std::map<T_semantic, Handle<T_handled>> & aMap1,
+        const std::map<T_semantic, Handle<T_handled>> & aMap2)
+    {
+        std::vector<T_semantic> identicalKeys;
+        auto it1 = aMap1.begin();
+        auto it2 = aMap2.begin();
+
+        // Two-pointer technique
+        while (it1 != aMap1.end() && it2 != aMap2.end()) 
+        {
+            if (it1->first == it2->first) 
+            {
+                // If keys match, add to result
+                identicalKeys.push_back(it1->first);
+                ++it1;
+                ++it2;
+            }
+            else if (it1->first < it2->first) 
+            {
+                // Move the pointer in map1
+                ++it1;
+            }
+            else 
+            {
+                // Move the pointer in map2
+                ++it2;
+            }
+        }
+        return identicalKeys;
+    }
+
+} // unnamed namespace
+
+void setupProgramRepositories(Handle<MaterialContext> aContext,
+                              RepositoryUbo aUboRepository,
+                              RepositoryTexture aTextureRepository,
+                              const IntrospectProgram & aIntrospectProgram)
+{
+    {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
+        // TODO #repos This should be consolidated
+        if(aContext)
+        {
+#if !defined(NDEBUG)
+            auto identicalSemantics = findIdenticalKeys(aUboRepository, aContext->mUboRepo);
+            for(const auto & duplicate : identicalSemantics)
+            {
+                SELOG(error)(
+                    "Duplicate UBO semantic '{}' when setting up program '{}'.",
+                    duplicate,
+                    aIntrospectProgram.mName);
+            }
+#endif
+            RepositoryUbo callRepo{aContext->mUboRepo};
+            aUboRepository.merge(callRepo);
+        }
+        setBufferBackedBlocks(aIntrospectProgram, aUboRepository);
+    }
+
+    {
+        PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
+        // TODO #repos This should be consolidated
+        if(aContext)
+        {
+#if !defined(NDEBUG)
+            auto identicalSemantics = findIdenticalKeys(aTextureRepository, aContext->mTextureRepo);
+            for(const auto & duplicate : identicalSemantics)
+            {
+                SELOG(error)(
+                    "Duplicate Texture semantic '{}' when setting up program '{}'.",
+                    duplicate,
+                    aIntrospectProgram.mName);
+            }
+#endif
+            RepositoryTexture callRepo{aContext->mTextureRepo};
+            aTextureRepository.merge(callRepo);
+        }
+        setTextures(aIntrospectProgram, aTextureRepository);
+    }
+}
+
+
 void draw(const PassCache & aPassCache,
           const RepositoryUbo & aUboRepository,
           const RepositoryTexture & aTextureRepository)
@@ -283,29 +370,7 @@ void draw(const PassCache & aPassCache,
             graphics::ScopedBind vaoScope{vao};
             PROFILER_END_SECTION(bindVaoProfiling);
             
-            {
-                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_buffer_backed_blocks", CpuTime);
-                // TODO #repos This should be consolidated
-                RepositoryUbo uboRepo{aUboRepository};
-                if(call.mCallContext)
-                {
-                    RepositoryUbo callRepo{call.mCallContext->mUboRepo};
-                    uboRepo.merge(callRepo);
-                }
-                setBufferBackedBlocks(selectedProgram, uboRepo);
-            }
-
-            {
-                PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "set_textures", CpuTime);
-                // TODO #repos This should be consolidated
-                RepositoryTexture textureRepo{aTextureRepository};
-                if(call.mCallContext)
-                {
-                    RepositoryTexture callRepo{call.mCallContext->mTextureRepo};
-                    textureRepo.merge(callRepo);
-                }
-                setTextures(selectedProgram, textureRepo);
-            }
+            setupProgramRepositories(call.mCallContext, aUboRepository, aTextureRepository, selectedProgram);
 
             auto bindProgramProfiling = PROFILER_BEGIN_RECURRING_SECTION(gRenderProfiler, "bind_program", CpuTime);
             graphics::ScopedBind programScope{selectedProgram};

@@ -8,6 +8,8 @@
 
 #include <graphics/CameraUtilities.h>
 
+#include <renderer/TextureUtilities.h>
+
 
 namespace ad::renderer {
 
@@ -73,9 +75,9 @@ graphics::Texture loadCubemapFromStrip(filesystem::path aImageStrip)
                     graphics::countCompleteMipmaps({side, side}));
 
     graphics::ScopedBind bound{cubemap};
-    Guard scopedAlignment = graphics::detail::scopeUnpackAlignment((GLint)hdrStrip.rowAlignment());
+    Guard scopedAlignment = graphics::scopeUnpackAlignment((GLint)hdrStrip.rowAlignment());
     // Set the stride between source images rows to the strip total width.
-    auto scopedRowLength = graphics::detail::scopePixelStorageMode(GL_UNPACK_ROW_LENGTH, hdrStrip.width());
+    auto scopedRowLength = graphics::scopePixelStorageMode(GL_UNPACK_ROW_LENGTH, hdrStrip.width());
     for(unsigned int faceIdx = 0; faceIdx != 6; ++faceIdx)
     {
         glTexSubImage2D(
@@ -125,7 +127,7 @@ graphics::Texture loadCubemapFromSequence(filesystem::path aImageSequence)
                     1);
 
     graphics::ScopedBind bound{cubemap};
-    Guard scopedAlignment = graphics::detail::scopeUnpackAlignment((GLint)hdrFace.rowAlignment());
+    Guard scopedAlignment = graphics::scopeUnpackAlignment((GLint)hdrFace.rowAlignment());
 
     for(unsigned int faceIdx = 0; faceIdx != 6; ++faceIdx)
     {

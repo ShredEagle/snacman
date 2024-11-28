@@ -96,7 +96,7 @@ ent::Handle<ent::Entity>
 makeText(GameContext & aContext,
          ent::Phase & aPhase,
          const std::string & aString,
-         std::shared_ptr<snac::Font> aFont,
+         std::shared_ptr<snac::Resources::LoadedFont_t> aFont,
          const math::hdr::Rgba_f & aColor,
          const math::Position<2, float> & aPosition_unitscreen,
          const math::Size<2, float> & aScale = {1.f, 1.f});
@@ -106,7 +106,7 @@ ent::Handle<ent::Entity>
 createMenuItem(GameContext & aContext,
                ent::Phase & aInit,
                const std::string & aString,
-               std::shared_ptr<snac::Font> aFont,
+               std::shared_ptr<snac::Resources::LoadedFont_t> aFont,
                const math::Position<2, float> & aPos,
                const std::unordered_map<int, std::string> & aNeighbors,
                const scene::Transition & aTransition,
@@ -130,6 +130,9 @@ void swapPlayerPosition(ent::Phase & aPhase,
 
 ent::Handle<ent::Entity> createTargetArrow(GameContext & aContext,
                                            const math::hdr::Rgba_f & aColor);
+
+std::shared_ptr<snac::Resources::LoadedFont_t> getBillpadFont(GameContext & aContext);
+
 ent::Handle<ent::Entity>
 createHudBillpad(GameContext & aContext,
                  const int aPlayerIndex);

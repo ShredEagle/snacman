@@ -14,6 +14,7 @@
 #include <snac-renderer-V2/Repositories.h>
 #include <snac-renderer-V2/debug/DebugRenderer.h>
 #include <snac-renderer-V2/graph/ShadowMapping.h>
+#include <snac-renderer-V2/graph/text/Font.h>
 
 
 

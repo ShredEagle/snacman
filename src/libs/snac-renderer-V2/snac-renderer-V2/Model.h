@@ -178,7 +178,7 @@ struct VertexStream /*: public SemanticBufferViews*/
 {
     SEMANTIC_BUFFER_MEMBERS                 
     BufferView mIndexBufferView;
-    GLenum mIndicesType = 0;/*NULL; for some reason Clang complains about NULL*/
+    GLenum mIndicesType = GL_NONE;
 };
 
 #undef SEMANTIC_BUFFER_MEMBERS
@@ -226,6 +226,19 @@ struct Part
 };
 
 
+
+/// @return `true` if the VertexStream use indices for vertex attributes (`glDrawElement()`)
+/// `false` otherwise (`glDrawArray()`).
+inline bool useElementIndices(const VertexStream & aVertexStream)
+{ return aVertexStream.mIndicesType != GL_NONE; }
+
+
+/// @return `true` if the Part indices for vertex attributes (`glDrawElement()`)
+/// `false` otherwise (`glDrawArray()`).
+inline bool useElementIndices(const Part & aPart)
+{ return useElementIndices(*aPart.mVertexStream); }
+
+
 struct Object
 {
     std::vector<Part> mParts;
@@ -245,7 +258,7 @@ struct Object
 
 struct Pose
 {
-    // TODO change to math::Position ?
+    // Position is modeled as a Vec, because in a graph it can be seen as relative displacements. 
     math::Vec<3, float> mPosition;
     // TODO #scaling #skew Should we allow non-uniform (3D) scaling? 
     // That would allow skewing, making decomposition unpractical

@@ -3,6 +3,16 @@
 
 #include <renderer/UniformBuffer.h>
 
+#include <span>
+
+
+namespace ad::math {
+
+template <int, class>
+class AffineMatrix;
+
+} // namespace ad::math
+
 
 namespace ad::renderer {
 
@@ -33,5 +43,8 @@ void loadLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo,
 void updateOffsetInLightViewProjectionUbo(const graphics::UniformBufferObject & aUbo,
                                           const LightViewProjection & aLightViewProjection);
 
+
+void loadJoints(const graphics::UniformBufferObject & aUbo,
+                std::span<math::AffineMatrix<4, GLfloat>> aJointMatrices);
 
 } // namespace ad::renderer

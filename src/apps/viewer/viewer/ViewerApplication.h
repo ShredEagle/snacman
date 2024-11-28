@@ -84,6 +84,11 @@ struct ViewerApplication
     std::shared_ptr<graphics::AppInterface> mSecondViewAppInterface;
     Storage mStorage;
     Loader mLoader;
+    
+    // Text module
+    arte::Freetype mFreetype;
+    Font mFont;
+
     Scene mScene;
     SceneGui mSceneGui;
 

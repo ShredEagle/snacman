@@ -30,28 +30,34 @@
 #include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 #include "typedef.h"
 
-#include <cstdio>
-#include <snacman/TemporaryRendererHelpers.h>
-
-#include <algorithm>
-#include <entity/Entity.h>
-#include <entity/EntityManager.h>
-#include <entity/Query.h>
-#include <map>
-#include <math/Angle.h>
-#include <math/Color.h>
-#include <math/Quaternion.h>
-#include <math/Vector.h>
-#include <optional>
-#include <ostream>
 #include <snacman/EntityUtilities.h>
 #include <snacman/Input.h>
 #include <snacman/QueryManipulation.h>
 #include <snacman/Resources.h>
+#include <snacman/TemporaryRendererHelpers.h>
+
+#include <entity/Entity.h>
+#include <entity/EntityManager.h>
+#include <entity/Query.h>
+
+#include <math/Angle.h>
+#include <math/Color.h>
+#include <math/Quaternion.h>
+#include <math/Vector.h>
+
+#include <snac-renderer-V2/graph/text/Font.h>
+
+#include <algorithm>
+#include <map>
+#include <optional>
+#include <ostream>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <cstdio>
+
 
 namespace ad {
 namespace snacgame {
@@ -137,13 +143,16 @@ ent::Handle<ent::Entity> createWorldText(GameContext & aContext,
     auto handle = aContext.mWorld.addEntity();
     Entity text = *handle.get(init);
 
-    auto font =
+    std::shared_ptr<snac::Resources::LoadedFont_t> font =
         aContext.mResources.getFont("fonts/TitanOne-Regular.ttf", 120);
 
+    auto [clientText, size] = renderer::prepareText(font->mFont, aText);
+
     text.add(component::Text{
-                 .mString{std::move(aText)},
-                 .mFont = std::move(font),
+                 .mString = clientText,
                  .mColor = math::hdr::gYellow<float>,
+                 .mDimensions = size,
+                 .mFontRef = font,
              })
         .add(aPose)
         .add(component::GameTransient{});
@@ -321,6 +330,14 @@ createPlayerSpawnEntity(GameContext & aContext,
     return spawner;
 }
 
+
+std::shared_ptr<snac::Resources::LoadedFont_t> getBillpadFont(GameContext & aContext)
+{
+    const std::string fontname = "fonts/notes/Bitcheese.ttf";
+    return aContext.mResources.getFont(fontname, 100);
+}
+
+
 ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
                                           const int aPlayerIndex)
 {
@@ -346,16 +363,18 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
     {
         Phase createScore;
 
-        const std::string fontname = "fonts/notes/Bitcheese.ttf";
+        auto font = getBillpadFont(aContext);
 
         // Score
         {
+            auto [clientText, size] = renderer::prepareText(font->mFont, "0");
             ent::Entity scoreText = *scoreHandle.get(createScore);
             scoreText.add(component::Text{
-                .mString = "0",
-                .mFont = aContext.mResources.getFont(fontname, 100),
+                .mString = clientText,
                 //.mColor = playerSlot.mColor,
                 .mColor = math::hdr::gBlack<float>,
+                .mDimensions = size,
+                .mFontRef = font,
             });
 
             addGeoNode(aContext, scoreText, {-1.7f, 0.6f, 0.f}, 1.f);
@@ -363,12 +382,14 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
 
         // Rounds
         {
+            auto [clientText, size] = renderer::prepareText(font->mFont, "0");
             ent::Entity roundText = *roundHandle.get(createScore);
             roundText.add(component::Text{
-                .mString = "0",
-                .mFont = aContext.mResources.getFont(fontname, 100),
+                .mString = clientText,
                 //.mColor = playerSlot.mColor,
                 .mColor = math::hdr::gBlack<float>,
+                .mDimensions = size,
+                .mFontRef = font,
             });
 
             addGeoNode(aContext, roundText, {0.5f, 0.3f, 0.f}, 1.1f);
@@ -376,11 +397,14 @@ ent::Handle<ent::Entity> createHudBillpad(GameContext & aContext,
 
         // Power-up
         {
+            auto [clientText, size] = renderer::prepareText(font->mFont, "");
             ent::Entity powerupText = *powerupHandle.get(createScore);
             powerupText.add(component::Text{
-                .mFont = aContext.mResources.getFont(fontname, 100),
+                .mString = clientText,
                 //.mColor = playerSlot.mColor,
                 .mColor = math::hdr::gBlack<float>,
+                .mDimensions = size,
+                .mFontRef = font,
             });
             addGeoNode(aContext, powerupText, {-1.9f, -.7f, 0.f}, 0.5f);
         }
@@ -537,7 +561,7 @@ EntHandle createJoinGamePlayer(GameContext & aContext, EntHandle aSlotHandle, in
 void preparePlayerForGame(GameContext & aContext, EntHandle aSlotHandle)
 {
     component::SceneNode & node = snac::getComponent<component::SceneNode>(aSlotHandle);
-    
+
     while(node.mFirstChild.isValid())
     {
         Phase destroyChild;
@@ -600,7 +624,7 @@ ent::Handle<ent::Entity>
 createMenuItem(GameContext & aContext,
                ent::Phase & aInit,
                const std::string & aString,
-               std::shared_ptr<snac::Font> aFont,
+               std::shared_ptr<snac::Resources::LoadedFont_t> aFont,
                const math::Position<2, float> & aPos,
                const std::unordered_map<int, std::string> & aNeighbors,
                const scene::Transition & aTransition,
@@ -623,18 +647,21 @@ ent::Handle<ent::Entity>
 makeText(GameContext & aContext,
          ent::Phase & aPhase,
          const std::string & aString,
-         std::shared_ptr<snac::Font> aFont,
+         std::shared_ptr<snac::Resources::LoadedFont_t> aFont,
          const math::hdr::Rgba_f & aColor,
          const math::Position<2, float> & aPosition_unitscreen,
          const math::Size<2, float> & aScale)
 {
     auto handle = aContext.mWorld.addEntity(aString.c_str());
 
+    auto [clientText, size] = renderer::prepareText(aFont->mFont, aString);
+
     handle.get(aPhase)
         ->add(component::Text{
-            .mString{aString},
-            .mFont = std::move(aFont),
+            .mString = clientText,
             .mColor = aColor,
+            .mDimensions = size,
+            .mFontRef = aFont,
         })
         .add(component::PoseScreenSpace{
             .mPosition_u = aPosition_unitscreen,
@@ -724,7 +751,7 @@ EntHandle createExplosion(GameContext & aContext,
                     .mDiffuse = math::hdr::gRed<float>,
                 },
             })
-        ;    
+        ;
     }
     return explosion;
 }

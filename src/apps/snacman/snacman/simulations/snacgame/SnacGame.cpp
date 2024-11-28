@@ -587,20 +587,20 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
     mQueryTextWorld
         ->each([&state](ent::Handle<ent::Entity> aHandle,
                        component::Text & aText,
-                       component::GlobalPose & aGlobPose) {
+                       // Taken by value to mutate it locally.
+                       component::GlobalPose aGlobPose) {
+            // TODO remove the hardcoded value of 100
+            // Note hardcoded 100 scale down. Because I'd
+            // like a value of 1 for the scale of the
+            // component to still mean "about visible". 
+            aGlobPose.mScaling /= 100;
+
             state->mTextWorldEntities.insert(
-                aHandle.id(), visu_V1::Text{
-                                  .mPosition_world = aGlobPose.mPosition,
-                                  // TODO remove the hardcoded value of 100
-                                  // Note hardcoded 100 scale down. Because I'd
-                                  // like a value of 1 for the scale of the
-                                  // component to still mean "about visible".
-                                  .mScaling = aGlobPose.mInstanceScaling
-                                              * aGlobPose.mScaling / 100.f,
-                                  .mOrientation = aGlobPose.mOrientation,
+                aHandle.id(), visu_V2::Text{
                                   .mString = aText.mString,
-                                  .mFont = aText.mFont,
+                                  .mPose = toPose(aGlobPose),
                                   .mColor = aText.mColor,
+                                  .mFontRef = aText.mFontRef,
                               });
         });
 
@@ -610,30 +610,38 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
     mQueryTextScreen
         ->each([&state, this](ent::Handle<ent::Entity> aHandle,
                              component::Text & aText,
-                             component::PoseScreenSpace & aPose) {
+                             component::PoseScreenSpace & aPose)
+        {
             math::Position<3, float> position_screenPix{
                 aPose.mPosition_u.cwMul(
                     // TODO this multiplication should be done once and
                     // cached but it should be refreshed on framebuffer
                     // resizing.
+                    // TODO Ad 2024/11/15: Actually, there should be a convenient way
+                    // to express position of Screen space objects in [-1, 1]^2 directly.
                     static_cast<math::Position<2, GLfloat>>(
                         this->mAppInterface->getFramebufferSize())
                     / 2.f),
-                0.f};
+                0.f
+        };
+
+            // You know I like my scales uniform
+            assert(aPose.mScale[0] == aPose.mScale[1]);
 
             state->mTextScreenEntities.insert(
                 aHandle.id(),
-                visu_V1::Text{
-                    .mPosition_world = position_screenPix,
-                    .mScaling = math::Size<3, float>{aPose.mScale, 1.f},
-                    .mOrientation =
-                        math::Quaternion{
-                            math::UnitVec<3, float>::MakeFromUnitLength(
-                                {0.f, 0.f, 1.f}),
-                            aPose.mRotationCCW},
+                visu_V2::Text{
                     .mString = aText.mString,
-                    .mFont = aText.mFont,
+                    .mPose = {
+                        .mPosition = position_screenPix.as<math::Vec>(),
+                        .mUniformScale = aPose.mScale[0],
+                        .mOrientation = math::Quaternion{
+                            math::UnitVec<3, float>::MakeFromUnitLength(
+                            {0.f, 0.f, 1.f}),
+                            aPose.mRotationCCW},
+                    },
                     .mColor = aText.mColor,
+                    .mFontRef = aText.mFontRef,
                 });
         });
 

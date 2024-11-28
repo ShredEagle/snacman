@@ -2,6 +2,7 @@
 #include "snacman/simulations/snacgame/component/PlayerGameData.h"
 #include "snacman/simulations/snacgame/component/Text.h"
 
+#include "../Entities.h"
 #include "../component/GlobalPose.h"
 #include "../component/Collision.h"
 #include "../component/Tags.h"
@@ -36,12 +37,13 @@ EatPill::EatPill(GameContext & aGameContext) :
 {}
 
 
-void EatPill::update()
+void EatPill::update(GameContext & aGameContext)
 {
     TIME_RECURRING_CLASSFUNC(Main);
-    mPlayers.each([this](const component::GlobalPose & aPlayerGeo,
-                         component::Collision aPlayerCol,
-                         component::PlayerRoundData & aRoundData)
+    mPlayers.each([this, &aGameContext]
+                  (const component::GlobalPose & aPlayerGeo,
+                   component::Collision aPlayerCol,
+                   component::PlayerRoundData & aRoundData)
     {
         ent::Phase eatPillUpdate;
         Box_f playerHitbox = component::transformHitbox(aPlayerGeo.mPosition,
@@ -74,13 +76,16 @@ void EatPill::update()
         // TODO: Should only happen on pill eating (collision),
         // but it would show the previous round score until 1st pill of next round is eaten (stunfest Q&D)
         // Update the text showing the score in the hud.
+        auto billpadFont = getBillpadFont(aGameContext);
         component::PlayerGameData & gameData = snac::getComponent<component::PlayerGameData>(aRoundData.mSlot);
         EntHandle hud = gameData.mHud;
         auto & playerHud = snac::getComponent<component::PlayerHud>(hud);
-        snac::getComponent<component::Text>(playerHud.mScoreText)
-                .mString = std::to_string(aRoundData.mRoundScore);
-        snac::getComponent<component::Text>(playerHud.mRoundText)
-                .mString = std::to_string(gameData.mRoundsWon);
+        changeString(snac::getComponent<component::Text>(playerHud.mScoreText), 
+                     std::to_string(aRoundData.mRoundScore),
+                     billpadFont->mFont);
+        changeString(snac::getComponent<component::Text>(playerHud.mRoundText),
+                     std::to_string(gameData.mRoundsWon),
+                     billpadFont->mFont);
     });
 
     mPills.each([](const component::GlobalPose & aPillPose, const component::Collision & aPillCol) {
