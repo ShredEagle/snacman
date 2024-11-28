@@ -46,7 +46,7 @@ struct GameContext;
 
 constexpr float gBurgerBaseSpeed = 70.f;
 constexpr float gBurgerHeightLaunch = 10.f;
-constexpr float gBurgerTimeTotarget = 0.5f;
+constexpr float gBurgerTimeTotarget = 1.f;
 
 //Scene graph component utils
 void addGeoNode(

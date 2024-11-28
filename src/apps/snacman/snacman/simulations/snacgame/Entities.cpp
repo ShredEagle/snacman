@@ -271,9 +271,16 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
 
 constexpr std::size_t gMaxBurgerLoss = 10;
 
+//FIX(franz): Fix names
+struct TargetPair
+{
+    math::Position<3, float> first;
+    component::LevelTile * second;
+};
+
 struct TargetList
 {
-    std::array<std::pair<math::Position<3, float>, component::LevelTile *>, gMaxBurgerLoss> mTargets;
+    std::array<TargetPair, gMaxBurgerLoss> mTargets;
     std::size_t mCount = 0;
 };
 
@@ -284,16 +291,16 @@ static TargetList findBurgerLossTarget(GameContext & aGameContext, EntHandle aLe
     mTiles.each([&targets, &mCount](component::LevelTile & aTile, const component::Geometry & aGeo) {
         if (!aTile.mPill.isValid() && targets.mCount != mCount)
         {
-            targets.mTargets.at(targets.mCount++) = std::make_pair(
+            targets.mTargets.at(targets.mCount++) = TargetPair{
                 math::Position<3, float>{aGeo.mPosition.x(), aGeo.mPosition.y(), gPillHeight},
                 &aTile
-            );
+            };
         }
     });
     return targets;
 }
 
-static EntHandle createBurgerHitbox(GameContext & aContext, std::pair<math::Position<3, float>, component::LevelTile *> & aTarget)
+static EntHandle createBurgerHitbox(GameContext & aContext, TargetPair & aTarget)
 {
     math::Position<3, float> aPos = aTarget.first;
     component::LevelTile * tile = aTarget.second;
@@ -309,7 +316,7 @@ static EntHandle createBurgerHitbox(GameContext & aContext, std::pair<math::Posi
 
 static void createBurgerHitboxFromList(GameContext & aContext, TargetList aList, EntHandle aLevel)
 {
-    std::pair<math::Position<3, float>, component::LevelTile *> * target = aList.mTargets.begin();
+    TargetPair * target = aList.mTargets.begin();
     for(;target != aList.mTargets.begin() + aList.mCount; target++)
     {
         EntHandle burgerHb = createBurgerHitbox(aContext, *target);
@@ -351,7 +358,7 @@ static EntHandle launchBurger(GameContext & aContext, const math::Position<3, fl
 
 static void launchBurgerParticles(GameContext & aContext, const math::Position<3, float> & aPos, TargetList & aList, EntHandle aLevel)
 {
-    std::pair<math::Position<3, float>, component::LevelTile *> * target = aList.mTargets.begin();
+    TargetPair * target = aList.mTargets.begin();
     for(;target != aList.mTargets.begin() + aList.mCount; target++)
     {
         EntHandle burger = launchBurger(aContext, aPos, target->first);
