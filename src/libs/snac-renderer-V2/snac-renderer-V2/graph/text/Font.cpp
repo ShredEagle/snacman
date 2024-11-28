@@ -1,23 +1,8 @@
 // TODO Ad 2024/11/14: 
-// * Render text in Viewer
-//   X * Restore SDF functionnality
-//   X * Handle color
-//   X * Provide constant values via defines or something similar
-//   X * Move defines out of Text.frag into prog
-//   X * Control freetype sdf spread, and forward to shaders
-//   * Take notes regarding the paper
-//     - Introduces using SDF instead of alpha-coverage for font rendering. Applicable with alpha-testing or alpha-blending (for smoothing)
-//     - Add a few more effects: outline, glow, drop-shadow.
-//     - In addition to line-arte (text, signe, UI), propose to use it more generally for alpha-tested images (such as foliage impostors)
-//     - The core advantage is a better magnification behaviour with bilinear-filtering (coverage function is not linear).
-// * X Implement cache files
-// * Name font atlas textures
+// * Name atlas textures with the font name for easier debugging.
 // * Allow to load from a loader interface (for render thread / cache handling)
 //   * Maybe allow a name in the interface (for debug glLabel)
-// * Decomission renderer_V1 completely (review #decommissionRV1)
-// Future directions:
-//   * Try mipmapping
-//   * Ensure several fonts can be stored in the same texture (array?) and do a single draw call
+// * Allow to draw distinct fonts in a single draw call.
 #include "Font.h"
 
 #include "../../Logging.h"
