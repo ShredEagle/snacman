@@ -25,11 +25,14 @@
 #include "GameContext.h"
 #include "GameParameters.h"
 #include "SceneGraph.h"
+#include "snacman/Profiling.h"
+#include "snacman/simulations/snacgame/component/LevelData.h"
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "ModelInfos.h"
 #include "snacman/simulations/snacgame/system/SceneGraphResolver.h"
 #include "typedef.h"
 
+#include <cmath>
 #include <cstdio>
 #include <snacman/TemporaryRendererHelpers.h>
 
@@ -109,23 +112,55 @@ renderer::Handle<const renderer::Object> addMeshGeoNode(
 }
 
 namespace {
+
+// struct PathPositionalElement
+// {
+//     float pos;
+//     math::Quaternion<float> orientation;
+// };
+//
+// static const std::array<PathPositionalElement, 4> PathInitPosList = {{
+//     {
+//         0.17f,
+//         math::Quaternion(math::UnitVec<3, float>{{1.f, 0.f, 0.f}}, math::Turn<float>{-0.25f}) *
+//             math::Quaternion(math::UnitVec<3, float>{{0.f, 1.f, 0.f}}, math::Turn<float>{0.25f})
+//     },
+//     {
+//         0.17f,
+//         math::Quaternion(math::UnitVec<3, float>{{1.f, 0.f, 0.f}}, math::Turn<float>{-0.25f}) *
+//             math::Quaternion(math::UnitVec<3, float>{{0.f, 1.f, 0.f}}, math::Turn<float>{0.5f})
+//     },
+//     {
+//         -0.25f,
+//         math::Quaternion(math::UnitVec<3, float>{{1.f, 0.f, 0.f}}, math::Turn<float>{0.25f}) *
+//             math::Quaternion(math::UnitVec<3, float>{{0.f, 1.f, 0.f}}, math::Turn<float>{0.f})
+//     },
+//     {
+//         -0.25f,
+//         math::Quaternion(math::UnitVec<3, float>{{1.f, 0.f, 0.f}}, math::Turn<float>{0.25f}) *
+//             math::Quaternion(math::UnitVec<3, float>{{0.f, 1.f, 0.f}}, math::Turn<float>{0.25f})
+//     },
+// }};
+
 void createLevelElement(Phase & aPhase,
                         EntHandle aHandle,
                         GameContext & aContext,
                         const math::Position<2, float> & aGridPos,
-                        HdrColor_f aColor)
+                        HdrColor_f aColor,
+                        EntHandle pillHandle = {})
 {
     Entity path = *aHandle.get(aPhase);
+    // const PathPositionalElement & pos = PathInitPosList.at((int)std::abs(aGridPos.x()) % 2 + (int)std::abs(aGridPos.y()) % 2);
     addMeshGeoNode(
         aContext, path, "models/square_biscuit/square_biscuit.sel",
         gMeshGenericEffect,
         {static_cast<float>(aGridPos.x()), static_cast<float>(aGridPos.y()),
-         gLevelHeight},
+         -0.030f},
         0.45f, lLevelElementScaling,
         math::Quaternion<float>{math::UnitVec<3, float>{{1.f, 0.f, 0.f}},
                                 math::Turn<float>{0.25f}},
         aColor);
-    path.add(component::LevelTile{});
+    path.add(component::LevelTile{.mPill = pillHandle});
 }
 } // namespace
 
@@ -234,13 +269,136 @@ EntHandle createPlayerPowerUp(GameContext & aContext,
     return handle;
 }
 
+constexpr std::size_t gMaxBurgerLoss = 10;
+
+struct TargetList
+{
+    std::array<std::pair<math::Position<3, float>, component::LevelTile *>, gMaxBurgerLoss> mTargets;
+    std::size_t mCount = 0;
+};
+
+static TargetList findBurgerLossTarget(GameContext & aGameContext, EntHandle aLevel, std::size_t mCount)
+{
+    TargetList targets;
+    static ent::Query<component::LevelTile, component::Geometry> mTiles{aGameContext.mWorld};
+    mTiles.each([&targets, &mCount](component::LevelTile & aTile, const component::Geometry & aGeo) {
+        if (!aTile.mPill.isValid() && targets.mCount != mCount)
+        {
+            targets.mTargets.at(targets.mCount++) = std::make_pair(
+                math::Position<3, float>{aGeo.mPosition.x(), aGeo.mPosition.y(), gPillHeight},
+                &aTile
+            );
+        }
+    });
+    return targets;
+}
+
+static EntHandle createBurgerHitbox(GameContext & aContext, std::pair<math::Position<3, float>, component::LevelTile *> & aTarget)
+{
+    math::Position<3, float> aPos = aTarget.first;
+    component::LevelTile * tile = aTarget.second;
+    EntHandle hb = aContext.mWorld.addEntity(fmt::format("burger hb ({}, {})", aPos.x(), aPos.y()));
+    Phase hbPhase;
+    Entity hbEnt = *hb.get(hbPhase);
+    addGeoNode(aContext, hbEnt, aPos);
+    hbEnt.add(component::Collision{component::gBurgerLossHitbox})
+         .add(component::BurgerLossHitbox{.mTile = tile});
+
+    return hb;
+}
+
+static void createBurgerHitboxFromList(GameContext & aContext, TargetList aList, EntHandle aLevel)
+{
+    std::pair<math::Position<3, float>, component::LevelTile *> * target = aList.mTargets.begin();
+    for(;target != aList.mTargets.begin() + aList.mCount; target++)
+    {
+        EntHandle burgerHb = createBurgerHitbox(aContext, *target);
+        insertEntityInScene(burgerHb, aLevel);
+    }
+}
+
+static EntHandle launchBurger(GameContext & aContext, const math::Position<3, float> & aPos, const math::Position<3, float> & aTargetPos)
+{
+    math::Vec<3, float> targetVector = ((aTargetPos - aPos));
+    float targetNorm = targetVector.getNorm();
+    float horizSpeed = targetNorm / gBurgerTimeTotarget;
+    const math::Vec<3, float> launchDir = (targetVector.normalize() * horizSpeed) + (2 * gBurgerHeightLaunch * horizSpeed / (targetNorm / 2)) * math::Vec<3, float>{0.f, 0.f, 1.f};
+    EntHandle burger = aContext.mWorld.addEntity(fmt::format("Burger -> ({}, {})", aTargetPos.x(), aTargetPos.y()));
+    Phase burgerInit;
+    Entity burgerEnt = *burger.get(burgerInit);
+    addMeshGeoNode(
+        aContext,
+        burgerEnt,
+        "models/burger/burger.sel",
+        gMeshGenericEffect,
+        aPos,
+        0.16f);
+    burgerEnt.add(component::Speed{
+        .mSpeed = launchDir,
+        .mRotation =
+            AxisAngle{.mAxis = math::UnitVec<3, float>{{0.f, 0.f, 1.f}},
+                      .mAngle = math::Degree<float>{180.f}},
+        })
+        .add(component::Collision{component::gBurgerLossHitbox})
+        .add(component::BurgerParticle{
+            .mTargetPos = aTargetPos,
+            .mTargetNorm = targetNorm / 2,
+            .mBaseSpeed = horizSpeed,
+        });
+
+    return burger;
+}
+
+static void launchBurgerParticles(GameContext & aContext, const math::Position<3, float> & aPos, TargetList & aList, EntHandle aLevel)
+{
+    std::pair<math::Position<3, float>, component::LevelTile *> * target = aList.mTargets.begin();
+    for(;target != aList.mTargets.begin() + aList.mCount; target++)
+    {
+        EntHandle burger = launchBurger(aContext, aPos, target->first);
+        insertEntityInScene(burger, aLevel);
+    }
+}
+
+void explodePlayer(
+    GameContext & aGameContext,
+    ent::Phase & aPhase,
+    ent::Handle<ent::Entity> aLevelHandle,
+    const snac::Time & aTime,
+    ent::Handle<ent::Entity> aPowerupHandle,
+    const math::Position<3, float> & aExpPos,
+    ExplodedPlayerList & aPlayerList)
+{
+    TIME_SINGLE(Main, "Explode Player");
+    ExplodedPlayer * currentPlayer = aPlayerList.mPlayers.begin();
+    const auto & players = aPlayerList.mPlayers;
+    const std::size_t & count = aPlayerList.playerCount;
+    for (; currentPlayer != players.begin() + count; currentPlayer++)
+    {
+        // TODO: (franz): make hitstun dependent on
+        // powerup type
+        currentPlayer->mRoundData->mInvulFrameCounter =
+            component::gBaseHitStunDuration;
+
+        std::size_t spawnedBurgerParticle = std::min(gMaxBurgerLoss, (std::size_t)(currentPlayer->mRoundData->mRoundScore / 10));
+        TargetList targets = findBurgerLossTarget(aGameContext, aLevelHandle, spawnedBurgerParticle);
+        createBurgerHitboxFromList(aGameContext, targets, aLevelHandle);
+        launchBurgerParticles(aGameContext, currentPlayer->mPosition, targets, aLevelHandle);
+    }
+
+    aPowerupHandle.get(aPhase)->erase();
+    createExplosion(
+        aGameContext, aLevelHandle, aExpPos, aTime);
+
+}
+
 EntHandle createPathEntity(GameContext & aContext,
                            Phase & aPhase,
-                           const math::Position<2, float> & aGridPos)
+                           const math::Position<2, float> & aGridPos,
+                           EntHandle pillHandle)
 {
     auto handle = aContext.mWorld.addEntity(fmt::format("Path ({}, {})", aGridPos.x(), aGridPos.y()));
     createLevelElement(aPhase, handle, aContext, aGridPos,
-                       math::hdr::gWhite<float>);
+                       math::hdr::gWhite<float>, pillHandle);
     return handle;
 }
 
@@ -700,6 +858,7 @@ EntHandle createTargetArrow(GameContext & aContext, const HdrColor_f & aColor)
 }
 
 EntHandle createExplosion(GameContext & aContext,
+                          EntHandle & aLevel,
                           const math::Position<3, float> & aPos,
                           const snac::Time & aTime)
 {
@@ -726,6 +885,10 @@ EntHandle createExplosion(GameContext & aContext,
             })
         ;    
     }
+    insertEntityInScene(explosion, aLevel);
+    system::updateGlobalPosition(
+        snac::getComponent<component::SceneNode>(
+            explosion));
     return explosion;
 }
 

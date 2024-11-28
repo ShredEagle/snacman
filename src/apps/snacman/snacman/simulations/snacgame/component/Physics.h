@@ -1,3 +1,4 @@
+#pragma once
 
 #include "reflexion/NameValuePair.h"
 #include <snacman/serialization/Serial.h>

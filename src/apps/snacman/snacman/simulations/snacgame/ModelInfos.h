@@ -69,11 +69,11 @@ constexpr std::array<ModelInfo,
                      static_cast<unsigned int>(component::PowerUpType::_End)>
     gPlayerPowerupInfoByType{
         ModelInfo{
-            .mPath = "models/dog/dog.sel",
+            .mPath = "models/bomb/Bomb.sel",
             .mProgPath = gMeshGenericEffect,
             .mOrientation =
-                math::Quaternion<float>{0.f, 0.707f, 0.f, 0.707f},
-            .mScaling = 0.03f,
+                math::Quaternion<float>::Identity(),
+            .mScaling = 1.f,
             .mPosOffset = {0.f, -1.f, 0.f},
         },
         ModelInfo{

@@ -115,8 +115,8 @@ LevelManager::createLevel(const component::LevelSetupData & aSetupData)
                     case 'W':
                     {
                         type = component::TileType::Path;
-                        createPathEntity(*mGameContext, createLevel, tilePos);
-                        createPill(*mGameContext, createLevel, tilePos);
+                        ent::Handle<ent::Entity> pill = createPill(*mGameContext, createLevel, tilePos);
+                        createPathEntity(*mGameContext, createLevel, tilePos, pill);
                         break;
                     }
                     case 'O':

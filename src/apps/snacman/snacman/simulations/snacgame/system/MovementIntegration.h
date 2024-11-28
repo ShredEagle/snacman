@@ -1,6 +1,8 @@
 #pragma once
 
+#include "snacman/simulations/snacgame/component/Geometry.h"
 #include "snacman/simulations/snacgame/component/Physics.h"
+#include "snacman/simulations/snacgame/component/Tags.h"
 #include <entity/Query.h>
 
 namespace ad {
@@ -26,6 +28,8 @@ private:
     ent::Query<component::Geometry, component::Speed> mMovables;
     ent::Query<component::MovementScreenSpace, component::PoseScreenSpace>
         mScreenMovables;
+    ent::Query<component::BurgerParticle, component::Speed, component::Geometry>
+        mBurgerParticles;
 };
 
 } // namespace system

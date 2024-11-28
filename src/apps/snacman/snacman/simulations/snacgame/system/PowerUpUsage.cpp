@@ -481,10 +481,11 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
             const Box_f powerupHitbox = component::transformHitbox(
                 aPowerupPose.mPosition, aPowerupCol.mHitbox);
             mPlayers.each(
-                [&aPowerup, powerupHitbox, &aPowerupHandle, &inGameDog, &aGeo,
+                [&aPowerup, powerupHitbox, &aPowerupHandle, &inGameDog,
                  this, &aTime,
                  aLevel](EntHandle aPlayerHandle,
                          const component::GlobalPose & aPlayerPose,
+                         const component::Geometry & aPlayerGeo,
                          const component::Collision & aPlayerCol,
                          component::PlayerRoundData & aPlayerRoundData)
                 {
@@ -495,17 +496,16 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
 
                     if (component::collideWithSat(powerupHitbox, playerHitbox))
                     {
-                        // TODO: (franz): make hitstun dependent on
-                        // powerup type
-                        aPlayerRoundData.mInvulFrameCounter =
-                            component::gBaseHitStunDuration;
-                        aPowerupHandle.get(inGameDog)->erase();
-                        EntHandle explosionHandle = createExplosion(
-                            *mGameContext, aGeo.mPosition, aTime);
-                        insertEntityInScene(explosionHandle, aLevel);
-                        updateGlobalPosition(
-                            snac::getComponent<component::SceneNode>(
-                                explosionHandle));
+                        ExplodedPlayerList list;
+                        list.playerCount = 1;
+                        list.mPlayers.at(0) = ExplodedPlayer{aPlayerGeo.mPosition, &aPlayerRoundData};
+                        explodePlayer(*mGameContext,
+                                      inGameDog,
+                                      aLevel,
+                                      aTime,
+                                      aPowerupHandle,
+                                      aPlayerGeo.mPosition,
+                                      list);
                     }
                 }
             });
@@ -572,10 +572,12 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
             {
                 // Boom boom the missile
                 // Find all player within radius
+                ExplodedPlayerList list;
                 mPlayers.each(
-                    [&aPowerupPose](
+                    [&aPowerupPose, &list](
                         EntHandle aOther,
                         component::PlayerRoundData & aPlayerRoundData,
+                        component::Geometry & aGeo,
                         component::GlobalPose & aPlayerPose)
                     {
                     float distance =
@@ -584,8 +586,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
 
                     if (distance < 2.f * 2.f)
                     {
-                        aPlayerRoundData.mInvulFrameCounter =
-                            component::gBaseHitStunDuration;
+                        list.mPlayers.at(list.playerCount++) = ExplodedPlayer{aGeo.mPosition,
+                                                                            &aPlayerRoundData};
                     }
                 });
 
@@ -594,15 +596,15 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                     std::get<component::InGameMissile>(aPowerup.mInfo);
                 missileInfo.mDamageArea.get(manageMissile)->erase();
                 missileInfo.mModel.get(manageMissile)->erase();
-                aPowerupHandle.get(manageMissile)->erase();
+                explodePlayer(*mGameContext,
+                              manageMissile,
+                              aLevel,
+                              aTime,
+                              aPowerupHandle,
+                              aGeo.mPosition,
+                              list);
                 aOwner.get(manageMissile)
                     ->remove<component::ControllingMissile>();
-
-                EntHandle explosionHandle =
-                    createExplosion(*mGameContext, aGeo.mPosition, aTime);
-                insertEntityInScene(explosionHandle, aLevel);
-                updateGlobalPosition(
-                    snac::getComponent<component::SceneNode>(explosionHandle));
             }
         });
     }

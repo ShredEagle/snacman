@@ -13,6 +13,7 @@
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "snacman/simulations/snacgame/scene/PauseScene.h"
 #include "snacman/simulations/snacgame/scene/PodiumScene.h"
+#include "snacman/simulations/snacgame/system/BurgerLossSystem.h"
 #include "snacman/simulations/snacgame/system/FallingPlayers.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/Timing.h"
@@ -92,6 +93,25 @@ constexpr math::Position<3, float> gGameSceneInitialCameraPos{
     0.f, 0.f, 0.f
 };
 
+struct pcg32_random_t
+{
+    uint64_t state;
+    uint64_t inc;
+};
+
+uint32_t pcg32_random_r(pcg32_random_t* rng)
+{
+    uint64_t oldstate = rng->state;
+    // Advance internal state
+    rng->state = oldstate * 6364136223846793005ULL + (rng->inc|1);
+    // Calculate output function (XSH RR), uses old state for max ILP
+    uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
+    uint32_t rot = oldstate >> 59u;
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+static pcg32_random_t random = {1, 1};
+
 GameScene::GameScene(GameContext & aGameContext,
                      ent::Wrap<component::MappingContext> & aContext) :
     Scene(gGameSceneName, aGameContext, aContext),
@@ -100,7 +120,7 @@ GameScene::GameScene(GameContext & aGameContext,
                    mGameContext.mResources.find(gMarkovRoot).value(),
                    "snaclvl4.xml",
                    {Size3_i{19, 19, 1}},
-                   123123)},
+                   (int)pcg32_random_r(&random))},
     mSceneData{mGameContext.mWorld, "game scene data"},
     mTiles{mGameContext.mWorld},
     mRoundTransients{mGameContext.mWorld},
@@ -126,7 +146,7 @@ GameScene::GameScene(GameContext & aGameContext,
                                          gMeshGenericEffect);
         mGameContext.mResources.getModel("models/portal/portal.sel",
                                          gMeshGenericEffect);
-        mGameContext.mResources.getModel("models/dog/dog.sel",
+        mGameContext.mResources.getModel("models/bomb/Bomb.sel",
                                          gMeshGenericEffect);
         mGameContext.mResources.getModel("models/missile/area.sel",
                                          gMeshGenericEffect);
@@ -193,7 +213,8 @@ void GameScene::onEnter(Transition aTransition)
                 .add(system::Pathfinding{mGameContext})
                 .add(system::Debug_BoundingBoxes{mGameContext})
                 .add(system::FallingPlayersSystem{mGameContext})
-                .add(system::TextZoomSystem{mGameContext});
+                .add(system::TextZoomSystem{mGameContext})
+                .add(system::BurgerLoss{mGameContext});
             break;
     }
 }
@@ -608,6 +629,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         mSystems.get()->get<system::PortalManagement>().postGraphUpdate(level);
         mSystems.get()->get<system::PowerUpUsage>().update(aTime, mLevel);
         mSystems.get()->get<system::EatPill>().update();
+        mSystems.get()->get<system::BurgerLoss>().update(mLevel);
 
         mSystems.get()->get<system::Debug_BoundingBoxes>().update();
 
