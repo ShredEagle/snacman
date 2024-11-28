@@ -713,6 +713,8 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
                     // TODO this multiplication should be done once and
                     // cached but it should be refreshed on framebuffer
                     // resizing.
+                    // TODO Ad 2024/11/15: Actually, there should be a convenient way
+                    // to express position of Screen space objects in [-1, 1]^2 directly.
                     static_cast<math::Position<2, GLfloat>>(
                         this->mAppInterface->getFramebufferSize())
                     / 2.f),

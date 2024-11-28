@@ -54,6 +54,7 @@ class Resources
 public:
     using LoadedFont_t = snacgame::FontAndPart;
 
+    // TODO Ad 2024/11/27: Text: can we move freetype entirely in render thread (or renderer_v2)
     Resources(resource::ResourceFinder aFinder,
               arte::Freetype & aFreetype,
               RenderThread<snacgame::Renderer_t> & aRenderThread) :
@@ -86,6 +87,7 @@ public:
     auto find(const filesystem::path & aPath) const
     { return mFinder.find(aPath); }
 
+    // TODO remove that
     // TODO #decommissionRV1 might become useless once Resources itselfs become the Load<> implementer
     snac::TechniqueLoader getTechniqueLoader() const
     { return {mFinder}; }
