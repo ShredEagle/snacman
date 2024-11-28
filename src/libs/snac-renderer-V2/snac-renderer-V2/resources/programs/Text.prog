@@ -1,5 +1,5 @@
 {
-    "defines": ["SMOOTH_TEXT", "OUTLINE_TEXT"],
+    "defines": ["SMOOTH_TEXT"],
     "vertex": "shaders/Text.vert",
     "fragment": "shaders/Text.frag"
 }

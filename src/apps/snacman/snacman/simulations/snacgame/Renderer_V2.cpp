@@ -551,7 +551,10 @@ void SnacGraph::renderDebugFrame(const snac::DebugDrawer::DrawList & aDrawList,
 
 
 template <class T_textContainer>
-void SnacGraph::passText(const T_textContainer & aTexts, renderer::Storage & aStorage)
+void SnacGraph::passText(
+    const T_textContainer & aTexts,
+    renderer::Storage & aStorage,
+    renderer::AnnotationsSelector aAnnotations)
 {
     std::unordered_map<const FontAndPart *, std::vector<const visu_V2::Text *>> partToTexts;
 
@@ -602,7 +605,7 @@ void SnacGraph::passText(const T_textContainer & aTexts, renderer::Storage & aSt
                               graphics::BufferHint::StreamDraw);
         const GLsizei glyphCount = (GLsizei)allGlyphInstances.size();
 
-        renderer::Handle<renderer::ConfiguredProgram> textProgram = getProgram(*glyphPart.mMaterial.mEffect, {});
+        renderer::Handle<renderer::ConfiguredProgram> textProgram = getProgram(*glyphPart.mMaterial.mEffect, aAnnotations);
         renderer::Handle<graphics::VertexArrayObject> vao = getVao(*textProgram, glyphPart, aStorage);
         graphics::ScopedBind vaoScope{*vao};
         graphics::ScopedBind programScope{textProgram->mProgram};
@@ -660,7 +663,10 @@ void SnacGraph::renderTexts(const visu_V2::GraphicState & aState,
             }
         );
 
-        passText(aState.mTextScreenEntities, aStorage);
+        std::array<renderer::Technique::Annotation, 1> annotations{{
+            {"outline", "on"}
+        }};
+        passText(aState.mTextScreenEntities, aStorage, annotations);
     }
 }
 

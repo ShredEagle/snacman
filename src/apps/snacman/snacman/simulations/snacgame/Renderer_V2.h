@@ -172,7 +172,9 @@ struct SnacGraph
                           math::Size<2, int> aFramebufferSize);
 
     template <class T_textContainer>
-    void passText(const T_textContainer & aTexts, renderer::Storage & aStorage);
+    void passText(const T_textContainer & aTexts,
+                  renderer::Storage & aStorage,
+                  renderer::AnnotationsSelector aAnnotations = {});
 
     void passDepth(SnacGraph::PartList aPartList,
                    renderer::RepositoryTexture aTextureRepository,

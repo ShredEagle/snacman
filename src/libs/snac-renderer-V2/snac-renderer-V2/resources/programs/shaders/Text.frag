@@ -17,7 +17,7 @@ const float gBorderCutoff = 0.5;
 
 #if defined(OUTLINE_TEXT)
 // half of the solid(core) outline width, in fragment unit
-const float halfOutline_fragment = 1.2; 
+const float halfOutline_fragment = 0.8; 
 const vec3 OUTLINE_COLOR = vec3(0.);
 #endif //OUTLINE_TEXT
 
