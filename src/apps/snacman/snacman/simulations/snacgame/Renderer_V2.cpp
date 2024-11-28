@@ -565,7 +565,9 @@ void SnacGraph::passText(
     }
 
     // Treat each font (so, each Part) separately
-    for(const auto [fontAndPart, texts] : partToTexts)
+    // Note: I do not think the reference is useful here (what we copy are pointers...)
+    // But GCC and Clang issue warnings, so let's appease them.
+    for(const auto & [fontAndPart, texts] : partToTexts)
     {
         const renderer::TextPart & glyphPart = fontAndPart->mPart;
 
