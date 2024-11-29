@@ -19,7 +19,8 @@ GameContext::GameContext(snac::Resources aResources, snac::RenderThread<Renderer
     mSceneStack{mWorld, "scene stack"},
     mSceneRoot{mWorld.addEntity("SceneRoot")},
     mSlotManager(this),
-    mAppInterface{aAppInterface}
+    mAppInterface{aAppInterface},
+    mRandom{(uint64_t)snac::Clock::now().time_since_epoch().count(), 1}
 {
     ent::Phase addSceneNodeToSceneRoot;
     ent::Entity sceneRoot = *mSceneRoot.get(addSceneNodeToSceneRoot);

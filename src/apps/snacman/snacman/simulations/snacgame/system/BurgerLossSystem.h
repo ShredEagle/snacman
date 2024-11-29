@@ -1,5 +1,6 @@
 #pragma once
 
+#include "snacman/Timing.h"
 #include "snacman/simulations/snacgame/component/Collision.h"
 #include "snacman/simulations/snacgame/component/GlobalPose.h"
 #include "snacman/simulations/snacgame/component/Physics.h"
@@ -15,7 +16,7 @@ class BurgerLoss
 public:
     BurgerLoss(GameContext & aGameContext);
 
-    void update(ent::Handle<ent::Entity> aLevel);
+    void update(ent::Handle<ent::Entity> aLevel, const snac::Time & aTime);
 
 private:
     ent::Query<component::BurgerLossHitbox, component::Collision, component::GlobalPose>

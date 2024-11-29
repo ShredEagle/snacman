@@ -41,7 +41,7 @@ void MovementIntegration::update(float aDelta)
         aSpeed.mSpeed = aSpeed.mSpeed
                         + math::Vec<3, float>{
                             0.f, 0.f,
-                            -2.f * gBurgerHeightLaunch * aBurger.mBaseSpeed
+                            -2.f * aBurger.mTargetHeight * aBurger.mBaseSpeed
                                 * aBurger.mBaseSpeed * aDelta
                                 / (aBurger.mTargetNorm * aBurger.mTargetNorm)};
     });
