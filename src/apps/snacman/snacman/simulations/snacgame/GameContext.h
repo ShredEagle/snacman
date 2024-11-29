@@ -51,8 +51,8 @@ inline uint32_t snac_random(pcg32_random_t* rng)
     rng->state = oldstate * 6364136223846793005ULL + (rng->inc|1);
     // Calculate output function (XSH RR), uses old state for max ILP
     uint32_t xorshifted = (uint32_t)((oldstate >> 18u) ^ oldstate) >> 27u;
-    uint32_t rot = oldstate >> 59u;
-    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+    int32_t rot = (int32_t)(oldstate >> 59u);
+    return (xorshifted >> (uint32_t)rot) | (xorshifted << (uint32_t)((-rot) & 31));
 }
 
 // Produce a random bounded integer number
@@ -64,7 +64,7 @@ inline uint32_t snac_random_bounded(pcg32_random_t* rng, uint32_t bound)
 // Produce a random float number between 0 and 1
 inline float snac_random_float(pcg32_random_t* rng)
 {
-    return ldexp(snac_random(rng), -32);
+    return (float)ldexp((double)snac_random(rng), -32);
 }
 
 // Produce a random float number between 0 and bound
