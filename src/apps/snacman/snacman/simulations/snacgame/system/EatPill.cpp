@@ -65,7 +65,7 @@ void EatPill::update(GameContext & aGameContext)
 
         const component::PlayerSlot & slot = aRoundData.mSlot.get()->get<component::PlayerSlot>();
 
-        mPills.each([this, &eatPillUpdate, &playerHitbox, &aRoundData, &aGameContext, &slot]
+        mPills.each([this, &eatPillUpdate, &playerHitbox, &aRoundData, &slot]
                     (ent::Handle<ent::Entity> aHandle,
                      const component::GlobalPose & aPillGeo,
                      const component::Collision & aPillCol) 
