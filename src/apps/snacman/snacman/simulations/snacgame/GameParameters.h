@@ -17,7 +17,7 @@ constexpr const char * gGameSceneName = "Game";
 constexpr const char * gJoinGameSceneName = "JoinGame";
 
 constexpr math::Spherical<float> gInitialCameraSpherical{
-    20.f,
+    25.f,
     math::Turn<float>{0.075f},
     math::Turn<float>{0.f}
 };
