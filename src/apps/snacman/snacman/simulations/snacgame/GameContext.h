@@ -50,7 +50,7 @@ inline uint32_t snac_random(pcg32_random_t* rng)
     // Advance internal state
     rng->state = oldstate * 6364136223846793005ULL + (rng->inc|1);
     // Calculate output function (XSH RR), uses old state for max ILP
-    uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
+    uint32_t xorshifted = (uint32_t)((oldstate >> 18u) ^ oldstate) >> 27u;
     uint32_t rot = oldstate >> 59u;
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
 }
