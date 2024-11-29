@@ -35,8 +35,7 @@ private:
     ent::Query<component::PlayerHud>
         mHuds;
 
-    sounds::Handle<sounds::SoundCue> mEatSoundCue;
-    sounds::Handle<sounds::PlayingSoundCue> mPlayingEatSoundCue;
+    Sfx mEatSound;
 };
 
 } // namespace system

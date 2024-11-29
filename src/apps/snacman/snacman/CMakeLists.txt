@@ -141,6 +141,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/Renderer_V1.cpp
     simulations/snacgame/Renderer_V2.cpp
     simulations/snacgame/SnacGame.cpp
+    simulations/snacgame/Sound.cpp
     simulations/snacgame/SimulationControl.cpp
     simulations/snacgame/SceneGraph.cpp
 
