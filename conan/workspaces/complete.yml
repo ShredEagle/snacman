@@ -11,7 +11,7 @@ editables:
         path: ../../../math/conan
     reflexion/ea47c1e3f1@adnn/develop:
         path: ../../../reflexion/conan
-    sounds/35518053ea@adnn/develop:
+    sounds/011db93ccf@adnn/develop:
         path: ../../../sounds/conan
     snacman/local:
         path: ../../conan
