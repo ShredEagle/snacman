@@ -12,6 +12,7 @@
 #include "snacman/simulations/snacgame/scene/MenuScene.h"
 #include "snacman/simulations/snacgame/scene/PauseScene.h"
 #include "snacman/simulations/snacgame/scene/PodiumScene.h"
+#include "snacman/simulations/snacgame/system/BurgerLossSystem.h"
 #include "snacman/simulations/snacgame/system/FallingPlayers.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/Timing.h"
@@ -99,7 +100,7 @@ GameScene::GameScene(GameContext & aGameContext,
                    mGameContext.mResources.find(gMarkovRoot).value(),
                    "snaclvl4.xml",
                    {Size3_i{19, 19, 1}},
-                   123123)},
+                   (int)snac_random(&mGameContext.mRandom))},
     mSceneData{mGameContext.mWorld, "game scene data"},
     mTiles{mGameContext.mWorld},
     mRoundTransients{mGameContext.mWorld},
@@ -125,7 +126,7 @@ GameScene::GameScene(GameContext & aGameContext,
                                          gMeshGenericEffect);
         mGameContext.mResources.getModel("models/portal/portal.sel",
                                          gMeshGenericEffect);
-        mGameContext.mResources.getModel("models/dog/dog.sel",
+        mGameContext.mResources.getModel("models/bomb/Bomb.sel",
                                          gMeshGenericEffect);
         mGameContext.mResources.getModel("models/missile/area.sel",
                                          gMeshGenericEffect);
@@ -192,7 +193,8 @@ void GameScene::onEnter(Transition aTransition)
                 .add(system::Pathfinding{mGameContext})
                 .add(system::Debug_BoundingBoxes{mGameContext})
                 .add(system::FallingPlayersSystem{mGameContext})
-                .add(system::TextZoomSystem{mGameContext});
+                .add(system::TextZoomSystem{mGameContext})
+                .add(system::BurgerLoss{mGameContext});
             break;
     }
 }
@@ -607,6 +609,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
         mSystems.get()->get<system::PortalManagement>().postGraphUpdate(level);
         mSystems.get()->get<system::PowerUpUsage>().update(aTime, mLevel);
         mSystems.get()->get<system::EatPill>().update(mGameContext);
+        mSystems.get()->get<system::BurgerLoss>().update(mLevel, aTime);
 
         mSystems.get()->get<system::Debug_BoundingBoxes>().update();
 

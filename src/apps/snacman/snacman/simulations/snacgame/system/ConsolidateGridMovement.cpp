@@ -76,14 +76,14 @@ void ConsolidateGridMovement::update(float aDelta)
                     aGeometry.mPosition +=
                         Vec3{displacement.x(), displacement.y(), 0.f};
 
-                    math::Angle<float> dirAngle{
+                    math::Radian<float> dirAngle{
                         (float) getOrientedAngle(Vec2{0.f, 1.f}, -displacement)
                             .value()};
                     /* aGeometry.mOrientation = */
                     /*     Quat_f{UnitVec3{Vec3{0.f, 1.f, 0.f}}, dirAngle}; */
                     aGeometry.mOrientation =
                         Quat_f{UnitVec3{Vec3{1.f, 0.f, 0.f}}, Turn_f{0.25f}}
-                        * Quat_f{UnitVec3{Vec3{0.f, 1.f, 0.f}}, dirAngle};
+                         * Quat_f{UnitVec3{Vec3{0.f, 1.f, 0.f}}, dirAngle - math::Turn<float>{0.25f}};
                     DBGDRAW_DEBUG(snac::gHitboxDrawer)
                         .addBasis({.mPosition = aPose.mPosition,
                                    .mOrientation = aPose.mOrientation});

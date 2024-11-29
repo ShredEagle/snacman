@@ -34,6 +34,9 @@ constexpr const math::Box<float> gPillHitbox{{-0.2f, -0.2f, -0.2f},
 constexpr const math::Box<float> gPowerUpHitbox{{-0.35f, -0.35f, -0.35f},
                                                {0.7f, 0.7f, 0.7f}};
 
+constexpr const math::Box<float> gBurgerLossHitbox{{-0.1f, -0.1f, -0.1f},
+                                               {0.2f, 0.2f, 0.2f}};
+
 inline math::Box<float> transformHitbox(const math::Position<3, float> & aPos, const math::Box<float> & aBox)
 {
     const math::Vec<3, float> & worldPos = aPos.as<math::Vec>();

@@ -3,6 +3,7 @@
 #include "GameParameters.h"
 #include "Handle_V2.h"
 #include "component/PowerUp.h"
+#include "snacman/simulations/snacgame/component/PlayerRoundData.h"
 
 #include <snacman/Timing.h>
 
@@ -43,6 +44,10 @@ struct Transition;
 
 struct GameContext;
 
+constexpr float gBurgerBaseSpeed = 70.f;
+constexpr float gBurgerHeightLaunch = 10.f;
+constexpr float gBurgerTimeTotarget = 1.f;
+
 //Scene graph component utils
 void addGeoNode(
     GameContext & aContext,
@@ -71,7 +76,8 @@ ent::Handle<ent::Entity> createPill(GameContext & aContext,
 ent::Handle<ent::Entity>
 createPathEntity(GameContext & aContext,
                  ent::Phase & aPhase,
-                 const math::Position<2, float> & aPos);
+                 const math::Position<2, float> & aPos,
+                 ent::Handle<ent::Entity> aPill = {});
 ent::Handle<ent::Entity>
 createCopPenEntity(GameContext & aContext,
                    const math::Position<2, float> & aPos);
@@ -148,8 +154,33 @@ ent::Handle<ent::Entity> createPowerUp(GameContext & aContext,
 ent::Handle<ent::Entity>
 createPlayerPowerUp(GameContext & aContext, const component::PowerUpType aType);
 
+struct ExplodedPlayer {
+    math::Position<3, float> mPosition;
+    component::PlayerRoundData * mRoundData;
+};
+
+struct ExplodedPlayerList {
+    std::array<ExplodedPlayer, 4> mPlayers;
+    std::size_t playerCount = 0;
+
+    ExplodedPlayer * begin()
+    {
+        return &(*mPlayers.begin());
+    }
+};
+
+void explodePlayer(
+    GameContext & aGameContext,
+    ent::Phase & aPhase,
+    ent::Handle<ent::Entity> aLevelHandle,
+    const snac::Time & aTime,
+    ent::Handle<ent::Entity> aPowerupHandle,
+    const math::Position<3, float> & aExpPos,
+    ExplodedPlayerList & aPlayerList);
+
 ent::Handle<ent::Entity>
 createExplosion(GameContext & aContext,
+                ent::Handle<ent::Entity> & aLevel,
                 const math::Position<3, float> & aPosition,
                 const snac::Time & aTime);
 
