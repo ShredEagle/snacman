@@ -23,6 +23,16 @@ Sfx::Sfx(const filesystem::path & aRelativePath, GameContext & aGameContext) :
         );
 }
 
+Sfx::~Sfx()
+{
+    // TODO Ad 2024/11/29: We should not have to manually destroy sounds, this is a temporary workaround
+    if(mPlayingSoundCue.mHandleIndex != -1)
+    {
+        mGameContext->mSoundManager.stopSound(mPlayingSoundCue);
+    }
+}
+
+
 void Sfx::play()
 {
     // TODO Ad 2024/11/29: #sound This is very bad, should be done automatically by soundmanager

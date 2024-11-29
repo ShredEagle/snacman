@@ -35,7 +35,7 @@ private:
     ent::Query<component::PlayerHud>
         mHuds;
 
-    Sfx mEatSound;
+    std::array<Sfx, 4> mEatSoundPerSlot;
 };
 
 } // namespace system

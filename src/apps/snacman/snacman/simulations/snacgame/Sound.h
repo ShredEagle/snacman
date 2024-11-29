@@ -20,6 +20,7 @@ enum SoundCategory : int
 struct Sfx
 {
     Sfx(const filesystem::path & aRelativePath, GameContext & aGameContext);
+    ~Sfx();
 
     void play();
 
