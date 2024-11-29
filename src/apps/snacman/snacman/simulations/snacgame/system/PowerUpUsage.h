@@ -68,6 +68,8 @@ private:
     Sfx mExplosionSound;
     Sfx mSwapSound;
     Sfx mHomingLaunchSound;
+    std::array<Sfx, 2> mHurtPlayerSound;
+    std::size_t mHurtIdx = 0;
 };
 
 } // namespace system

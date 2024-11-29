@@ -49,9 +49,13 @@ PowerUpUsage::PowerUpUsage(GameContext & aGameContext) :
     mPowerups{mGameContext->mWorld},
     mInGameDogPowerups(mGameContext->mWorld),
     mInGameMissilePowerups(mGameContext->mWorld),
-    mExplosionSound{"audio/sfx/boom-1.ogg", aGameContext},
+    mExplosionSound{"audio/sfx/boom-2.ogg", aGameContext},
     mSwapSound{"audio/sfx/zwip-1.ogg", aGameContext},
-    mHomingLaunchSound{"audio/sfx/waf-1.ogg", aGameContext}
+    mHomingLaunchSound{"audio/sfx/waf-1.ogg", aGameContext},
+    mHurtPlayerSound{{
+        {"audio/sfx/ailleu-1.ogg", aGameContext},
+        {"audio/sfx/ailleu-2.ogg", aGameContext},
+    }}
 {}
 
 void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
@@ -513,7 +517,10 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                                       aPowerupHandle,
                                       aPlayerGeo.mPosition,
                                       list);
+
                         mExplosionSound.play();
+                        mHurtIdx = (mHurtIdx + 1) % mHurtPlayerSound.size();
+                        mHurtPlayerSound[mHurtIdx].play();
                     }
                 }
             });
@@ -614,6 +621,11 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 aOwner.get(manageMissile)
                     ->remove<component::ControllingMissile>();
                 mExplosionSound.play();
+                if(list.playerCount != 0)
+                {
+                    mHurtIdx = (mHurtIdx + 1) % mHurtPlayerSound.size();
+                    mHurtPlayerSound[mHurtIdx].play();
+                }
             }
         });
     }
