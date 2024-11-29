@@ -25,6 +25,12 @@ Sfx::Sfx(const filesystem::path & aRelativePath, GameContext & aGameContext) :
 
 void Sfx::play()
 {
+    // TODO Ad 2024/11/29: #sound This is very bad, should be done automatically by soundmanager
+    // only when sound is DONE playing!
+    if(mPlayingSoundCue.mHandleIndex != -1)
+    {
+        mGameContext->mSoundManager.stopSound(mPlayingSoundCue);
+    }
     mPlayingSoundCue = mGameContext->mSoundManager.playSound(mSoundCue);
 }
  
