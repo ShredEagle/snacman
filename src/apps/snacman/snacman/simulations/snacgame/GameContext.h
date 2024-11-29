@@ -8,6 +8,7 @@
 #include "graphics/AppInterface.h"
 #include "handy/Guard.h"
 #include "snacman/EntityUtilities.h"
+#include "snacman/Logging.h"
 #include "snacman/Timing.h"
 
 #include <cmath>
@@ -65,7 +66,8 @@ inline uint32_t snac_random_bounded(pcg32_random_t* rng, uint32_t bound)
 // Produce a random float number between 0 and 1
 inline float snac_random_float(pcg32_random_t* rng)
 {
-    return (float)ldexp((double)snac_random(rng), -32);
+    float result = (float)ldexp((double)snac_random(rng), -32);
+    return result;
 }
 
 // Produce a random float number between 0 and bound

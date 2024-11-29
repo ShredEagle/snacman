@@ -64,7 +64,7 @@ void BurgerLoss::update(ent::Handle<ent::Entity> aLevel, const snac::Time & aTim
             bool notDone = std::find(usedTiles.begin(), usedTiles.end(), tileHandle) == usedTiles.end() &&
                                std::find(usedTiles.begin(), usedTiles.end(), aHandleParticle) == usedTiles.end();
             if ((collide ||
-                duration > gBurgerTimeTotarget) &&
+                duration > (2 * aParticle.mTargetNorm / aParticle.mBaseSpeed)) &&
                 notDone)
             {
                 if (tileHandle.isValid())

@@ -299,12 +299,14 @@ struct TargetList
     }
 };
 
-static TargetList findBurgerLossTarget(GameContext & aGameContext, EntHandle aLevel, std::size_t mCount)
+constexpr float gMaxExplosionLossDistance = 5.f;
+
+static TargetList findBurgerLossTarget(GameContext & aGameContext, math::Position<3, float> mOrigin, EntHandle aLevel, std::size_t mCount)
 {
     TargetList targets;
     static ent::Query<component::LevelTile, component::Geometry> mTiles{aGameContext.mWorld};
-    mTiles.each([&targets, &mCount](EntHandle aTileHandle, component::LevelTile & aTile, const component::Geometry & aGeo) {
-        if (!aTile.mPill.isValid() && targets.mCount != mCount)
+    mTiles.each([&targets, &mCount, &mOrigin](EntHandle aTileHandle, component::LevelTile & aTile, const component::Geometry & aGeo) {
+        if (!aTile.mPill.isValid() && targets.mCount != mCount && (mOrigin - aGeo.mPosition).getNorm() < gMaxExplosionLossDistance)
         {
             targets.mTargets.at(targets.mCount++) = TargetPair{
                 math::Position<3, float>{aGeo.mPosition.x(), aGeo.mPosition.y(), gPillHeight},
@@ -346,11 +348,10 @@ static EntHandle launchBurger(GameContext & aContext,
 {
     math::Vec<3, float> targetVector = ((aTargetPos - aPos));
     float targetNorm = targetVector.getNorm();
-    float horizSpeed = snac_random_float_centered(
-        &aContext.mRandom,
-        targetNorm / gBurgerTimeTotarget);
+    float gBurgerTimeTotarget = 1.f + (snac_random_float(&aContext.mRandom) - 0.5f) * 0.2f;
+    float horizSpeed = targetNorm / gBurgerTimeTotarget;
+    SELOG(info)("horizSpeed: {}", horizSpeed);
     float targetHeight = snac_random_float_centered_bounded(&aContext.mRandom, gBurgerHeightLaunch, 1.f);
-    SELOG(info)("Target Height: {}", targetHeight);
     const math::Vec<3, float> launchDir = (targetVector.normalize() * horizSpeed) + (2 * targetHeight * horizSpeed / (targetNorm / 2)) * math::Vec<3, float>{0.f, 0.f, 1.f};
     EntHandle burger = aContext.mWorld.addEntity(fmt::format("Burger -> ({}, {})", aTargetPos.x(), aTargetPos.y()));
     Phase burgerInit;
@@ -414,7 +415,7 @@ void explodePlayer(
             component::gBaseHitStunDuration;
 
         std::size_t spawnedBurgerParticle = std::min(gMaxBurgerLoss, (std::size_t)(currentPlayer->mRoundData->mRoundScore / 10));
-        TargetList targets = findBurgerLossTarget(aGameContext, aLevelHandle, spawnedBurgerParticle);
+        TargetList targets = findBurgerLossTarget(aGameContext, currentPlayer->mPosition, aLevelHandle, spawnedBurgerParticle);
         createBurgerHitboxFromList(aGameContext, targets, aLevelHandle);
         launchBurgerParticles(aGameContext, currentPlayer->mPosition, targets, aLevelHandle, aTime);
     }
