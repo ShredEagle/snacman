@@ -2,6 +2,9 @@
 
 #include <entity/Query.h>
 
+#include "../Sound.h"
+
+
 namespace ad {
 namespace snacgame {
 struct GameContext;
@@ -31,6 +34,9 @@ private:
         mPills;
     ent::Query<component::PlayerHud>
         mHuds;
+
+    sounds::Handle<sounds::SoundCue> mEatSoundCue;
+    sounds::Handle<sounds::PlayingSoundCue> mPlayingEatSoundCue;
 };
 
 } // namespace system

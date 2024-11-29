@@ -34,7 +34,19 @@ EatPill::EatPill(GameContext & aGameContext) :
     mPlayers{aGameContext.mWorld},
     mPills{aGameContext.mWorld},
     mHuds{aGameContext.mWorld}
-{}
+{
+    sounds::SoundManager & soundManager = aGameContext.mSoundManager;
+    handy::StringId eatSound =
+        soundManager.createData(*aGameContext.mResources.find("audio/crunch-1.ogg"));
+    mEatSoundCue = 
+        soundManager.createSoundCue(
+            {
+                {eatSound, {/*loop*/0}},
+            },
+            SoundCategory_SFX,
+            ad::sounds::HIGHEST_PRIORITY
+        );
+}
 
 
 void EatPill::update(GameContext & aGameContext)
@@ -57,7 +69,7 @@ void EatPill::update(GameContext & aGameContext)
             playerHitbox
         );
 
-        mPills.each([&eatPillUpdate, &playerHitbox, &aRoundData]
+        mPills.each([this, &eatPillUpdate, &playerHitbox, &aRoundData, &aGameContext]
                     (ent::Handle<ent::Entity> aHandle,
                      const component::GlobalPose & aPillGeo,
                      const component::Collision & aPillCol) 
@@ -67,6 +79,11 @@ void EatPill::update(GameContext & aGameContext)
 
             if (component::collideWithSat(pillHitbox, playerHitbox) && aRoundData.mInvulFrameCounter <= 0.f)
             {
+                if(mPlayingEatSoundCue.mHandleIndex != -1)
+                {
+                    aGameContext.mSoundManager.stopSound(mPlayingEatSoundCue);
+                }
+                mPlayingEatSoundCue = aGameContext.mSoundManager.playSound(mEatSoundCue);
                 aHandle.get(eatPillUpdate)->erase();
                 aRoundData.mRoundScore += gPointPerPill;
 
