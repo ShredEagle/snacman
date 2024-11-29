@@ -282,6 +282,11 @@ struct TargetList
 {
     std::array<TargetPair, gMaxBurgerLoss> mTargets;
     std::size_t mCount = 0;
+
+    TargetPair * begin()
+    {
+        return &(*mTargets.begin());
+    }
 };
 
 static TargetList findBurgerLossTarget(GameContext & aGameContext, EntHandle aLevel, std::size_t mCount)
@@ -316,8 +321,8 @@ static EntHandle createBurgerHitbox(GameContext & aContext, TargetPair & aTarget
 
 static void createBurgerHitboxFromList(GameContext & aContext, TargetList aList, EntHandle aLevel)
 {
-    TargetPair * target = &(*aList.mTargets.begin());
-    for(;target != aList.mTargets.begin() + aList.mCount; target++)
+    TargetPair * target = aList.begin();
+    for(;target != aList.begin() + aList.mCount; target++)
     {
         EntHandle burgerHb = createBurgerHitbox(aContext, *target);
         insertEntityInScene(burgerHb, aLevel);
@@ -371,8 +376,8 @@ static void launchBurgerParticles(GameContext & aContext,
                                   EntHandle aLevel,
                                   const snac::Time & aTime)
 {
-    TargetPair * target = &(*aList.mTargets.begin());
-    for(;target != aList.mTargets.begin() + aList.mCount; target++)
+    TargetPair * target = aList.begin();
+    for(;target != aList.begin() + aList.mCount; target++)
     {
         EntHandle burger = launchBurger(aContext, aPos, target->first, aTime);
         insertEntityInScene(burger, aLevel);
@@ -389,10 +394,9 @@ void explodePlayer(
     ExplodedPlayerList & aPlayerList)
 {
     TIME_SINGLE(Main, "Explode Player");
-    ExplodedPlayer * currentPlayer = &(*aPlayerList.mPlayers.begin());
-    const auto & players = aPlayerList.mPlayers;
+    ExplodedPlayer * currentPlayer = aPlayerList.begin();
     const std::size_t & count = aPlayerList.playerCount;
-    for (; currentPlayer != players.begin() + count; currentPlayer++)
+    for (; currentPlayer != aPlayerList.begin() + count; currentPlayer++)
     {
         // TODO: (franz): make hitstun dependent on
         // powerup type

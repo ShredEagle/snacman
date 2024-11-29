@@ -159,6 +159,11 @@ struct ExplodedPlayer {
 struct ExplodedPlayerList {
     std::array<ExplodedPlayer, 4> mPlayers;
     std::size_t playerCount = 0;
+
+    ExplodedPlayer * begin()
+    {
+        return &(*mPlayers.begin());
+    }
 };
 
 void explodePlayer(
