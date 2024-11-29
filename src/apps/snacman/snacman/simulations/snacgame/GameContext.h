@@ -3,6 +3,7 @@
 #include "GameParameters.h"
 #include "SimulationControl.h"
 #include "PlayerSlotManager.h"
+#include "Sound.h"
 
 #include "graphics/AppInterface.h"
 #include "handy/Guard.h"
@@ -47,6 +48,8 @@ struct GameContext
     ent::Handle<ent::Entity> mSceneRoot;
     PlayerSlotManager mSlotManager;
     const graphics::AppInterface & mAppInterface;
+
+    sounds::SoundManager mSoundManager{{SoundCategory_SFX, SoundCategory_Music}};
 };
 
 } // namespace snacgame

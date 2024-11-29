@@ -32,6 +32,7 @@ public:
         {
             ent::Phase destroy;
             mStageDecor.get(destroy)->erase();
+            mGameContext.mSoundManager.stopSound(mPlayingMusicCue);
         }
     }
 
@@ -41,11 +42,30 @@ public:
         {
             mGameContext.mSceneStack->popScene(aTransition);
         }
+
+        if (aTransition.mTransitionType == TransType::FirstLaunch)
+        {
+            sounds::SoundManager & soundManager = mGameContext.mSoundManager;
+            handy::StringId music = soundManager.createStreamedOggData(
+                *mGameContext.mResources.find("audio/music/Snacman-Level-V1.ogg"));
+
+            sounds::Handle<ad::sounds::SoundCue> musicCue = 
+                soundManager.createSoundCue(
+                    {
+                        {music, {/*loop*/-1}},
+                    },
+                    SoundCategory_Music,
+                    ad::sounds::HIGHEST_PRIORITY
+                );
+
+            mPlayingMusicCue = soundManager.playSound(musicCue);
+        }
     }
 
     void update(const snac::Time & aTime, RawInput & aInput) override {}
 
     ent::Handle<ent::Entity> mStageDecor;
+    sounds::Handle<ad::sounds::PlayingSoundCue> mPlayingMusicCue;
 };
 } // namespace scene
 } // namespace snacgame

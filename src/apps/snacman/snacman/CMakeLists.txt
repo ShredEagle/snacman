@@ -45,6 +45,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/Renderer_V2.h
     simulations/snacgame/SceneGraph.h
     simulations/snacgame/SnacGame.h
+    simulations/snacgame/Sound.h
     simulations/snacgame/SimulationControl.h
     simulations/snacgame/typedef.h
 
