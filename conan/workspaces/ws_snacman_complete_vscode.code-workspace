@@ -23,6 +23,9 @@
 		{
 			"name": "snacman",
 			"path": "../.."
+		},
+		{
+			"path": "../../../sounds"
 		}
 	],
 	"settings": {
