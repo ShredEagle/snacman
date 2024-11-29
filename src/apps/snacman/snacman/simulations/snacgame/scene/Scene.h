@@ -118,21 +118,23 @@ struct DisconnectedControllerInfo
 };
 
 enum class TransType {
-    MenuFromPause,          // 0
-    JoinGameFromMenu,       // 1
-    JoinGameFromPodium,     // 2
-    JoinGameFromPause,      // 3
-    GameFromJoinGame,       // 4
-    GameFromPodium,         // 5
-    GameFromPause,          // 6
-    GameFromDiscWithKick,   // 7
-    GameFromDiscWitoutKick, // 8
-    PauseFromGame,          // 9
-    PodiumFromGame,         // 10
-    QuitAll,                // 11
-    QuitToMenu,             // 12
-    DisconnectedFromGame,   // 13
-    Count,                  // 14
+    _NoTransition,          // 0
+    FirstLaunch,            // 1
+    MenuFromPause,          // 2
+    JoinGameFromMenu,       // 3
+    JoinGameFromPodium,     // 4
+    JoinGameFromPause,      // 5
+    GameFromJoinGame,       // 6
+    GameFromPodium,         // 7
+    GameFromPause,          // 8
+    GameFromDiscWithKick,   // 9
+    GameFromDiscWitoutKick, // 10
+    PauseFromGame,          // 11
+    PodiumFromGame,         // 12
+    QuitAll,                // 13
+    QuitToMenu,             // 14
+    DisconnectedFromGame,   // 15
+    Count,                  // 16
 };
 
 struct Transition

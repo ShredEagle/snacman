@@ -121,7 +121,8 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
 
     mGameContext.mSceneStack->pushScene(
         std::make_shared<scene::StageDecorScene>(mGameContext,
-                                                 mMappingContext));
+                                                 mMappingContext),
+        {.mTransitionType = snacgame::scene::TransType::FirstLaunch});
     mGameContext.mSceneStack->pushScene(
         std::make_shared<scene::MenuScene>(mGameContext, mMappingContext));
 
@@ -481,6 +482,8 @@ bool SnacGame::update(snac::Clock::duration & aUpdatePeriod, RawInput & aInput)
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 mSimulationTime.mDeltaDuration));
     }
+
+    mGameContext.mSoundManager.update();
 
     return false;
 }

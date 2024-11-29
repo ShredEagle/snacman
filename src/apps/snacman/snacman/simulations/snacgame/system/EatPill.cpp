@@ -33,7 +33,13 @@ namespace system {
 EatPill::EatPill(GameContext & aGameContext) :
     mPlayers{aGameContext.mWorld},
     mPills{aGameContext.mWorld},
-    mHuds{aGameContext.mWorld}
+    mHuds{aGameContext.mWorld},
+    mEatSoundPerSlot{{
+        {"audio/sfx/crunch-1.ogg", aGameContext},
+        {"audio/sfx/slurp-1.ogg", aGameContext},
+        {"audio/sfx/nom-1.ogg", aGameContext},
+        {"audio/sfx/miam-1.ogg", aGameContext},
+    }}
 {}
 
 
@@ -57,7 +63,9 @@ void EatPill::update(GameContext & aGameContext)
             playerHitbox
         );
 
-        mPills.each([&eatPillUpdate, &playerHitbox, &aRoundData]
+        const component::PlayerSlot & slot = aRoundData.mSlot.get()->get<component::PlayerSlot>();
+
+        mPills.each([this, &eatPillUpdate, &playerHitbox, &aRoundData, &slot]
                     (ent::Handle<ent::Entity> aHandle,
                      const component::GlobalPose & aPillGeo,
                      const component::Collision & aPillCol) 
@@ -67,6 +75,8 @@ void EatPill::update(GameContext & aGameContext)
 
             if (component::collideWithSat(pillHitbox, playerHitbox) && aRoundData.mInvulFrameCounter <= 0.f)
             {
+                mEatSoundPerSlot.at(slot.mSlotIndex).play();
+
                 aHandle.get(eatPillUpdate)->erase();
                 aRoundData.mRoundScore += gPointPerPill;
 

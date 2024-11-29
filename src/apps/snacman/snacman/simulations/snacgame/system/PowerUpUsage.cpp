@@ -48,7 +48,10 @@ PowerUpUsage::PowerUpUsage(GameContext & aGameContext) :
     mPlayers{mGameContext->mWorld},
     mPowerups{mGameContext->mWorld},
     mInGameDogPowerups(mGameContext->mWorld),
-    mInGameMissilePowerups(mGameContext->mWorld)
+    mInGameMissilePowerups(mGameContext->mWorld),
+    mExplosionSound{"audio/sfx/boom-1.ogg", aGameContext},
+    mSwapSound{"audio/sfx/zwip-1.ogg", aGameContext},
+    mHomingLaunchSound{"audio/sfx/waf-1.ogg", aGameContext}
 {}
 
 void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
@@ -213,6 +216,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 puGeo.mPosition.z() = 0.f;
 
                 aRoundData.mType = component::PowerUpType::None;
+
+                mHomingLaunchSound.play();
             }
             break;
         }
@@ -263,6 +268,8 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                 removePortalImage(aHandle);
 
                 aRoundData.mType = component::PowerUpType::None;
+
+                mSwapSound.play();
 
                 break;
             }
@@ -506,6 +513,7 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                                       aPowerupHandle,
                                       aPlayerGeo.mPosition,
                                       list);
+                        mExplosionSound.play();
                     }
                 }
             });
@@ -605,6 +613,7 @@ void PowerUpUsage::update(const snac::Time & aTime, EntHandle aLevel)
                               list);
                 aOwner.get(manageMissile)
                     ->remove<component::ControllingMissile>();
+                mExplosionSound.play();
             }
         });
     }

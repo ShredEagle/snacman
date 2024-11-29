@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Scene.h"
-#include <snac-renderer-V1/Camera.h>
 
 #include <math/Color.h>
 #include <entity/Query.h>
 #include <entity/Wrap.h>
+
 
 namespace ad {
 

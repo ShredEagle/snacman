@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../Sound.h"
+
 #include <snacman/Timing.h>
 
 #include <entity/Query.h>
@@ -62,6 +64,10 @@ private:
                component::Speed,
                component::Geometry>
         mInGameMissilePowerups;
+
+    Sfx mExplosionSound;
+    Sfx mSwapSound;
+    Sfx mHomingLaunchSound;
 };
 
 } // namespace system

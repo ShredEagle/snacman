@@ -31,6 +31,11 @@ void initializeLogging()
     std::call_once(loggingInitializationOnce, &initializeLogging_impl);
     arte::initializeLogging();
     renderer::initializeLogging();
+
+    // TODO: wrap that into sounds lib
+    spdlog::stdout_color_mt("sounds");
+    //spdlog::get("sounds")->set_level(spdlog::level::info);
+    spdlog::get("sounds")->set_level(spdlog::level::trace);
     //Note: Initialize all upstream libraries logging here too.
 };
 
