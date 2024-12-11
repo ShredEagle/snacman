@@ -2,6 +2,7 @@
 
 #include <arte/Logging.h>
 #include <snac-renderer-V1/Logging.h>
+#include <sounds/Logging.h>
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 
@@ -31,11 +32,8 @@ void initializeLogging()
     std::call_once(loggingInitializationOnce, &initializeLogging_impl);
     arte::initializeLogging();
     renderer::initializeLogging();
+    sounds::initializeLogging();
 
-    // TODO: wrap that into sounds lib
-    spdlog::stdout_color_mt("sounds");
-    //spdlog::get("sounds")->set_level(spdlog::level::info);
-    spdlog::get("sounds")->set_level(spdlog::level::trace);
     //Note: Initialize all upstream libraries logging here too.
 };
 
