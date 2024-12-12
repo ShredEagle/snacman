@@ -34,6 +34,7 @@ set(${TARGET_NAME}_HEADERS
 
     graph/Clipping.h
     graph/DepthMethod.h
+    graph/EnvironmentMapping.h
     graph/ShadowCascadeBlock.h
     graph/ShadowMapping.h
     graph/text/Font.h
@@ -66,6 +67,7 @@ set(${TARGET_NAME}_SOURCES
     files/Dds.cpp
     files/Loader.cpp
 
+    graph/EnvironmentMapping.cpp
     graph/ShadowMapping.cpp
     graph/text/Font.cpp
     graph/text/TextGlsl.cpp

@@ -119,6 +119,8 @@ private:
     graphics::AppInterface * mAppInterface;
 
     GameContext mGameContext;
+
+    renderer::Environment mEnvironmentMap;
     
     // TODO use the ent::Wrap
  

@@ -1,3 +1,5 @@
+#pragma once 
+
 #include "math/Quaternion.h"
 #include "math/Vector.h"
 #include "snacman/simulations/snacgame/component/PowerUp.h"
@@ -7,11 +9,13 @@
 namespace ad {
 namespace snacgame {
 
-constexpr int gTextSize = snac::gDefaultPixelHeight * 3;
+inline constexpr int gTextSize = snac::gDefaultPixelHeight * 3;
 
-constexpr const char * gDonutModel = "models/donut/donut.sel";
+inline constexpr const char * gDonutModel = "models/donut/donut.sel";
 
-constexpr const char * gMeshGenericEffect = "effects/MeshOpaque.sefx";
+inline constexpr const char * gMeshGenericEffect = "effects/MeshOpaque.sefx";
+
+inline constexpr const char * gEnvMap = "envmaps/christmas_photo_studio_05/split-christmas_photo_studio_05_8k.dds";
 
 
 struct PowerUpBaseInfo

@@ -18,6 +18,7 @@
 #include <resource/ResourceFinder.h>
 
 #include <snac-renderer-V2/Model.h>
+#include <snac-renderer-V2/graph/EnvironmentMapping.h>
 
 #include <future>
 #include <queue>
@@ -243,6 +244,38 @@ public:
                         std::move(fontFullPath),
                         aPixelHeight,
                         aResources));
+                }
+                catch(...)
+                {
+                    promise->set_exception(std::current_exception());
+                }
+             });
+        return future;
+    }
+
+
+    // TODO Ad 2024/12/12: #renderer_API This is getting out-of hand:
+    // Since most our rendrer loading code (e.g. the code to load the environment) is
+    // assuming it is running on the GL context thread, we end up wrapping each such function
+    // it is own "async" method, so it can be called from the game thread.
+    std::future<renderer::Environment> 
+    loadEnvironment(filesystem::path aEnvironmentDds)
+    {
+        // Almost certainly a programming error:
+        // There is a risk the calling code will block on the future completion
+        // If the render thread is blocking, the completion will never occur.
+        assert(std::this_thread::get_id() != mThread.get_id());
+
+        // std::function require the type-erased functor to be copy constructible.
+        // all captured types must be copyable.
+        auto promise = std::make_shared<std::promise<renderer::Environment>>();
+        std::future<renderer::Environment> future = promise->get_future();
+        push([promise = std::move(promise), path = std::move(aEnvironmentDds)]
+             (T_renderer & aRenderer) 
+             {
+                try
+                {
+                    promise->set_value(aRenderer.loadEnvironmentMap(path));
                 }
                 catch(...)
                 {

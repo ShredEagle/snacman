@@ -397,6 +397,16 @@ inline Handle<graphics::Texture> makeTexture(Storage & aStorage, GLenum aTarget,
 }
 
 
+inline Handle<graphics::Texture> pushTexture(Storage & aStorage,
+                                             graphics::Texture aTexture,
+                                             const char * aDebugName)
+{
+    graphics::Texture & added = aStorage.mTextures.emplace_back(std::move(aTexture));
+    glObjectLabel(GL_TEXTURE, added, -1, aDebugName);
+    return &added;
+}
+
+
 // TODO change the first argument to an handle if materials are on day stored in an array of Storage.
 inline const Name & getName(const Material & aMaterial, const Storage & aStorage)
 {

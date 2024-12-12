@@ -763,6 +763,12 @@ std::shared_ptr<FontAndPart> Renderer_V2::loadFont(const arte::Freetype & aFreet
 }
 
 
+renderer::Environment Renderer_V2::loadEnvironmentMap(std::filesystem::path aEnvironmentDds)
+{
+    return renderer::loadEnvironmentMap(aEnvironmentDds, mRendererToKeep.mStorage);
+}
+
+
 void Renderer_V2::continueGui()
 {
     using namespace imguiui;
