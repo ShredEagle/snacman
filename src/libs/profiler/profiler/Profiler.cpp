@@ -281,7 +281,7 @@ Profiler::EntryIndex Profiler::beginSection(EntryNature aNature, const char * aN
         if (!alreadyPresent)
         {
             mLastResetFrame = mFrameState.mFrameNumber;
-            SELOG(debug)("Profiler sections structure changed.");
+            SELOG(trace)("Profiler sections structure changed.");
         }
     }
     else

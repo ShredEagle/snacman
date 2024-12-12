@@ -35,8 +35,12 @@ Sfx::~Sfx()
 
 void Sfx::play()
 {
-    // TODO Ad 2024/11/29: #sound This is very bad, should be done automatically by soundmanager
+    // Ad 2024/11/29: #sound This is very bad, should be done automatically by soundmanager
     // only when sound is DONE playing!
+    // ---
+    // Note: This is now fixed in Sounds library, so the mPlayingSoundCue member and manual stopping
+    // are not required anymore.
+    // Please note that there is a maximal number of concurrent sources for a given cue (MAX_SOURCE_PER_CUE)
     if(mPlayingSoundCue.mHandleIndex != -1)
     {
         mGameContext->mSoundManager.stopSound(mPlayingSoundCue);
