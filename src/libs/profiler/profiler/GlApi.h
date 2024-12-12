@@ -59,6 +59,7 @@ public:
     void FramebufferTexture(GLenum target, GLenum attachment, GLuint texture, GLint level);
     void FramebufferTexture3D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
     void FramebufferTextureLayer(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer);
+    void MultiDrawArraysIndirect(GLenum mode, const void *indirect, GLsizei drawcount, GLsizei stride);
     void MultiDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect, GLsizei drawcount, GLsizei stride);
     void PolygonMode(GLenum face, GLenum mode);
     void TexImage3D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels);
@@ -250,6 +251,15 @@ inline void GlApi::DrawElementsInstancedBaseVertexBaseInstance(GLenum mode, GLsi
     ++v().mDrawCount;
 #endif
     return glDrawElementsInstancedBaseVertexBaseInstance(mode, count, type, indices, instancecount, basevertex, baseinstance);
+}
+
+
+inline void GlApi::MultiDrawArraysIndirect(GLenum mode, const void *indirect, GLsizei drawcount, GLsizei stride)
+{
+#if defined(SE_INSTRUMENT_GL)
+    ++v().mDrawCount;
+#endif
+    return glMultiDrawArraysIndirect(mode, indirect, drawcount, stride);
 }
 
 
