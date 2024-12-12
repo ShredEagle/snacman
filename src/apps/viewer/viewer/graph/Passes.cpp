@@ -150,7 +150,7 @@ void passSkyboxBase(const GraphShared & aGraphShared,
     }
 
     // TODO Ad 2024/06/29: Use the existing setup code to bind texture and UBOs
-    graphics::setUniform(aProgram, "u_SkyboxTexture", 5);
+    graphics::setUniform(aProgram, "u_EnvironmentTexture", 5);
 
     // This is bad, harcoding knowledge of the binding points
     // but this was written as a refresher on native GL
