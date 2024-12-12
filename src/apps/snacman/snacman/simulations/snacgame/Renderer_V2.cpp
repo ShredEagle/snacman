@@ -540,6 +540,24 @@ void SnacGraph::renderWorld(const visu_V2::GraphicState & aState,
                        textureRepository);
         ENABLE_PROFILING_GL;
     }
+
+    // Skybox
+    {
+        // We rotate the view to have the podium scene show the most interesting portion
+        renderer::GpuViewProjectionBlock rotatedView{
+            math::trans3d::rotateY(math::Degree<GLfloat>{135.f})
+                * aState.mCamera.getParentToCamera(),
+            aState.mCamera.getProjection(),
+        };
+            
+        renderer::loadCameraUbo(
+            mGraphUbos.mViewingProjectionUbo,
+            rotatedView);
+        renderer::proto::load(mIndirectBuffer,
+                          std::span{mSkybox.mPassCache.mDrawCommands},
+                          graphics::BufferHint::StreamDraw);
+        mSkybox.pass(mGraphUbos.mUboRepository, aState.mEnvironment);
+    }
 }
 
 

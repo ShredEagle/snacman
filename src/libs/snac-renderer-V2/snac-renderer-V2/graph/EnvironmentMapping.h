@@ -29,5 +29,14 @@ struct Environment
 Environment loadEnvironmentMap(const std::filesystem::path aDdsPath, Storage & aStorage);
 
 
+struct SkyPassCache
+{
+    SkyPassCache(const Loader & aLoader, Storage & aStorage);
+
+    void pass(const RepositoryUbo & aUboRepository, const Environment & aEnvironment);    
+
+    PassCache mPassCache;
+};
+
 
 } // namespace ad::renderer

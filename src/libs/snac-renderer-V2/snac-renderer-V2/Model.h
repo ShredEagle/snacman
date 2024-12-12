@@ -382,6 +382,8 @@ struct Storage
     std::list<AnimatedRig> mAnimatedRigs;
     // Used for random access (DOD)
     std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, so the name at index zero can be used when there are no material parameters
+
+    Handle<graphics::VertexArrayObject> mDummyVao{&*mVaos.insert(mVaos.end(), graphics::VertexArrayObject{})};
 };
 
 

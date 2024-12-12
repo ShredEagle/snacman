@@ -218,7 +218,7 @@ struct SnacGraph
 
     renderer::DebugRenderer mDebugRenderer;
 
-    renderer::Skybee mSkybox;
+    renderer::SkyPassCache mSkybox;
 };
 
 using Resources_V2 = renderer::Loader;
@@ -232,7 +232,7 @@ struct Impl_V2
             .mInstanceStream = SnacGraph::makeInstanceStream(mStorage),
             .mShadowMapping = renderer::ShadowMapping{mStorage},
             .mDebugRenderer = renderer::DebugRenderer{mStorage, aLoader},
-            .mSkybox = renderer::Skybee{aLoader, mStorage},
+            .mSkybox = renderer::SkyPassCache{aLoader, mStorage},
         }
     {
         // TODO use cascades
