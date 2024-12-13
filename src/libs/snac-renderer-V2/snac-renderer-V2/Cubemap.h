@@ -30,7 +30,6 @@ struct Skybox
     Skybox(const Loader & aLoader, Storage & aStorage);
 
     //Part mUnitCube;
-    Handle<graphics::VertexArrayObject> mCubeVao;
     // NOTE: to disappear in the part effect
     Handle<const Effect> mEffect;
 };

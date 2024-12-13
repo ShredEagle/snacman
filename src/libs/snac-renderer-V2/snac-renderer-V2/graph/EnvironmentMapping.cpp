@@ -31,7 +31,7 @@ Environment loadEnvironmentMap(const std::filesystem::path aDdsPath, Storage & a
 SkyPassCache::SkyPassCache(const Loader & aLoader, Storage & aStorage)
 {
     Handle<ConfiguredProgram> program =
-        storeConfiguredProgram(aLoader.loadProgram("programs/SkyboxNew.prog"),
+        storeConfiguredProgram(aLoader.loadProgram("programs/Skybox.prog"),
                                aStorage);
 
     mPassCache = PassCache{
