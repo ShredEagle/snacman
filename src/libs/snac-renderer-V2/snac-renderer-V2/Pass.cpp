@@ -381,12 +381,23 @@ void draw(const PassCache & aPassCache,
                 // Can we have efficient GPU measures?
                 PROFILER_SCOPE_RECURRING_SECTION(gRenderProfiler, "glDraw_call", CpuTime/*, GpuTime*/);
                 
-                gl.MultiDrawElementsIndirect(
-                    call.mPrimitiveMode,
-                    call.mIndicesType,
-                    (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
-                    call.mDrawCount,
-                    sizeof(DrawElementsIndirectCommand));
+                if (call.mIndicesType != GL_NONE)
+                {
+                    gl.MultiDrawElementsIndirect(
+                        call.mPrimitiveMode,
+                        call.mIndicesType,
+                        (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
+                        call.mDrawCount,
+                        sizeof(DrawElementsIndirectCommand));
+                }
+                else
+                {
+                    gl.MultiDrawArraysIndirect(
+                        call.mPrimitiveMode,
+                        (void *)(firstInstance * sizeof(DrawElementsIndirectCommand)),
+                        call.mDrawCount,
+                        sizeof(DrawElementsIndirectCommand));
+                }
             }
         }
         firstInstance += call.mDrawCount;

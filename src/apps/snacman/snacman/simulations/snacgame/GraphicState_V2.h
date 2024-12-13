@@ -20,6 +20,7 @@
 #include <snac-renderer-V2/Model.h>
 #include <snac-renderer-V2/Rigging.h>
 
+#include <snac-renderer-V2/graph/EnvironmentMapping.h>
 #include <snac-renderer-V2/graph/text/TextGlsl.h>
 // TODO Ad 2024/11/27: #text Remove Font.h include
 // I think a well designed visu::Text should not be aware of the Font itself
@@ -89,42 +90,6 @@ inline Entity interpolate(const Entity & aLeftEntity, const Entity & aRightEntit
     }
 }
 
-} // namespace visu_V2
-
-
-// TODO: remove #decommissionRV1
-namespace visu_V1 {
-
-
-struct Text
-{
-    math::Position<3, float> mPosition_world;
-    math::Size<3, float> mScaling; // TODO were is it used?
-    math::Quaternion<float> mOrientation;
-    std::string mString;
-    std::shared_ptr<snac::Font> mFont;
-    math::hdr::Rgba_f mColor;
-};
-
-inline Text interpolate(const Text & aLeftEntity, const Text & aRightEntity, float aInterpolant)
-{
-    return Text{
-        .mPosition_world = math::lerp(aLeftEntity.mPosition_world,
-                                      aRightEntity.mPosition_world,
-                                      aInterpolant),
-        .mScaling = math::lerp(aLeftEntity.mScaling, aRightEntity.mScaling, aInterpolant),
-        .mOrientation = math::slerp(aLeftEntity.mOrientation, aRightEntity.mOrientation, aInterpolant),
-        .mString = aLeftEntity.mString,
-        .mFont = aLeftEntity.mFont,
-        .mColor = math::lerp(aLeftEntity.mColor, aRightEntity.mColor, aInterpolant),
-    };
-}
-
-
-} // namespace visu_V1
-
-
-namespace visu_V2 {
 
 struct Text
 {
@@ -163,6 +128,7 @@ struct GraphicState
     // TODO #interpolation Interpolate the camera pose
     renderer::Camera mCamera; 
     renderer::LightsDataUi mLights;
+    renderer::Environment mEnvironment;
 
     snac::SparseSet<Text, MaxEntityId> mTextScreenEntities;
 
@@ -195,6 +161,7 @@ inline GraphicState interpolate(const GraphicState & aLeft, const GraphicState &
         .mCamera{aRight.mCamera},
         // We probably do not want to interpolate lights, unlikely this would be noticeable
         .mLights{aRight.mLights},
+        .mEnvironment{aRight.mEnvironment},
         // Note: For the moment, we do not interpolate the debug drawings, both for simplicity and performance
         .mDebugDrawList{aRight.mDebugDrawList},
     };

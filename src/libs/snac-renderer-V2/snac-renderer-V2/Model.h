@@ -382,6 +382,8 @@ struct Storage
     std::list<AnimatedRig> mAnimatedRigs;
     // Used for random access (DOD)
     std::vector<Name> mMaterialNames{"<no-material>",}; // This is a hack, so the name at index zero can be used when there are no material parameters
+
+    Handle<graphics::VertexArrayObject> mDummyVao{&*mVaos.insert(mVaos.end(), graphics::VertexArrayObject{})};
 };
 
 
@@ -393,6 +395,16 @@ inline Handle<graphics::Texture> makeTexture(Storage & aStorage, GLenum aTarget,
     // Doesn not work before the object is actually created.
     glObjectLabel(GL_TEXTURE, added, -1, aDebugName);
 
+    return &added;
+}
+
+
+inline Handle<graphics::Texture> pushTexture(Storage & aStorage,
+                                             graphics::Texture aTexture,
+                                             const char * aDebugName)
+{
+    graphics::Texture & added = aStorage.mTextures.emplace_back(std::move(aTexture));
+    glObjectLabel(GL_TEXTURE, added, -1, aDebugName);
     return &added;
 }
 

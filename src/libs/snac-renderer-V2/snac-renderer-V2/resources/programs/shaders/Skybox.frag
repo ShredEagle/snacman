@@ -6,9 +6,9 @@
 in vec3 ex_FragmentPosition_world;
 
 #if defined(EQUIRECTANGULAR)
-uniform sampler2D u_SkyboxTexture;
+uniform sampler2D u_EnvironmentTexture;
 #else
-uniform samplerCube u_SkyboxTexture;
+uniform samplerCube u_EnvironmentTexture;
 #endif
 
 layout(location = 0) out vec4 out_Color;
@@ -35,13 +35,13 @@ void main()
     // Polar angle increase in the opposite direction compared to v coordinate
     float v = 1 - acos(view_world.y) / M_PI;
 
-    vec3 envColor = texture(u_SkyboxTexture, vec2(u,v)).rgb;
+    vec3 envColor = texture(u_EnvironmentTexture, vec2(u,v)).rgb;
 #else
     // Cubemap coordinate system is left handed, but the cube texture coords is given
     // in right handed world space, so negate Z. 
     // Note: the individual images in the cubemap texture are loaded "upside-down" compared to usual OpenGL textures
     // in order for this to work (you can see they are upside down in Nsight Graphics)
-    vec3 envColor = texture(u_SkyboxTexture, worldToCubemap(ex_FragmentPosition_world)).rgb;
+    vec3 envColor = texture(u_EnvironmentTexture, worldToCubemap(ex_FragmentPosition_world)).rgb;
 #endif
     out_Color = correctGamma(vec4(envColor, 1.0));
     out_LinearHdr = envColor;

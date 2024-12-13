@@ -24,15 +24,12 @@ graphics::Texture loadCubemapFromDds(filesystem::path aDds);
 graphics::Texture loadEquirectangular(filesystem::path aEquirectangularMap);
 
 
-// TODO Ad 2024/06/26: This should be made generic, and moved in a general header
-//Part makeUnitCube(Storage & aStorage);
-
+// TODO Ad 2024/12/12: This should be removed
 struct Skybox
 {
     Skybox(const Loader & aLoader, Storage & aStorage);
 
     //Part mUnitCube;
-    Handle<graphics::VertexArrayObject> mCubeVao;
     // NOTE: to disappear in the part effect
     Handle<const Effect> mEffect;
 };

@@ -65,8 +65,9 @@ struct DrawCall
     GLenum mPrimitiveMode = 0;
     GLenum mIndicesType = 0;
 
-    const IntrospectProgram * mProgram;
-    const graphics::VertexArrayObject * mVao;
+    // Not in Storage at the moment (the containing ConfiguredProgram is)
+    const IntrospectProgram *  mProgram;
+    Handle<const graphics::VertexArrayObject> mVao;
     // TODO I am not sure having the material context here is a good idea, it feels a bit high level
     Handle<MaterialContext> mCallContext;
 
@@ -77,6 +78,7 @@ struct DrawCall
 };
 
 
+// TODO Ad 2024/12/12: We might want a specialization when the draw is neither multi nor indirect.
 // TODO #model rename to DrawXxx
 /// @brief The draw calls to be issued, usually valid for a given Pass.
 /// @note It is intended to be derived by applications if they have any more specific needs (e.g. ViewerPassCache)

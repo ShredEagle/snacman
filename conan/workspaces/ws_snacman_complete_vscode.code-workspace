@@ -206,6 +206,26 @@
             "console": "integratedTerminal"
 			},
 			{
+            "name": "(sew) WB equi christmas",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				//"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				//"D:/projects/Gamedev/2/proto-assets/models/concrete_cat_statue_4k.gltf/concrete_cat_statue_4k.sew",
+				//"D:/projects/Gamedev/2/proto-assets/models/cannon_01_4k.gltf/cannon_01_4k.sew"
+				"D:/projects/Gamedev/2/proto-assets/models/shadow_scene.sew",
+				//"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/split-neon_photostudio_8k.hdr"
+				"--equirectangular-environment", "D:/projects/Gamedev/2/snac-assets/envmaps/christmas_photo_studio_05/christmas_photo_studio_05_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
             "name": "(sew) WB equi neon",
             "type": "cppvsdbg",
             "request": "launch",

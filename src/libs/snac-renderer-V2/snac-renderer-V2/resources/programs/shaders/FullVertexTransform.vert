@@ -10,25 +10,25 @@ in vec4 ve_Color;
 in vec2 ve_Uv;
 
 #if defined(ENTITIES)
-// The instance attribute associating the OpenGL instance
-// (in the sense of instanced rendering) to its corresponding Entity.
-in uint in_EntityIdx; // Note: cannot be part of the include, which might be used in FS.
-#define ENTITY_IDX_ATTRIBUTE in_EntityIdx
-#include "Entities.glsl"
-out flat uint ex_EntityIdx;
+    // The instance attribute associating the OpenGL instance
+    // (in the sense of instanced rendering) to its corresponding Entity.
+    in uint in_EntityIdx; // Note: cannot be part of the include, which might be used in FS.
+    #define ENTITY_IDX_ATTRIBUTE in_EntityIdx
+    #include "Entities.glsl"
+    out flat uint ex_EntityIdx;
 #else //ENTITIES
-in uint in_ModelTransformIdx;
+    in uint in_ModelTransformIdx;
 
-// TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
-layout(std140, binding = 1) uniform LocalToWorldBlock
-{
-    mat4 modelTransforms[MAX_ENTITIES];
-};
+    // TODO #ssbo Use a shader storage block, due to the unbounded nature of the number of instances
+    layout(std140, binding = 1) uniform LocalToWorldBlock
+    {
+        mat4 modelTransforms[MAX_ENTITIES];
+    };
 
-mat4 getModelTransform()
-{
-    return modelTransforms[in_ModelTransformIdx];
-}
+    mat4 getModelTransform()
+    {
+        return modelTransforms[in_ModelTransformIdx];
+    }
 #endif //ENTITIES
 
 in uint in_MaterialIdx;

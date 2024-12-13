@@ -20,7 +20,7 @@ OrbitalCamera::OrbitalCamera(ent::EntityManager & aWorld, float aAspectRatio) :
         .mAspectRatio = aAspectRatio,
         .mVerticalFov = math::Degree<float>{45.f},
         .mNearZ = -0.01f,
-        .mFarZ = -40.f,
+        .mFarZ = -45.f,
     };
     mCamera.setupPerspectiveProjection(initialPerspective);
 }

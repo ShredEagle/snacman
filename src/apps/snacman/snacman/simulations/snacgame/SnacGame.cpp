@@ -1,5 +1,6 @@
 #include "SnacGame.h"
 
+#include "ModelInfos.h"
 #include "component/AllowedMovement.h"
 #include "component/Context.h"
 #include "component/Controller.h"
@@ -95,6 +96,9 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     mGameContext(
         snac::Resources{std::move(aResourceFinder), aFreetype, aRenderThread},
         aRenderThread, aAppInterface),
+    // TODO Ad 2024/12/12: Should we also wrap the environment loading through Resources system?
+    // Currently, quick direct loading of a static environment.
+    mEnvironmentMap{aRenderThread.loadEnvironment(*mGameContext.mResources.find(gEnvMap)).get()},
     mMappingContext{mGameContext.mWorld, "mapping context", mGameContext.mResources},
     mSystemOrbitalCamera{mGameContext.mWorld, "orbital camera", mGameContext.mWorld,
                          math::getRatio<float>(mAppInterface->getWindowSize())},
@@ -648,8 +652,23 @@ std::unique_ptr<Renderer_t::GraphicState_t> SnacGame::makeGraphicState()
                 });
         });
 
+    //
+    // Camera
+    //
     state->mCamera = mSystemOrbitalCamera->getCamera();
 
+    //
+    // Environment map
+    //
+    // TODO Ad 2024/12/12: #renderer_API This is currently wasteful 
+    // (makes a copy of the static environment each update)
+    // It feels like a more generic interface is also lying here 
+    // (currently, the environment is a RepositoryTexture)
+    state->mEnvironment = mEnvironmentMap;
+
+    //
+    // Debug drawing
+    //
     state->mDebugDrawList = snac::DebugDrawer::EndFrame();
 
     return state;

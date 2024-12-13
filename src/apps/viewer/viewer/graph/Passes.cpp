@@ -137,7 +137,7 @@ void passSkyboxBase(const GraphShared & aGraphShared,
     Handle<const graphics::Texture> envMap = 
         aEnvironment.mTextureRepository.at(semantic::gEnvironmentTexture);
 
-    glBindVertexArray(*aGraphShared.mSkybox.mCubeVao);
+    glBindVertexArray(*aStorage.mDummyVao);
     glActiveTexture(GL_TEXTURE5);
     switch(aEnvironment.mType)
     {
@@ -150,7 +150,7 @@ void passSkyboxBase(const GraphShared & aGraphShared,
     }
 
     // TODO Ad 2024/06/29: Use the existing setup code to bind texture and UBOs
-    graphics::setUniform(aProgram, "u_SkyboxTexture", 5);
+    graphics::setUniform(aProgram, "u_EnvironmentTexture", 5);
 
     // This is bad, harcoding knowledge of the binding points
     // but this was written as a refresher on native GL
@@ -167,7 +167,8 @@ void passSkyboxBase(const GraphShared & aGraphShared,
 
     auto scopedPolygonMode = graphics::scopePolygonMode(*aControls.mForwardPolygonMode);
 
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    // The cube hardcoded in Cube.glsl is a triangle strip from 14 indices.
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 14);
 }
 
 

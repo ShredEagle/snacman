@@ -20,6 +20,7 @@
 
 #include <snac-renderer-V2/files/Loader.h>
 
+#include <snac-renderer-V2/graph/EnvironmentMapping.h>
 #include <snac-renderer-V2/graph/ShadowMapping.h>
 
 #include <snac-renderer-V2/utilities/VertexStreamUtilities.h>
@@ -216,6 +217,8 @@ struct SnacGraph
     renderer::ShadowMapping mShadowMapping;
 
     renderer::DebugRenderer mDebugRenderer;
+
+    renderer::SkyPassCache mSkybox;
 };
 
 using Resources_V2 = renderer::Loader;
@@ -229,6 +232,7 @@ struct Impl_V2
             .mInstanceStream = SnacGraph::makeInstanceStream(mStorage),
             .mShadowMapping = renderer::ShadowMapping{mStorage},
             .mDebugRenderer = renderer::DebugRenderer{mStorage, aLoader},
+            .mSkybox = renderer::SkyPassCache{aLoader, mStorage},
         }
     {
         // TODO use cascades
@@ -285,6 +289,8 @@ public:
                                           std::filesystem::path aFontFullPath,
                                           unsigned int aPixelHeight,
                                           snac::Resources & aResources);
+
+    renderer::Environment loadEnvironmentMap(std::filesystem::path aEnvironmentDds);
 
     void continueGui();
 

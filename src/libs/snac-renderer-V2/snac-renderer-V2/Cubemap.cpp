@@ -199,24 +199,8 @@ graphics::Texture loadEquirectangular(filesystem::path aEquirectangularMap)
 
 
 Skybox::Skybox(const Loader & aLoader, Storage & aStorage) :
-    mCubeVao{&aStorage.mVaos.emplace_back()},
     mEffect{aLoader.loadEffect("effects/Skybox.sefx", aStorage)}
-{
-    std::vector<math::Position<3, float>> vertices;
-    vertices.reserve(cube::Maker::gVertexCount);
-    for(unsigned int idx = 0; idx != cube::Maker::gVertexCount; ++idx)
-    {
-        vertices.push_back(cube::Maker::getPosition(idx));
-    }
-
-    graphics::BufferAny & vertexBuffer = aStorage.mBuffers.emplace_back();
-    graphics::ScopedBind vboBind{vertexBuffer, graphics::BufferType::Array};
-    glBufferData(GL_ARRAY_BUFFER, std::span{vertices}.size_bytes(), vertices.data(), GL_STATIC_DRAW);
-
-    graphics::ScopedBind vaoBind{*mCubeVao};
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-}
+{}
 
 
 } // namespace ad::renderer
