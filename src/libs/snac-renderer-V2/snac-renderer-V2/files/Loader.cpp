@@ -690,6 +690,11 @@ namespace {
                 {
                     internalFormat = dds::getCompressedFormat(dds->mHeader);
                 }
+                else
+                {
+                    SELOG(warn)("Missing DDS version for texture '{}'.",
+                                (aIn.mParentPath / path).string());
+                }
 
                 graphics::Texture & textureArray = aStorage.mTextures.emplace_back(GL_TEXTURE_2D_ARRAY);
                 graphics::ScopedBind boundTextureArray{textureArray};
