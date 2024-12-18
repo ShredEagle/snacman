@@ -456,11 +456,16 @@ namespace {
         GLint blockByteSize = 0;
         glGetInternalformativ(aTextureTarget, aCompressedFormat, 
                               GL_TEXTURE_COMPRESSED_BLOCK_SIZE, 1, &blockByteSize);
-        // IMPORTANT: despite what OpenGL 4.6 core profile claims, it returns the size in bits, not bytes
         assert(blockByteSize % 8 == 0);
-        blockByteSize /= 8;
+        // IMPORTANT: despite what OpenGL 4.6 core profile claims, it returns the size in bits, not bytes
+        // However Linux is not dumb and returns the proper size so the division is only for windows scrubs
+        if (blockByteSize == 8 * 16)
+        {
+            blockByteSize /= 8;
+        }
         // As of this writting, all compressed block sizes we implement are 16 bytes.
         // Remove this assert when this is not true anymore.
+        
         assert(blockByteSize == 16);
 
         // Sanity check: the block is 4x4
