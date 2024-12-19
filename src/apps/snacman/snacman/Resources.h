@@ -87,6 +87,9 @@ public:
     auto find(const filesystem::path & aPath) const
     { return mFinder.find(aPath); }
 
+    auto pathFor(const filesystem::path & aPath) const
+    { return mFinder.pathFor(aPath); }
+
     // TODO remove that
     // TODO #decommissionRV1 might become useless once Resources itselfs become the Load<> implementer
     snac::TechniqueLoader getTechniqueLoader() const

@@ -98,7 +98,7 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
         aRenderThread, aAppInterface),
     // TODO Ad 2024/12/12: Should we also wrap the environment loading through Resources system?
     // Currently, quick direct loading of a static environment.
-    mEnvironmentMap{aRenderThread.loadEnvironment(*mGameContext.mResources.find(gEnvMap)).get()},
+    mEnvironmentMap{aRenderThread.loadEnvironment(mGameContext.mResources.pathFor(gEnvMap)).get()},
     mMappingContext{mGameContext.mWorld, "mapping context", mGameContext.mResources},
     mSystemOrbitalCamera{mGameContext.mWorld, "orbital camera", mGameContext.mWorld,
                          math::getRatio<float>(mAppInterface->getWindowSize())},
