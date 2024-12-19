@@ -564,7 +564,7 @@ void GameScene::update(const snac::Time & aTime, RawInput & aInput)
             });
             players.sort();
 
-            if (players.ranking.at(0).second.mRoundsWon >= 1)
+            if (players.ranking.at(0).second.mRoundsWon >= gPodiumRoundPeriod)
             {
                 // Reset player rounds won in case we will play again
                 mSlots.each([](EntHandle aHandle, component::PlayerGameData & aGameData) {

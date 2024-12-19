@@ -136,6 +136,7 @@ set(${TARGET_NAME}_SOURCES
 
     simulations/snacgame/Entities.cpp
     simulations/snacgame/GameContext.cpp
+    simulations/snacgame/GameParameters.cpp
     simulations/snacgame/ImguiSceneEditor.cpp
     simulations/snacgame/OrbitalControlInput.cpp
     simulations/snacgame/PlayerSlotManager.cpp
