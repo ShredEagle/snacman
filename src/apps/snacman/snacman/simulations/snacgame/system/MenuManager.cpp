@@ -1,6 +1,7 @@
 #include "MenuManager.h"
 
 #include "snacman/simulations/snacgame/InputCommandConverter.h"
+#include "snacman/simulations/snacgame/InputConstants.h"
 #include "../component/MenuItem.h"
 #include "../component/Text.h"
 
@@ -30,7 +31,7 @@ std::pair<component::MenuItem, int> MenuManager::manageMenu(const std::vector<Co
     }
 
     int filteredForMenuCommand =
-        accumulatedCommand & (gGoUp | gGoDown | gGoLeft | gGoRight);
+        accumulatedCommand & (gGoUp | gGoDown | gGoLeft | gGoRight | gPositiveEdge);
 
     EntHandle selectedItemHandle = snac::getFirstHandle(
         mMenuItems, [](component::MenuItem & aItem) { return aItem.mSelected; });

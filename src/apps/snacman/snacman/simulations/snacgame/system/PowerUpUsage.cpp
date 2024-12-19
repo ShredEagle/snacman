@@ -672,6 +672,7 @@ std::pair<Pos2, EntHandle> PowerUpUsage::getDogPlacementTile(
 
             if (newDepth < currentDepth)
             {
+                currentDepth = newDepth;
                 targetPos = targetNode.mPos;
                 targetHandle = aOther;
             }
