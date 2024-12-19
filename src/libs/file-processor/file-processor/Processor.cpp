@@ -722,7 +722,7 @@ namespace {
                             assert(Image{upsampledTextureAbsolute}.dimensions() == *upsampledDimensions);
                         }
                         // Replace the base texture relative path with the upsampled relative path
-                        texture = (upsampledDir / textureFilename).string();
+                        texture = (upsampledDir / textureFilename).generic_string();
                     }
                     else
                     {
