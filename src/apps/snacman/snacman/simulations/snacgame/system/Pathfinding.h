@@ -141,7 +141,7 @@ pathfind(component::PathfindNode & aStartNode,
             // cannot cut corners because the next node in it's path cannot
             // be more than 1 cell away
             if (visitedNode.mPathable && newCost < visitedNode.mCost
-                && distance <= 1.f)
+                /*&& distance <= 1.f*/)
             {
                 visitNode(visitedNode, current, newCost, aTarget, openedNode);
             }
