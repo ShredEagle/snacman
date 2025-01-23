@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-test:
-    uses: shredeagle/reusable-workflows/.github/workflows/main_build.yml@v2.7.3
+    uses: shredeagle/reusable-workflows/.github/workflows/main_build.yml@v2.8.0
     with:
       os: >-
         ["ubuntu-24.04", "windows-2022"]
