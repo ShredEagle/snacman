@@ -11,6 +11,7 @@ namespace snacgame {
 
 extern const int gPodiumRoundPeriod;
 
+constexpr const char * gCreditsSceneName = "Credits";
 constexpr const char * gMenuSceneName = "Menu";
 constexpr const char * gPauseSceneName = "Pause";
 constexpr const char * gPodiumSceneName = "Podium";

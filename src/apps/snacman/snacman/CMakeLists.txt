@@ -77,6 +77,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/component/Text.h
     simulations/snacgame/component/VisualModel.h
 
+    simulations/snacgame/scene/CreditsScene.h
     simulations/snacgame/scene/GameScene.h
     simulations/snacgame/scene/DataScene.h
     simulations/snacgame/scene/JoinGameScene.h
@@ -152,6 +153,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/component/PlayerHud.cpp
     simulations/snacgame/component/Text.cpp
 
+    simulations/snacgame/scene/CreditsScene.cpp
     simulations/snacgame/scene/Scene.cpp
     simulations/snacgame/scene/GameScene.cpp
     simulations/snacgame/scene/DisconnectedControllerScene.cpp

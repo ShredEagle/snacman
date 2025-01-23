@@ -164,7 +164,9 @@ Font Font::makeUseCache(const arte::Freetype & aFreetype,
         Font result{
             std::move(fontFace),
             aFontPixelHeight,
-            aStorage
+            aStorage,
+            aFirstChar,
+            aLastChar
         };
 
         BinaryOutArchive dataOut{

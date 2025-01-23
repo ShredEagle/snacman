@@ -770,7 +770,9 @@ std::shared_ptr<FontAndPart> Renderer_V2::loadFont(const arte::Freetype & aFreet
             aFreetype,
             aFontFullPath,
             aPixelHeight,
-            mRendererToKeep.mStorage),
+            mRendererToKeep.mStorage,
+            ad::renderer::gFirstCharCode,
+            232), // Someone as a 'ç' in his name, which is UTF codepoint 231
     });
     result->mPart = renderer::makePartForFont(
         result->mFont, 
