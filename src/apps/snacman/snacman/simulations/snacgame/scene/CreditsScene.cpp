@@ -83,6 +83,7 @@ CreditsScene::CreditsScene(GameContext & aGameContext,
     Scene(gCreditsSceneName, aGameContext, aContext)
 {
     populateSection(0);
+    setOpacity(0.f);
 }
 
 void CreditsScene::onEnter(Transition) {
