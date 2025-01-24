@@ -18,6 +18,7 @@ constexpr const char * gPodiumSceneName = "Podium";
 constexpr const char * gDisconnectedControllerSceneName = "DisconnectedController";
 constexpr const char * gGameSceneName = "Game";
 constexpr const char * gJoinGameSceneName = "JoinGame";
+constexpr const char * gSplashSceneName = "Splash";
 
 constexpr math::Spherical<float> gInitialCameraSpherical{
     25.f,

@@ -496,6 +496,8 @@ void SnacGraph::renderWorld(const visu_V2::GraphicState & aState,
     // TODO to be handled by Render Graph passes
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
+    // Required for splash screen, to blend with the clear color
+    glEnable(GL_BLEND);
     glDepthMask(GL_TRUE);
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -542,6 +544,7 @@ void SnacGraph::renderWorld(const visu_V2::GraphicState & aState,
     }
 
     // Skybox
+    if(!aState.mEnvironment.mTextureRepository.empty())
     {
         // We rotate the view to have the podium scene show the most interesting portion
         renderer::GpuViewProjectionBlock rotatedView{

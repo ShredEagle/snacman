@@ -2,6 +2,8 @@
 
 #include "Scene.h"
 
+#include "../component/MenuItem.h"
+
 #include <math/Color.h>
 #include <entity/Query.h>
 #include <entity/Wrap.h>
@@ -11,7 +13,6 @@ namespace ad {
 
 namespace snacgame {
 namespace component {
-struct MenuItem;
 struct Text;
 }
 namespace scene {

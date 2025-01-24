@@ -1,0 +1,34 @@
+{
+    "techniques": [
+        {
+            "annotations": {
+                "pass": "forward",
+                "environment": "on"
+            },
+            "programfile": "programs/FullScreenSplash.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward",
+                "entities": "on"
+            },
+            "programfile": "programs/FullScreenSplash.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward",
+                "entities": "on",
+                "shadows": "on"
+            },
+            "programfile": "programs/FullScreenSplash.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward",
+                "entities": "on",
+                "csm": "on"
+            },
+            "programfile": "programs/FullScreenSplash.prog"
+        }
+    ]
+}

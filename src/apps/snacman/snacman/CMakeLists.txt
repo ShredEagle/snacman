@@ -87,6 +87,7 @@ set(${TARGET_NAME}_HEADERS
     simulations/snacgame/scene/DisconnectedControllerScene.h
     simulations/snacgame/scene/Scene.h
     simulations/snacgame/scene/SettingsScene.h
+    simulations/snacgame/scene/SplashScene.h
 
     simulations/snacgame/system/AdvanceAnimations.h
     simulations/snacgame/system/AllowMovement.h
@@ -162,6 +163,7 @@ set(${TARGET_NAME}_SOURCES
     simulations/snacgame/scene/PauseScene.cpp
     simulations/snacgame/scene/PodiumScene.cpp
     simulations/snacgame/scene/SettingsScene.cpp
+    simulations/snacgame/scene/SplashScene.cpp
 
     simulations/snacgame/system/AdvanceAnimations.cpp
     simulations/snacgame/system/AllowMovement.cpp

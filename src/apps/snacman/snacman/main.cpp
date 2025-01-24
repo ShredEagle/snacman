@@ -150,6 +150,9 @@ void runApplication()
          freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))
     };
 
+    // For splash-screen, so the transparent zones appear black
+    glfwApp.getAppInterface()->setClearColor(math::hdr::gBlack<float>);
+
     // Context must be removed from this thread before it can be made current on
     // the render thread.
     glfwApp.removeCurrentContext();
