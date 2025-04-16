@@ -30,8 +30,9 @@ std::pair<component::MenuItem, int> MenuManager::manageMenu(const std::vector<Co
         accumulatedCommand |= controller.mInput.mCommand;
     }
 
+    // Really dirty way to have positiveEdge on joystick axis
     int filteredForMenuCommand =
-        accumulatedCommand & (gGoUp | gGoDown | gGoLeft | gGoRight | gPositiveEdge);
+        ((accumulatedCommand & (gGoUp | gGoDown | gGoLeft | gGoRight | gPositiveEdge)) ^ mLastInput) & accumulatedCommand;
 
     EntHandle selectedItemHandle = snac::getFirstHandle(
         mMenuItems, [](component::MenuItem & aItem) { return aItem.mSelected; });
@@ -65,6 +66,8 @@ std::pair<component::MenuItem, int> MenuManager::manageMenu(const std::vector<Co
         SELOG(error)
         ("Could not find item {} in menu (Check the case)", newItem);
     }
+
+    mLastInput = accumulatedCommand & (gGoUp | gGoDown | gGoLeft | gGoRight);
 
 
     return {menuItem, accumulatedCommand};

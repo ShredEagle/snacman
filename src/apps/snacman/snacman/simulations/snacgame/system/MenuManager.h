@@ -22,6 +22,7 @@ public:
 private:
     GameContext * mGameContext;
     ent::Query<component::MenuItem, component::Text> mMenuItems;
+    int mLastInput = 0;
 };
 
 } // namespace system

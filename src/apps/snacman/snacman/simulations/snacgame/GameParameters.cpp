@@ -4,7 +4,7 @@
 namespace ad::snacgame {
 
 
-const int gPodiumRoundPeriod = 5;
+const int gPodiumRoundPeriod = 1;
 
 
 } // namespace ad::snacgame

@@ -1,6 +1,7 @@
 #include "MenuScene.h"
 
 #include "snacman/serialization/Witness.h"
+#include "snacman/simulations/snacgame/InputConstants.h"
 #include "snacman/simulations/snacgame/scene/Scene.h"
 #include "snacman/simulations/snacgame/system/InputProcessor.h"
 #include "snacman/simulations/snacgame/system/MenuManager.h"
