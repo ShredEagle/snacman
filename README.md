@@ -1,9 +1,8 @@
 # Snacman
 
-Snacman is a fast-paced multiplayer game where players navigate procedurally generated labyrinth in a colorful 3D world.\
+Snacman is a fast-paced party-game where players navigate procedurally generated labyrinth in a colorful 3D world.\
 Play as a donut determined to become the greatest eater of all time, and use your power-ups on anyone who lays eyes on your burgers.
 
-The game features:
 
 * 2–4 local players
 * Procedurally generated labyrinths
@@ -15,4 +14,4 @@ The game features:
 * Scoring and crown mechanics
 
 
-![in-game](https://gist.github.com/user-attachments/assets/5f629eb0-b8b5-46b2-96e0-40a4e481667e)
+![in-game screenshot](https://adnn.github.io/assets/snacman/snacgame_edited-800_450.png)
