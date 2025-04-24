@@ -8,8 +8,9 @@ on:
 
 jobs:
   build:
-    uses: shredeagle/reusable-workflows/.github/workflows/main_build.yml@v2.8.0
+    uses: shredeagle/reusable-workflows/.github/workflows/main_build.yml@v2.8.1
     with:
+      conan_config_branch: "last_conanv1"
       os: >-
         ["ubuntu-24.04", "windows-2022"]
       deployrecipe_userchannel: adnn/develop

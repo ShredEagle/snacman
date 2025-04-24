@@ -7,12 +7,13 @@ on:
 
 jobs:
   extract_tag:
-    uses: shredeagle/reusable-workflows/.github/workflows/extract_version_tag.yml@v2.8.0
+    uses: shredeagle/reusable-workflows/.github/workflows/extract_version_tag.yml@v2.8.1
 
   build:
     needs: extract_tag
-    uses: shredeagle/reusable-workflows/.github/workflows/main_build.yml@v2.8.0
+    uses: shredeagle/reusable-workflows/.github/workflows/main_build.yml@v2.8.1
     with:
+      conan_config_branch: "last_conanv1"
       os: >-
         ["ubuntu-24.04", "windows-2022"]
       deployrecipe_userchannel: adnn/stable
