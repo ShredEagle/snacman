@@ -1,0 +1,4 @@
+{
+    "vertex": "shaders/Splash.vert",
+    "fragment": "shaders/Splash.frag"
+}

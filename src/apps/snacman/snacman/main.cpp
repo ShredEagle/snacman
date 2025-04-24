@@ -23,6 +23,7 @@
 
 #include <imguiui/ImguiUi.h>
 
+#include <platform/Gui.h>
 #include <platform/Path.h>
 
 #include <resource/ResourceFinder.h>
@@ -91,6 +92,23 @@ void showDiagnostics()
 }
 
 
+void checkExtensions()
+{
+    #define CHECK_EXT(ext) \
+        if(!GLAD_##ext) throw std::runtime_error{std::string{"OpenGL extension '"} + #ext + "' is not available."}
+
+    CHECK_EXT(GL_ARB_texture_storage);
+    CHECK_EXT(GL_ARB_clear_texture);
+    CHECK_EXT(GL_ARB_program_interface_query);
+    CHECK_EXT(GL_ARB_shader_storage_buffer_object);
+    CHECK_EXT(GL_ARB_base_instance);
+    CHECK_EXT(GL_ARB_multi_draw_indirect);
+    CHECK_EXT(GL_ARB_texture_filter_anisotropic);
+
+    #undef CHECK_EXT
+}
+
+
 void runApplication()
 {
     SELOG(info)("I'm a snac man.");
@@ -116,6 +134,8 @@ void runApplication()
         4, 6,
         { {GLFW_SAMPLES, 4} },
     };
+
+    checkExtensions();
 
     // Must be scoped below the GL context.
     auto mainProfilerScope = SCOPE_PROFILER(gMainProfiler, renderer::Profiler::Providers::CpuOnly);
@@ -149,6 +169,9 @@ void runApplication()
          finder,
          freetype.load(finder.pathFor("fonts/FiraMono-Regular.ttf"))
     };
+
+    // For splash-screen, so the transparent zones appear black
+    glfwApp.getAppInterface()->setClearColor(math::hdr::gBlack<float>);
 
     // Context must be removed from this thread before it can be made current on
     // the render thread.
@@ -335,6 +358,7 @@ int main(int argc, char * argv[])
     }
     catch (std::exception & aException)
     {
+        platform::showErrorBox(aException.what(), "Error " + getVersionedName());
         SELOG(critical)
         ("Uncaught exception while running application:\n{}",
          aException.what());

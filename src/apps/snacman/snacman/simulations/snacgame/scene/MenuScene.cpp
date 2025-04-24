@@ -23,6 +23,7 @@
 #include "../GameParameters.h"
 #include "../InputCommandConverter.h"
 #include "../OrbitalControlInput.h"
+#include "../scene/CreditsScene.h"
 #include "../scene/DataScene.h"
 #include "../scene/GameScene.h"
 #include "../scene/JoinGameScene.h"
@@ -78,19 +79,30 @@ void MenuScene::onEnter(Transition aTransition)
         {
             {gGoDown, "Quit"},
         },
-        Transition{.mTransitionType = TransType::JoinGameFromMenu}, true,
+        Transition{.mTransitionType = TransType::JoinGameFromMenu},
+        true,
         {1.5f, 1.5f});
     auto quitHandle =
         createMenuItem(mGameContext, init, "Quit", font,
                        math::Position<2, float>{-0.55f, -0.3f},
                        {
                            {gGoUp, "Start"},
+                           {gGoDown, "Credits"},
                        },
                        Transition{.mTransitionType = TransType::QuitAll},
                        false, {1.5f, 1.5f});
-
+    auto creditsHandle = createMenuItem(
+        mGameContext, init, "Credits", font,
+        math::Position<2, float>{0.1f, -0.8f},
+        {
+            {gGoUp, "Quit"},
+        },
+        Transition{.mTransitionType = TransType::Credits},
+        false,
+        {1.0f, 1.0f});
     mOwnedEntities.push_back(startHandle);
     mOwnedEntities.push_back(quitHandle);
+    mOwnedEntities.push_back(creditsHandle);
 
     mSystems.get(init)
         ->add(system::SceneGraphResolver{mGameContext, mGameContext.mSceneRoot})
@@ -108,6 +120,7 @@ void MenuScene::onExit(Transition aTransition)
         handle.get(destroy)->erase();
     }
 
+    mOwnedEntities.clear();
     mSystems.get(destroy)->erase();
 }
 
@@ -126,7 +139,7 @@ void MenuScene::update(const snac::Time & aTime, RawInput & aInput)
     bool quit = accumulatedCommand & gQuitCommand;
 
     if (menuItem.mTransition.mTransitionType
-        == TransType::JoinGameFromMenu)
+            == TransType::JoinGameFromMenu)
     {
         for (auto command : controllerCommands)
         {
@@ -143,6 +156,16 @@ void MenuScene::update(const snac::Time & aTime, RawInput & aInput)
                 return;
             }
         }
+    }
+    else if (menuItem.mTransition.mTransitionType == TransType::Credits
+             && accumulatedCommand & gSelectItem)
+    {
+        // We leave the menu scene under the added credits scene.
+        mGameContext.mSceneStack->pushScene(
+            std::make_shared<CreditsScene>(mGameContext,
+                                           mMappingContext)
+        );
+        return;
     }
     else if (menuItem.mTransition.mTransitionType == TransType::QuitAll
              && accumulatedCommand & gSelectItem)

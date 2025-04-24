@@ -26,10 +26,9 @@
 #include "ImguiInhibiter.h"
 #include "InputConstants.h"
 #include "math/Angle.h"
-#include "scene/DataScene.h"
 #include "scene/GameScene.h"
-#include "scene/MenuScene.h"
 #include "scene/Scene.h"
+#include "scene/SplashScene.h"
 #include "SceneGraph.h"
 #include "SimulationControl.h"
 #include "snacman/EntityUtilities.h"
@@ -116,19 +115,9 @@ SnacGame::SnacGame(graphics::AppInterface & aAppInterface,
     ent::Phase init;
     ImPlot::CreateContext();
 
-    /* // Add permanent game title */
-    /* makeText(mGameContext, init, "Snacman", */
-    /*          mGameContext.mResources.getFont("fonts/TitanOne-Regular.ttf"),
-     */
-    /*          math::hdr::gYellow<float>, {-0.25f, 0.75f}, {1.8f, 1.8f}); */
-    mGameContext.mResources.getBlueprint("blueprints/decor.json", mGameContext.mWorld, mGameContext);
-
     mGameContext.mSceneStack->pushScene(
-        std::make_shared<scene::StageDecorScene>(mGameContext,
-                                                 mMappingContext),
-        {.mTransitionType = snacgame::scene::TransType::FirstLaunch});
-    mGameContext.mSceneStack->pushScene(
-        std::make_shared<scene::MenuScene>(mGameContext, mMappingContext));
+        std::make_shared<scene::SplashScene>(mGameContext, mMappingContext, mEnvironmentMap)
+    );
 
     // Initial setup of the directional main light
     *mMainLight = component::LightDirection{

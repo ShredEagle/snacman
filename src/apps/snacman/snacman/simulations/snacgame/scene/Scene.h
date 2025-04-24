@@ -131,10 +131,11 @@ enum class TransType {
     GameFromDiscWitoutKick, // 10
     PauseFromGame,          // 11
     PodiumFromGame,         // 12
-    QuitAll,                // 13
-    QuitToMenu,             // 14
-    DisconnectedFromGame,   // 15
-    Count,                  // 16
+    Credits,
+    QuitAll,                
+    QuitToMenu,             
+    DisconnectedFromGame,   
+    Count,                  
 };
 
 struct Transition
