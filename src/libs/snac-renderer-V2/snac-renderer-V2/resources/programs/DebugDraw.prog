@@ -1,0 +1,4 @@
+{
+    "vertex": "shaders/SimplePositionTransform.vert",
+    "fragment": "shaders/Solid.frag"
+}

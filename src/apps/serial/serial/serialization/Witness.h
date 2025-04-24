@@ -1,0 +1,319 @@
+#pragma once
+
+#include "Imgui.h"
+#include "ImguiSerialization.h"
+#include "Json.h"
+#include "JsonSerialization.h"
+#include "snac-renderer-V2/Model.h"
+
+#include <imgui.h>
+#include <imguiui/ImguiUi.h>
+#include <nlohmann/json.hpp>
+#include <ranges>
+#include <reflexion/Concept.h>
+#include <reflexion/NameValuePair.h>
+#include <snac-reflexion/Reflexion.h>
+#include <variant>
+
+using ad::imguiui::ImguiUi;
+using nlohmann::json;
+
+/// WITNESS_TYPE must be a list of template
+/// parameter, all type must be pointer type (or equivalent)
+/// To add a new type you must add it to WITNESS_TYPE
+/// A new branch must be added to the two base witness methods
+/// of the witness class with the new type and how to process data
+/// for it
+#define WITNESS_TYPE json *, ImguiUi *
+
+typedef std::variant<WITNESS_TYPE> WitnessData;
+
+class Witness;
+
+template <class T_renderable>
+concept ImguiRenderable =
+    ImguiDefaultRenderable<T_renderable>
+    && !ad::reflex::can_be_described_to<T_renderable, Witness>
+    && !ad::reflex::can_be_described_to_by_fn<T_renderable, Witness>;
+
+template <class T_witnessable>
+concept ImguiWitnessable =
+    !ImguiDefaultRenderable<T_witnessable>
+    && (ad::reflex::can_be_described_to<T_witnessable, Witness>
+        || ad::reflex::can_be_described_to_by_fn<T_witnessable, Witness>);
+
+template <class T_type>
+concept JsonExtractable =
+    JsonDefaultExtractable<T_type>
+    && !ad::reflex::can_be_described_to<T_type, Witness>
+    && !ad::reflex::can_be_described_to_by_fn<T_type, Witness>;
+template <class T_type>
+concept JsonTestifyable =
+    !JsonDefaultExtractable<T_type>
+    || ad::reflex::can_be_described_to<T_type, Witness>
+    || ad::reflex::can_be_described_to_by_fn<T_type, Witness>;
+
+template <class T_type>
+concept JsonSerializable =
+    JsonDefaultSerializable<T_type>
+    && !ad::reflex::can_be_described_to<T_type, Witness>
+    && !ad::reflex::can_be_described_to_by_fn<T_type, Witness>;
+template <class T_type>
+concept JsonWitnessable =
+    !JsonDefaultSerializable<T_type>
+    || ad::reflex::can_be_described_to<T_type, Witness>
+    || ad::reflex::can_be_described_to_by_fn<T_type, Witness>;
+
+/// \brief Wrapper class for serialization data porcelain
+/// based around a variant that is made of all available data porcelain type
+class Witness
+{
+private:
+    Witness(WitnessData aData) : mData(aData){};
+
+public:
+    WitnessData mData;
+
+    static const Witness make_const(WitnessData aData)
+    {
+        return Witness(aData);
+    }
+    static Witness make(WitnessData aData) { return Witness(aData); }
+
+    /// Unfortunately it is not possible to forbid Witness Instantiation
+    /// The first reason is that it is not possible to forbid assignement of
+    /// prvalues (which the result of make and make_const is)
+    /// It is also impossible to assert if a value is a prvalue or not
+    /// These constructor declaration are here to prevent all other way to
+    /// manipulate non temporary instance of Witness
+    ~Witness() = default;
+    Witness(const Witness &) = delete;
+    Witness(Witness &&) = delete;
+    Witness & operator=(Witness &&) & = delete;
+    Witness & operator=(const Witness &) & = delete;
+    Witness & operator=(Witness &&) && = delete;
+    Witness & operator=(const Witness &&) && = delete;
+
+    template <class T_data>
+    void witness(ad::reflex::Nvp<T_data> && d)
+    {
+        auto & [name, value] = d;
+        witness(name, value);
+    }
+
+    template <class T_data>
+    void witness(ad::reflex::Nvp<T_data> && d) const
+    {
+        auto & [name, value] = d;
+        witness(name, value);
+    }
+
+    template <class T_value>
+    void witness(const char * aName, T_value * aValue)
+    {
+        std::visit(
+            [this, aValue, aName](auto && arg) {
+                using witness_type = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<witness_type, json *>)
+                {
+                    witness_json(aName, aValue);
+                }
+                else if constexpr (std::is_same_v<witness_type, ImguiUi *>)
+                {
+                    witness_imgui(aName, aValue);
+                }
+                else
+                {
+                    static_assert(
+                        false, "Default witness template should not be called");
+                }
+            },
+            mData);
+    }
+
+    template <class T_value>
+    void witness(const char * aName, T_value * aValue) const
+    {
+        std::visit(
+            [this, aValue, aName](auto && arg) {
+                using witness_type = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<witness_type, json *>)
+                {
+                    testify_json(aName, aValue);
+                }
+                else if constexpr (std::is_same_v<witness_type, ImguiUi *>)
+                {
+                }
+                else
+                {
+                    static_assert(
+                        false, "Default witness template should not be called");
+                }
+            },
+            mData);
+    }
+
+    template <ImguiRenderable T_value>
+    void witness_imgui(const char * aName, T_value * aValue)
+    {
+        debugRender(aName, *aValue);
+    }
+
+    template <ImguiWitnessable T_value,
+              class... T_args,
+              template <class...>
+              class T_range>
+        requires(std::ranges::range<T_range<T_value, T_args...>>
+                 && !std::is_same_v<T_range<T_value, T_args...>, std::string>)
+    void witness_imgui(const char * aName, T_range<T_value, T_args...> * aRange)
+    {
+        static int clickedNode = -1;
+        if (ImGui::TreeNode(aName))
+        {
+            float child_w = ImGui::GetContentRegionAvail().x;
+            ImGui::BeginChild("rangechild", ImVec2(child_w, 200.0f));
+            for (int i = 0; i < aRange->size(); i++)
+            {
+                ImGui::Text("%d", i);
+
+                if (ImGui::IsItemClicked())
+                {
+                    clickedNode = i;
+                }
+            }
+            ImGui::EndChild();
+            ImGui::SameLine();
+            if (clickedNode > -1)
+            {
+                aRange->at(clickedNode).describeTo(*this);
+            }
+            ImGui::TreePop();
+        }
+        else
+        {
+            clickedNode = 0;
+        }
+    }
+
+    template <ImguiWitnessable T_value>
+    void witness_imgui(const char * aName, T_value * aValue)
+    {
+        if (ImGui::TreeNode(aName))
+        {
+            aValue->describeTo(*this);
+            ImGui::TreePop();
+        }
+    }
+
+    template <class T_value>
+    void witness_imgui(const char * aName, T_value * aValue)
+    {
+        ImGui::Text("%s: No debug render for this type", aName);
+    }
+
+    // This is to witness reference to handle in components, not to be confused
+    // with the free function witness_imgui that witness Handle as a proper
+    // value This should put the name of the handle into the field
+    void witness_imgui(const char * aName,
+                       ad::ent::Handle<ad::ent::Entity> * aHandle)
+    {
+        if (ImGui::TreeNode(aName))
+        {
+            ImGui::Text("%s", aHandle->name());
+            ImGui::TreePop();
+        }
+    }
+
+    template <JsonSerializable T_value>
+    void witness_json(const char * aName, T_value * aValue)
+    {
+        json & data = *std::get<json *>(mData);
+        data[aName] = *aValue;
+    }
+
+    template <JsonWitnessable T_value,
+              typename... T_args,
+              template <class...>
+              class T_range>
+        requires(std::ranges::range<T_range<T_value, T_args...>>)
+    void witness_json(const char * aName, T_range<T_value, T_args...> * aRange)
+    {
+        json & data = *std::get<json *>(mData);
+        data[aName] = json::array();
+        int i = 0;
+        for (T_value & value : *aRange)
+        {
+            value.describeTo(Witness::make(&data[aName][i++]));
+        }
+    }
+
+    template <JsonWitnessable T_value>
+    void witness_json(const char * aName, T_value * aValue)
+    {
+        json & data = *std::get<json *>(mData);
+        aValue->describeTo(Witness::make(&data[aName]));
+    }
+
+    // This is to witness a reference to handle in components, not to be
+    // confused with the free function witness_json that witness Handle as a
+    // proper value This should put the name of the handle into the json data
+    void witness_json(const char * aName,
+                      ad::ent::Handle<ad::ent::Entity> * aHandle)
+    {
+        json & data = *std::get<json *>(mData);
+        data[aName] = aHandle->name();
+    }
+
+    template <JsonExtractable T_value>
+    void testify_json(const char * aName, T_value * aValue) const
+    {
+        json & data = *std::get<json *>(mData);
+        *aValue = data[aName].template get<T_value>();
+    }
+
+    template <JsonTestifyable T_value>
+    void testify_json(const char * aName, T_value * aValue) const
+    {
+        json & data = *std::get<json *>(mData);
+        aValue->describeTo(Witness::make_const(&data[aName]));
+    }
+
+    template <JsonTestifyable T_value,
+              class... T_args,
+              template <class...>
+              class T_range>
+        requires(std::ranges::range<T_range<T_value, T_args...>>)
+    void testify_json(const char * aName,
+                      T_range<T_value, T_args...> * aRange) const
+    {
+        json & data = *std::get<json *>(mData);
+        for (auto & value : data[aName])
+        {
+            aRange->emplace_back();
+            aRange->back().describeTo(Witness::make_const(&value));
+        }
+    }
+
+    // This is to tesity a reference to handle in components, not to be confused
+    // with the free function witness_json that witness Handle as a proper value
+    // This should make a request to associate the handle pointer to the proper
+    // handle once all the entities have been created
+    void testify_json(const char * aName,
+                      ad::ent::Handle<ad::ent::Entity> * aHandle) const
+    {
+        json & data = *std::get<json *>(mData);
+        reflexion::handleRequestsInstance().emplace_back(aHandle, data[aName]);
+    }
+};
+
+#define WITNESS_FUNC_DECLARATION(name)                                         \
+    void testify_##name(ad::ent::EntityManager & aWorld,                       \
+                        const Witness && aData);                               \
+    void testify_##name(ad::ent::Handle<ad::ent::Entity> & aHandle,            \
+                        const Witness && aData);                               \
+    void witness_##name(ad::ent::EntityManager & aWorld, Witness && aData);    \
+    void witness_##name(ad::ent::Handle<ad::ent::Entity> & aHandle,            \
+                        Witness && aData);
+
+WITNESS_FUNC_DECLARATION(json)
+WITNESS_FUNC_DECLARATION(imgui)

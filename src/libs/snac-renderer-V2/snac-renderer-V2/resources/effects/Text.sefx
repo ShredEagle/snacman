@@ -1,0 +1,14 @@
+{
+    "techniques": [
+        {
+            "programfile": "programs/Text.prog"
+        },
+        {
+            "annotations": {
+                "outline": "on"
+            },
+            "defines": "OUTLINE_TEXT",
+            "programfile": "programs/Text.prog"
+        }
+    ]
+}

@@ -1,0 +1,103 @@
+{
+    "techniques": [
+        {
+            "annotations": {
+                "pass": "forward",
+                "environment": "on"
+            },
+            "programfile": "programs/ForwardBlinnPhongLighting.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward",
+                "entities": "on"
+            },
+            "defines": ["ENTITIES"],
+            "programfile": "programs/ForwardBlinnPhongLighting.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward",
+                "entities": "on",
+                "shadows": "on"
+            },
+            "defines": ["ENTITIES", "SHADOW_MAPPING"],
+            "programfile": "programs/ForwardBlinnPhongLighting.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward",
+                "entities": "on",
+                "csm": "on"
+            },
+            "defines": ["ENTITIES", "SHADOW_MAPPING", "SHADOW_CASCADE"],
+            "programfile": "programs/ForwardBlinnPhongLighting.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward_pbr"
+            },
+            "programfile": "programs/ForwardPbr.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward_pbr",
+                "environment": "on",
+                "shadows": "on"
+            },
+            "programfile": "programs/ForwardPbr.prog",
+            "defines": ["ENVIRONMENT_MAPPING", "SHADOW_MAPPING"]
+        },
+        {
+            "annotations": {
+                "pass": "forward_pbr",
+                "environment": "on",
+                "csm": "on"
+            },
+            "programfile": "programs/ForwardPbr.prog",
+            "defines": ["ENVIRONMENT_MAPPING", "SHADOW_MAPPING", "SHADOW_CASCADE"]
+        },
+        {
+            "annotations": {
+                "pass": "forward_phong",
+                "environment": "on"
+            },
+            "programfile": "programs/ForwardPhongLighting.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward_debug",
+                "environment": "on"
+            },
+            "programfile": "programs/ForwardDebug.prog"
+        },
+        {
+            "annotations": {
+                "pass": "depth_opaque"
+            },
+            "programfile": "programs/DepthMapping.prog"
+        },
+        {
+            "annotations": {
+                "pass": "depth_opaque",
+                "entities": "on"
+            },
+            "defines": ["ENTITIES"],
+            "programfile": "programs/DepthMapping.prog"
+        },
+        {
+            "annotations": {
+                "pass": "cascaded_depth_opaque"
+            },
+            "programfile": "programs/CascadedDepthMapping.prog"
+        },
+        {
+            "annotations": {
+                "pass": "cascaded_depth_opaque",
+                "entities": "on"
+            },
+            "defines": ["ENTITIES"],
+            "programfile": "programs/CascadedDepthMapping.prog"
+        }
+    ]
+}

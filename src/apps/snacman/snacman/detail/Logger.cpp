@@ -1,5 +1,9 @@
 #include "Logger.h"
 
+#include <arte/Logging.h>
+#include <snac-renderer-V1/Logging.h>
+#include <sounds/Logging.h>
+
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <mutex>
@@ -26,6 +30,10 @@ namespace {
 void initializeLogging()
 {
     std::call_once(loggingInitializationOnce, &initializeLogging_impl);
+    arte::initializeLogging();
+    renderer::initializeLogging();
+    sounds::initializeLogging();
+
     //Note: Initialize all upstream libraries logging here too.
 };
 

@@ -1,0 +1,52 @@
+#pragma once
+
+
+#include <string>
+
+#include <cstring>
+
+
+@AUTOGEN_DISCLAIMER@
+
+
+namespace ad {
+namespace snac {
+
+
+// Usefull for development builds
+constexpr const char * gRepositoryRoot = "@REPO_FOLDER@";
+
+// Application (target) name
+constexpr const char * gApplicationName = "@TARGET_NAME@";
+
+// Build version if it is provided, empty string otherwise
+constexpr const char * gBuildVersion = "@BUILD_VERSION@";
+
+
+inline bool isVersioned()
+{
+    return strcmp(gBuildVersion, "") != 0;
+}
+
+
+inline std::string prefixVersion()
+{
+    std::string result{"v"};
+    result += gBuildVersion;
+    return result;
+}
+
+
+inline std::string getVersionedName()
+{
+    std::string result{gApplicationName};
+    if(isVersioned())
+    {
+        result += " " + prefixVersion();
+    }
+    return result;
+}
+
+
+} // namespace snac
+} // namespace ad

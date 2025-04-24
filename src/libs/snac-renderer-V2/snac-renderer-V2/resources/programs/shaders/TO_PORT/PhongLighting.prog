@@ -1,0 +1,5 @@
+{
+    "defines": ["ENTITIES"],
+    "vertex": "shaders/../FullVertexTransform.vert",
+    "fragment": "shaders/../BlinnPhongLighting.frag"
+}

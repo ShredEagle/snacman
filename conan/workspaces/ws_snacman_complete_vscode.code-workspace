@@ -1,0 +1,321 @@
+{
+	"folders": [
+		{
+			"name": "ws_snacman_complete_vscode",
+			"path": "../../../ws_snacman_complete_vscode"
+		},
+		{
+			"name": "entity",
+			"path": "../../../entity"
+		},
+		{
+			"name": "graphics",
+			"path": "../../../graphics"
+		},
+		{
+			"name": "handy",
+			"path": "../../../handy"
+		},
+		{
+			"name": "math",
+			"path": "../../../math"
+		},
+		{
+			"name": "snacman",
+			"path": "../.."
+		},
+		{
+			"path": "../../../sounds"
+		}
+	],
+	"settings": {
+		"cmake.autoSelectActiveFolder": false,
+		"files.associations": {
+			"*.sefx": "json",
+			"*.prog": "json",
+			"*.sew": "json",
+			"filesystem": "cpp",
+			"algorithm": "cpp",
+			"array": "cpp",
+			"atomic": "cpp",
+			"bit": "cpp",
+			"cctype": "cpp",
+			"charconv": "cpp",
+			"chrono": "cpp",
+			"clocale": "cpp",
+			"cmath": "cpp",
+			"compare": "cpp",
+			"concepts": "cpp",
+			"condition_variable": "cpp",
+			"coroutine": "cpp",
+			"cstdarg": "cpp",
+			"cstddef": "cpp",
+			"cstdint": "cpp",
+			"cstdio": "cpp",
+			"cstdlib": "cpp",
+			"cstring": "cpp",
+			"ctime": "cpp",
+			"cwchar": "cpp",
+			"deque": "cpp",
+			"exception": "cpp",
+			"format": "cpp",
+			"forward_list": "cpp",
+			"fstream": "cpp",
+			"functional": "cpp",
+			"future": "cpp",
+			"initializer_list": "cpp",
+			"iomanip": "cpp",
+			"ios": "cpp",
+			"iosfwd": "cpp",
+			"iostream": "cpp",
+			"istream": "cpp",
+			"iterator": "cpp",
+			"limits": "cpp",
+			"list": "cpp",
+			"locale": "cpp",
+			"map": "cpp",
+			"memory": "cpp",
+			"mutex": "cpp",
+			"new": "cpp",
+			"numeric": "cpp",
+			"optional": "cpp",
+			"ostream": "cpp",
+			"queue": "cpp",
+			"random": "cpp",
+			"ranges": "cpp",
+			"ratio": "cpp",
+			"regex": "cpp",
+			"set": "cpp",
+			"span": "cpp",
+			"sstream": "cpp",
+			"stack": "cpp",
+			"stdexcept": "cpp",
+			"stop_token": "cpp",
+			"streambuf": "cpp",
+			"string": "cpp",
+			"system_error": "cpp",
+			"thread": "cpp",
+			"tuple": "cpp",
+			"type_traits": "cpp",
+			"typeindex": "cpp",
+			"typeinfo": "cpp",
+			"unordered_map": "cpp",
+			"utility": "cpp",
+			"variant": "cpp",
+			"vector": "cpp",
+			"xfacet": "cpp",
+			"xhash": "cpp",
+			"xiosbase": "cpp",
+			"xlocale": "cpp",
+			"xlocbuf": "cpp",
+			"xlocinfo": "cpp",
+			"xlocmes": "cpp",
+			"xlocmon": "cpp",
+			"xlocnum": "cpp",
+			"xloctime": "cpp",
+			"xmemory": "cpp",
+			"xstddef": "cpp",
+			"xstring": "cpp",
+			"xtr1common": "cpp",
+			"xtree": "cpp",
+			"xutility": "cpp",
+			"valarray": "cpp",
+			"any": "cpp",
+			"*.rh": "cpp",
+			"strstream": "cpp",
+			"numbers": "cpp",
+			"resumable": "cpp",
+			"codecvt": "cpp",
+			"unordered_set": "cpp"
+		},
+		"cmake.buildDirectory": "D:\\projects\\Gamedev\\2\\ws_snacman_complete_vscode",
+		"[cpp]": {
+			"editor.suggest.insertMode": "insert"
+		}
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+            "name": "(sew) Bomb scene",
+            "type": "cppvsdbg",
+            "request": "launch",
+            // Resolved by CMake Tools:
+            "program": "${command:cmake.launchTargetPath}",
+            //"args": ["D:/projects/Gamedev/2/proto-assets/donut.sew"],
+            "args": ["D:/projects/Gamedev/2/artistic-zone/export/Bomb/Bomb.sew"],
+            //"args": ["D:/projects/Gamedev/2/artistic-zone/export/Triangle/triangle.sew"],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB cube outdoor",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/JE_Gray_02/split-je_gray_02_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB equi outdoor",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/JE_Gray_02/je_gray_02_8k.hdr"
+				//"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/river_walk_1/river_walk_1_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB cube neon",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				//"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				//"D:/projects/Gamedev/2/proto-assets/models/concrete_cat_statue_4k.gltf/concrete_cat_statue_4k.sew",
+				//"D:/projects/Gamedev/2/proto-assets/models/cannon_01_4k.gltf/cannon_01_4k.sew"
+				"D:/projects/Gamedev/2/proto-assets/models/shadow_scene.sew",
+				//"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/split-neon_photostudio_8k.hdr"
+				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/neon_photostudio_8k-cubemap.dds"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB equi christmas",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				//"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				//"D:/projects/Gamedev/2/proto-assets/models/concrete_cat_statue_4k.gltf/concrete_cat_statue_4k.sew",
+				//"D:/projects/Gamedev/2/proto-assets/models/cannon_01_4k.gltf/cannon_01_4k.sew"
+				"D:/projects/Gamedev/2/proto-assets/models/shadow_scene.sew",
+				//"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/split-neon_photostudio_8k.hdr"
+				"--equirectangular-environment", "D:/projects/Gamedev/2/snac-assets/envmaps/christmas_photo_studio_05/christmas_photo_studio_05_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB equi neon",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				//"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"D:/projects/Gamedev/2/proto-assets/models/concrete_cat_statue_4k.fbx/concrete_cat_statue_4k.sew",
+				"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/neon_photostudio_8k.hdr"
+				//"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/river_walk_1/river_walk_1_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) Block cube neon",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/snac-assets/block_scene.sew",
+				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/neon_photostudio/neon_photostudio_8k-cubemap.dds"
+			],
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB cube goldbay",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--cube-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/golden_bay/split-golden_bay_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(sew) WB equi goldbay",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+				"D:/projects/Gamedev/2/proto-assets/waterbottle-glTF/WaterBottle.sew",
+				"--equirectangular-environment", "D:/projects/Gamedev/2/proto-assets/envmaps/golden_bay/golden_bay_8k.hdr"
+			],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+
+			{
+            "name": "(mdl) Bomb fbx",
+            "type": "cppvsdbg",
+            "request": "launch",
+            // Resolved by CMake Tools:
+            "program": "${command:cmake.launchTargetPath}",
+            "args": ["D:/projects/Gamedev/2/artistic-zone/export/Bomb/Bomb.fbx"],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			},
+			{
+            "name": "(mdl) Cat statue fbx",
+            "type": "cppvsdbg",
+            "request": "launch",
+            // Resolved by CMake Tools:
+            "program": "${command:cmake.launchTargetPath}",
+            "args": ["D:/projects/Gamedev/2/proto-assets/models/concrete_cat_statue_4k.gltf/concrete_cat_statue_4k.gltf"],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "environment": [],
+			// Has a bug with /c...
+            //"console": "externalTerminal"
+            "console": "integratedTerminal"
+			}
+		]
+	}
+}

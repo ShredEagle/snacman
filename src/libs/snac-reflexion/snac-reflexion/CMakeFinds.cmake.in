@@ -1,0 +1,3 @@
+@find_package@(Entity CONFIG @REQUIRED@ entity)
+@find_package@(Handy CONFIG @REQUIRED@ handy)
+@find_package@(nlohmann_json 3.11.2 CONFIG @REQUIRED@)

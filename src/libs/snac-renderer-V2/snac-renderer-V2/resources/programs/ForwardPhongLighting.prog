@@ -1,0 +1,4 @@
+{
+    "vertex": "shaders/FullVertexTransform.vert",
+    "fragment": "shaders/PhongLighting.frag"
+}

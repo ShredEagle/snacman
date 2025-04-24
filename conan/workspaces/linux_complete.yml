@@ -1,0 +1,20 @@
+editables:
+    entity/67b30e2858@adnn/develop:
+        path: ../../../entity/conan
+    graphics/826ea9d282@adnn/develop:
+        path: ../../../graphics/conan
+    handy/e2b164a804@adnn/develop:
+        path: ../../../handy/conan
+    MarkovJunior.cpp/f7022ac731@adnn/develop:
+        path: ../../../MarkovJunior.cpp/conan
+    math/8c49b882e7@adnn/develop:
+        path: ../../../math/conan
+    reflexion/ea47c1e3f1@adnn/develop:
+        path: ../../../reflexion/conan
+    sounds/7ba1fe1145@adnn/develop:
+        path: ../../../sounds/conan
+    snacman/local:
+        path: ../../conan
+layout: linux_layout
+workspace_generator: cmake
+root: snacman/local

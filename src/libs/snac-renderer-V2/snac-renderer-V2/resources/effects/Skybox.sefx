@@ -1,0 +1,33 @@
+{
+    "techniques": [
+        {
+            "annotations": {
+                "pass": "forward",
+                "environment_texture": "cubemap"
+            },
+            "programfile": "programs/Skybox.prog"
+        },
+        {
+            "annotations": {
+                "pass": "forward",
+                "environment_texture": "equirectangular"
+            },
+            "programfile": "programs/Skybox.prog",
+            "defines": "EQUIRECTANGULAR"
+        },
+        {
+            "annotations": {
+                "pass": "prefilter_specular_radiance"
+            },
+            "programfile": "programs/PrefilterCubemap.prog",
+            "defines": "SPECULAR_RADIANCE"
+        },
+        {
+            "annotations": {
+                "pass": "prefilter_diffuse_irradiance"
+            },
+            "programfile": "programs/PrefilterCubemap.prog",
+            "defines": "DIFFUSE_IRRADIANCE"
+        }
+    ]
+}

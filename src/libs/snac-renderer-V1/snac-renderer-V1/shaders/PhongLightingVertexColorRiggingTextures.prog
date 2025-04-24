@@ -1,0 +1,5 @@
+{
+    "defines": ["RIGGING"],
+    "vertex": "PhongLighting.vert",
+    "fragment": "PhongLighting.frag"
+}

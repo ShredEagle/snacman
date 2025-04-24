@@ -54,3 +54,5 @@ Thumbs.db
 *.user
 ipch
 .vscode
+
+imgui.ini
